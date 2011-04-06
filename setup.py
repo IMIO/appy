@@ -1,0 +1,24 @@
+from setuptools import setup, find_packages
+
+version = '0.6.5'
+
+setup(name='appy',
+      version=version,
+      description="Applications in Python",
+      long_description="""\
+""",
+      classifiers=[],
+      keywords='',
+      author='Gaetan Delannay',
+      author_email='',
+      url='',
+      license='GPL',
+      packages=find_packages('src'),
+      package_dir={'': 'src'},
+      include_package_data=True,
+      zip_safe=False,
+      install_requires=[
+      ],
+      entry_points="""
+      """,
+      )
