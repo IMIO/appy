@@ -1,0 +1,7 @@
+Changelog
+=========
+
+0.6.5dev (unreleased)
+---------------------
+
+- eggified appy
