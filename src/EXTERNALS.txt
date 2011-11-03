@@ -1,0 +1,1 @@
+appy http://svn.communesplone.org/svn/communesplone/appy.launchpad/tags/0.7.0-patched/
