@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = '0.8.2dev0'
+version = '0.8.1'
 
 setup(name='appy',
       version=version,
