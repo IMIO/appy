@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = '0.8.2dev0'
+version = '0.8.2'
 
 setup(name='appy',
       version=version,
@@ -11,7 +11,7 @@ setup(name='appy',
       classifiers=[],
       keywords='',
       author='Gaetan Delannay',
-      author_email='support@communesplone.be',
+      author_email='gaetan.delannay@geezteem.com',
       url='http://launchpad.net/~appy',
       license='GPL',
       packages=find_packages('src'),
