@@ -1,8 +1,14 @@
 Changelog
 =========
 
-0.8.3dev (unreleased)
+0.8.4dev (unreleased)
 ---------------------
+
+- Nothing changed yet.
+
+
+0.8.3 (2013-04-30)
+------------------
 
 - Nothing changed yet.
 
