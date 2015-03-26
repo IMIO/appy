@@ -5,7 +5,10 @@ from distutils.core import setup
 def find_packages():
     res = []
     for dir, dns, fns in os.walk('appy'):
-        res.append(dir.replace('/', '.'))
+        if '.svn' in dir:
+            continue
+        package_name = dir.replace('/', '.')        
+        res.append(package_name)
     return res
 
 setup(name="appy",
