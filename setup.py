@@ -7,7 +7,7 @@ def find_packages():
     for dir, dns, fns in os.walk('appy'):
         if '.svn' in dir:
             continue
-        package_name = dir.replace('/', '.')        
+        package_name = dir.replace('/', '.')
         res.append(package_name)
     return res
 
