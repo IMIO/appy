@@ -1,20 +1,21 @@
 import os
-from setuptools import setup, find_packages
+from distutils.core import setup
 
-version = '0.8.4dev'
 
-setup(name='appy',
-      version=version,
-      description="Applications in Python",
-      long_description=open("README.txt").read() + "\n" +
-                       open(os.path.join("docs", "HISTORY.txt")).read(),
-      classifiers=[],
-      keywords='',
-      author='Gaetan Delannay',
-      author_email='gaetan.delannay@geezteem.com',
-      url='http://launchpad.net/~appy',
-      license='GPL',
-      packages=find_packages('src'),
-      package_dir={'': 'src'},
-      include_package_data=True,
-      zip_safe=False)
+def find_packages():
+    res = []
+    for dir, dns, fns in os.walk('appy'):
+        res.append(dir.replace('/', '.'))
+    return res
+
+setup(name="appy",
+      version="0.9dev",
+      description="The Appy framework",
+      long_description="Appy builds simple but complex web Python apps.",
+      author="Gaetan Delannay",
+      author_email="gaetan.delannay AT geezteem.com",
+      license="GPL",
+      platforms="all",
+      url='http://appyframework.org',
+      packages=find_packages(),
+      package_data={'': ["*.*"]})

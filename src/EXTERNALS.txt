@@ -1,1 +1,1 @@
-appy http://svn.communesplone.org/svn/communesplone/appy.launchpad/tags/0.8.3-patched
+appy https://svn.forge.pallavi.be/appy
