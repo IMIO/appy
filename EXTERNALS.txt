@@ -1,1 +1,5 @@
-appy https://svn.forge.pallavi.be/appy
+#
+# used with: svn propset svn:externals -F ./EXTERNALS.txt .
+#
+
+appy -r549 https://svn.forge.pallavi.be/appy
