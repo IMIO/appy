@@ -15,10 +15,10 @@ class Sorter:
     '''Sorts results as produced by a catalog'''
 
     # The sorter' input and output data structures are as follows.
-    # --------------------------------------------------------------------------
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # input   | A result set of object IIDs as computed by a catalog, as an
     #         | instance of IISet.
-    # --------------------------------------------------------------------------
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # output  | A sorted list of object IIDs, in the form of a Lazy data
     #         | structure (see appy/database/lazy.py). The sorter produces an
     #         | intermediary data structure that is more complex than a list.
@@ -27,7 +27,7 @@ class Sorter:
     #         | reasons, into a Lazy data structure, that behaves like a list
     #         | and manipulates, behind the scenes, the more complex internal
     #         | structure.
-    # --------------------------------------------------------------------------
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def __init__(self, sortIndex, rs, reverse):
         # The index to use for sorting

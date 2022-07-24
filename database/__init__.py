@@ -18,6 +18,7 @@ from appy.database.lazy import Lazy
 from appy.utils import path as putils
 from appy.database.catalog import Catalog
 from appy.utils import multicall, Function
+from appy.database.analyser import Analyser
 
 # Constants  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 DB_CREATED   = 'Database created @%s.'
@@ -56,13 +57,18 @@ class Config:
         self.filePath = None
         # The path to the folder containing database-controlled binary files
         self.binariesFolder = None
+        # The path to the folder containing phantom files
+        self.phantomFolder = None
         # Typically, we have this configuration: within a Appy <site>, we have a
-        # folder named "var" containing all database-related stuff: the main
-        # database file named appy.fs and the sub-folders containing
-        # database-controlled binaries. In this case:
+        # folder named "var" containing the main database file named appy.fs,
+        # the sub-folders containing database-controlled binaries, among which
+        # one particular folder named "phantom", containing phantom files =
+        # waste files that weren't properly cleaned during aborted transactions:
+        #
         #   "filePath"       is <site>/var/appy.fs
         #   "binariesFolder" is <site>/var
-
+        #   "phantomFolder"  is <site>/var/phantom
+        #
         # What roles can unlock pages ? By default, only a Manager can do it.
         # You can place here roles expressed as strings or Role instances,
         # global or local.
@@ -71,7 +77,7 @@ class Config:
         # occurred.
         self.conflictRetries = 5
 
-    def set(self, folder, filePath=None):
+    def set(self, folder, filePath=None, phantomFolder=None):
         '''Sets site-specific configuration elements. If filePath is None,
            p_folder will both hold binaries and the database file that will be
            called appy.fs.'''
@@ -80,6 +86,13 @@ class Config:
             self.filePath = self.binariesFolder / 'appy.fs'
         else:
             self.filePath = pathlib.Path(filePath)
+        # Initialise the phantom folder
+        if phantomFolder:
+            phantom = pathlib.Path(phantomFolder)
+        else:
+            phantom = self.binariesFolder / 'phantom'
+        self.phantomFolder = phantom
+        print('Phantom folder is', phantom)
 
     def getDatabase(self, server, handler, poFiles, method=None):
         '''Create and/or connect to the site's database (as instance of class
@@ -115,7 +128,9 @@ class Config:
             # initialization or update at server startup.
             database.init(created, handler, poFiles, method=method)
         elif server.mode == 'clean':
-            # Clean the database temp folder and pack it
+            # Clean the database temp folder, pack the database and launch a
+            # database analysis, leading to the potential removal of phantom
+            # files.
             database.clean(handler, logger)
         elif server.mode == 'run':
             # Execute method named p_method on the tool
@@ -363,7 +378,7 @@ class Database:
            a list of object IDS instead of a list of true objects.'''
         # p_ids being True can be useful for some usages like determining the
         # number of objects without needing to get information about them.
-        # ~~~
+        # ~
         # Ensure there is a catalog for p_className
         catalog = handler.dbConnection.root.catalogs.get(className)
         if not catalog:
@@ -423,24 +438,31 @@ class Database:
         logger.info(TMP_OBJS_DEL % count)
 
     def clean(self, handler, logger):
-        '''Cleaning the database means (a) removing any temp object from it and
-           (b) packing it.'''
+        '''Clean the database = (a) remove any temp object from it, (b) launch
+           an analysis via the appy.database.analyser and (c) pack it.'''
         # Create a specific connection
         connection = handler.dbConnection = self.db.open()
-        # Get the temp store
+        # (a) Remove temp objects. Get the temp store.
         temp = getattr(connection.root, 'temp', None)
         dbFile = handler.server.config.database.filePath
         dbPath = str(dbFile)
         if temp is None:
+            # This is a structural problem: abort the whole operation
             return self.abort(connection, TMP_STORE_NF % dbPath, logger)
+        commit = False
         count = len(temp)
         if count == 0:
             logger.info(TMP_STORE_E % dbPath)
         else:
             self.cleanTemp(handler, logger, count=count)
+            commit = True
+        # (b) Launch an analysis
+        Analyser(handler, logger).run()
+        # At this step, close the connection (after committing if necessary)
+        if commit:
             transaction.commit()
         connection.close()
-        # Pack the database
+        # (c) Pack the database
         self.pack(logger)
 
     def run(self, method, handler, logger):
