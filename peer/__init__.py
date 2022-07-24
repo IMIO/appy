@@ -89,9 +89,9 @@ class Peer:
         # tricky case: an autoref being add=False,link=False,composite=True
         # will be considered addable but this could be wrong.
         self.addable = {} # ~{s_className: {s_refFieldName: b_addable}}~
-        # ~~~
+        # ~
         # The following attributes store run-time temporary data structures
-        # ~~~
+        # ~
         # Create the proxy instance representing the distant server. The passed
         # p_timeout, expressed in seconds, will be used for every HTTP request
         # sent to the peer.

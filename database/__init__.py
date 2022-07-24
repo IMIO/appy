@@ -18,7 +18,6 @@ from appy.database.lazy import Lazy
 from appy.utils import path as putils
 from appy.database.catalog import Catalog
 from appy.utils import multicall, Function
-from appy.database.analyser import Analyser
 
 # Constants  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 DB_CREATED   = 'Database created @%s.'
@@ -92,7 +91,6 @@ class Config:
         else:
             phantom = self.binariesFolder / 'phantom'
         self.phantomFolder = phantom
-        print('Phantom folder is', phantom)
 
     def getDatabase(self, server, handler, poFiles, method=None):
         '''Create and/or connect to the site's database (as instance of class
@@ -456,7 +454,9 @@ class Database:
         else:
             self.cleanTemp(handler, logger, count=count)
             commit = True
-        # (b) Launch an analysis
+        # (b) Launch an analysis. importing the Analyser at the start of this
+        #     file produces a circular import.
+        from appy.database.analyser import Analyser
         Analyser(handler, logger).run()
         # At this step, close the connection (after committing if necessary)
         if commit:
