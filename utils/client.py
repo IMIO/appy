@@ -394,7 +394,8 @@ class Resource:
         # protocol from p_uri.
         protocol = uri[:uri.index(':')]
         if protocol == 'https':
-            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
             conn = hc.HTTPSConnection(self.host, self.port,
                                       timeout=self.timeout, context=context)
