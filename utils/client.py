@@ -390,7 +390,10 @@ class Resource:
              responseType=None, unmarshallParams=None):
         '''Sends a HTTP request with p_method, for p_uri'''
         hc = http.client
-        if self.protocol == 'https':
+        # p_uri's protocol may be different from p_self.protocol: recompute the
+        # protocol from p_uri.
+        protocol = uri[:uri.index(':')]
+        if protocol == 'https':
             context = ssl.SSLContext()
             context.verify_mode = ssl.CERT_NONE
             conn = hc.HTTPSConnection(self.host, self.port,
