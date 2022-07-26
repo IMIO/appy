@@ -30,10 +30,10 @@ jobs:
         if_key_exists: replace # replace / ignore / fail; optional (defaults to fail)
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Update submodule
+    - name: Update appy
       run: |
-        git pull --recurse-submodules
-        git submodule update --remote --recursive -f
+        rm -rf appy
+        git clone ssh://git-appy@www.geezteem.com:3388/~/python2 appy
     - name: Commit update
       run: |
         git config --global user.name 'Git bot'
