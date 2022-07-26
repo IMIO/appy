@@ -571,15 +571,17 @@ class Action(Field):
         # Execute the action
         success, msg = self.execute(o, options=options)
         if not msg:
-            # Use the default i18n messages
-            suffix = 'done' if success else 'ko'
-            msg = o.translate('action_%s' % suffix)
+            # Use the default i18n message, if no message has been dumped yet on
+            # the response object.
+            if not resp.message:
+                suffix = 'done' if success else 'ko'
+                msg = o.translate('action_%s' % suffix)
             # If we had to redirect the user, we have no URL to do that; so we
             # fall back to a computation.
             result = 'computation' if result == 'redirect' else result
             r = msg
         elif result == 'file':
-            # msg does not contain a message, but a Python file handler
+            # v_msg does not contain a message, but a Python file handler
             r = msg.read()
             # If we are serving a file from the popup, close it afterwards
             if o.req.popup: resp.setCookie('closePopup', 'yes')
