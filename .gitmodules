@@ -1,0 +1,3 @@
+[submodule "python2"]
+	path = appy
+	url = ssh://git-appy@www.geezteem.com:3388/~/python2
