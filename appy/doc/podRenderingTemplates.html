@@ -1,0 +1,125 @@
+<html>
+  <head>
+    <title><b>pod</b> - Rendering templates</title>
+    <link rel="stylesheet" href="appy.css" type="text/css">
+  </head>
+  <body>
+    <h1><a name="rendering"></a>Rendering a pod template</h1>
+
+    <p>In order to render a pod template, the first thing to do is to create a renderer (create a <span class="code">appy.pod.Renderer</span> instance). The constructor for this class looks like this:</p>
+
+    <p class="code codePara">
+    <b>class</b> Renderer:<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;<b>def</b> __init__(self, template, context, result, pythonWithUnoPath=None,<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    ooPort=2002, stylesMapping={}, forceOoCall=False,<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    finalizeFunction=None, overwriteExisting=False,<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    imageResolver=None):<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'''This Python Open Document Renderer (PodRenderer) loads a document<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;template (p_template) which is an ODT file with some elements<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;written in Python. Based on this template and some Python objects<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;defined in p_context, the renderer generates an ODT file<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(p_result) that instantiates the p_template and fills it with objects<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;from the p_context.<br/>
+<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- If p_result does not end with .odt, the Renderer<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    will call LibreOffice to perform a conversion. If p_forceOoCall is<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    True, even if p_result ends with .odt, LibreOffice will be called, not<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    for performing a conversion, but for updating some elements like<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    indexes (table of contents, etc) and sections containing links to<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    external files (which is the case, for example, if you use the<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    default function "document").<br/>
+<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- If the Python interpreter which runs the current script is not<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    UNO-enabled, this script will run, in another process, a UNO-enabled<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    Python interpreter (whose path is p_pythonWithUnoPath) which will<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    call LibreOffice. In both cases, we will try to connect to LibreOffice<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    in server mode on port p_ooPort.<br/>
+<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- If you plan to make "XHTML to OpenDocument" conversions, you may<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    specify a styles mapping in p_stylesMapping.<br/>
+<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- If you specify a function in p_finalizeFunction, this function will<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    be called by the renderer before re-zipping the ODT result. This way,<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    you can still perform some actions on the content of the ODT file<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    before it is zipped and potentially converted. This function must<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    accept one arg: the absolute path to the temporary folder containing<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    the un-zipped content of the ODT result.<br/>
+<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- If you set p_overwriteExisting to True, the renderer will overwrite<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    the result file. Else, an exception will be thrown if the result file<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    already exists.<br/>
+<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- p_imageResolver allows POD to retrieve images, from "img" tags within<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    XHTML content. Indeed, POD may not be able (ie, may not have the<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    permission to) perform a HTTP GET on those images. Currently, the<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    resolver can only be a Zope application object.<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'''<br/>
+    </p>
+
+    <p>For the <span class="code">template</span> and the <span class="code">result</span>, you can specify absolute or relative paths. I guess it is better to always specify absolute paths.</p>
+
+    <p><br/>The <span class="code">context</span> may be either a dict, UserDict, or an instance. If it is an instance, its <span class="code">__dict__ </span>attribute is used. For example, <span class="code">context</span> may be the result of calling <span class="code">globals()</span> or <span class="code">locals()</span>. Every (key, value) pair defined in the context corresponds to a name (the key) that you can use within your template within pod statements or expressions. Those names may refer to any Python object: a function, a variable, an object, a module, etc.</p>
+
+    <p>Once you have the <span class="code">Renderer</span> instance, simply call its <span class="code">run</span> method. This method may raise a <span class="code">appy.pod.PodError</span> exception.</p>
+
+    <p><br/>Since pod 0.0.2, you may put a XHTML document somewhere in the context and ask pod to convert it as a chunk of OpenDocument into the resulting OpenDocument. You may want to customize the mapping between XHTML and OpenDocument styles. This can be done through the <span class="code">stylesMapping</span> parameter. A detailed explanation about the "XHTML to OpenDocument" abilities of pod may be found <a href="podWritingAdvancedTemplates.html#xhtml">here</a>.</p>
+
+    <h1><a name="resultFormats"></a>Result formats</h1>
+
+    <p>If <span class="code">result</span> ends with <span class="code">.odt</span>, LibreOffice will NOT be called (unless <span class="code">forceOoCall</span> is <span class="code">True</span>). pod does not need LibreOffice to generate a result in ODT format, excepted in the following cases:</p>
+
+    <ul>
+      <li>you need to update fields in the result (ie a table of contents);</li>
+      <li>you need to include external documents into the result (ODT, PDF, Word, ...) by using special function <a href="podWritingAdvancedTemplates.html#document"><span class="code">document</span></a>.</li>
+    </ul>
+
+    <p>If <span class="code">result</span> ends with:</p>
+
+    <ul>
+      <li><span class="code">.pdf</span>,</li>
+      <li><span class="code">.doc</span> (Microsoft Word 97),</li>
+      <li><span class="code">.rtf</span> or</li>
+      <li><span class="code">.txt</span>,</li>
+    </ul>
+
+    <p>LibreOffice will be called in order to convert a temporary ODT file rendered by pod into the desired format. This will work only if your Python interpreter knows about the Python UNO bindings. UNO is the OpenOffice API. If typing <span class="code">import uno</span> at the interpreter prompt does not produce an error, your interpreter is UNO-enabled. If not, there is probably a UNO-enabled Python interpreter within your LibreOffice copy (in &lt;LibreOfficePath&gt;/program). In this case you can specify this path in the <span class="code">pythonWithUnoPath</span> parameter of the <span class="code">Renderer</span> constructor. Note that when using a UNO-disabled interpreter, there will be one additional process fork for launching a Python-enabled interpreter.</p>
+
+    <p>During rendering, pod uses a temp folder located at <span class="code">&lt;result&gt;.temp</span>.</p>
+
+    <h1><a name="ooInServerMode"></a>Launching LibreOffice in server mode</h1>
+
+    <p>You launch LibreOffice in server mode by running the command (under Linux):</p>
+
+    <p class="code codePara">soffice -invisible -headless "-accept=socket,host=localhost,port=2002;urp;"</p>
+
+    <p>Under Windows it may look like:</p>
+
+    <p class="code codePara">"[path_to_lo]\program\soffice" -invisible -headless "-accept=socket,host=localhost,port=2002;urp;"</p>
+
+    <p>Of course, use any port number you prefer.</p>
+  </body>
+</html>
