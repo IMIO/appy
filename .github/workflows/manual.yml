@@ -33,7 +33,10 @@ jobs:
     - name: Update appy
       run: |
         rm -rf appy
-        git clone ssh://git-appy@www.geezteem.com:3388/~/python2 appy
+        git clone ssh://git-appy@www.geezteem.com:3388/~/python2
+        mkdir appy
+        mv python2/* appy
+        rm -rf python2
     - name: Commit update
       run: |
         git config --global user.name 'Git bot'
