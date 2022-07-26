@@ -385,7 +385,7 @@ class Layouts(dict):
     topLayouts = asDict(('query', 'pre'))
 
     # Layouts corresponding to ranges of icons or buttons
-    buttonLayouts = asDict(('buttons', 'sub', 'view'))
+    buttonLayouts = asDict(('buttons', 'sub', 'view', 'xml'))
 
     # Some layouts must be explicitly specified in order to be taken into
     # account, while, for most of them, this is implicit. For example, when
