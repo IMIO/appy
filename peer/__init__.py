@@ -139,9 +139,9 @@ class Peer:
            (or p_self.url if not given) with p_params.'''
         try:
             if post:
-                r = self.server.post(uri=url, data=params)
+                r = self.server.post(path=url, data=params)
             else:
-                r = self.server.get(uri=url, params=params)
+                r = self.server.get(path=url, params=params)
         except Resource.Error as re:
             raise self.Error('%s: %s' % (url or self.url, str(re)))
         if r.code == 404:

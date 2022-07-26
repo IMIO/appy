@@ -3,9 +3,8 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from base64 import encodebytes
-from mimetypes import guess_type
 import xml.sax, http.client, urllib.parse, ssl
-import os, sys, re, stat, time, socket, random, hashlib, gzip
+import re, time, socket, random, hashlib, gzip
 
 from appy.utils import json
 from appy.utils import copyData
@@ -314,17 +313,7 @@ class Resource:
         # this resource object.
         self.serverTime = 0
         # Split the URL into its components
-        r = urlRex.match(url)
-        if r:
-            protocol, host, port, uri = r.groups()
-            self.protocol = protocol
-            self.host = host
-            if port:
-                self.port = int(port[1:])
-            else:
-                self.port = Resource.standardPorts[self.protocol]
-            self.uri = uri or '/'
-        else: raise self.Error(URL_ERR % str(url))
+        self.protocol, self.host, self.port, self.path = self.getUrlParts(url)
         # If some headers must be sent with any request sent through this
         # resource, you can store them in the following dict.
         self.headers = {'Host': self.getHeaderHost(), 'User-Agent': 'Appy',
@@ -333,6 +322,25 @@ class Resource:
         # Cookies defined hereafter will be included in self.headers at every
         # request.
         self.cookies = {}
+
+    def getUrlParts(self, url, raiseOnError=True):
+        '''Return p_url parts as a tuple (protocol, host, port, path). If the
+           URL is wrong (or is not a complete URL), the method raises an error
+           if p_raiseOnError is True or returns None if p_raiseOnError is
+           False.'''
+        r = urlRex.match(url)
+        if not r:
+            if raiseOnError:
+                raise Resource.Error(URL_ERR % str(url))
+            else:
+                return r
+        protocol, host, port, path = r.groups()
+        if port:
+            port = int(port[1:])
+        else:
+            port = Resource.standardPorts[protocol]
+        path = path or '/'
+        return protocol, host, port, path
 
     def getHeaderHost(self):
         '''Gets the content of header key "Host"'''
@@ -386,21 +394,28 @@ class Resource:
                 pass
         return r
 
-    def send(self, method, uri, body=None, headers=None, bodyType=None,
+    def send(self, method, path, body=None, headers=None, bodyType=None,
              responseType=None, unmarshallParams=None):
-        '''Sends a HTTP request with p_method, for p_uri'''
+        '''Sends a HTTP request with p_method, @ this p_path'''
+        # p_path can be a complete URL (http://a.b.be/c) or the "path "part (/c)
+        parts = self.getUrlParts(path, raiseOnError=False)
+        if parts is None:
+            # p_path is a real path
+            protocol, host, port = self.protocol, self.host, self.port
+            path = path or '/'
+        else:
+            # p_path is a complete URL
+            protocol, host, port, path = parts
+        # Initialise a HTTP or HTTPS connection
         hc = http.client
-        # p_uri's protocol may be different from p_self.protocol: recompute the
-        # protocol from p_uri.
-        protocol = uri[:uri.index(':')]
         if protocol == 'https':
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
-            conn = hc.HTTPSConnection(self.host, self.port,
-                                      timeout=self.timeout, context=context)
+            conn = hc.HTTPSConnection(host, port, timeout=self.timeout,
+                                      context=context)
         else:
-            conn = hc.HTTPConnection(self.host, self.port, timeout=self.timeout)
+            conn = hc.HTTPConnection(host, port, timeout=self.timeout)
         try:
             conn.connect()
         except socket.gaierror as sge:
@@ -410,7 +425,7 @@ class Resource:
         except socket.error as se:
             raise self.Error(CONN_ERR % str(se))
         # Tell what kind of HTTP request it will be
-        conn.putrequest(method, uri, skip_host=True)
+        conn.putrequest(method, path, skip_host=True)
         # Add HTTP headers
         if headers is None: headers = {}
         self.completeHeaders(headers)
@@ -418,8 +433,7 @@ class Resource:
         conn.endheaders()
         # Add HTTP body
         if body:
-            if not bodyType: bodyType = 'string'
-            copyData(body, conn, 'send', type=bodyType)
+            copyData(body, conn, 'send', type=bodyType or 'string')
         # Send the request, get the reply
         if self.measure: startTime = time.time()
         try:
@@ -438,47 +452,19 @@ class Resource:
                             utf8=self.utf8, responseType=responseType,
                             unmarshallParams=unmarshallParams)
 
-    def mkdir(self, name):
-        '''Creates a folder named p_name in this resource'''
-        folderUri = self.uri + '/' + name
-        #body = '<d:propertyupdate xmlns:d="DAV:"><d:set><d:prop>' \
-        #       '<d:displayname>%s</d:displayname></d:prop></d:set>' \
-        #       '</d:propertyupdate>' % name
-        return self.send('MKCOL', folderUri)
-
-    def delete(self, name):
-        '''Deletes a file or a folder (and all contained files if any) named
-           p_name within this resource.'''
-        toDeleteUri = self.uri + '/' + name
-        return self.send('DELETE', toDeleteUri)
-
-    def add(self, path, name=''):
-        '''Adds a file in this resource, whose p_path is passed'''
-        size = os.stat(path)[stat.ST_SIZE]
-        body = open(path, 'rb')
-        name = os.path.basename(path)
-        fileType, encoding = guess_type(path)
-        fileUri = self.uri + '/' + name
-        headers = {'Content-Length': str(size)}
-        if fileType: headers['Content-Type'] = fileType
-        if encoding: headers['Content-Encoding'] = encoding
-        r = self.send('PUT', fileUri, body, headers, bodyType='file')
-        body.close()
-        return r
-
-    def get(self, uri=None, headers=None, params=None, followRedirect=True,
+    def get(self, path=None, headers=None, params=None, followRedirect=True,
             responseType=None, unmarshallParams=None):
         '''Perform a HTTP GET on the server. Parameters can be given as a dict
            in p_params. p_responseType will be used if no "Content-Type" key is
            found on the HTTP response. In the processs of unmarshalling received
            data, specific parameters can be passed in dict
            p_unmarshallParams. '''
-        if not uri: uri = self.uri
+        path = path or self.path
         # Encode and append params if given
         if params:
-            sep = '&' if '?' in uri else '?'
-            uri = '%s%s%s' % (uri, sep, urllib.parse.urlencode(params))
-        r = self.send('GET', uri, headers=headers, responseType=responseType,
+            sep = '&' if '?' in path else '?'
+            path = '%s%s%s' % (path, sep, urllib.parse.urlencode(params))
+        r = self.send('GET', path, headers=headers, responseType=responseType,
                       unmarshallParams=unmarshallParams)
         # Follow redirect when relevant
         if r.code in r.redirectCodes and followRedirect:
@@ -491,19 +477,19 @@ class Resource:
         if r.code == 401 and self.authMethod == 'Digest' and r.data:
             # Re-trigger the request with the correct authentication headers
             headers = headers or {}
-            headers['Authorization'] = r.data.buildCredentials(self, uri)
-            return self.get(uri=uri, headers=headers, params=params,
+            headers['Authorization'] = r.data.buildCredentials(self, path)
+            return self.get(path=path, headers=headers, params=params,
                        followRedirect=followRedirect, responseType=responseType)
         return r
     rss = get
 
-    def post(self, data=None, uri=None, headers=None, encode='form',
+    def post(self, data=None, path=None, headers=None, encode='form',
              followRedirect=True):
         '''Perform a HTTP POST on the server. If p_encode is "form", p_data is
            considered to be a dict representing form data that will be
            form-encoded. Else, p_data will be considered as the ready-to-send
            body of the HTTP request.'''
-        if not uri: uri = self.uri
+        path = path or self.path
         if headers is None: headers = {}
         # Prepare the data to send
         if encode == 'form':
@@ -513,7 +499,7 @@ class Resource:
         else:
             body = data
         headers['Content-Length'] = str(len(body))
-        r = self.send('POST', uri, headers=headers, body=body)
+        r = self.send('POST', path, headers=headers, body=body)
         if r.code in r.redirectCodes and followRedirect:
             # Update headers
             for key in ('Content-Type', 'Content-Length'):
@@ -524,19 +510,19 @@ class Resource:
             if self.measure: r.duration += duration
         return r
 
-    def soap(self, data, uri=None, headers=None, namespace=None,
+    def soap(self, data, path=None, headers=None, namespace=None,
              soapAction=None):
         '''Sends a SOAP message to this resource. p_namespace is the URL of the
            server-specific namespace. If header value "SOAPAction" is different
            from self.url, specify it in p_soapAction.'''
-        if not uri: uri = self.uri
+        path = path or self.path
         # Prepare the data to send
         data = SoapDataEncoder(data, namespace).encode()
         if headers is None: headers = {}
         headers['SOAPAction'] = soapAction or self.url
         # Content-type could be 'text/xml'
         headers['Content-Type'] = 'application/soap+xml;charset=UTF-8'
-        r = self.post(data, uri, headers=headers, encode=None)
+        r = self.post(data, path, headers=headers, encode=None)
         # Unwrap content from the SOAP envelope
         if hasattr(r.data, 'Body'):
             r.data = r.data.Body

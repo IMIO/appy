@@ -240,7 +240,7 @@ class Tester:
         logUrl = '/config/performLogin'
         log("%s >> logging in... " % logUrl)
         self.sleep()
-        response = server.post(data, uri=logUrl)
+        response = server.post(data, path=logUrl)
         success = '_appy_' in server.cookies
         msg = '%s authenticated.' % config.login \
               if success else 'authentication failed.'
