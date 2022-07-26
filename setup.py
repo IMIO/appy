@@ -12,7 +12,7 @@ def find_packages():
     return res
 
 setup(name="appy",
-      version="0.9dev",
+      version="1.99.dev0",
       description="The Appy framework",
       long_description="Appy builds simple but complex web Python apps.",
       author="Gaetan Delannay",
