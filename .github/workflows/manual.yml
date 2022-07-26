@@ -33,13 +33,13 @@ jobs:
     - name: Update appy
       run: |
         rm -rf appy
-        git clone ssh://git-appy@www.geezteem.com:3388/~/python2
-        mkdir appy
-        mv python2/* appy
-        rm -rf python2
+        git clone ssh://git-appy@www.geezteem.com:3388/~/python2 appy
+        rm -rf appy/.git*
     - name: Commit update
       run: |
         git config --global user.name 'Git bot'
         git config --global user.email 'bot@noreply.github.com'
         git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+        git add .
+        git status
         git commit -am "Auto updated submodule references" && git push || echo "No changes to commit"
