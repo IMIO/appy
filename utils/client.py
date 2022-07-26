@@ -316,9 +316,8 @@ class Resource:
         self.protocol, self.host, self.port, self.path = self.getUrlParts(url)
         # If some headers must be sent with any request sent through this
         # resource, you can store them in the following dict.
-        self.headers = {'Host': self.getHeaderHost(), 'User-Agent': 'Appy',
-                        'Connection': 'close', 'Accept': '*/*',
-                        'Accept-Encoding': 'gzip, identity'}
+        self.headers = {'User-Agent': 'Appy', 'Connection': 'close',
+                        'Accept': '*/*', 'Accept-Encoding': 'gzip, identity'}
         # Cookies defined hereafter will be included in self.headers at every
         # request.
         self.cookies = {}
@@ -342,12 +341,11 @@ class Resource:
         path = path or '/'
         return protocol, host, port, path
 
-    def getHeaderHost(self):
+    def getHeaderHost(self, protocol, host, port):
         '''Gets the content of header key "Host"'''
         # Insert the port number if not standard
-        suffix = '' if self.port == Resource.standardPorts[self.protocol] \
-                    else ':%d' % self.port
-        return '%s%s' % (self.host, suffix)
+        suffix = '' if port == Resource.standardPorts[protocol] else ':%d'% port
+        return '%s%s' % (host, suffix)
 
     def __repr__(self):
         '''p_self's short string representation'''
@@ -428,6 +426,7 @@ class Resource:
         conn.putrequest(method, path, skip_host=True)
         # Add HTTP headers
         if headers is None: headers = {}
+        headers['Host'] = self.getHeaderHost(protocol, host, port)
         self.completeHeaders(headers)
         for k, v in headers.items(): conn.putheader(k, v)
         conn.endheaders()
