@@ -172,7 +172,7 @@ class HttpResponse:
     emptyDict = {}
 
     # Redirect HTTP codes
-    redirectCodes = (302, 303)
+    redirectCodes = (301, 302, 303)
 
     def __init__(self, resource, response, body, duration=None, utf8=True,
                  responseType=None, unmarshallParams=None):
