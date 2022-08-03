@@ -155,10 +155,10 @@ class Importer:
         # that case, Ref info is of the form [<bound method xx>, <value>]: a
         # list of 2 elements, whose first one contains the homonym method, and
         # whose second one contains the Ref info in itself.
-        # ~~~
+        # ~
         # This method "resolves" such name clashes and ensures the result is a
         # list.
-        # ~~~
+        # ~
         # Get info on the distant object
         r = getattr(self.distant, field.name, None)
         if not r: return

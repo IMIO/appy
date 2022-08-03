@@ -42,6 +42,10 @@ class Importer0(Importer):
                 # initial distant transition.
                 if event.comments:
                     history[-1].comment = event.comments
+                # Flag "local roles only", in Appy 0, is potentially stored on
+                # this first event.
+                if event.local:
+                    self.local.localRoles.only = True
                 continue
             # Get parameters being common to all history events
             params = {'state': event.review_state, 'date': event.time,
