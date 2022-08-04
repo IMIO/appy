@@ -206,7 +206,7 @@ class ToolMixin(BaseMixin):
         # Remove <br/> tags
         if '</p>' in res: res = res[3:res.index('</p>')]
         # Add the page title if found
-        if obj and ('page' in self.REQUEST):
+        if obj and 'page' in self.REQUEST:
             pageLabel = '%s_page_%s' % (obj.meta_type, self.REQUEST['page'])
             text = self.translate(pageLabel, blankOnError=True)
             if text:

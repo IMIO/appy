@@ -2158,7 +2158,7 @@ class BaseMixin:
             fallback = self.getProductConfig(True).fallbackLanguage
             try:
                 translation = getattr(tool, fallback).appy()
-                res = getattr(translation, label, '')
+                res = getattr(translation, label, '') or ''
             except AttributeError:
                 # The fallback language may not be among app's languages
                 pass

@@ -64,26 +64,32 @@ class Sub:
     # The hook used to inject the new styles in content.xml
     styleHook = '</office:automatic-styles>'
 
-    def __init__(self):
-        '''Retrieve command-line args'''
-        # Get options
-        options = {}
-        args = sys.argv
-        if '-c' in args:
-            args.remove('-c')
-            self.check = True
+    def __init__(self, path=None, check=None):
+        '''Retrieve command-line args. If p_path is passed, command-line args
+           are ignored: p_path and p_check are used instead. This allows to use
+           this class via another program.'''
+        if path:
+            self.path = path
+            self.check = check
         else:
-            self.check = False
-        if len(args) != 2:
-            print(usage)
-            sys.exit(1)
-        self.path = args[1]
-        if not os.path.isfile(self.path):
-            print FILE_KO % self.path
-            sys.exit(1)
-        if not self.path.endswith('.odt'):
-            print FILE_WR % self.path
-            sys.exit(1)
+            # Get options from the command line
+            options = {}
+            args = sys.argv
+            if '-c' in args:
+                args.remove('-c')
+                self.check = True
+            else:
+                self.check = False
+            if len(args) != 2:
+                print(usage)
+                sys.exit(1)
+            self.path = args[1]
+            if not os.path.isfile(self.path):
+                print FILE_KO % self.path
+                sys.exit(1)
+            if not self.path.endswith('.odt'):
+                print FILE_WR % self.path
+                sys.exit(1)
 
     def log(self, message):
         '''Logs this p_message'''
