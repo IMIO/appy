@@ -830,8 +830,15 @@ class Pod(Field):
 
     def isRenderableOn(self, layout):
         '''Pod fields are among rare fields that can be rendered almost
-           anywhere. There is this restriction, though: a multi-template pod
-           can't be rendered on layout "buttons".'''
+           anywhere.'''
+        # A multi-objects pod can only be rendered on layout 'query'
+        if self.multiObjects:
+            # Here, instead of returning 'layout == 'query', None is returned,
+            # because the method that retrieves PODs on the query layout, in
+            # meta/class_.py, is specific (for performance) and does not,
+            # technically, call m_isRenderableOn methods like this one.
+            return
+        # A multi-template pod can't be rendered on layout "buttons"
         return len(self.template) == 1 if layout == 'buttons' else True
 
     def setTemplateFolder(self, folder):

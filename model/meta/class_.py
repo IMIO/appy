@@ -527,7 +527,7 @@ class Class(Meta):
         return getattr(self.concrete, 'indexable', True)
 
     def getListPods(self, tool):
-        '''Finds, among p_self' fields, those being Pod fields showable on
+        '''Finds, among p_self's fields, those being Pod fields showable on
            search results.'''
         # r is a dict {p_field: [visibleTemplate]}
         r = {}
