@@ -944,9 +944,13 @@ msgstr "Dans certaines situations, en quittant cette page de cette manière, vou
 msgid "unauthorized"
 msgstr "Vous n'êtes pas autorisé à consulter ceci."
 
-#. Default: "Microsoft Internet Explorer is not supported.<br/>Please use a modern web browser to consult this site."
+#. Default: "Microsoft Internet Explorer is not supported.\nUsing it with site is risky and could lead to problems as severe as data loss.\n\nPlease use a modern web browser to consult this site."
 msgid "wrong_browser"
-msgstr "Microsoft Internet Explorer n'est pas supporté.<br/>Veuillez utilisez un navigateur moderne."
+msgstr "Microsoft Internet Explorer n'est pas supporté.\nL'utiliser pour ce site est risqué et peut mener à de graves dysfonctionnements, allant jusqu'à la perte de données.\n\nVeuillez utiliser un navigateur moderne."
+
+#. Default: "Your are using ${name}, version ${version}, which is now obsolete and unsupported.\nUsing it with site is risky and could lead to problems as severe as data loss.\n\nPlease upgrade your browser to at least version ${minimal}, or use another one."
+msgid "old_browser"
+msgstr "Vous utilisez ${name} dans sa version ${version}, qui est obsolète.\nL'utiliser pour ce site est risqué et peut mener à de graves dysfonctionnements, allant jusqu'à la perte de données.\n\nVeuillez mettre à jour votre navigateur à la version ${minimal} au minimum, ou utilisez-en un autre."
 
 #. Default: "Send by email"
 msgid "email_send"

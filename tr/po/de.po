@@ -943,8 +943,12 @@ msgstr ""
 msgid "unauthorized"
 msgstr ""
 
-#. Default: "Microsoft Internet Explorer is not supported.<br/>Please use a modern web browser to consult this site."
+#. Default: "Microsoft Internet Explorer is not supported.\nUsing it with site is risky and could lead to problems as severe as data loss.\n\nPlease use a modern web browser to consult this site."
 msgid "wrong_browser"
+msgstr ""
+
+#. Default: "Your are using ${name}, version ${version}, which is now obsolete and unsupported.\nUsing it with site is risky and could lead to problems as severe as data loss.\n\nPlease upgrade your browser to at least version ${minimal}, or use another one."
+msgid "old_browser"
 msgstr ""
 
 #. Default: "Send by email"

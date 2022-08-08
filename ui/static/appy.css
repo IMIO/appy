@@ -69,7 +69,7 @@ select[multiple]     { border:1px solid |itextBottomColor|; margin:0;
 .wrongBrowser {
   color:darkred; font-size:120%; padding:2em; text-align:center;
   position:fixed; z-index:5; margin:auto; left:0; right:0;
-  background-color:white }
+  background-color:white; height:100% }
 .sticky { position:sticky; top:0; z-index:3 }
 .lang { margin-right:6px }
 .changePassword { color:#494949 !important; font-style:italic; font-size:90% }

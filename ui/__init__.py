@@ -7,6 +7,7 @@
 import os.path, re
 
 from appy.px import Px
+from appy.utils import asDict
 from appy.model.utils import Object as O
 
 # Make classes from sub-packages available here  - - - - - - - - - - - - - - - -
@@ -1035,8 +1036,29 @@ class Footer:
 class Browser:
     '''Determines if the browser is compatible with Appy'''
 
-    ieRex = re.compile('MSIE\s+\d\.\d')
-    ieRex2 = re.compile('Trident.*rv\:')
+    # Main regex, allowing to extract browser name & version from the user agent
+    rex = re.compile('([a-zA-Z]+)(?:/|\s+)(\d+\.\d+)')
+
+    # Here are some examples. Trident corresponds to IE 11.
+    #   MSIE 6.0
+    #   Trident/7.0
+    #   Firefox/103.0
+    #   Chrome/103.0
+    #   ...
+
+    # Internet Explorer is not supported, any version
+    unsupported = asDict(('Trident', 'MSIE'))
+
+    # Supported browsers
+    supported = asDict(('Firefox', 'Seamonkey', 'Chrome', 'Chromium', 'Safari',
+                        'OPR', 'Opera'))
+
+    # If several browser names are included in the user agent, these ones take
+    # precedence over others.
+    precedes = asDict(('Firefox', 'Chrome', 'Chromium'))
+
+    # Browser names and minimal versions as supported by Appy
+    versions = {'Chrome': 90.0, 'Chromium': 90.0, 'Firefox': 90.0}
 
     @classmethod
     def getIncompatibilityMessage(class_, tool, handler):
@@ -1045,6 +1067,29 @@ class Browser:
         # Get the "User-Agent" request header
         agent = handler.headers.get('User-Agent')
         if not agent: return
-        if class_.ieRex.search(agent) or class_.ieRex2.search(agent):
-            return tool.translate('wrong_browser')
+        # Get all (name, version) pairs as carried by the user agent
+        pairs = class_.rex.findall(agent)
+        if not pairs: return
+        # Keep only the relevant pair
+        name = version = None
+        for n, v in pairs:
+            # Directly dismiss unsupported browsers
+            if n in class_.unsupported:
+                return tool.translate('wrong_browser')
+            elif n in class_.supported:
+                # A supported browser has been found
+                if name:
+                    if n in class_.precedes:
+                        # We have 2 names: keep the most appropriate one
+                        name = n
+                        version = v
+                    break
+                name = n
+                version = v
+        # Issue a warning if the browser version is unsupported
+        if version:
+            minimal = class_.versions.get(name)
+            if minimal and float(version) < minimal:
+                map = {'name': name, 'version': version, 'minimal':minimal}
+                return tool.translate('old_browser', mapping=map)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
