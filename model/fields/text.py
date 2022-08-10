@@ -20,14 +20,15 @@ from appy.database.indexes.text import TextIndex
 from appy.model.fields.multilingual import Multilingual
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-INLINE_EDIT_MULTILINGUAL = 'Is is currently not possible to inline-edit ' \
-                           'multilingual Text fields.'
+IN_ED_MLG  = 'Is is currently not possible to inline-edit multilingual Text ' \
+             'fields.'
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Replacements:
     '''Used by class Text2Html below, this class is used to define replacements
        for characters found in structured text, in order to recreate formatting
        from structured text written with some conventions.'''
+
     # Default replacement conventions
     default = {
       # Replace double quotes by "guillemets" (angle quotes). The sub-dict has
@@ -42,15 +43,18 @@ class Replacements:
       '{': '<span style="background-color: yellow">', '}': '</span>',
       '&': '&amp;' # XML escaping
     }
+
     # Among "default", some keys represent opening and ending delimiters
     delimiters = {'[': ']', '<': '>', '{': '}'}
     endDelimiters = flipDict(delimiters)
+
     # Prefix (semi)colons, question and exclamation marks with a non-breakable
     # space, excepted if such a space is already present.
     nbspChars = (':', ';', '!', '?', '%')
     for c in nbspChars:
         default[c] = {' ': c, 0: ' %s' % c}
     whitespace = (' ', ' ')
+
     # Regular expression for replacing special markers (see "replacementFun"
     # attribute below.
     regex = re.compile('\*(.+?)\*')
@@ -156,6 +160,7 @@ class Text2Html:
     '''Converts a chunk of structured text into XHTML. Some conventions apply,
        ie, rows of text starting with a dash are converted to bulleted lists;
        rows starting with char "|" are considered to be table rows, etc.'''
+
     defaultReplacements = Replacements()
 
     def __init__(self, p='p', prefix='', replacements='default',
@@ -686,7 +691,7 @@ class Text(Multilingual, Field):
         # Currently, it is not possible to inline edit multilingual Texts
         langs = self.languages
         if (callable(langs) or (len(langs) > 1)) and self.inlineEdit:
-            raise Exception(INLINE_EDIT_MULTILINGUAL)
+            raise Exception(IN_ED_MLG)
 
     def getTextareaStyle(self):
         '''Get the content of textarea's "style" attribute'''
