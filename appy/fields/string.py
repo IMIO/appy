@@ -809,24 +809,58 @@ class String(Field):
                                        raiseOnError=False)
         return extractor.parse('<p>%s</p>' % value)
 
+    def repairUni(self, value):
+        '''Repair this unilingual, string p_value'''
+        # Return a tuple (s_repairedValue, b_repaired). If the value was not
+        # repaired (because there was no need for repair), it (p_value, False)
+        # is returned.
+        if not value: return value, False
+        # Is p_value parsable ?
+        if StringCleaner.isParsable(value): return value, False
+        # Remove illegal chars
+        new = StringCleaner.clean(value)
+        if not StringCleaner.isParsable(new):
+            # Still unparsable... try adding an ending p
+            anew = new.strip() + '</p>'
+            if not StringCleaner.isParsable(anew):
+                raise Exception(UNPARSABLE % new)
+            else:
+                new = anew
+        return new, True
+
     def repair(self, obj):
         '''Checks whether this XHTML p_value is SAX-parsable. If not, try to
            remove illegal chars. The method returns True if the field content
            has been repaired.'''
         value = self.getValue(obj)
         if not value: return
-        if not StringCleaner.isParsable(value):
-            # Remove illegal chars
-            new = StringCleaner.clean(value)
-            if not StringCleaner.isParsable(new):
-                # Still unparsable... try adding an ending p
-                anew = new.strip() + '</p>'
-                if not StringCleaner.isParsable(anew):
-                    raise Exception(UNPARSABLE % new)
-                else:
-                    new = anew
-            setattr(obj, self.name, new)
-            return True
+        if isinstance(value, dict):
+            # Manage a multilingual value
+            new = None
+            for lang, val in value.iteritems():
+                newVal, repaired = self.repairUni(val)
+                if repaired:
+                    if new is None:
+                        new = {lang: newVal}
+                    else:
+                        new[lang] = newVal
+            if new:
+                # At least one value as been repaired. Complete v_new with the
+                # possibly unchanged values.
+                for lang, val in value.iteritems():
+                    if lang not in new:
+                        new[lang] = val
+                setattr(obj, self.name, new)
+                r = True
+            else:
+                r = False
+        else:
+            # Manage a unilingual value
+            new, repaired = self.repairUni(value)
+            if repaired:
+                setattr(obj, self.name, new)
+            r = repaired
+        return r
 
     def getIndexValue(self, obj, forSearch=False):
         '''Pure text must be extracted from rich content; multilingual content
