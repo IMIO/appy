@@ -427,8 +427,8 @@ class Ref(Field):
       </form>
       <!-- Button for creating an object from a template when relevant -->
       <x if="createFromSearch"
-         var2="fromRef=True; className=tiedClass.name;
-               sourceField=prefixedName">:tool.pxAddFrom</x>
+         var2="fromRef=True; class_=tiedClass; className=class_.name;
+               sourceField=prefixedName">:class_.pxAddFrom</x>
      </x>''')
 
     # Button allowing to select from a popup objects to be linked via the Ref
