@@ -923,9 +923,10 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
       /* Ajax requests are disabled when initializing slaves via m_initSlaves
          below. Update slaves' values depending on master values. */
       let slaveId = slaves[i].id,
-          slaveName = slaveId.split('_')[1];
-      askField(slaveId, objectUrl, layoutType, getFormData(), false, className,
-               'POST');
+          slaveName = slaveId.split('_')[1],
+          params = getFormData();
+      params['className'] = className;
+      askField(slaveId, objectUrl, layoutType, params, false, className,'POST');
     }
   }
 }
