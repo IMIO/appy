@@ -15,6 +15,7 @@ T_LIST    = 'Available target(s) for app "%s", from reference site "%s":\n%s'
 NO_CONFIG = 'The "deploy" config was not found in config.deploy.'
 NO_TARGET = 'No target was found on config.deploy.targets.'
 TARGET_KO = 'Target "%s" not found. Available target(s): %s.'
+TARGET_NO = 'Please specify a target to run this command.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Target:
@@ -262,7 +263,11 @@ class Deployer:
         # Get the target
         target = self.target = self.getTarget(targets)
         if not target and self.command not in Deployer.noTargetCommands:
-            print(TARGET_KO % (self.targetName, ', '.join(targets)))
+            if self.targetName is None:
+                message = TARGET_NO
+            else:
+                message = TARGET_KO % (self.targetName, ', '.join(targets))
+            print(message)
             sys.exit(1)
         getattr(self, self.command)()
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

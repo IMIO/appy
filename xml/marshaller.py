@@ -215,7 +215,7 @@ class Marshaller:
                 if value.fsName:
                     # This is a DB-controlled file
                     location = '%s/%s/%s' % (self.databaseFolder, value.fsPath,
-                                             value.fsName)
+                                             Escape.xml(value.fsName))
                 else:
                     # A not-in-db file
                     location = value.fsPath

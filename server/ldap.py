@@ -164,19 +164,19 @@ class Config:
         '''Formats the user-related p_ldapData retrieved from the LDAP, as a
            dict of params usable for creating or updating the corresponding
            Appy user.'''
-        res = {}
+        r = {}
         # Retrieve base params
         for name, appyName in self.ldapAttributes.items():
             if not appyName: continue
             # Get the name of the attribute as known in the LDAP
             ldapName = getattr(self, name)
             if not ldapName: continue
-            self.setAppyValue(ldapName, ldapData, appyName, res)
+            self.setAppyValue(ldapName, ldapData, appyName, r)
         # Retrieve custom params
         for ldapName, appyName in self.customAttributes.items():
-            if ldapData.has_key(ldapName):
-                self.setAppyValue(ldapName, ldapData, appyName, res)
-        return res
+            if ldapName in ldapData:
+                self.setAppyValue(ldapName, ldapData, appyName, r)
+        return r
 
     def setLocalUser(self, tool, attrs, login, password=None, sso=None):
         '''Creates or updates the local User instance corresponding to a LDAP
