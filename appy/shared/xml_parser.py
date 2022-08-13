@@ -825,7 +825,8 @@ class XmlMarshaller:
                 if fieldValue.fsName:
                     # This is a DB-controlled file
                     location = '%s/%s/%s' % (self.databaseFolder,
-                                           fieldValue.fsPath, fieldValue.fsName)
+                                             fieldValue.fsPath,
+                                             Escape.xml(fieldValue.fsName))
                 else:
                     # A not-in-db file
                     location = fieldValue.fsPath
