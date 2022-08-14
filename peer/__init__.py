@@ -55,7 +55,7 @@ class Peer:
     # Constructor  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def __init__(self, url, login=None, password=None, id=None, name=None,
-                 myId=None, myName=None, folder=None, timeout=10):
+                 myId=None, myName=None, folder=None, timeout=20):
         # The URL of the distant site
         self.url = url
         # An optional ID for this distant site
@@ -134,14 +134,15 @@ class Peer:
             if info not in r: r.append(info)
         return r[0] if len(r) == 1 else ('%s (%s)' % (r[0], ', '.join(r[1:])))
 
-    def get(self, url=None, params=None, post=False, raiseIfString=True):
+    def get(self, url=None, params=None, post=False, raiseIfString=True,
+            timeout=None):
         '''Sends a HTTP GET request (or POST if p_post is True) to p_url
            (or p_self.url if not given) with p_params.'''
         try:
             if post:
-                r = self.server.post(path=url, data=params)
+                r = self.server.post(path=url, data=params, timeout=timeout)
             else:
-                r = self.server.get(path=url, params=params)
+                r = self.server.get(path=url, params=params, timeout=timeout)
         except Resource.Error as re:
             raise self.Error('%s: %s' % (url or self.url, str(re)))
         if r.code == 404:

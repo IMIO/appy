@@ -393,7 +393,7 @@ class Resource:
         return r
 
     def send(self, method, path, body=None, headers=None, bodyType=None,
-             responseType=None, unmarshallParams=None):
+             responseType=None, unmarshallParams=None, timeout=None):
         '''Sends a HTTP request with p_method, @ this p_path'''
         # p_path can be a complete URL (http://a.b.be/c) or the "path "part (/c)
         parts = self.getUrlParts(path, raiseOnError=False)
@@ -406,14 +406,15 @@ class Resource:
             protocol, host, port, path = parts
         # Initialise a HTTP or HTTPS connection
         hc = http.client
+        timeout = self.timeout if timeout is None else timeout
         if protocol == 'https':
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
-            conn = hc.HTTPSConnection(host, port, timeout=self.timeout,
+            conn = hc.HTTPSConnection(host, port, timeout=timeout,
                                       context=context)
         else:
-            conn = hc.HTTPConnection(host, port, timeout=self.timeout)
+            conn = hc.HTTPConnection(host, port, timeout=timeout)
         try:
             conn.connect()
         except socket.gaierror as sge:
@@ -452,7 +453,7 @@ class Resource:
                             unmarshallParams=unmarshallParams)
 
     def get(self, path=None, headers=None, params=None, followRedirect=True,
-            responseType=None, unmarshallParams=None):
+            responseType=None, unmarshallParams=None, timeout=None):
         '''Perform a HTTP GET on the server. Parameters can be given as a dict
            in p_params. p_responseType will be used if no "Content-Type" key is
            found on the HTTP response. In the processs of unmarshalling received
@@ -464,12 +465,12 @@ class Resource:
             sep = '&' if '?' in path else '?'
             path = '%s%s%s' % (path, sep, urllib.parse.urlencode(params))
         r = self.send('GET', path, headers=headers, responseType=responseType,
-                      unmarshallParams=unmarshallParams)
+                      unmarshallParams=unmarshallParams, timeout=timeout)
         # Follow redirect when relevant
         if r.code in r.redirectCodes and followRedirect:
             # Addition durations when "measure" is True
             duration = r.duration
-            r = self.get(r.data, headers=headers)
+            r = self.get(r.data, headers=headers, timeout=timeout)
             if self.measure: r.duration += duration
             return r
         # Perform Digest-based authentication when relevant
@@ -478,12 +479,13 @@ class Resource:
             headers = headers or {}
             headers['Authorization'] = r.data.buildCredentials(self, path)
             return self.get(path=path, headers=headers, params=params,
-                       followRedirect=followRedirect, responseType=responseType)
+                            followRedirect=followRedirect,
+                            responseType=responseType, timeout=timeout)
         return r
     rss = get
 
     def post(self, data=None, path=None, headers=None, encode='form',
-             followRedirect=True):
+             followRedirect=True, timeout=None):
         '''Perform a HTTP POST on the server. If p_encode is "form", p_data is
            considered to be a dict representing form data that will be
            form-encoded. Else, p_data will be considered as the ready-to-send
@@ -498,14 +500,14 @@ class Resource:
         else:
             body = data
         headers['Content-Length'] = str(len(body))
-        r = self.send('POST', path, headers=headers, body=body)
+        r = self.send('POST', path, headers=headers, body=body, timeout=timeout)
         if r.code in r.redirectCodes and followRedirect:
             # Update headers
             for key in ('Content-Type', 'Content-Length'):
                 if key in headers: del headers[key]
             # Addition durations when "measure" is True
             duration = r.duration
-            r = self.get(r.data, headers=headers)
+            r = self.get(r.data, headers=headers, timeout=timeout)
             if self.measure: r.duration += duration
         return r
 
