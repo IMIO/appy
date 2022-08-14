@@ -2,6 +2,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from persistent import Persistent
+
 from appy.ui.layout import Layouts
 from appy.model.fields import Field
 
@@ -44,4 +46,23 @@ class Custom(Field):
           masterValue, focus, historized, mapping, generateLabel, label, None,
           None, None, None, True, False, view, cell, buttons, edit, xml,
           translations)
+
+    def isEmptyValue(self, o, value):
+        '''An empty persistent value must not be considered as empty'''
+        # Indeed, an empty persistent list or dict is an existing data container
+        # being significant. Supposed you have initialised an empty persistent
+        # dict on your custom field o.myCustom:
+        #
+        #                 o.myCustom = PersistentMapping()
+        #
+        # If this empty persistent mapping was considered as an "empty" value,
+        # getting:
+        #
+        #                          o.myCustom
+        #
+        # would return None, and not the persistent mapping, because, when a
+        # value is considered being empty, a default value is searched. If no
+        # default value is found, None is returned.
+        if isinstance(value, Persistent): return
+        return super().isEmptyValue(o, value)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
