@@ -256,16 +256,17 @@ class Unmarshaller(Parser):
                 container.size += len(val)
             else:
                 # Current container is an object
-                if hasattr(container, name) and \
-                   getattr(container, name):
+                if name in container.__dict__:
                     # We have already encountered a sub-object with this name.
                     # Having several sub-objects with the same name, we will
                     # create a list.
                     val = getattr(container, name)
-                    if not isinstance(val, list):
-                        val = [val, value]
-                    else:
+                    if val is None:
+                        val = value
+                    elif isinstance(val, list):
                         val.append(value)
+                    else:
+                        val = [val, value]
                 else:
                     val = value
                 setattr(container, name, val)
