@@ -107,9 +107,9 @@ class Config:
         self.traversers = {}
         # The path to the site. Will be set by m_set below.
         self.sitePath = None
-        # ~~~
+        # ~
         # Options for the pool of threads
-        # ~~~
+        # ~
         # The initial number of threads to run
         self.threads = 5
         # The maximum number of requests a worker thread will process before
