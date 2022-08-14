@@ -9,7 +9,6 @@ from appy.ui.layout import Layout
 from appy.model.fields import Show
 from appy.database.lock import Lock
 from appy.ui.template import Template
-from appy.model.fields.pod import Pod
 from appy.ui.criteria import Criteria
 from appy.model.fields.ref import Ref
 from appy.ui.validate import Validator
@@ -673,7 +672,7 @@ class Base:
         if not field.freezable:
             raise Exception(F_FREEZ_KO % name)
         # Additional parameters are passed for Pod fields
-        if isinstance(field, Pod):
+        if field.type == 'Pod':
             return field.freeze(self, template, format, secure=secure,
                                 upload=value, freezeOdtOnError=freezeOdtOnError)
         else:
@@ -685,7 +684,7 @@ class Base:
         if not field.freezable:
             raise Exception(F_FREEZ_KO % name)
         # Additional parameters are passed for Pod fields
-        if isinstance(field, Pod):
+        if field.type == 'Pod':
             field.unfreeze(self, template, format, secure=secure)
         else:
             field.unfreeze(self)
