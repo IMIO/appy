@@ -159,6 +159,9 @@ class Pod(Field):
     # machinery for this.
     customGetValue = True
 
+    # Pod fields may be freezable
+    freezable = True
+
     class Layouts(Layouts):
         '''Pod-specific layouts'''
         # Right-aligned layouts, convenient for pod fields exporting search

@@ -29,6 +29,10 @@ class Computed(Field):
     # Values produced by a Computed fields may be summable
     summable = True
 
+    # By default, Computed values are considered to be freezable, excepted if
+    # explicitly declared as unfreezable, via instance attribute "unfreezable".
+    freezable = True
+
     view = cell = buttons = edit = Px('''<x if="field.plainText">:value</x><x
       if="not field.plainText">::value</x>''')
 

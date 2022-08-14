@@ -9,6 +9,7 @@ from appy.ui.layout import Layout
 from appy.model.fields import Show
 from appy.database.lock import Lock
 from appy.ui.template import Template
+from appy.model.fields.pod import Pod
 from appy.ui.criteria import Criteria
 from appy.model.fields.ref import Ref
 from appy.ui.validate import Validator
@@ -39,6 +40,7 @@ INDEX_TEMP  = "A temp object can't be (un)indexed."
 CATALOG_KO  = 'Catalog not found for %s instance.'
 NO_ID       = 'Call to getObject with no ID.'
 NO_STR      = 'Specify the name of the class as a string.'
+F_FREEZ_KO  = 'Field "%s" is not (un)freezable.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Base:
@@ -659,6 +661,34 @@ class Base:
             keyMethod = sortKey
         # Perform the sort
         objects.sort(key=keyMethod, reverse=reverse)
+
+    def freezeField(self, name, template=None, format='pdf', secure=False,
+                    freezeOdtOnError=True, value=None):
+        '''Freezes, on p_self, the content of a freezable field named p_name'''
+        # In the case of a Pod field, a given p_template may be given (indeed,
+        # several templates can exist in field.template); the "freeze format"
+        # may be passed in p_format ("pdf" by default). If p_value is not None,
+        # it is frozen as-is, instead of recomputing the field value.
+        field = self.getField(name)
+        if not field.freezable:
+            raise Exception(F_FREEZ_KO % name)
+        # Additional parameters are passed for Pod fields
+        if isinstance(field, Pod):
+            return field.freeze(self, template, format, secure=secure,
+                                upload=value, freezeOdtOnError=freezeOdtOnError)
+        else:
+            return field.freeze(self, value=value)
+
+    def unfreezeField(self, name, template=None, format='pdf', secure=False):
+        '''Unfreezes a frozen field'''
+        field = self.getField(name)
+        if not field.freezable:
+            raise Exception(F_FREEZ_KO % name)
+        # Additional parameters are passed for Pod fields
+        if isinstance(field, Pod):
+            field.unfreeze(self, template, format, secure=secure)
+        else:
+            field.unfreeze(self)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                              Containment

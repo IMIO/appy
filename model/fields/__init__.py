@@ -225,6 +225,11 @@ class Field:
     # to compute totals via appy/model/totals::Totals instances.
     summable = False
 
+    # Most fields are not "freezable". Being freezable means: a field value,
+    # normally produced via some computation, can store the "hard-coded"
+    # (frozen) result of this computation.
+    freezable = False
+
     # Render a field. Optional vars:
     # * fieldName   can be given as different as field.name for fields included
     #               in outer fields: in this case, fieldName includes the row
