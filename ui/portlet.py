@@ -71,12 +71,16 @@ class Portlet:
       </div>
       <!-- Zone payload -->
       <div>
-       <!-- Link to the user profile -->
-       <x if="cfg.tget('showUserLink', tool)"
-          var2="showUserIcon=False">:user.pxLink</x>
-       <!-- User full title -->
-       <div if="cfg.userTitle" class="utitle">
-        <img src=":svg('user')" class="icon"/><x>:user.getTitle()</x></div>
+       <x if="not isAnon">
+        <!-- Link to the user profile -->
+        <x if="cfg.tget('showUserLink', tool)"
+           var2="showUserIcon=False">:user.pxLink</x>
+        <!-- User full title -->
+        <div if="cfg.userTitle" class="utitle">
+         <img src=":svg('user')" class="icon"/><x>:user.getTitle()</x></div>
+       </x>
+       <!-- Connect link if discreet login -->
+       <x if="Template.showConnect(_ctx_)">:Template.pxLogin</x>
        <!-- Language selector -->
        <x if="ui.Language.showSelector(cfg,layout)">:ui.Language.pxSelector</x>
       </div>
@@ -102,7 +106,7 @@ class Portlet:
      </div>
 
      <!-- The user zone -->
-     <x if="not isAnon">:ui.Portlet.pxUser</x>
+     <x>:ui.Portlet.pxUser</x>
 
      <!-- Pages and custom zone -->
      <div class="pzone">
@@ -116,8 +120,6 @@ class Portlet:
        <!-- Header messages -->
        <div var="text=cfg.getHeaderText(tool)" class="test"
             if="not popup and text">::text</div>
-       <!-- Connect link if discreet login -->
-       <x if="Template.showConnect(_ctx_)">:Template.pxLogin</x>
 
        <!-- Root pages -->
        <x if="cfg.tget('showRootPages', tool)"

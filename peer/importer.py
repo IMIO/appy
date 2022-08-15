@@ -401,7 +401,7 @@ class Importer:
                 self.log(D_N_FOUND % self.distantUrl)
                 return
         # If the local object was previously created, we follow the standard
-        # process, consisting it syncing its fields with its distant
+        # process, consisting in syncing its fields with its distant
         # counterpart.
         if self.local:
             # Set history and local roles when required
