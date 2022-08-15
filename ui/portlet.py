@@ -79,10 +79,10 @@ class Portlet:
         <div if="cfg.userTitle" class="utitle">
          <img src=":svg('user')" class="icon"/><x>:user.getTitle()</x></div>
        </x>
-       <!-- Connect link if discreet login -->
-       <x if="Template.showConnect(_ctx_)">:Template.pxLogin</x>
        <!-- Language selector -->
        <x if="ui.Language.showSelector(cfg,layout)">:ui.Language.pxSelector</x>
+       <!-- Connect link if discreet login -->
+       <x if="Template.showConnect(_ctx_)">:Template.pxLogin</x>
       </div>
      </div>''')
 
