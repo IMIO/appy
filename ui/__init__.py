@@ -380,6 +380,9 @@ class Config:
         self.gcFSize = '100%' # *F*ont size
         self.gcFStyle = 'normal' # *F*ont style, can be "italic"
 
+        # The sidebar (sb)
+        self.sbPadding = '28px 8px 30px 0px'
+
         # Advanced search link
         self.asMargin = '3px 0 10px 30px' # For link "*a*dvanced *s*earch"
         self.asFSize = '90%'
@@ -900,6 +903,8 @@ class Collapsible:
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Sidebar:
+    '''The Appy sidebar'''
+
     @classmethod
     def show(class_, tool, o, layout, popup):
         '''The sidebar must be shown when p_o declares to use the sidebar. If
@@ -912,7 +917,7 @@ class Sidebar:
         if sidebar.show in (True, layout):
             # Complete user info
             sidebar.width = sidebar.width or '320px'
-            sidebar.minWidth = sidebar.minWidth or '220px'
+            sidebar.minWidth = sidebar.minWidth or '320px'
             return sidebar
 
     @classmethod
@@ -930,8 +935,8 @@ class Sidebar:
       <x var="layout='view'">:o.pxFields</x>
      </div>''',
 
-     css='''.sidebar { padding: 28px 8px 30px 0px; position: sticky; top: 0;
-                       overflow-y:auto; overflow-x: auto }''')
+     css='''.sidebar { padding:|sbPadding|; position:sticky; top:0;
+                       overflow-y:auto; overflow-x:auto }''')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Breadcrumb:

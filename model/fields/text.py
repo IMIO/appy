@@ -358,8 +358,8 @@ class Icon:
     '''An icon from the toolbar when the Text field is used in "structured"
        mode.'''
 
-    def __init__(self, name, type,
-                 label=None, icon=None, data=None, shortcut=None):
+    def __init__(self, name, type, label=None, icon=None, data=None,
+                 shortcut=None):
         # A short, unique name for the icon
         self.name = name
         # The following type of icons exist. Depending on the type, p_data
