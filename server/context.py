@@ -90,7 +90,7 @@ class AuthenticationContext:
         self.noContextPosition = noContextPosition
         # Note that chooseOnLogin=False & switchContext=False (see below) is
         # useless.
-        # ~~~
+        # ~
         # By default, after switching the context, the user stays on the same
         # page. If you want him to be redirected to its home page, set the
         # following attribute to True.
@@ -151,10 +151,14 @@ class AuthenticationContext:
         '''Set, on the the p_guard, authentication-p_ctx-related attributes'''
         # The authentication context in itself (a short identifier)
         guard.authContext = ctx
-        # Its human-readable name
-        guard.authContextName = self.getName(tool, user, ctx)
-        # The corresponding object, if any
-        guard.authObject = self.getObject(tool, user, ctx)
+        # p_ctx may be the empty string
+        if ctx:
+            # The context's human-readable name and corresponding object
+            guard.authContextName = self.getName(tool, user, ctx)
+            guard.authObject = self.getObject(tool, user, ctx)
+        else:
+            guard.authContextName = tool.translate('everything')
+            guard.authObject = None
 
     def isMandatory(self, tool, authenticate=False):
         '''When authentication contexts are activated, is the user forced to

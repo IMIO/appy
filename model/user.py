@@ -604,7 +604,7 @@ class User(Base):
             user = config.sso.getUser(tool, login, createIfNotFound=True)
             # If authentication contexts are in use, retrieve the potentially
             # defined default context when relevant.
-            if not ctx and authContext:
+            if ctx is None and authContext:
                 ctx = authContext.getDefaultContext(tool, user)
                 # Update the cookie with this default context
                 if ctx: Cookie.update(handler, ctx)
@@ -631,8 +631,12 @@ class User(Base):
                 user = handler.dbConnection.root.objects.get('anon')
             else:
                 # The user is authenticated. Create an authentication cookie for
-                # him. Set a default context when appropriate.
-                if authContext and not ctx:
+                # him. Set a default context when appropriate (v_ctx being None
+                # involves searching for a default context, while p_ctx being
+                # the empty string means that selecting no context at all was a
+                # positive action performed by the user: no default context must
+                # be searched in that case).
+                if authContext and ctx is None:
                     ctx = authContext.getDefaultContext(tool, user)
                 guard.Cookie.write(handler, user.login, password, ctx)
         # Set, on the guard, when present, attributes related to the
