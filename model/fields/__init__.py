@@ -1589,7 +1589,9 @@ class Field:
             r.append('width:%s;overflow-x:auto' % width)
         height = getattr(self, '%sheight' % prefix)
         if isinstance(height, str):
-            r.append('height:%s;overflow-y:auto' % height)
+            # Use "max-height" and not "height", because, if the widget content
+            # is reduced, forcing the height will be ugly.
+            r.append('max-height:%s;overflow-y:auto' % height)
         return ';'.join(r)
 
     def getWidthInChars(self, isSearch):
