@@ -5,6 +5,9 @@
 import io
 from DateTime import DateTime # Just to have it in the interpreter context
 from contextlib import redirect_stdout
+from persistent.list import PersistentList
+from persistent.mapping import PersistentMapping
+# Some of these imports are just there to put names in the interpreter context
 
 from appy.px import Px
 from appy.utils import Traceback
