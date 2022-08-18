@@ -36,8 +36,12 @@ class Deploy(Program):
                    '(automatically set if called from <site>/bin/deploy).'
     HELP_COMMAND = 'The command to perform. Available commands are: %s' % \
                    helpCommands(COMMANDS)
-    HELP_TARGET  = 'The target to deploy to. By default, target "default" ' \
-                   'will be chosen.'
+    HELP_TARGET  = 'The target(s) to deploy to. If not specified, the ' \
+                   'default will be chosen. [update command only] You can ' \
+                   'specify several targets to deploy at once, using a ' \
+                   'comma-separated list of targets containing no space, ie, ' \
+                   '"dev,acc,prod". You can also specify term "ALL" to ' \
+                   'deploy all available targets at once.'
 
     # Error messages
     FOLDER_KO    = '%s does not exist or is not a folder.'

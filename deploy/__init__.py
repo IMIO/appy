@@ -10,12 +10,18 @@ from pathlib import Path
 from appy.deploy.repository import Repository
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+TG_UPDATE = '\n>-> Updating target "%s"...\n\n>-> Type Ctrl-C to go to the ' \
+            'next target or retrieve terminal prompt. <-<\n'
 T_EXEC    = 'Executing :: %s'
 T_LIST    = 'Available target(s) for app "%s", from reference site "%s":\n%s'
 NO_CONFIG = 'The "deploy" config was not found in config.deploy.'
 NO_TARGET = 'No target was found on config.deploy.targets.'
-TARGET_KO = 'Target "%s" not found. Available target(s): %s.'
+TARGET_KO = 'Target "%s" not found.'
 TARGET_NO = 'Please specify a target to run this command.'
+TARGET_VL = 'No valid target was mentioned. Available target(s): %s.'
+ALL_RESV  = '\n⚠️  Name "ALL" is reserved to update all targets at once. ' \
+            'Please rename the target having this name.\n'
+SINGLE_TG = 'Command "%s" cannot be run on more than one target.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Target:
@@ -33,7 +39,7 @@ class Target:
         # The private key used to connect to the host in SSH
         self.sshKey = sshKey
         # Information about the Appy site on the target
-        # ~~~
+        # ~
         # The path to the site. Typically: /home/appy/<siteName>
         self.sitePath = sitePath
         # The port on which this site will listen
@@ -100,10 +106,14 @@ class Deployer:
         self.appPath = appPath
         # The path to the reference, local site, containing targets definition
         self.sitePath = sitePath
-        # The chosen target (name). If p_targetName is None, the default target
-        # (if there is one) will be selected.
+        # The chosen target(s), as a string (program input). If p_targetName is
+        # None and p_command requires a target, the default target(s) will be
+        # selected.
         self.targetName = targetName
-        self.target = None # Will hold a Target instance
+        # Will hold the list of Target instances corresponding to p_targetName
+        self.targets = None
+        # Will hold the first (or unique) Target from p_self.target
+        self.target = None
         # The command to execute
         self.command = command
         # The app config
@@ -130,10 +140,19 @@ class Deployer:
         infos = []
         default = None
         i = 1
+        # Make a first round to get the longest target name
+        longest = 0
+        for name, target in self.config.deploy.targets.items():
+            longest = max(len(name), longest)
+        # Walk targets
         for name, target in self.config.deploy.targets.items():
             suffix = ' [default]' if target.default else ''
-            info = '%s. %s - %s%s' % (str(i).zfill(2), name, target, suffix)
+            info = '%s. %s - %s%s' % (str(i).zfill(2), name.ljust(longest),
+                                      target, suffix)
             infos.append(info)
+            if name == 'ALL':
+                # This word is reserved
+                print(ALL_RESV)
             i += 1
         infos = '\n'.join(infos)
         print(T_LIST % (self.appPath.name, self.sitePath.name, infos))
@@ -190,38 +209,59 @@ class Deployer:
             t.execute(';'.join(configCommands))
 
     def update(self):
-        '''Performs an update of all software known to the site and coming from
-           external sources (app and dependencies) and (re)starts the site.'''
-        target = self.target
-        # (1) Build the set of commands to update the app, ext and dependencies
-        commands = []
-        siteOwner = target.siteOwner
-        lib = Path(target.sitePath) / 'lib'
-        for name in ('App', 'Ext'):
-            repo = getattr(target, 'site%s' % name)
-            if repo:
+        '''Performs, on these p_self.targets, an update of all software known to
+           the site and coming from external sources (app and dependencies), and
+           (re)starts the site.'''
+        targets = self.targets
+        # After updating a given target, the last lines of its log file will be
+        # shown via a command like:
+        #
+        #                       tail -f -n 100 app.log
+        #
+        # Then, when you are tired looking at this log file, type <Ctrl>-C to
+        # update the next target or retrieve terminal prompt.
+        #
+        # If there are several targets, the number of shown lines will be
+        # reduced:
+        #
+        #                        tail -n 30 app.log
+        #
+        tailNb = 100 if len(self.targets) == 1 else 30
+        # Browse targets
+        for name, target in self.targets.items():
+            print(TG_UPDATE % name)
+            # (1) Build the set of commands to update the app, ext and
+            #     dependencies.
+            commands = []
+            siteOwner = target.siteOwner
+            lib = Path(target.sitePath) / 'lib'
+            for name in ('App', 'Ext'):
+                repo = getattr(target, 'site%s' % name)
+                if repo:
+                    command, folder = repo.getUpdateCommand(lib)
+                    commands.append(command)
+                    commands.append('chown -R %s %s' % (siteOwner, folder))
+            # Update dependencies
+            for repo in target.siteDependencies:
                 command, folder = repo.getUpdateCommand(lib)
                 commands.append(command)
                 commands.append('chown -R %s %s' % (siteOwner, folder))
-        # Update dependencies
-        for repo in target.siteDependencies:
-            command, folder = repo.getUpdateCommand(lib)
-            commands.append(command)
-            commands.append('chown -R %s %s' % (siteOwner, folder))
-        # Run those commands as the main SSH user: else, agent forwarding will
-        # not be allowed and will prevent to update repositories using public
-        # key authentication.
-        command = '%s %s' % (Repository.getEnvironment(), ';'.join(commands))
-        target.execute(command)
-        # (2) Build the command to restart the distant site
-        commands = []
-        restart = '%s/bin/site restart' % target.sitePath
-        commands.append(restart)
-        commands.append(self.tail % (100, target.sitePath))
-        # These commands will be ran with target.siteOwner
-        owner = siteOwner.split(':')[0]
-        command = "su %s -c '%s'" % (owner, ';'.join(commands))
-        target.execute(command)
+            # Run those commands as the main SSH user: else, agent forwarding
+            # will not be allowed and will prevent to update repositories using
+            # public key authentication.
+            command = '%s %s' % (Repository.getEnvironment(),
+                                 ';'.join(commands))
+            target.execute(command)
+            # (2) Build the command to restart the distant site and display its
+            #     log file.
+            commands = []
+            restart = '%s/bin/site restart' % target.sitePath
+            commands.append(restart)
+            commands.append(self.tail % (tailNb, target.sitePath))
+            # These commands will be ran with target.siteOwner
+            owner = siteOwner.split(':')[0]
+            command = "su %s -c '%s'" % (owner, ';'.join(commands))
+            target.execute(command)
 
     def view(self):
         '''Launch a command "tail -f" on the target's app.log file'''
@@ -232,18 +272,27 @@ class Deployer:
     #                             Main method
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    def getTarget(self, targets):
-        '''Return the target onto which the command must be applied'''
-        name = self.targetName
-        r = None
-        if name:
-            r = targets.get(name)
+    def getTargets(self, targets):
+        '''Return the targets onto which the command must be applied, among all
+           p_targets as defined in the config.'''
+        names = self.targetName
+        notFound = []
+        if not names:
+            # Collect the default target(s)
+            r = {n:t for n,t in targets.items() if t.default}
         else:
-            for target in targets.values():
-                if target.default:
-                    r = target
-                    break
-        return r
+            r = {} # Collect the chosen targets ~{s_name:Target}~
+            for name in names.split(','):
+                if name == 'ALL':
+                    # Add all targets
+                    for n, t in targets.items():
+                        r[n] = t
+                elif name in targets:
+                    r[name] = targets[name]
+                else:
+                    notFound.append(name)
+                    print(TARGET_KO % name)
+        return r, notFound
 
     def run(self):
         '''Performs p_self.command on the specified p_self.targetName'''
@@ -260,14 +309,28 @@ class Deployer:
         if not targets:
             print(NO_TARGET)
             sys.exit(1)
-        # Get the target
-        target = self.target = self.getTarget(targets)
-        if not target and self.command not in Deployer.noTargetCommands:
-            if self.targetName is None:
-                message = TARGET_NO
-            else:
-                message = TARGET_KO % (self.targetName, ', '.join(targets))
-            print(message)
-            sys.exit(1)
+        # Get the specified target(s) when relevant
+        if self.command not in Deployer.noTargetCommands:
+            self.targets, notFound = self.getTargets(targets)
+            if not self.targets:
+                if self.targetName is None:
+                    message = TARGET_NO
+                else:
+                    message = TARGET_VL % ', '.join(self.targets)
+                print(message)
+                sys.exit(1)
+            # Abord the whole operation if at least one wrong target was found
+            if notFound:
+                sys.exit(1)
+            # The only command accepting more than one target is "update"
+            if self.command != 'update':
+                # Unwrap the first and unique target in p_self.target
+                for target in self.targets.values():
+                    self.target = target
+                    break
+                # Abort if there is more than one target
+                if len(self.targets) > 1:
+                    print(SINGLE_TG % self.command)
+                    sys.exit(1)
         getattr(self, self.command)()
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
