@@ -10,8 +10,9 @@ from pathlib import Path
 from appy.deploy.repository import Repository
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TG_UPDATE = '\n>-> Updating target "%s"...\n\n>-> Type Ctrl-C to go to the ' \
-            'next target or retrieve terminal prompt. <-<\n'
+TG_UPDATE = '\n☉  Updating target "%s" (%d/%d)... ☉\n\n⚠  Once the ' \
+            'site\'s log is shown, type Ctrl-C to go to the next target or ' \
+            'retrieve terminal prompt. ⚠\n'
 T_EXEC    = 'Executing :: %s'
 T_LIST    = 'Available target(s) for app "%s", from reference site "%s":\n%s'
 NO_CONFIG = 'The "deploy" config was not found in config.deploy.'
@@ -19,7 +20,7 @@ NO_TARGET = 'No target was found on config.deploy.targets.'
 TARGET_KO = 'Target "%s" not found.'
 TARGET_NO = 'Please specify a target to run this command.'
 TARGET_VL = 'No valid target was mentioned. Available target(s): %s.'
-ALL_RESV  = '\n⚠️  Name "ALL" is reserved to update all targets at once. ' \
+ALL_RESV  = '\n⚠ Name "ALL" is reserved to update all targets at once. ' \
             'Please rename the target having this name.\n'
 SINGLE_TG = 'Command "%s" cannot be run on more than one target.'
 
@@ -226,10 +227,13 @@ class Deployer:
         #
         #                        tail -n 30 app.log
         #
-        tailNb = 100 if len(self.targets) == 1 else 30
+        total = len(self.targets)
+        tailNb = 100 if total == 1 else 30
+        i = 0
         # Browse targets
         for name, target in self.targets.items():
-            print(TG_UPDATE % name)
+            i += 1
+            print(TG_UPDATE % (name, i, total))
             # (1) Build the set of commands to update the app, ext and
             #     dependencies.
             commands = []
