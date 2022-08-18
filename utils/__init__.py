@@ -239,7 +239,12 @@ def executeCommand(cmd, stdin=None, env=None, shell=False):
        (see subprocess.Popen doc).'''
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=stdin,
                             stderr=subprocess.PIPE, env=env, shell=shell)
-    return proc.communicate()
+    out, err = proc.communicate()
+    if isinstance(out, bytes):
+        out = out.decode()
+    if isinstance(err, bytes):
+        err = err.decode()
+    return out, err
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ImageMagick:
