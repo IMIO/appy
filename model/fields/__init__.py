@@ -1442,8 +1442,7 @@ class Field:
             # An inner field. No historization (yet) for it.
             part = ''
             # Retrieve the outer, inner fields and row number
-            name, px = req.px.rsplit(':', 1)
-            outer, inner, i = name.split('*')
+            outer, inner, i = o.traversal.parts[-2].split('*')
             i = int(i)
             outer = o.getField(outer)
             # Update the value. Clone the row to ensure the ZODB will detect the

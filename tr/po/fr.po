@@ -1777,9 +1777,9 @@ msgstr "Contenu du fichier config.py de ce site"
 msgid "Tool_synchronizeExternalUsers"
 msgstr "Synchro LDAP"
 
-#. Default: "This will read the the whole LDAP users database as visible by this app and create or update every user's local copy. Are you sure?"
+#. Default: "This will read the the whole LDAP users database as visible by this app and create or update every user's local copy.\n\nAre you sure?"
 msgid "Tool_synchronizeExternalUsers_confirm"
-msgstr "Ceci va lire l'entièreté de la base d'utilisateurs LDAP telle que visible par ce site et créer ou mettre à jour la copie locale de chaque utilisateur. Êtes-vous sûr?"
+msgstr "Ceci va lire l'entièreté de la base d'utilisateurs LDAP telle que visible par ce site et créer ou mettre à jour la copie locale de chaque utilisateur.\n\nÊtes-vous sûr?"
 
 #. Default: "Groups"
 msgid "Tool_page_groups"

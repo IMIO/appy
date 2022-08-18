@@ -433,7 +433,7 @@ class Icon:
     def get(self, o):
         '''Returns the HTML chunk representing this icon'''
         shortcut = str(self.shortcut) if self.shortcut else ''
-        r = '<img class="icon" src="%s" title="%s" name="%s"' \
+        r = '<img class="iconTB" src="%s" title="%s" name="%s"' \
             ' onmouseover="switchIconBack(this, true)"' \
             ' onmouseout="switchIconBack(this, false)"' \
             ' data-type="%s" data-data="%s" data-shortcut="%s" ' \
@@ -509,8 +509,8 @@ class Text(Multilingual, Field):
       .toolbar { height: 24px; margin: 2px 0 }
       .sentenceContainer { position: relative; display: inline }
       .sentence { padding: 3px 0 }
-      .icon { padding: 3px; border-width: 1px; border: 1px transparent solid }
-      .iconSelected { background-color: #dbdbdb; border-color: #909090 }
+      .iconTB { padding: 3px; border-width: 1px; border: 1px transparent solid }
+      .iconTBSel { background-color: #dbdbdb; border-color: #909090 }
      ''',
 
      js='''
@@ -535,7 +535,7 @@ class Text(Multilingual, Field):
         target['icons'] = getIconsMapping(toolbar);
       }
       switchIconBack = function(icon, selected) {
-        icon.className = (selected)? 'icon iconSelected': 'icon';
+        icon.className = (selected)? 'iconTB iconTBSel': 'iconTB';
       }
       lengthenArea = function(area, percentage) {
         // Lengthen some text p_area by some p_percentage

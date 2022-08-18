@@ -1776,7 +1776,7 @@ msgstr ""
 msgid "Tool_synchronizeExternalUsers"
 msgstr ""
 
-#. Default: "This will read the the whole LDAP users database as visible by this app and create or update every user's local copy. Are you sure?"
+#. Default: "This will read the the whole LDAP users database as visible by this app and create or update every user's local copy.\n\nAre you sure?"
 msgid "Tool_synchronizeExternalUsers_confirm"
 msgstr ""
 
