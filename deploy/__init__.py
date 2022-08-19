@@ -7,10 +7,11 @@
 import os, sys
 from pathlib import Path
 
+from appy.utils import termColorize
 from appy.deploy.repository import Repository
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TG_UPDATE = '\n☉  Updating target "%s" (%d/%d)... ☉\n\n⚠  Once the ' \
+TG_UPDATE = '\n☉  Updating target %s (%d/%d)... ☉\n\n⚠  Once the ' \
             'site\'s log is shown, type Ctrl-C to go to the next target or ' \
             'retrieve terminal prompt. ⚠\n'
 T_EXEC    = 'Executing :: %s'
@@ -233,7 +234,7 @@ class Deployer:
         # Browse targets
         for name, target in self.targets.items():
             i += 1
-            print(TG_UPDATE % (name, i, total))
+            print(TG_UPDATE % (termColorize(name), i, total))
             # (1) Build the set of commands to update the app, ext and
             #     dependencies.
             commands = []

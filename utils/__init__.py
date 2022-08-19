@@ -365,6 +365,12 @@ def iconParts(icon):
     return icon, base, icon.endswith('.svg')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def termColorize(s, color='2'):
+    '''Returns the colorized version of p_s, formatted to be rendered in a Unix
+       terminal.'''
+    return '\x1b[3%sm%s\x1b[0m' % (color, s)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 METH_KO = 'Method named "%s" does not exist on this %s instance.'
 
 class Function:

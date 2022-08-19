@@ -461,14 +461,14 @@ class Class(Meta):
         r = getattr(self.python, 'createVia', 'form')
         return r if not callable(r) else r(tool)
 
-    def getCreateLink(self, tool, create, formName,
-                      sourceField=None, insert=None):
+    def getCreateLink(self, tool, createVia, formName, sourceField=None,
+                      insert=None):
         '''When instances of p_self must be created from a template (from the
            UI), this method returns the link allowing to search such templates
            from a popup.'''
         r = '%s/Search/results?className=%s&search=fromSearch&popup=True&' \
             'fromClass=%s&formName=%s' % \
-            (tool.url, create.container.name, self.name, formName)
+            (tool.url, createVia.container.name, self.name, formName)
         # When object creation occurs via a Ref field, its coordinates are given
         # in p_sourceField as a string: "sourceObjectId:fieldName".
         if sourceField: r += '&sourceField=%s' % sourceField
@@ -727,12 +727,20 @@ class Class(Meta):
 
     # Icon for creating instances of this class from a template
     pxAddFrom = Px('''
+     <!-- The image outside the button, if "iconOut" -->
+     <img if="iconOut" src=":field.getIconUrl(url)"
+          class=":'clickable %s' % field.iconCss"
+          onclick="this.nextSibling.click()"/>
+
+     <!-- The button in itself -->
      <a target="appyIFrame" id=":addFormName + '_from'"
-        href=":class_.getCreateLink(tool, create, addFormName, sourceField)">
+        href=":class_.getCreateLink(tool, createVia, addFormName, sourceField)">
       <input var="css='Small' if fromRef else 'Portlet';
+                  cssOut='noIcon ' if iconOut else '';
                   label=_('object_add_from')"
-         type="button" value=":label" class=":'button%s button' % css"
-         onclick="openPopup('iframePopup')" style=":svg('add', bg=True)"/>
+         type="button" value=":label" onclick="openPopup('iframePopup')"
+         class=":'%sbutton%s button' % (cssOut, css)"
+         style=":'' if field.iconOut else svg('add', bg=True)"/>
      </a>''')
 
     # Style characteristics to apply to the "add" button, depending on its type
@@ -748,8 +756,8 @@ class Class(Meta):
 
     # Form for creating instances of this class from the portlet or a search
     pxAdd = Px('''
-     <form var="create=class_.getCreateVia(tool); className=class_.name"
-           if="create" class="addForm" name=":'%s_add' % className"
+     <form var="createVia=class_.getCreateVia(tool); className=class_.name"
+           if="createVia" class="addForm" name=":'%s_add' % className"
            var2="styles=class_.addStyles[buttonType];
                  target=ui.LinkTarget(class_.python, popup=viaPopup);
                  text=_(label or 'object_add')"
@@ -767,8 +775,8 @@ class Class(Meta):
         onclick=":target.getOnClick('searchResults')"/>
 
       <!-- Create from a pre-filled form when relevant -->
-      <div if="create != 'form'" class="addFrom"
-         var2="fromRef=False; sourceField=None;
+      <div if="createVia != 'form'" class="addFrom"
+         var2="fromRef=False; sourceField=None; iconOut=False;
                addFormName='%s_add' % className">:class_.pxAddFrom</div>
      </form>''',
 

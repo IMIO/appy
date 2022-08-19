@@ -322,7 +322,7 @@ class Ref(Field):
          var2="workflow=o.getWorkflow()">:workflow.pxTransitions</x>
 
       <!-- Edit -->
-      <div if="editable and create != 'noForm'" class="ibutton"
+      <div if="editable and createVia != 'noForm'" class="ibutton"
            var2="text=_('object_edit')">
        <a if="not locked"
           var2="navInfo=ifield.getNavInfo(io, batch.start + currentNumber,
@@ -379,7 +379,7 @@ class Ref(Field):
             title=":_('object_add_above')"
             onclick=":'onAdd(%s,%s,%s)'% (q('before'), q(addFormName), q(id))"/>
        <a if="createFromSearch" target="appyIFrame"
-          href=":tiedClass.getCreateLink(tool, create, addFormName,
+          href=":tiedClass.getCreateLink(tool, createVia, addFormName,
                   sourceField=prefixedName, insert='before.%s' % id)">
         <img src=":url('addAboveFrom')" class="clickable"
              title=":_('object_add_above_from')"
@@ -415,7 +415,7 @@ class Ref(Field):
         <img if="field.iconOut" src=":field.getIconUrl(url)"
              class=":'clickable %s' % field.iconCss"
              onclick="this.nextSibling.click()"/>
-        <input type=":field.getAddButtonType(create)"
+        <input type=":field.getAddButtonType(createVia)"
                var="addLabel=_(field.addLabel);
                     label=inMenu and tiedClassLabel or addLabel;
                     css=ui.Button.getCss(label, iconOut=field.iconOut)"
@@ -428,6 +428,7 @@ class Ref(Field):
       <!-- Button for creating an object from a template when relevant -->
       <x if="createFromSearch"
          var2="fromRef=True; class_=tiedClass; className=class_.name;
+               iconOut=field.iconOut;
                sourceField=prefixedName">:class_.pxAddFrom</x>
      </x>''')
 
@@ -853,7 +854,7 @@ class Ref(Field):
 
     def __init__(self, class_=None, attribute=None, validator=None,
       composite=False, multiplicity=(0,1), default=None, defaultOnEdit=None,
-      add=False, addConfirm=False, delete=None, create='form', viaPopup=None,
+      add=False, addConfirm=False, delete=None, createVia='form', viaPopup=None,
       creators=None, link=True, unlink=None, linkMethod=None,
       unlinkElement=None, unlinkConfirm=True, insert=None, beforeLink=None,
       afterLink=None, afterUnlink=None, back=None, backSecurity=True, show=True,
@@ -911,8 +912,8 @@ class Ref(Field):
             self.delete = bool(self.add)
 
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # If "create"   | when clicking the "add" button / icon to create an
-        # is....        | object through this ref...
+        # If "createVia"| When clicking the "add" button / icon to create an
+        # is ...        | object through this ref ...
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #    "form"     | (the default) an empty form will be shown to the user
         #               | (p_self.klass' "edit" layout);
@@ -929,10 +930,10 @@ class Ref(Field):
         #               | Note that when specifying a Search instance, value of
         #               | attribute "addConfirm" will be ignored.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # "create" may also hold a method returning one of the above-mentioned
-        # values.
+        # "createVia" may also hold a method returning one of the above-
+        # mentioned values.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        self.create = create
+        self.createVia = createVia
 
         # When a page related to a tied object must be shown, for creating,
         # editing or simply viewing it, its target (=where it is rendered, in
@@ -1448,8 +1449,8 @@ class Ref(Field):
         r.scope = (c.scope or 'all') if r.layout == 'view' else 'objs'
         r.scopeAll = r.scope == 'all'
         r.inPickList = r.scope == 'poss'
-        r.create = self.getAttribute(o, 'create')
-        r.createFromSearch = not isinstance(r.create, str)
+        r.createVia = self.getAttribute(o, 'createVia')
+        r.createFromSearch = not isinstance(r.createVia, str)
         r.ajaxSuffix = 'poss' if r.inPickList else 'objs'
         r.hook = '%s_%s_%s' % (r.iid, r.name, r.ajaxSuffix)
         r.inMenu = False
@@ -1902,9 +1903,9 @@ class Ref(Field):
             css = 'rbutton' if self.multiplicity[1] == 1 else 'lbutton'
         return '%s %s' % (css, r)
 
-    def getAddButtonType(self, create):
+    def getAddButtonType(self, createVia):
         '''Returns the type of the input tag representing the "add" button'''
-        if self.addConfirm or create == 'noForm':
+        if self.addConfirm or createVia == 'noForm':
             r = 'button'
         else:
             r = 'submit'
@@ -2241,7 +2242,7 @@ class Ref(Field):
     def getOnAdd(self, c):
         '''Computes the JS code to execute when button "add" is clicked'''
         q = c.q
-        if c.create == 'noForm':
+        if c.createVia == 'noForm':
             # Ajax-refresh the Ref with a special param to link a newly created
             # object.
             r = "askAjax('%s', null, {'start':'%d', " \
