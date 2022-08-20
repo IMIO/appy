@@ -740,7 +740,7 @@ class Class(Meta):
                   label=_('object_add_from')"
          type="button" value=":label" onclick="openPopup('iframePopup')"
          class=":'%sbutton%s button' % (cssOut, css)"
-         style=":'' if field.iconOut else svg('add', bg=True)"/>
+         style=":'' if iconOut else svg('add', bg=True)"/>
      </a>''')
 
     # Style characteristics to apply to the "add" button, depending on its type
