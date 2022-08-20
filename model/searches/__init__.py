@@ -533,7 +533,6 @@ class Search:
             sourceField = req.sourceField
             if sourceField:
                 # We are creating an object from a Ref field
-                breakpoint()
                 id, fieldName = sourceField.split(':')
                 o = tool.getObject(id)
                 r = o.getField(fieldName).getAttribute(o, 'createVia')

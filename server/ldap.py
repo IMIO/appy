@@ -23,7 +23,7 @@ LDAP_ACT      = '%d user(s) %sactivated: %s.'
 LDAP_NO_DEACT = 'No user was deactivated.'
 LDAP_QRY_ERR  = 'LDAP query error %s: %s'
 PRIV_SET      = '%s: automatic privileges set.'
-SYNC_SUMMARY  = 'users sync from %s: %d local user(s) created, %d updated, ' \
+SYNC_SUMMARY  = 'Users sync from %s: %d local user(s) created, %d updated, ' \
                 '%d untouched and %d invalid entries. %s local user(s) ' \
                 'deactivated and %d reactivated.'
 
@@ -373,7 +373,7 @@ class Config:
         # Log the operation and return a message
         message = SYNC_SUMMARY % (serverUri, counts.created, counts.updated,
                                   counts.untouched, counts.wrong,
-                                  counts.deactivated, counts.reactivated) 
+                                  counts.deactivated, counts.reactivated)
         tool.log(message)
         return message
 
