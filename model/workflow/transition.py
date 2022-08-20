@@ -336,8 +336,9 @@ class Transition:
         if doHistory and msg and self.historizeActionMessage:
             event.completeComment(msg)
         # Reindex the object if required. Not only security-related indexes
-        # (Allowed, State) need to be updated here.
-        if reindex and not isInit and not o.isTemp(): o.reindex()
+        # (allowed, state) need to be updated here.
+        if reindex and not isInit and not o.isTemp() and o.class_.isIndexable():
+            o.reindex()
         # Return a message to the user if needed
         if not doSay: return
         return msg or o.translate('object_saved')
