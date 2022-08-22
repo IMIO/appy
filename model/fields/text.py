@@ -485,9 +485,6 @@ class Text(Multilingual, Field):
     verticalLanguagesLayouts = {
       'edit': 'vertical', 'view': 'vertical', 'cell': 'vertical'}
 
-    # The name of the index class storing values of this field in the catalog
-    indexType = 'TextIndex'
-
     # Unilingual view
     viewUni = cellUni = Px('''
      <x>::field.getInlineEditableValue(o, value or '-', layout, name=name,
@@ -654,7 +651,7 @@ class Text(Multilingual, Field):
       mapping=None, generateLabel=None, label=None, sdefault='', scolspan=1,
       swidth=20, fwidth=10, sheight=None, persist=True, inlineEdit=False,
       view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None,
+      translations=None, indexType='TextIndex',
       # Specific attributes
       placeholder=None, languages=('en',), languagesLayouts=None,
       viewSingle=False, structured=False, readonly=False):
@@ -671,6 +668,13 @@ class Text(Multilingual, Field):
         # the rendered textarea tag, on edit layouts, will have attribute
         # "readonly" set.
         self.readonly = readonly
+        # The default index type for Text fields is "TextIndex": it is meant to
+        # split the field content into words one can search. If you prefer to
+        # have a simple index that will store a single string for sorting
+        # purposes, use index type "SortIndex". If you want sorting to be based
+        # on values not being normalized, use index "Index" instead of
+        # "SortIndex".
+        self.indexType = indexType
         # Call base constructors
         Multilingual.__init__(self, languages, languagesLayouts, viewSingle)
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,

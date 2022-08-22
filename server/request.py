@@ -159,7 +159,7 @@ class Request(Object):
         if not id: return
         template = o.getObject(id)
         # Some fields may be excluded from the copy
-        toExclude = o.class_.getCreateExclude(o)
+        toExclude = o.class_.getCreateExclude(template)
         # Browse fields
         for field in o.getFields('edit'):
             if field.name in toExclude: continue

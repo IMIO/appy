@@ -22,7 +22,7 @@ class DateIndex(Index):
             # p_field.emptyIndexValue).
             return value
         # p_value is a DateTime instance that we will convert to an integer
-        # ~~~
+        # ~
         # This code is inspired by the Zope catalog
         year,month,day,hours,minutes,seconds,zone = value.toZone('UTC').parts()
         r = (((year * 12 + month) * 31 + day) * 24 + hours) * 60 + minutes

@@ -12,7 +12,7 @@ class TextIndex(Index):
     '''Index for Text fields'''
 
     # For a Text index, a value to store in the index is already and always
-    # built as a tuple (by m_toIndexed hereabove): so it it always considered to
+    # built as a tuple (by m_toIndexed below): so it it always considered to
     # be "multiple", and it is useless to convert it to a tuple.
     def isMultiple(self, value, inIndex=False): return isinstance(value, tuple)
     def getMultiple(self, value): return value

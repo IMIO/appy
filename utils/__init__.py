@@ -13,7 +13,8 @@ def asDict(seq):
     return {elem: None for elem in seq}
 
 # Global variables - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sequenceTypes = (list, tuple, PersistentList)
+listTypes = (list, PersistentList)
+sequenceTypes = listTypes + (tuple,)
 commercial = False
 
 # On these layouts, using a gobal selector and switching from one option to the

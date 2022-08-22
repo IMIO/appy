@@ -13,6 +13,7 @@ from appy.database.indexes.ref import RefIndex
 from appy.database.indexes.date import DateIndex
 from appy.database.indexes.text import TextIndex
 from appy.database.indexes.rich import RichIndex
+from appy.database.indexes.sort import SortIndex
 from appy.database.indexes.float import FloatIndex
 from appy.database.indexes.boolean import BooleanIndex
 

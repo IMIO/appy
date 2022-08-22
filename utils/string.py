@@ -158,8 +158,8 @@ class Normalize:
     def text(class_, s, lower=True, keepDash=False, keepBlank=True):
         '''Normalizes string p_s, for producing a text being suitable for
            purposes like database indexing.'''
-        # Apply the normalization.
-        # ~~~
+        # Apply the normalization
+        # ~
         # Choose the appropriate regular expression and set of chars to
         # blankify, depending on the fact that dashes and/or blanks must be kept
         # or not (p_keepDash and p_keepBlank).

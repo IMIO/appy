@@ -631,7 +631,7 @@ class Search:
         # callers (like POD fields) may need to get info about the search as
         # stored on the UiSearch instance, like its translated name and
         # description.
-        # ~~~
+        # ~
         # Get search parameters as an object
         params = O()
         i = 0

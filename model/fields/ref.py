@@ -403,7 +403,7 @@ class Ref(Field):
             name=":addFormName" id=":addFormName" target=":target.target"
             action=":'%s/new' % o.url">
        <input type="hidden" name="className" value=":tiedClass.name"/>
-       <input type="hidden" name="template" value=""/>
+       <input type="hidden" name="template_" value=""/>
        <input type="hidden" name="insert" value=""/>
        <input type="hidden" name="nav"
               value=":field.getNavInfo(o, 0, batch.total)"/>
@@ -1677,6 +1677,12 @@ class Ref(Field):
         '''Return a copy: it can be dangerous to give the real database value'''
         return self.getValue(o, single=False)[:]
 
+    def setRequestValue(self, o):
+        '''The emptiness condition differs from the Field.setRequestValue'''
+        value = self.getCopyValue(o)
+        if value != Ref.empty:
+            o.req[self.name] = value
+
     def getComparableValue(self, o):
         '''Return a copy of field value on p_o'''
         # Because a new value does not overwrite but updates the stored value,
@@ -2075,7 +2081,7 @@ class Ref(Field):
             # Abort object linking if required by p_self.beforeLink
             if r == False: return 0
         # Where must we insert the object ?
-        if at and at.insertId in refs:
+        if at and at.insertObject in refs:
             # Insertion logic is overridden by this Position instance, that
             # imposes obj's position within tied objects.
             refs.insert(at.getInsertIndex(refs), p)
@@ -2519,8 +2525,12 @@ class Ref(Field):
         if requestValue:
             # We are validating the form. Return the request value instead of
             # the popup value.
-            return [o.getObject(requestValue)] if isinstance(requestValue,str) \
-                   else [o.getObject(v) for v in requestValue]
+            if not isinstance(requestValue, utils.listTypes):
+                r = PersistentList()
+                r.append(requestValue)
+            else:
+                r = requestValue
+            return r
         r = []
         # No object can be selected if the popup has not been opened yet
         if 'semantics' not in req:
