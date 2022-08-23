@@ -2416,6 +2416,8 @@ class Ref(Field):
         r = ''
         # p_o may not be the tool if we are on a search screen
         for col in self.getColSets(o, tied.class_, usage=usage)[0].columns:
+            # Ignore special columns
+            if col.special: continue
             name = col.name
             refType = tied.getField(name)
             value = getattr(tied, name)

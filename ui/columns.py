@@ -15,6 +15,9 @@ F_MISSING  = 'Field "%s", used in a column specifier, not found.'
 class Col:
     '''Represents an individual column'''
 
+    # Direct Col instances are not special
+    special = False
+
     # Header, in a table containing search results
     pxHeader = Px('''
      <th>
@@ -187,6 +190,8 @@ class Col:
 class Number(Col):
     '''Specific column containing rows' numbers and related controls'''
 
+    special = True
+
     def init(self, o, oclass):
         '''Nothing more must be done for this type of column'''
         return True
@@ -201,6 +206,8 @@ class Number(Col):
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Checkbox(Col):
     '''Specific column containing rows' checkboxes'''
+
+    special = True
 
     # Header, in a table containing search results
     pxHeader = Px('''
