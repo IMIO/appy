@@ -1063,7 +1063,7 @@ class Browser:
     precedes = asDict(('Firefox', 'Chrome', 'Chromium'))
 
     # Browser names and minimal versions as supported by Appy
-    versions = {'Chrome': 90.0, 'Chromium': 90.0, 'Firefox': 90.0}
+    versions = {'Chrome': 87.0, 'Chromium': 87.0, 'Firefox': 90.0}
 
     @classmethod
     def getIncompatibilityMessage(class_, tool, handler):

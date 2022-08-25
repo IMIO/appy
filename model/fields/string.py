@@ -289,7 +289,7 @@ class String(Multilingual, Field):
         return String.computeSearchValue(self, req, value=value)
 
     def getSortValue(self, o):
-        '''Return the value of p_self on p_obj that must be used for sorting.
+        '''Return the value of p_self on p_o that must be used for sorting.
            While the raw p_value may be the value to use in most cases, it is
            not always true. For example, a string like "Gaëtan" could have
            "gaetan" as sort value.'''

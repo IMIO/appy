@@ -2521,18 +2521,30 @@ class Ref(Field):
                  # internal to the originating ckeditor.
                  ckNum=req.CKEditorFuncNum or '')
 
+    def getRequestObjects(self, o, requestValue):
+        '''Get a list of objects from p_requestValue'''
+        # Depending on the cases, p_requestValue can hold an object, an object
+        # ID, a list of object IDs or a list of objects.
+        # ~
+        # Ensure it is a persistent list
+        r = requestValue
+        if not isinstance(r, utils.listTypes):
+            r = [r]
+        # Ensure every list item is an object
+        i = 0
+        while i < len(r):
+            if isinstance(r[i], str):
+                r[i] = o.getObject(r[i])
+            i += 1
+        print(self.name, 'Request objects are', r)
+        return r
+
     def getPopupObjects(self, o, name, req, requestValue):
         '''Gets the list of objects that were selected in the popup (for fields
            with link="popup" or "popupRef").'''
-        if requestValue:
-            # We are validating the form. Return the request value instead of
-            # the popup value.
-            if not isinstance(requestValue, utils.listTypes):
-                r = PersistentList()
-                r.append(requestValue)
-            else:
-                r = requestValue
-            return r
+        # If there is a request value, We are validating the form. Return the
+        # request value instead of the popup value.
+        if requestValue: return self.getRequestObjects(o, requestValue)
         r = []
         # No object can be selected if the popup has not been opened yet
         if 'semantics' not in req:

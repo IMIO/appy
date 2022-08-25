@@ -101,7 +101,7 @@ class Parser(ContentHandler, ErrorHandler):
         self.raiseOnError = raiseOnError
 
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # ContentHandler methods
+    #                         ContentHandler methods
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def startDocument(self):
@@ -140,7 +140,7 @@ class Parser(ContentHandler, ErrorHandler):
         self.characters(char)
 
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # ErrorHandler methods
+    #                         ErrorHandler methods
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def error(self, error):
@@ -156,18 +156,18 @@ class Parser(ContentHandler, ErrorHandler):
 
     def parse(self, xml, source='string'):
         '''Parses a XML stream'''
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If p_source | p_xml...
         # is...       |
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  "string"   | must be a string or bytes object containing valid XML
         #             | content;
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  "file"     | can be:
         #             |  - a string containing the path to the XML file on disk;
         #             |  - a file handler opened for reading. Note that in this
         #             |    case, this method will close it.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self._xml = xml
         self.parser.setContentHandler(self)
         self.parser.setErrorHandler(self)
@@ -175,11 +175,11 @@ class Parser(ContentHandler, ErrorHandler):
         inputSource = InputSource()
         if source == 'string':
             xml = xml.decode() if isinstance(xml, bytes) else xml
-            inputSource.setByteStream(io.StringIO(xml))
+            xml = io.StringIO(xml)
         else:
             xml = xml if isinstance(xml, io.IOBase) else open(xml)
-            inputSource.setByteStream(xml)
+        inputSource.setByteStream(xml)
         self.parser.parse(inputSource)
-        if isinstance(xml, io.IOBase): xml.close()
+        xml.close()
         return self.r
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
