@@ -16,11 +16,13 @@ class SortIndex(Index):
         '''Keeps only p_keep first chars and normalizes p_value, for the purpose
            of sorting.'''
         if not value: return
-        return Normalize.text(value[:keep], keepBlank=False) or None
+        val = value[:keep]
+        return Normalize.text(val, keepDash=None, keepBlank=False) or None
 
     @classmethod
     def toTerm(class_, value, field):
         '''Normalizes p_value in order to be used as a search term'''
-        # Similar to p_toIndexed, but do not restrict the number of chars
-        return Normalize.text(value, keepBlank=False)
+        # Similar to p_toIndexed, but do not restrict the number of chars and
+        # do not concatenate search terms.
+        return Normalize.text(value)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

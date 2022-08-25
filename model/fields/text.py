@@ -777,7 +777,8 @@ class Text(Multilingual, Field):
 
     def getFilterValue(self, value):
         '''Normalizes p_value and ensures it ends with a star'''
-        return '%s*' % sutils.Normalize.text(value).strip()
+        r = sutils.Normalize.text(value, keepDash=True, keepBlank=True)
+        return '%s*' % r.strip()
 
     @classmethod
     def computeSearchValue(class_, field, req, value=None):

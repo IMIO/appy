@@ -157,18 +157,40 @@ class Normalize:
     @classmethod
     def text(class_, s, lower=True, keepDash=False, keepBlank=True):
         '''Normalizes string p_s, for producing a text being suitable for
-           purposes like database indexing.'''
-        # Apply the normalization
-        # ~
+           purposes like database indexing or cleaning search terms.'''
+        #
+        # If p_keepDash is ...
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # True  | Dashes (-) are kept.
+        #       |
+        #       | Example:
+        #       |
+        #       | "Jean-François" > "jean-francois"
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # False | Dashes are replaced with blanks. Appropriate for cleaning
+        #       | search terms as encoded by a user.
+        #       |
+        #       | Example:
+        #       |
+        #       | "Jean-François" > "jean francois"
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # None  | Dashes are completely removed from the result. Appropriate for
+        #       | producing ready-to-be-sorted values in a database index.
+        #       |
+        #       | Example:
+        #       |
+        #       | "Jean-François" > "jeanfrancois"
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Choose the appropriate regular expression and set of chars to
-        # blankify, depending on the fact that dashes and/or blanks must be kept
-        # or not (p_keepDash and p_keepBlank).
-        r = Normalize.string(s, class_.textRex[keepBlank][keepDash],
-                             blankify=class_.textIgnorable[keepDash],
+        # ignore or blankify, depending on the fact that dashes and/or blanks
+        # must be kept or not (p_keepDash and p_keepBlank).
+
+        r = Normalize.string(s, class_.textRex[keepBlank][bool(keepDash)],
+                             blankify='-' if keepDash is False else None,
+                             ignore=class_.textIgnorable[bool(keepDash)],
                              replace=class_.replacements)
         # Lowerize the result if required (p_lower)
-        if lower: r = r.lower()
-        return r
+        return r.lower() if lower else r
 
     @classmethod
     def fileName(class_, s):

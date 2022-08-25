@@ -88,7 +88,7 @@ class Base:
       # sorting. In the call to m_getShownValue, language 'en' is forced in
       # order to bypass the user language and always have a deterministic value.
       'indexValue': lambda o, v: Normalize.text(o.getShownValue(language='en'),
-                                                keepBlank=False) if v else ''}
+                                   keepDash=None, keepBlank=False) if v else ''}
 
     title = String(**titleAttributes)
 
