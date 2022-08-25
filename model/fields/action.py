@@ -619,4 +619,12 @@ class Action(Field):
            defining useful info about the action, like the back and check
            hooks.'''
         return Multi(back, check)
+
+    def setTraversable(self, allow='perm:read'):
+        '''By default, the URL allowing to trigger an action (/perform) is
+           accessible only to those having permission 'write' on the
+           corresponding object. This method allows to update this and open the
+           action to anyone having this p_allow condition.'''
+        self.traverse = t = Action.traverse.copy()
+        t['perform'] = t['storeFromAjax'] = allow
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

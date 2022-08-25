@@ -403,6 +403,10 @@ msgstr "Lijst"
 msgid "goto_number"
 msgstr "Ga naar nummer"
 
+#. Default: "Back"
+msgid "go_back"
+msgstr ""
+
 #. Default: "Whatever"
 msgid "whatever"
 msgstr "Maakt niets uit"

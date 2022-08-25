@@ -404,6 +404,10 @@ msgstr "Liste"
 msgid "goto_number"
 msgstr "Aller au n°"
 
+#. Default: "Back"
+msgid "go_back"
+msgstr "Retour"
+
 #. Default: "Whatever"
 msgid "whatever"
 msgstr "Peu importe"

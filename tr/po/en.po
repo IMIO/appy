@@ -404,6 +404,10 @@ msgstr "Go back"
 msgid "goto_number"
 msgstr "Go to number"
 
+#. Default: "Back"
+msgid "go_back"
+msgstr "Back"
+
 #. Default: "Whatever"
 msgid "whatever"
 msgstr "Whatever"

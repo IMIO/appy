@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -56,16 +58,21 @@ class Error:
         return r
 
     @classmethod
-    def getContent(class_, traversal, code, error, text):
+    def getContent(class_, traversal, code, error, text, _):
         '''Get the textual content to render in the error page'''
         # Dump a traceback for a Manager
-        if traversal.user.hasRole('Manager') and code != 200:
+        if traversal.user.hasRole('Manager') and code == 500:
             r = Traceback.get(html=True)
         else:
             if isinstance(error, MessageException):
                 r = text
+            elif isinstance(error, traversal.handler.guard.Error) and text:
+                # Unauthorized. Do not display the standard message if a
+                # specific message has been produced.
+                r = text
             else:
-                _ = traversal.handler.tool.translate
+                # Produce a standard message, completed with an optional
+                # additional message (in p_text).
                 r = _(Error.byCode[code]['label'])
                 if text:
                     r += '<div class="discreet">%s</div>' % text
@@ -79,6 +86,9 @@ class Error:
         # When managing an error, ensure no database commit will occur
         handler = traversal.handler
         handler.commit = False
+        # Did the error occurred in the context of an Ajax request ?
+        context = traversal.context
+        ajax = (context and context.ajax) or handler.req.ajax == 'True'
         # Log the error
         code = resp.code if resp.code in Error.byCode else 500
         # Message exceptions are special errors being 200 at the HTTP level
@@ -91,13 +101,22 @@ class Error:
         if code in (500, 503):
             handler.log('app', 'error', Traceback.get().strip())
         # Compute the textual content that will be shown
-        content = class_.getContent(traversal, code, error, text)
+        _ = handler.tool.translate
+        content = class_.getContent(traversal, code, error, text, _)
         # If we are called by an Ajax request, return only the error message,
         # and set the return code to 200; else, browsers will complain.
-        context = traversal.context
-        if context and context.ajax:
+        if ajax:
             resp.code = HTTPStatus.OK
-            return '<p>%s</p>' % content
+            # Add a link to the referer, if any
+            referer = handler.headers.get('referer')
+            if referer:
+                suffix = '<a href="%s">← %s</a>' % (referer, _('go_back'))
+            else:
+                suffix = ''
+            # Thanks to the DOCTYPE preamble, the Ajax subsystem will understand
+            # we are in a special context and will take care of rendering the
+            # message appropriately.
+            return '<!DOCTYPE html><p>%s</p>%s' % (content, suffix)
         # Return the PX corresponding to the error code. For rendering it, get
         # the last PX context, or create a fresh one if there is no context.
         if not context:
