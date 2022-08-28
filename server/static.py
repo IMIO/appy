@@ -11,8 +11,8 @@ from DateTime import DateTime
 
 import appy
 from appy.utils import css
-from appy.utils.string import Normalize
 from appy.model.utils import Object as O
+from appy.utils.string import Normalize, Variables
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 MAP_VAL_KO  = 'Values from the map must be pathlib.Path objects.'
@@ -119,11 +119,10 @@ class Config:
         if self.ramRoot in self.map:
             raise Exception(RAM_ROOT_KO % self.ramRoot)
 
-    def addFile(self, path, rex, fun, isCss):
+    def addFile(self, path, variables, isCss):
         '''Adds, in Static.ram, the file at p_path. Within the file content,
-           variables, if found, are replaced with values via a call to
-           p_rex.sub, with this p_fun(ction) used as replacement function.
-           Returns the size of the file in bytes.'''
+           variables, if found, are replaced with values as defined on
+           p_variables. Returns the size of the file in bytes.'''
         # Read the content of this file
         with path.open('r') as f:
             # If the file is a CSS file, compact it
@@ -132,7 +131,7 @@ class Config:
                 content = css.File.compact(content)
             # Add it to Static.ram, with variables replaced
             try:
-                content = rex.sub(fun, content)
+                content = Variables.replace(content, variables)
                 r = len(content)
                 Static.ram[path.name] = content
                 return r
@@ -142,31 +141,24 @@ class Config:
     def init(self, uiConfig):
         '''Reads all CSS and SVG files from all disk locations containing static
            content (in p_self.map) and loads them in Static.ram, after having
-           replaced variables with their values from the app's config.'''
+           replaced variables with their values from the app's p_uiConfig.'''
         counts = O(css=0, svg=0, size=0)
         # For CSS files, browse locations in forward order: that way, the order
         # of inclusion of CSS files is: (1) Appy, (2) the app and, optionally,
         # (3) the ext.
-        # ~
-        # The following function will, for every match (=every variable use
-        # found in the file), return the corresponding value as found on the UI
-        # config.
-        fun = lambda match: getattr(uiConfig, match.group(1))
-        rex = uiConfig.variable
+        variables = uiConfig
         for path in self.map.values():
             for cssFile in path.glob('*.css'):
-                counts.size += self.addFile(cssFile, rex, fun, True)
+                counts.size += self.addFile(cssFile, variables, True)
                 counts.css += 1
         # For SVG files, browse location in reverse order. That way, if the same
         # file exists at several levels, the one that exists at the deepest
         # level will prevail: (1) ext, (2) app and finally (3) Appy.
-        # ~
-        # Values to replace are defined in a specific part of the UI config
-        fun = lambda match: getattr(uiConfig.svg, match.group(1))
+        variables = uiConfig.svg
         for path in reversed(self.map.values()):
             for svgFile in path.glob('*.svg'):
                 if svgFile.name not in Static.ram:
-                    counts.size += self.addFile(svgFile, rex, fun, False)
+                    counts.size += self.addFile(svgFile, variables, False)
                     counts.svg += 1
         return counts
 

@@ -226,6 +226,25 @@ class Normalize:
         return Normalize.string(s, class_.nonDigit)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Variables:
+    '''Replaces, in some text, variables defined with syntax |name| with content
+       as found on the homonym attribute of a passed object.'''
+
+    # Regular expression defining a variable (with pipes as delimiters)
+    withPipes = re.compile('\|(\w+?)\|', re.S)
+    # A variant with asteriscs as delimiters
+    withStars = re.compile('\*(\w+?)\*', re.S)
+
+    @classmethod
+    def replace(class_, s, o, stars=False):
+        '''Replaces, in string p_s, any variable matching class_.definition with
+           a value as found on the homonym attribute stored on this
+           p_o(bject).'''
+        fun = lambda match: getattr(o, match.group(1))
+        rex = class_.withStars if stars else class_.withPipes
+        return rex.sub(fun, s)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def getStringFrom(o, stringify=True, c="'"):
     '''Returns a string representation for p_o that can be transported over
        HTTP and manipulated in Javascript.

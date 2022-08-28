@@ -20,22 +20,27 @@ class Deploy(Program):
                            'package system (currently: "apt" only).',
                 'site':    'Create an Appy site on the target.',
                 'update':  'Updates a site and (re)start it.',
-                'view':    "View app.log's tail on the target"
+                'view':    "View app.log's tail on the target."
     }
 
     def helpCommands(COMMANDS):
         '''Builds the text describing available commands'''
         r = []
+        # Get the longest command first
+        longest = 0
+        for command in COMMANDS:
+            longest = max(longest, len(command))
+        # Dump help about every command
         for command, text in COMMANDS.items():
-            r.append('"%s": %s' % (command, text))
-        return '\n'.join(r)
+            r.append('"%s" - %s' % (command.ljust(longest), text))
+        return ' -=- '.join(r)
 
     # Help messages
     HELP_APP     = 'The path, on this machine, to the app to deploy ' \
                    '(automatically set if called from <site>/bin/deploy).'
     HELP_SITE    = 'The path, on this machine, to the reference site ' \
                    '(automatically set if called from <site>/bin/deploy).'
-    HELP_COMMAND = 'The command to perform. Available commands are: %s' % \
+    HELP_COMMAND = 'The command to perform. Available commands are:\n%s' % \
                    helpCommands(COMMANDS)
     HELP_TARGET  = 'The target(s) to deploy to. If not specified, the ' \
                    'default will be chosen. [update command only] You can ' \
@@ -43,6 +48,15 @@ class Deploy(Program):
                    'comma-separated list of targets containing no space, ie, ' \
                    '"dev,acc,prod". You can also specify term "ALL" to ' \
                    'deploy all available targets at once.'
+    HELP_OPTIONS = 'Some commands acccept options. Options must be ' \
+                   'specified as a comma-separated list of names. [Options ' \
+                   'for command "install"] "lo" (Debian systems only) - ' \
+                   'Creates an init script /etc/init.d/lo for running ' \
+                   'LibreOffice (LO) in server mode.'
+    HELP_BLIND   = '[update command only] If set, when updating several ' \
+                   'targets, there is no stop between each one (such stops ' \
+                   'allow to consult the target\'s app.log to ensure ' \
+                   'everything went well).'
 
     # Error messages
     FOLDER_KO    = '%s does not exist or is not a folder.'
@@ -58,6 +72,10 @@ class Deploy(Program):
         # Optional arguments
         parser.add_argument('-t', '--target', dest='target',
                             help=Deploy.HELP_TARGET)
+        parser.add_argument('-o', '--options', dest='options',
+                            help=Deploy.HELP_OPTIONS)
+        parser.add_argument('-b', '--blind', dest='blind',
+                            help=Deploy.HELP_BLIND, action='store_true')
 
     def analyseArguments(self):
         '''Check and store arguments'''
@@ -72,9 +90,15 @@ class Deploy(Program):
         if self.command not in Deploy.COMMANDS:
             self.exit(self.COMMAND_KO % self.command)
         self.target = args.target
+        if args.options:
+            self.options = args.options.split(',')
+        else:
+            self.options = None
+        self.blind = args.blind
 
     def run(self):
-        return Deployer(self.app, self.site, self.command, self.target).run()
+        return Deployer(self.app, self.site, self.command, self.target,
+                        options=self.options, blind=self.blind).run()
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if __name__ == '__main__': Deploy().run()

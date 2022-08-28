@@ -62,7 +62,7 @@ def findPackages(base):
 # Python 2 or 3 ?
 base = 'py%d' % sys.version_info[0]
 if base == 'py3':
-    dependencies = ['zodb', 'DateTime']
+    dependencies = ['zodb', 'DateTime', 'python-ldap']
     python = '>=3.6'
 else:
     dependencies = []

@@ -8,6 +8,7 @@ import os.path, re
 
 from appy.px import Px
 from appy.utils import asDict
+from appy.utils.string import Variables
 from appy.model.utils import Object as O
 
 # Make classes from sub-packages available here  - - - - - - - - - - - - - - - -
@@ -34,10 +35,6 @@ class Config:
 
     # Defaults fonts used in the web user interface
     defaultFonts = "Rajdhani, sans-serif"
-
-    # Regular expression for variables possibly defined in some (almost static)
-    # files like CSS and SVG.
-    variable = re.compile('\|(\w+?)\|', re.S)
 
     def __init__(self):
         '''Constructor for the UI configuration'''
@@ -786,8 +783,7 @@ class Config:
     def patchCss(self, css):
         '''Replaces variables possibly defined in this p_css code with values
            from p_self.'''
-        fun = lambda match: getattr(self, match.group(1))
-        return self.variable.sub(fun, css)
+        return Variables.replace(css, self)
 
     def getUserText(self, user):
         '''Get the text to show within the user link'''

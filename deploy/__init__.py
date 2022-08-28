@@ -11,9 +11,9 @@ from appy.utils import termColorize
 from appy.deploy.repository import Repository
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TG_UPDATE = '\n☉  Updating target %s (%d/%d)... ☉\n\n⚠  Once the ' \
-            'site\'s log is shown, type Ctrl-C to go to the next target or ' \
-            'retrieve terminal prompt. ⚠\n'
+TG_UPDATE = '\n☉  Updating target %s (%d/%d)... ☉\n'
+TG_NEXT   = '⚠  Once the site\'s log is shown, type Ctrl-C to go to the ' \
+            'next target or retrieve terminal prompt. ⚠\n'
 T_EXEC    = 'Executing :: %s'
 T_LIST    = 'Available target(s) for app "%s", from reference site "%s":\n%s'
 NO_CONFIG = 'The "deploy" config was not found in config.deploy.'
@@ -63,22 +63,60 @@ class Target:
         # without specfying arg "-t <target>": the default target will be
         # automatically chosen.
         self.default = default
+        # Info about LibreOffice (LO) running in server mode on the target
+        # ~
+        # The port on which LO listens
+        self.loPort = 2002
 
     def __repr__(self):
         '''p_self's string representation'''
         return '<Target %s:%d@%s>' % (self.sshHost, self.sshPort, self.sitePath)
 
-    def execute(self, command):
+    def execute(self, command, exe='ssh', forceExit=False):
         '''Executes p_command on this target'''
-        r = ['ssh', '%s@%s' % (self.sshLogin, self.sshHost), '"%s"' % command]
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # If p_exe is...
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "ssh"  | (the default) p_command is a shell command to execute on the
+        #        | distant target via the "ssh" executable ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "scp"  | a file must be copied on the target via the "scp" executable:
+        #        | p_command is a 2-tuple containing the source and destination
+        #        | paths.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        r = [exe]
+        # If p_forceExit is True, add the "-t" ootion to ensure the distant
+        # terminal will be shut down.
+        if forceExit:
+            r.append('-t')
+        host = '%s@%s' % (self.sshLogin, self.sshHost)
+        if exe == 'ssh':
+            r.append(host)
+            r.append('"%s"' % command)
+            # Option for port is '-p'
+            portOption = 'p'
+        else:
+            # Add the source file
+            r.append(command[0])
+            # Add the destination file
+            r.append('%s:%s' % (host, command[1]))
+            # For scp, option is '-P'
+            portOption = 'P'
         # Determine port
-        if self.sshPort != 22: r.insert(1, '-p%d' % self.sshPort)
+        if self.sshPort != 22:
+            r.insert(1, '-%s%d' % (portOption, self.sshPort))
         # Determine "-i" option (path to the private key)
         if self.sshKey: r.insert(1, '-i %s' % self.sshKey)
         # Build the complete command
         r = ' '.join(r)
         print(T_EXEC % r)
         os.system(r)
+
+    def copy(self, source, dest):
+        '''Copy local file whose absolute path is p_source to the distant file,
+           on this target, whose absolute path is p_dest.'''
+        # If p_dest exists on the target, it will be overwritten
+        self.execute((source, dest), exe='scp')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -103,7 +141,8 @@ class Deployer:
     # Commands for which a target is not required
     noTargetCommands = ('list',)
 
-    def __init__(self, appPath, sitePath, command, targetName=None):
+    def __init__(self, appPath, sitePath, command, targetName=None,
+                 options=None, blind=False):
         # The path to the app
         self.appPath = appPath
         # The path to the reference, local site, containing targets definition
@@ -112,6 +151,10 @@ class Deployer:
         # None and p_command requires a target, the default target(s) will be
         # selected.
         self.targetName = targetName
+        # Options
+        self.options = options or ()
+        # Must the "update" command be run blind ?
+        self.blind = blind
         # Will hold the list of Target instances corresponding to p_targetName
         self.targets = None
         # Will hold the first (or unique) Target from p_self.target
@@ -176,6 +219,20 @@ class Deployer:
           'adduser --disabled-password --gecos appy appy'
         ]
         target.execute(';'.join(commands))
+        if 'lo' in self.options:
+            # Create a init.d script in a temp folder. Lazy-import module "init"
+            # to avoid loading it into RAM when not needed.
+            from appy.deploy import init
+            initUser = target.siteOwner.split(':')[0]
+            tempInit = init.LO.get(port=target.loPort, user=initUser)
+            # Copy the script in /etc/init.d on the target
+            target.copy(tempInit, '/etc/init.d/lo')
+            # Configure it to be run at boot
+            commands = ['cd /etc/init.d', 'chmod a+x lo',
+                        'update-rc.d lo defaults']
+            target.execute(';'.join(commands))
+            # Delete the locally-generated init script
+            os.remove(tempInit)
 
     def site(self):
         '''Creates an Appy site on the distant server'''
@@ -235,6 +292,8 @@ class Deployer:
         for name, target in self.targets.items():
             i += 1
             print(TG_UPDATE % (termColorize(name), i, total))
+            if not self.blind:
+                print(TG_NEXT)
             # (1) Build the set of commands to update the app, ext and
             #     dependencies.
             commands = []
@@ -262,11 +321,13 @@ class Deployer:
             commands = []
             restart = '%s/bin/site restart' % target.sitePath
             commands.append(restart)
-            commands.append(self.tail % (tailNb, target.sitePath))
+            # Display the site's app.log (if not blind)
+            if not self.blind:
+                commands.append(self.tail % (tailNb, target.sitePath))
             # These commands will be ran with target.siteOwner
             owner = siteOwner.split(':')[0]
             command = "su %s -c '%s'" % (owner, ';'.join(commands))
-            target.execute(command)
+            target.execute(command, forceExit=self.blind)
 
     def view(self):
         '''Launch a command "tail -f" on the target's app.log file'''
