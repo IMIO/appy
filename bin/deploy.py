@@ -35,7 +35,13 @@ class Deploy(Program):
             r.append('"%s" - %s' % (command.ljust(longest), text))
         return ' -=- '.join(r)
 
-    # Help messages
+    # Help messages (and message parts)
+    LO_SV        = 'LibreOffice (LO) in server mode'
+    SITE_NAME    = '<site name>'
+    SITE_SV      = 'the site on the target (start,stop,...)'
+    INIT_D       = 'Creates an init script /etc/init.d/%s for controlling %s'
+    DEB_O        = 'Debian systems only'
+
     HELP_APP     = 'The path, on this machine, to the app to deploy ' \
                    '(automatically set if called from <site>/bin/deploy).'
     HELP_SITE    = 'The path, on this machine, to the reference site ' \
@@ -43,24 +49,36 @@ class Deploy(Program):
     HELP_COMMAND = 'The command to perform. Available commands are:\n%s' % \
                    helpCommands(COMMANDS)
     HELP_TARGET  = 'The target(s) to deploy to. If not specified, the ' \
-                   'default will be chosen. [update command only] You can ' \
-                   'specify several targets to deploy at once, using a ' \
-                   'comma-separated list of targets containing no space, ie, ' \
+                   'default will be chosen. ["update" & "view" commands ' \
+                   'only] You can specify several targets, using a comma-' \
+                   'separated list of targets containing no space, ie, ' \
                    '"dev,acc,prod". You can also specify term "ALL" to ' \
-                   'deploy all available targets at once.'
+                   'denote all targets.'
     HELP_OPTIONS = 'Some commands acccept options. Options must be ' \
                    'specified as a comma-separated list of names. [Options ' \
-                   'for command "install"] "lo" (Debian systems only) - ' \
-                   'Creates an init script /etc/init.d/lo for running ' \
-                   'LibreOffice (LO) in server mode.'
-    HELP_BLIND   = '[update command only] If set, when updating several ' \
+                   'for command "install"] "lo" (%s) - %s. ' \
+                   '[Options for command "site"] "lo" (if not executed via ' \
+                   'command "install", this option can still be applied when ' \
+                   'launching command "site" on some target), "init" (%s) - ' \
+                   '%s.' % (DEB_O, INIT_D % ('lo', LO_SV),
+                            DEB_O, INIT_D % (SITE_NAME, SITE_SV))
+    HELP_BLIND   = '["update" command only] If set, when updating several ' \
                    'targets, there is no stop between each one (such stops ' \
                    'allow to consult the target\'s app.log to ensure ' \
                    'everything went well).'
 
+    # Allowed options, for every command. A command not being in this dict
+    # accepts no option at all.
+    allowedOptions = {
+      'install': ('lo',),
+      'site'   : ('lo','init')
+    }
+
     # Error messages
     FOLDER_KO    = '%s does not exist or is not a folder.'
     COMMAND_KO   = 'Command "%s" does not exist.'
+    OPTIONS_NO   = 'Command "%s" accepts no option at all.'
+    OPTIONS_KO  =  'Option "%s" is illegal for command "%s".'
 
     def defineArguments(self):
         '''Define the allowed arguments for this program'''
@@ -77,6 +95,19 @@ class Deploy(Program):
         parser.add_argument('-b', '--blind', dest='blind',
                             help=Deploy.HELP_BLIND, action='store_true')
 
+    def analyseOptions(self):
+        '''Ensure options are coherent w.r.t the command'''
+        if not self.options: return
+        command = self.command
+        allowed = Deploy.allowedOptions.get(command)
+        # Prevent specifying options for commands for which no option is allowed
+        if allowed is None:
+            self.exit(self.OPTIONS_NO % command)
+        # Ensure every specified option is legal w.r.t p_self.command
+        for option in self.options:
+            if option not in allowed:
+                self.exit(self.OPTIONS_KO % (option, command))
+
     def analyseArguments(self):
         '''Check and store arguments'''
         args = self.args
@@ -90,11 +121,13 @@ class Deploy(Program):
         if self.command not in Deploy.COMMANDS:
             self.exit(self.COMMAND_KO % self.command)
         self.target = args.target
+        self.blind = args.blind
+        # Get and analyse options
         if args.options:
             self.options = args.options.split(',')
         else:
             self.options = None
-        self.blind = args.blind
+        self.analyseOptions()
 
     def run(self):
         return Deployer(self.app, self.site, self.command, self.target,

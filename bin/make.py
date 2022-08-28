@@ -367,8 +367,8 @@ class Make(Program):
 
     # Error messages
     WRONG_TARGET = 'Wrong target "%s".'
-    F_EXISTS     = '%s already exists. You must specify an inexistent path ' \
-                   'that this script will create and populate with a fresh %s.'
+    F_EXISTS     = '%s already exists. An inexistent path must be specified ' \
+                   'if you want this script to create and populate a fresh %s.'
     NO_APP       = 'No app was specified.'
     WRONG_APP    = '%s does not exist or is not a folder.'
     WRONG_APP_S  = 'Wrong app specifier: %s'
@@ -446,7 +446,8 @@ class Make(Program):
         if target == 'site':
             # The path to the site must not exist
             if self.folder.exists():
-                self.exit(self.F_EXISTS % (self.folder, 'site'))
+                self.exit(self.F_EXISTS % (self.folder, 'site'),
+                          printUsage=False)
             # Manage the app and its ext
             self.app = self.analyseApp(self.args.app)
             ext = self.args.ext
@@ -454,7 +455,7 @@ class Make(Program):
             # The port must be an integer value
             port = self.args.port
             if port and not port.isdigit():
-                self.exit(self.PORT_KO % port)
+                self.exit(self.PORT_KO % port, printUsage=False)
             self.port = int(port) if port else 8000
             # An owner may be specified
             self.owner = self.args.owner
@@ -467,7 +468,8 @@ class Make(Program):
             # The path to the ext must not exist (it is not possible to update
             # an ext, only create it).
             if self.folder.exists():
-                self.exit(self.F_EXISTS % (self.folder, 'ext'))
+                self.exit(self.F_EXISTS % (self.folder, 'ext'),
+                          printUsage=False)
             # The path to the related app must be given
             self.app = self.analyseApp(self.args.app, specifierDisallowed=True)
 

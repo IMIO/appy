@@ -11,7 +11,10 @@ from appy.utils import termColorize
 from appy.deploy.repository import Repository
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TG_UPDATE = '\n☉  Updating target %s (%d/%d)... ☉\n'
+TG_LOG    = 'Log file for'
+TP_UPDATE = 'Updating'
+TG_ACT    = '\n☉  %s target %s (%d/%d)... ☉\n'
+OPT_APPLY = '\nApplying option %s - %s...\n'
 TG_NEXT   = '⚠  Once the site\'s log is shown, type Ctrl-C to go to the ' \
             'next target or retrieve terminal prompt. ⚠\n'
 T_EXEC    = 'Executing :: %s'
@@ -20,10 +23,18 @@ NO_CONFIG = 'The "deploy" config was not found in config.deploy.'
 NO_TARGET = 'No target was found on config.deploy.targets.'
 TARGET_KO = 'Target "%s" not found.'
 TARGET_NO = 'Please specify a target to run this command.'
-TARGET_VL = 'No valid target was mentioned. Available target(s): %s.'
+TARGET_VL = 'No valid target was mentioned.\n\nAvailable target(s):\n%s.'
 ALL_RESV  = '\n⚠ Name "ALL" is reserved to update all targets at once. ' \
             'Please rename the target having this name.\n'
 SINGLE_TG = 'Command "%s" cannot be run on more than one target.'
+
+# Explanations about options
+INIT_D    = 'Create and configure an init script for controlling'
+INIT_DET  = '(re)start / stop / status + start at boot'
+OPT_INF   = {
+  'lo'  : '%s LibreOffice (LO) in server mode - %s' % (INIT_D, INIT_DET),
+  'init': '%s the distant site - %s' % (INIT_D, INIT_DET)
+}
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Target:
@@ -42,8 +53,10 @@ class Target:
         self.sshKey = sshKey
         # Information about the Appy site on the target
         # ~
-        # The path to the site. Typically: /home/appy/<siteName>
+        # The path to the site. Typically: /home/appy/<siteName>. Extract the
+        # distant site name from it.
         self.sitePath = sitePath
+        self.siteName = os.path.basename(sitePath)
         # The port on which this site will listen
         self.sitePort = sitePort
         # Instances representing the distant repos where the app and ext reside.
@@ -53,6 +66,7 @@ class Target:
         self.siteExt = siteExt
         # The owner of the distant site. Typically: appy:appy.
         self.siteOwner = siteOwner
+        self.siteUser = siteOwner.split(':')[0]
         # A list of Python dependencies to install on the distant app, in its
         # "lib" folder. Every dependency must be specified via a Repository
         # instance, from one of the concrete classes as mentioned hereabove (see
@@ -141,6 +155,9 @@ class Deployer:
     # Commands for which a target is not required
     noTargetCommands = ('list',)
 
+    # Commands accepting several targets
+    manyTargetsCommands = ('update', 'view')
+
     def __init__(self, appPath, sitePath, command, targetName=None,
                  options=None, blind=False):
         # The path to the app
@@ -178,7 +195,7 @@ class Deployer:
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     # Command for consulting the last lines in a target's app.log file
-    tail = 'tail -f -n %d %s/var/app.log'
+    tail = 'tail%s -n %d %s/var/app.log'
 
     def list(self):
         '''Lists the available targets on the config'''
@@ -206,6 +223,25 @@ class Deployer:
         '''Retrieve info about the target OS'''
         self.target.execute('cat /etc/lsb-release')
 
+    def lo(self, target):
+        '''Create an init script for LibreOffice on this p_target'''
+        # Lazy-import module "init" to avoid loading it into RAM when not needed
+        from appy.deploy import init
+        init.LO(target).deploy()
+
+    def init(self, target):
+        '''Create an init script for the target site'''
+        from appy.deploy import init
+        init.Site(target).deploy()
+
+    def applyOptions(self, target):
+        '''Apply the options as defined in p_self.options'''
+        # Apply options
+        for option in self.options:
+            descr = OPT_INF[option]
+            print(OPT_APPLY % (termColorize(option, color='3'), descr))
+            getattr(self, option)(target)
+
     def install(self):
         '''Installs required dependencies on the target via "apt" and "pip3" and
            create special user "appy" on the server.'''
@@ -219,20 +255,8 @@ class Deployer:
           'adduser --disabled-password --gecos appy appy'
         ]
         target.execute(';'.join(commands))
-        if 'lo' in self.options:
-            # Create a init.d script in a temp folder. Lazy-import module "init"
-            # to avoid loading it into RAM when not needed.
-            from appy.deploy import init
-            initUser = target.siteOwner.split(':')[0]
-            tempInit = init.LO.get(port=target.loPort, user=initUser)
-            # Copy the script in /etc/init.d on the target
-            target.copy(tempInit, '/etc/init.d/lo')
-            # Configure it to be run at boot
-            commands = ['cd /etc/init.d', 'chmod a+x lo',
-                        'update-rc.d lo defaults']
-            target.execute(';'.join(commands))
-            # Delete the locally-generated init script
-            os.remove(tempInit)
+        # Apply options
+        self.applyOptions(target)
 
     def site(self):
         '''Creates an Appy site on the distant server'''
@@ -266,6 +290,8 @@ class Deployer:
         # Execute the config commands if any
         if configCommands:
             t.execute(';'.join(configCommands))
+        # Apply options
+        self.applyOptions(t)
 
     def update(self):
         '''Performs, on these p_self.targets, an update of all software known to
@@ -291,7 +317,7 @@ class Deployer:
         # Browse targets
         for name, target in self.targets.items():
             i += 1
-            print(TG_UPDATE % (termColorize(name), i, total))
+            print(TG_ACT % (TP_UPDATE, termColorize(name), i, total))
             if not self.blind:
                 print(TG_NEXT)
             # (1) Build the set of commands to update the app, ext and
@@ -323,7 +349,7 @@ class Deployer:
             commands.append(restart)
             # Display the site's app.log (if not blind)
             if not self.blind:
-                commands.append(self.tail % (tailNb, target.sitePath))
+                commands.append(self.tail % ('-f', tailNb, target.sitePath))
             # These commands will be ran with target.siteOwner
             owner = siteOwner.split(':')[0]
             command = "su %s -c '%s'" % (owner, ';'.join(commands))
@@ -331,8 +357,22 @@ class Deployer:
 
     def view(self):
         '''Launch a command "tail -f" on the target's app.log file'''
-        target = self.target
-        target.execute(self.tail % (200, target.sitePath))
+        total = len(self.targets)
+        if total == 1:
+            # Display the log file of a single target, with tail "-f"
+            lines = 200
+            opt = ' -f'
+        else:
+            # Display several target's log files: do not use the '-f' option and
+            # show a smaller number of lines per target.
+            lines = 5
+            opt = ''
+        # Browse targets
+        i = 0
+        for name, target in self.targets.items():
+            i += 1
+            print(TG_ACT % (TG_LOG, termColorize(name), i, total))
+            target.execute(self.tail % (opt, lines, target.sitePath))
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                             Main method
@@ -382,14 +422,14 @@ class Deployer:
                 if self.targetName is None:
                     message = TARGET_NO
                 else:
-                    message = TARGET_VL % ', '.join(self.targets)
+                    available = tuple(self.config.deploy.targets.keys())
+                    message = TARGET_VL % '\n'.join(available)
                 print(message)
                 sys.exit(1)
             # Abord the whole operation if at least one wrong target was found
             if notFound:
                 sys.exit(1)
-            # The only command accepting more than one target is "update"
-            if self.command != 'update':
+            if self.command not in Deployer.manyTargetsCommands:
                 # Unwrap the first and unique target in p_self.target
                 for target in self.targets.values():
                     self.target = target
