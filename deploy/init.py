@@ -76,16 +76,12 @@ class Init:
         # The "status" command
         self.status = status
 
-    def get(self, asFile=True):
-        '''Creates the content of an init.d script. If p_asFile is True, the
-           content is dumped in a temp file and the method returns the path to
-           this temp file. Else, the content is returned, as a string.'''
-        r = Variables.replace(init, self, stars=True)
-        # Return the result as a string
-        if not asFile: return r
-        # Dump the result in a temp file and return its path
+    def get(self):
+        '''Creates the content of an init.d script and dump it in a temp file.
+           The method returns the path to this temp file.'''
+        content = Variables.replace(init, self, stars=True)
         path = getTempFileName()
-        with open(path, 'w') as f: f.write(r)
+        with open(path, 'w') as f: f.write(content)
         return path
 
     def deploy(self):
@@ -94,7 +90,7 @@ class Init:
         target = self.target
         initFolder = Init.debianFolder
         # Generate the init script locally, in a temp file
-        tempFilePath = self.get(asFile=True)
+        tempFilePath = self.get()
         # Copy the script in /etc/init.d on the target
         target.copy(tempFilePath, self.path)
         # Configure it to be run at boot

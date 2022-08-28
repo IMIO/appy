@@ -60,7 +60,8 @@ class Deploy(Program):
                    '[Options for command "site"] "lo" (if not executed via ' \
                    'command "install", this option can still be applied when ' \
                    'launching command "site" on some target), "init" (%s) - ' \
-                   '%s.' % (DEB_O, INIT_D % ('lo', LO_SV),
+                   '%s, "apache" (create an Apache virtual host).' % \
+                   (DEB_O, INIT_D % ('lo', LO_SV),
                             DEB_O, INIT_D % (SITE_NAME, SITE_SV))
     HELP_BLIND   = '["update" command only] If set, when updating several ' \
                    'targets, there is no stop between each one (such stops ' \
@@ -71,7 +72,7 @@ class Deploy(Program):
     # accepts no option at all.
     allowedOptions = {
       'install': ('lo',),
-      'site'   : ('lo','init')
+      'site'   : ('lo', 'init', 'apache')
     }
 
     # Error messages

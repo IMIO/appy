@@ -27,13 +27,18 @@ TARGET_VL = 'No valid target was mentioned.\n\nAvailable target(s):\n%s.'
 ALL_RESV  = '\n⚠ Name "ALL" is reserved to update all targets at once. ' \
             'Please rename the target having this name.\n'
 SINGLE_TG = 'Command "%s" cannot be run on more than one target.'
+APA_NO    = 'Apache option was not applied: no Apache configuration found. ' \
+            'Place an instance of appy.deploy.apache.Config in attribute ' \
+            'Target.apache.'
 
 # Explanations about options
 INIT_D    = 'Create and configure an init script for controlling'
 INIT_DET  = '(re)start / stop / status + start at boot'
 OPT_INF   = {
-  'lo'  : '%s LibreOffice (LO) in server mode - %s' % (INIT_D, INIT_DET),
-  'init': '%s the distant site - %s' % (INIT_D, INIT_DET)
+  'lo'    : '%s LibreOffice (LO) in server mode - %s' % (INIT_D, INIT_DET),
+  'init'  : '%s the distant site - %s' % (INIT_D, INIT_DET),
+  'apache': 'Create or update an Apache virtual host for this site, and ' \
+            'restart Apache'
 }
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -42,7 +47,8 @@ class Target:
 
     def __init__(self, sshHost, sshPort=22, sshLogin='root', sshKey=None,
                  sitePath=None, sitePort=8000, siteApp=None, siteExt=None,
-                 siteOwner='appy:appy', siteDependencies=None, default=False):
+                 siteOwner='appy:appy', siteDependencies=None, default=False,
+                 apache=None):
         # The name of the distant host, for establishing a SSH connection
         self.sshHost = sshHost
         # The port for the SSH connection
@@ -79,8 +85,12 @@ class Target:
         self.default = default
         # Info about LibreOffice (LO) running in server mode on the target
         # ~
-        # The port on which LO listens
+        # The port on which LO listens on the target machine
         self.loPort = 2002
+        # Info about an Apache virtual host that you may want to define, if you
+        # use Apache as a reverse proxy in front of your Appy site. Place here,
+        # if applicable, an instance of class appy.deploy.apache::Config.
+        self.apache = apache
 
     def __repr__(self):
         '''p_self's string representation'''
@@ -224,15 +234,24 @@ class Deployer:
         self.target.execute('cat /etc/lsb-release')
 
     def lo(self, target):
-        '''Create an init script for LibreOffice on this p_target'''
+        '''Create or update an init script for LibreOffice on this p_target'''
         # Lazy-import module "init" to avoid loading it into RAM when not needed
         from appy.deploy import init
         init.LO(target).deploy()
 
     def init(self, target):
-        '''Create an init script for the target site'''
+        '''Create or update an init script for this p_target'''
         from appy.deploy import init
         init.Site(target).deploy()
+
+    def apache(self, target):
+        '''Create or update a virtual host on this p_target'''
+        # Ensure an Apache configuration has been defined
+        if not target.apache:
+            print(APA_NO)
+            return
+        from appy.deploy.apache import Apache
+        Apache(target).deploy()
 
     def applyOptions(self, target):
         '''Apply the options as defined in p_self.options'''
