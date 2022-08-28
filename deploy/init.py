@@ -97,7 +97,6 @@ class Init:
         tempFilePath = self.get(asFile=True)
         # Copy the script in /etc/init.d on the target
         target.copy(tempFilePath, self.path)
-        breakpoint()
         # Configure it to be run at boot
         commands = ['cd %s' % initFolder, 'chmod a+x %s' % self.name,
                     'update-rc.d %s defaults' % self.name]
