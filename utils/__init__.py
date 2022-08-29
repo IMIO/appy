@@ -232,7 +232,7 @@ class Traceback:
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def executeCommand(cmd, stdin=None, env=None, shell=False):
+def executeCommand(cmd, stdin=None, env=None, shell=False, stringOutput=True):
     '''Executes command p_cmd and returns a tuple (s_stdout, s_stderr)
        containing the data output by the subprocesss on stdout and stderr. p_cmd
        should be a list of args (the 1st arg being the command in itself, the
@@ -241,9 +241,11 @@ def executeCommand(cmd, stdin=None, env=None, shell=False):
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=stdin,
                             stderr=subprocess.PIPE, env=env, shell=shell)
     out, err = proc.communicate()
-    if isinstance(out, bytes):
+    # The output may be a binary file as well: p_stringOutput may need to be
+    # False in that case.
+    if stringOutput and isinstance(out, bytes):
         out = out.decode()
-    if isinstance(err, bytes):
+    if stringOutput and isinstance(err, bytes):
         err = err.decode()
     return out, err
 

@@ -46,6 +46,8 @@ SYNC_KO   = 'If you want to automate the management of your target\'s ' \
             ' a local folder where disttant config.py files mwill be ' \
             'synchronized.'
 SYNC_NN   = 'Sync is not needed: no file is missing.'
+SYNC_NF   = '\n⚠  Config file "%%s" not found. Generate one by executing:' \
+            '%s' % SYNC_CMD
 SYNC_F_C  = '%s created.'
 
 # Explanations about options
@@ -246,6 +248,20 @@ class Config:
             o.createFile(folder/missing, local.config)
             print(SYNC_F_C % missing)
 
+    def pushFile(self, targetName, target):
+        '''Copies the local config.py file corresponding to this p_target to the
+           distant machine.'''
+        # Don't do anything if sync is not enabled
+        folder = self.configFiles
+        if not folder: return
+        # Find the local file
+        local = Path(folder) / '%s.config.py' % targetName
+        if not local.is_file():
+            print(SYNC_NF % local)
+            return
+        # Copy it to the p_target
+        target.copy(str(local), '%s/config.py' % target.sitePath)
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Deployer:
     '''App deployer'''
@@ -421,6 +437,8 @@ class Deployer:
         # Execute the config commands if any
         if configCommands:
             t.execute(';'.join(configCommands))
+        # Copy the local config.py if config files are synchronized
+        self.config.deploy.pushFile(self.targetName, t)
         # Apply options
         self.applyOptions(t)
 
@@ -451,7 +469,7 @@ class Deployer:
             print(TG_ACT % (TP_UPDATE, termColorize(name), i, total))
             if not self.blind:
                 print(TG_NEXT)
-            # (1) Build the set of commands to update the app, ext and
+            # (1) Build and run the set of commands to update the app, ext and
             #     dependencies.
             commands = []
             siteOwner = target.siteOwner
@@ -473,14 +491,16 @@ class Deployer:
             command = '%s %s' % (Repository.getEnvironment(),
                                  ';'.join(commands))
             target.execute(command)
-            # (2) Build the command to restart the distant site and display its
-            #     log file.
+            # (2) Copy the config.py file if applicable
+            self.config.deploy.pushFile(name, target)
+            # (3) Build and run the command to restart the distant site and
+            #     possibly display its log file.
             commands = []
             restart = '%s/bin/site restart' % target.sitePath
             commands.append(restart)
             # Display the site's app.log (if not blind)
             if not self.blind:
-                commands.append(self.tail % ('-f', tailNb, target.sitePath))
+                commands.append(self.tail % (' -f', tailNb, target.sitePath))
             # These commands will be ran with target.siteOwner
             owner = siteOwner.split(':')[0]
             command = "su %s -c '%s'" % (owner, ';'.join(commands))
