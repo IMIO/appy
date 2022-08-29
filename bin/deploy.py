@@ -62,7 +62,7 @@ class Deploy(Program):
                    'launching command "site" on some target), "init" (%s) - ' \
                    '%s, "apache" (create an Apache virtual host).' % \
                    (DEB_O, INIT_D % ('lo', LO_SV),
-                            DEB_O, INIT_D % (SITE_NAME, SITE_SV))
+                    DEB_O, INIT_D % (SITE_NAME, SITE_SV))
     HELP_BLIND   = '["update" command only] If set, when updating several ' \
                    'targets, there is no stop between each one (such stops ' \
                    'allow to consult the target\'s app.log to ensure ' \
@@ -71,6 +71,7 @@ class Deploy(Program):
     # Allowed options, for every command. A command not being in this dict
     # accepts no option at all.
     allowedOptions = {
+      'list'   : ('sync',),
       'install': ('lo',),
       'site'   : ('lo', 'init', 'apache')
     }

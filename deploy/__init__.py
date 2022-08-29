@@ -8,6 +8,7 @@ import os, sys
 from pathlib import Path
 
 from appy.utils import termColorize
+from appy.model.utils import Object as O
 from appy.deploy.repository import Repository
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -30,15 +31,32 @@ SINGLE_TG = 'Command "%s" cannot be run on more than one target.'
 APA_NO    = 'Apache option was not applied: no Apache configuration found. ' \
             'Place an instance of appy.deploy.apache.Config in attribute ' \
             'Target.apache.'
+SYNC_CMD  = '\n\n   ./deploy list -o sync'
+CFG_D_NO  = '\n⚠  Your have defined folder "%%s" to store your target\'s ' \
+            'config.py files. This folder does not exist yet. Use the ' \
+            'following command to create it and add, into it, one template ' \
+            'config.py file per target.%s' % SYNC_CMD
+CF_MIS    = '\n⚠  %%d missing file(s) in "%%s": %%s.\n\nUse the following ' \
+            'command to create missing files:%s' % SYNC_CMD
+CF_SUR    = '\n⚠  %d file(s) in "%s" that do not correspond to any of ' \
+            'your currently defined targets:: %s.\n\nPlease remove or ' \
+            'rename it yourself.'
+SYNC_KO   = 'If you want to automate the management of your target\'s ' \
+            'config.py files, define, in attribute config.deploy.configFiles,' \
+            ' a local folder where disttant config.py files mwill be ' \
+            'synchronized.'
+SYNC_NN   = 'Sync is not needed: no file is missing.'
+SYNC_F_C  = '%s created.'
 
 # Explanations about options
 INIT_D    = 'Create and configure an init script for controlling'
 INIT_DET  = '(re)start / stop / status + start at boot'
 OPT_INF   = {
-  'lo'    : '%s LibreOffice (LO) in server mode - %s' % (INIT_D, INIT_DET),
-  'init'  : '%s the distant site - %s' % (INIT_D, INIT_DET),
-  'apache': 'Create or update an Apache virtual host for this site, and ' \
-            'restart Apache'
+  'lo'     : '%s LibreOffice (LO) in server mode - %s' % (INIT_D, INIT_DET),
+  'init'   : '%s the distant site - %s' % (INIT_D, INIT_DET),
+  'apache' : 'Create or update an Apache virtual host for this site, and ' \
+             'restart Apache',
+  'sync'   : 'Create or update local copies of config.py target files'
 }
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -148,9 +166,85 @@ class Config:
 
     def __init__(self):
         # This dict stores all the known targets for deploying this app. Keys
-        # are target names, values are Target instances. The default target must
-        # be defined at key "default".
+        # are target names, values are Target instances.
         self.targets = {}
+        # Managing target's config.py files
+        # ~
+        # If you want to automate the management of targets' config.py files, 
+        # specify, in the following attribute, a path, on your local machine,
+        # where local copies of config.py files will be created / updated, and
+        # pushed to targets. Note that in that mode, any manual change performed
+        # in config.py files on targets can potentially be lost.
+        #
+        # Within this folder, every config.py file is named:
+        #
+        #                        <key>.config.py
+        #
+        # <key> is the key at which the Target object can be found within
+        # p_self.targets.
+        self.configFiles = None
+
+    def warnFiles(self, collectOnly=False):
+        '''Issue warnings if config files are in use but not complete, or
+           silently collect missing files if p_collectOnly is True.'''
+        # No warning at all if config files are not in use
+        folder = self.configFiles
+        if not folder: return ()
+        # Issue a warning if the folder does not exist
+        folder = Path(folder)
+        if not folder.is_dir():
+            if not collectOnly:
+                print(CFG_D_NO % folder)
+            return
+        # Issue a warning if there is not exactly one config.py file per target
+        targets = self.targets
+        info = O(missing=[], surplus=[])
+        for name, target in targets.items():
+            fileName = '%s.config.py' % name
+            path = folder / fileName
+            if not path.is_file():
+                info.missing.append(fileName)
+        # Also note files being there but that do not corrrespond to any target
+        # from p_self.targets.
+        for sub in folder.glob('*'):
+            name = sub.name
+            # Ignore files not being configuration files
+            if not name.endswith('.config.py'): continue
+            key = name.split('.', 1)[0]
+            if key not in targets:
+                info.surplus.append(name)
+        if info.missing and not collectOnly:
+            print(CF_MIS % (len(info.missing), folder, ', '.join(info.missing)))
+        if info.surplus and not collectOnly:
+            print(CF_SUR % (len(info.surplus), folder, ', '.join(info.surplus)))
+        return info
+
+    def syncFiles(self, info):
+        '''Create any missing config.py file within p_self.configFiles'''
+        if info is None:
+            # The files folder is not defined in the config
+            print(SYNC_KO)
+            return
+        # Do nothing if p_info s None: nothing is missing
+        if not info.missing:
+            print(SYNC_NN)
+            return
+        # Ensure folder p_self.configFiles exists
+        folder = Path(self.configFiles)
+        folder.mkdir(parents=True, exist_ok=True)
+        # Create any missing file. Lazy-import the local module to avoid loading
+        # it in RAM when not needed.
+        from appy.deploy import local
+        for missing in info.missing:
+            # Get the corresponding Target instance
+            target = self.targets[missing.split('.',1)[0]]
+            # Misuse class local.Target: I want to use one of its methods
+            o = local.Target()
+            o.folder = target.sitePath
+            o.app = target.siteApp.getLocalFolder(Path('%s/lib' % o.folder))
+            o.port = target.sitePort
+            o.createFile(folder/missing, local.config)
+            print(SYNC_F_C % missing)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Deployer:
@@ -207,17 +301,23 @@ class Deployer:
     # Command for consulting the last lines in a target's app.log file
     tail = 'tail%s -n %d %s/var/app.log'
 
+    def sync(self, info=None):
+        '''Create one config.py file for every target for which no such file
+           locally exists in folder p_self.config.deploy.configFiles.'''
+        return self.config.deploy.syncFiles(info)
+
     def list(self):
         '''Lists the available targets on the config'''
         infos = []
         default = None
         i = 1
+        config = self.config.deploy
         # Make a first round to get the longest target name
         longest = 0
-        for name, target in self.config.deploy.targets.items():
+        for name, target in config.targets.items():
             longest = max(len(name), longest)
         # Walk targets
-        for name, target in self.config.deploy.targets.items():
+        for name, target in config.targets.items():
             suffix = ' [default]' if target.default else ''
             info = '%s. %s - %s%s' % (str(i).zfill(2), name.ljust(longest),
                                       target, suffix)
@@ -228,6 +328,14 @@ class Deployer:
             i += 1
         infos = '\n'.join(infos)
         print(T_LIST % (self.appPath.name, self.sitePath.name, infos))
+        # Add a warning if a "configFiles" folder is defined but does not
+        # contain one config.py file per target.
+        if config.configFiles:
+            files = config.warnFiles(collectOnly='sync' in self.options)
+        else:
+            files = None
+        # Apply options
+        self.applyOptions(files)
 
     def info(self):
         '''Retrieve info about the target OS'''
@@ -253,13 +361,17 @@ class Deployer:
         from appy.deploy.apache import Apache
         Apache(target).deploy()
 
-    def applyOptions(self, target):
+    def applyOptions(self, arg=None):
         '''Apply the options as defined in p_self.options'''
         # Apply options
         for option in self.options:
             descr = OPT_INF[option]
             print(OPT_APPLY % (termColorize(option, color='3'), descr))
-            getattr(self, option)(target)
+            method = getattr(self, option)
+            if arg:
+                method(arg)
+            else:
+                method()
 
     def install(self):
         '''Installs required dependencies on the target via "apt" and "pip3" and
