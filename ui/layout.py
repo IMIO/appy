@@ -45,7 +45,7 @@ class Cell:
         '''Renders p_value (one element among self.content) for a given
            p_layoutTarget (a field or object) on some p_layout.'''
         # Do not render "r" if we must render a not-required object
-        if (value == 'pxRequired') and not layoutTarget.required: return
+        if value == 'pxRequired' and not layoutTarget.required: return
         # The name of the PX is the layout or p_value
         name = layout if value == 'f' else value
         r = layoutTarget
@@ -101,6 +101,7 @@ class Layout:
     # - symbols, allowing to define column or row breaks, alignment, etc.
 
     # Letters for a page - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     #  e - The object h*e*ader, containing its title, breadcrumb, siblings and
     #      navigation.
     #  b - The range of *b*uttons: pages and phases, save, delete, actions and
@@ -110,6 +111,7 @@ class Layout:
     #      fields
 
     # Letters for a field  - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     #  l - "label"        The field label
     #  d - "description"  The field description
     #  h - "help"         Help for the field (typically rendered as an icon,
@@ -132,10 +134,12 @@ class Layout:
     }
 
     # Symbols to use within a layout string  - - - - - - - - - - - - - - - - - -
+
     # A row delimiter is to be used at the end of a row. The symbol used defines
     # alignment for the previously defined row.
     rowDelimiters =  {'-':'middle', '=':'top', '_':'bottom'}
     rowDelms = ''.join(rowDelimiters.keys())
+
     # A cell delimiter is to be used at the end of a cell. The symbol used
     # defines alignment for the previouly defined cell.
     cellDelimiters = {'|': 'center', ';': 'left', '!': 'right'}
@@ -205,8 +209,8 @@ class Layout:
         else:
             source = ''
             self.layoutString = layoutString
-        # Initialise simple params, either from the true params, either from
-        # the p_other Table instance.
+        # Initialise simple params, either from the true params, or from
+        # the p_other Layout instance.
         for param in Layout.baseAttributes:
             setattr(self, param, eval('%s%s' % (source, param)))
         # The following attribute will store a special Row instance used for
@@ -249,8 +253,8 @@ class Layout:
         # Split the p_layoutString with the row delimiters
         rowContent = ''
         for char in layoutString:
-            if char in Layout.rowDelimiters:
-                valign = Layout.rowDelimiters[char]
+            if char in self.rowDelimiters:
+                valign = self.rowDelimiters[char]
                 if self.isHeaderRow(rowContent):
                     if not self.headerRow:
                         self.headerRow = Row(rowContent, valign, isHeader=True)
@@ -298,6 +302,45 @@ class Layout:
                 content.insert(1, Layout.pxs['r'])
 
     def __repr__(self): return '<Layout %s>' % self.layoutString
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class LayoutF(Layout):
+    '''Alternative to parent class Layout, using a div tag with flex layout,
+       instead of a table.'''
+
+    # Flex-specific row delimiters (vertical alignment)
+    rowDelimiters =  {'-':'center', '=':'start', '_':'end'}
+    rowDelms = ''.join(rowDelimiters.keys())
+
+    pxRender = Px('''
+     <div style=":table.getStyle()" class=":table.getCss(_ctx_)"
+          id=":tagId" name=":tagName">
+      <x for="cell in table.row.cells">
+       <x for="c in cell.content">::cell.renderContent(c, layout, layoutTarget)
+       </x>
+      </x>
+     </div>''')
+
+    def __init__(self, layoutString, style=None, css=None, other=None,
+                 derivedType=None):
+        # Call the base constructor
+        super().__init__(layoutString, style=style, css=css, other=other,
+                         derivedType=derivedType)
+        # Unwrap the first row, that is the unique row that will be taken into
+        # account.
+        self.row = self.rows[0]
+
+    def getStyle(self):
+        '''Get content of the main tag's "style" attribute'''
+        r = 'display:flex;align-items:%s' % self.row.valign
+        if self.style:
+            r = '%s;%s' % (r, self.style)
+        return r
+
+    def getCss(self, c):
+        '''Get the CSS class(es) to apply to the main tag's "class" attribute'''
+        r = '%s %s' % (c.tagCss or '', self.css or '')
+        return r.strip()
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ColumnLayout:

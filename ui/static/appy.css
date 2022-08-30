@@ -120,6 +120,9 @@ div.rbutton { float:right }
 .xhtml table { margin:20px 0 }
 .xhtml table td, .xhtml table th { border:1px solid grey; padding:3px }
 .xhtml table th { background-color:|lightColor| }
+.xhtmlE { border:1px solid lightgrey; background-color:white; padding:5px 10px;
+          font-size:90% }
+.xhtmlE div { padding-bottom:0.3em }
 .clickable { cursor:pointer !important }
 .disabled { opacity:0.3 }
 .unclickable { pointer-events:none; cursor:default }

@@ -84,7 +84,21 @@ app = '{self.app}'
 site = '{self.folder}'
 
 # Complete the config  - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def complete(c):
+def complete(c, minimal=False):
+    '''Completes the global p_c(onfig)'''
+    # Amon, the Appy monitoring tool, if used, will call this function with
+    # p_minimal being True. If you use Amon, please take the habit to put any
+    # non-standard stuff requiring specific "import" statements in conditional
+    # expressions, like in this example:
+    #
+    # if not minimal:
+    #     from MyApp import MySpecificConfig
+    #     c.myConfig = MySpecificConfig()
+    #     ...
+    #
+    # In doing so, Amon will be able to import your config.py file without
+    # rurning into trouble, trying to import a whole network of Python packages.
+    #
     c.model.set(app)
     c.server.set(app, site)
     c.server.port = {self.port}

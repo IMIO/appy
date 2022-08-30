@@ -59,16 +59,19 @@ class List(Field):
       <td if="isEdit" align=":dright">
        <img class="clickable iconS" src=":svg('deleteS')"
             title=":_('object_delete')"
-            onclick=":field.jsDeleteConfirm(q, tableId)"/>
+            onclick=":field.jsDeleteConfirm(_ctx_)"/>
        <img class="clickable iconS" src=":svg('arrow')"
             style="transform: rotate(180deg)" title=":_('move_up')"
-            onclick=":'moveRow(%s,%s,this)' % (q('up'), q(tableId))"/>
+            onclick=":'moveRow(%s,%s,%s,this)' %
+                       (q('up'), q(tableId), q(tagId))"/>
        <img class="clickable iconS" src=":svg('arrow')"
             title=":_('move_down')"
-            onclick=":'moveRow(%s,%s,this)' % (q('down'), q(tableId))"/>
+            onclick=":'moveRow(%s,%s,%s,this)' %
+                       (q('down'), q(tableId), q(tagId))"/>
        <input class="clickable" type="image" tabindex="0"
               src=":url('addBelow')" title=":_('object_add_below')"
-              onclick=":'insertRow(%s,this); return false' % q(tableId)"/>
+              onclick=":'insertRow(%s,%s,this);
+                         return false' % (q(tableId), q(tagId))"/>
       </td></tr>''')
 
     # PX for rendering the list (shared between pxView, pxEdit and pxCell)
@@ -91,7 +94,7 @@ class List(Field):
         <!-- Icon for adding a new row -->
         <th if="isEdit">
          <img class="clickable" src=":url('plus')" title=":_('object_add')"
-              onclick=":'insertRow(%s)' % q(tableId)"/>
+              onclick=":'insertRow(%s,%s)' % (q(tableId),q(tagId))"/>
         </th>
        </tr>
       </thead>
@@ -114,7 +117,7 @@ class List(Field):
     </x>''',
 
      js='''
-       updateRowNumber = function(row, rowIndex, action) {
+       updateRowNumber = function(tagId, row, rowIndex, action) {
          /* Within p_row, we must find tables representing fields. Every such
             table has an id of the form [objectId]_[field]*[subField]*[i].
             Within this table, for every occurrence of this string, the "[i]"
@@ -122,9 +125,8 @@ class List(Field):
             p_rowIndex is this index. If p_action is 'add', the index must
             become [i] + p_rowIndex. */
 
-         // Browse tables representing fields
-         var fields = row.getElementsByTagName('table'),
-             tagTypes = ['input', 'select', 'img', 'textarea', 'a', 'script'],
+         // Browse elements representing fields
+         var fields = row.querySelectorAll('[id^="'+tagId+'"]'),
              newIndex = -1, id, old, elems, neww, val, w, oldIndex;
 
          // Patch fields
@@ -148,30 +150,28 @@ class List(Field):
            fields[i].id = fields[i].id.replace(old, neww);
            // Find sub-elements mentioning "old" and replace it with "neww"
            val = w = null;
-           for (var j=0; j<tagTypes.length; j++) {
-             var widgets = fields[i].getElementsByTagName(tagTypes[j]);
-             for (var k=0; k<widgets.length; k++) {
-               w = widgets[k];
-               // Patch id
-               val = w.id;
-               if (val) w.id = val.replace(old, neww);
-               // Patch name
-               val = w.name;
-               if (val) w.name = val.replace(old, neww);
-               // Patch href
-               if ((w.nodeName == 'A') && w.href)
-                 { w.href = w.href.replace(old, neww); }
-               // Patch (and reeval) script
-               if (w.nodeName == 'SCRIPT') {
-                 w.text = w.text.replace(old, neww);
-                 eval(w.text);
-               }
+           var widgets = fields[i].querySelectorAll('[id^="'+elems[0]+'\*"]');
+           for (var k=0; k<widgets.length; k++) {
+             w = widgets[k];
+             // Patch id
+             val = w.id;
+             if (val) w.id = val.replace(old, neww);
+             // Patch name
+             val = w.name;
+             if (val) w.name = val.replace(old, neww);
+             // Patch href
+             if ((w.nodeName == 'A') && w.href)
+               { w.href = w.href.replace(old, neww); }
+             // Patch (and reeval) script
+             if (w.nodeName == 'SCRIPT') {
+               w.text = w.text.replace(old, neww);
+               eval(w.text);
              }
            }
          }
        }
 
-       insertRow = function(tableId, previous) {
+       insertRow = function(tableId, tagId, previous) {
          /* Add a new row in table with ID p_tableId, after p_previous row or at
             the end if p_previous is null. */
          var table = document.getElementById(tableId),
@@ -186,21 +186,21 @@ class List(Field):
            // We must insert the new row before it
            body.insertBefore(newRow, next);
            // The new row takes the index of "next" (- the 2 unsignificant rows)
-           updateRowNumber(newRow, newIndex-2, 'set');
+           updateRowNumber(tagId, newRow, newIndex-2, 'set');
            // Row numbers for "next" and the following rows must be incremented
            for (var i=newIndex+1; i < rows.length; i++) {
-             updateRowNumber(rows[i], 1, 'add');
+             updateRowNumber(tagId, rows[i], 1, 'add');
            }
          }
          else {
            // We must insert the new row at the end
            body.appendChild(newRow);
            // Within newRow, incorporate the row nb within field names and ids
-           updateRowNumber(newRow, rows.length-3, 'set');
+           updateRowNumber(tagId, newRow, rows.length-3, 'set');
          }
        }
 
-       deleteRow = function(tableId, deleteImg, ask, rowIndex) {
+       deleteRow = function(tableId, tagId, deleteImg, ask, rowIndex) {
          var table = document.getElementById(tableId),
              rows = table.rows,
              row = (deleteImg)? deleteImg.parentNode.parentNode: rows[rowIndex];
@@ -208,33 +208,33 @@ class List(Field):
          // Must we ask the user to confirm this action ?
          if (ask) {
              askConfirm('script',
-                        'deleteRow("'+tableId+'",null,false,'+rowIndex+')');
+                'deleteRow("'+tableId+'","'+tagId+'",null,false,'+rowIndex+')');
              return;
          }
          // Decrement higher row numbers by 1 because of the deletion
          for (var i=rowIndex+1; i < rows.length; i++) {
-           updateRowNumber(rows[i], -1, 'add');
+           updateRowNumber(tagId, rows[i], -1, 'add');
          }
          table.deleteRow(rowIndex);
        }
 
-       moveRow = function(direction, tableId, moveImg) {
+       moveRow = function(direction, tableId, tagId, moveImg) {
          var row = moveImg.parentNode.parentNode,
              body = document.getElementById(tableId).tBodies[0], sibling;
          // Move up or down
          if (direction == 'up') {
            sibling = row.previousElementSibling;
            if (sibling && sibling.style.display != 'none') {
-             updateRowNumber(row, -1, 'add');
-             updateRowNumber(sibling, 1, 'add');
+             updateRowNumber(tagId, row, -1, 'add');
+             updateRowNumber(tagId, sibling, 1, 'add');
              body.insertBefore(row, sibling);
            }
          }
          else if (direction == 'down') {
            sibling = row.nextElementSibling;
            if (sibling) {
-             updateRowNumber(row, 1, 'add');
-             updateRowNumber(sibling, -1, 'add');
+             updateRowNumber(tagId, row, 1, 'add');
+             updateRowNumber(tagId, sibling, -1, 'add');
              // If sibling is null, row will be added to the end
              sibling = sibling.nextElementSibling;
              body.insertBefore(row, sibling);
@@ -453,10 +453,11 @@ class List(Field):
             if field:
                 field.getJs(o, layout, r, config)
 
-    def jsDeleteConfirm(self, q, tableId):
+    def jsDeleteConfirm(self, c):
         '''Gets the JS code to call when the user wants to delete a row'''
         confirm = 'true' if self.deleteConfirm else 'false'
-        return 'deleteRow(%s,this,%s)' % (q(tableId), confirm)
+        q = c.q
+        return "deleteRow(%s,%s,this,%s)" % (q(c.tableId), q(c.tagId), confirm)
 
     def subValidate(self, o, value, errors):
         '''Validates inner fields'''

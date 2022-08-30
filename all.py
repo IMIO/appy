@@ -26,7 +26,6 @@ from appy.model.utils import Object as O
 from appy.model.fields.float import Float
 from appy.model.fields.color import Color
 from appy.model.fields import Field, Show
-from appy.ui.layout import Layout, Layouts
 from appy.model.fields.string import String
 from appy.model.fields.action import Action
 from appy.model.fields.switch import Switch
@@ -41,6 +40,7 @@ from appy.model.fields.computed import Computed
 from appy.model.fields.password import Password
 from appy.model.searches.gridder import Gridder
 from appy.model.fields.group import Group, Column
+from appy.ui.layout import Layout, LayoutF, Layouts
 from appy.model.workflow.transition import Transition
 from appy.model.fields.select import Select, Selection
 from appy.database.operators import or_, and_, in_, not_

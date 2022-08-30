@@ -106,7 +106,7 @@ class Rich(Multilingual, Field):
 
     # Unilingual edit
     editUni = Px('''
-     <textarea var="inputId=not lg and name or '%s_%s' % (name, lg)"
+     <textarea var="inputId=name if not lg else ('%s_%s' % (name, lg))"
        id=":inputId" name=":inputId" cols=":field.getTextareaCols()"
        style=":field.getTextareaStyle()"
        rows=":field.height">:field.getInputValue(inRequest, requestValue, value)

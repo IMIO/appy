@@ -255,7 +255,7 @@ class Config:
         folder = self.configFiles
         if not folder: return
         # Find the local file
-        local = Path(folder) / '%s.config.py' % targetName
+        local = Path(folder) / ('%s.config.py' % targetName)
         if not local.is_file():
             print(SYNC_NF % local)
             return
@@ -493,7 +493,9 @@ class Deployer:
             target.execute(command)
             # (2) Copy the config.py file if applicable
             self.config.deploy.pushFile(name, target)
-            # (3) Build and run the command to restart the distant site and
+            # (3) Apply potential options
+            self.applyOptions(target)
+            # (4) Build and run the command to restart the distant site and
             #     possibly display its log file.
             commands = []
             restart = '%s/bin/site restart' % target.sitePath
