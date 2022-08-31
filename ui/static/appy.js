@@ -1,5 +1,6 @@
 var lsTimeout,  // Timout for the live search
-    podTimeout; // Timeout for checking status of pod downloads
+    podTimeout, // Timeout for checking status of pod downloads
+    emptyDiv='<div></div>';
 
 // Builds the URL to a static resource named p_name
 function buildUrl(name) { return siteUrl + '/static/appy/' + name }
@@ -1526,6 +1527,11 @@ function initFocus(pageId){
   let id = pageId + '_title',
       elem = document.getElementById(id);
   if (elem) elem.focus();
+}
+
+// Initialises empty XHTML content for a poor widget
+function initPoorContent(div) {
+  if (!div.innerHTML) div.innerHTML = emptyDiv;
 }
 
 // Functions for making popups draggable

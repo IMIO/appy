@@ -1328,7 +1328,9 @@ class Base:
         let divs = f.querySelectorAll('[contenteditable=true]'), div=null;
         for (let i=0; i<divs.length; i++) {
           div = divs[i];
-          if (div.innerHTML) div.nextSibling.value = div.innerHTML;
+          if (div.innerHTML && div.innerHTML != emptyDiv) {
+            div.nextSibling.value = div.innerHTML;
+          }
         }
       }
 

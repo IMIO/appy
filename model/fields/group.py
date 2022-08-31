@@ -427,7 +427,7 @@ class UiGroup:
         lastRow = self.elements[-1]
         numberOfColumns = len(self.columnsWidths)
         # Grid groups span a single field on 2 columns
-        if self.style == 'grid': numberOfColumns = numberOfColumns / 2
+        if self.style == 'grid': numberOfColumns = int(numberOfColumns / 2)
         # Compute the number of columns already filled in the last row
         filledColumns = 0
         for rowElem in lastRow: filledColumns += rowElem.colspan
