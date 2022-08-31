@@ -72,7 +72,7 @@ class Replacements:
         '''Return the replacement char for p_char. p_previous is the previous
            char encountered before p_char.'''
         r = self.replacements[char]
-        if not isinstance(r, basestring):
+        if not isinstance(r, str):
             # The replacement depends on "previous"
             if previous in r:
                 r = r[previous]
@@ -85,8 +85,8 @@ class Replacements:
                            (s_result, [s_toReopen])
         '''
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #  s_result  | Is the resulting unicode string, whose special chars have
-        #            | been replaced with their replacements.
+        #  s_result  | Is the resulting string, whose special chars have been
+        #            | replaced with their replacements.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # [toReopen] | Among special chars to replace, there are opening and
         #            | ending chars, used as delimiters for applying style, ie,
@@ -103,9 +103,6 @@ class Replacements:
         #            | p_toReopen. Indeed, the real ending delimiters may be
         #            | present in the next p_text.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # Ensure p_text is Unicode
-        isStr = isinstance(text, str)
-        if isStr: text = text.decode('utf-8')
         # Replace special markers when appropriate
         if fun: text = self.regex.sub(fun, text)
         # Build the result as a list
@@ -150,9 +147,7 @@ class Replacements:
                 add(self.getReplacementFor(delimiters[stack[i]], None))
                 i -= 1
         # Join the result to a string
-        r = u''.join(r)
-        # Encode the result when relevant
-        if isStr: r = r.encode('utf-8')
+        r = ''.join(r)
         return r, stack
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

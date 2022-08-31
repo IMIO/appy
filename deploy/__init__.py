@@ -464,9 +464,9 @@ class Deployer:
         tailNb = 100 if total == 1 else 30
         i = 0
         # Browse targets
-        for name, target in self.targets.items():
+        for targetName, target in self.targets.items():
             i += 1
-            print(TG_ACT % (TP_UPDATE, termColorize(name), i, total))
+            print(TG_ACT % (TP_UPDATE, termColorize(targetName), i, total))
             if not self.blind:
                 print(TG_NEXT)
             # (1) Build and run the set of commands to update the app, ext and
@@ -492,7 +492,7 @@ class Deployer:
                                  ';'.join(commands))
             target.execute(command)
             # (2) Copy the config.py file if applicable
-            self.config.deploy.pushFile(name, target)
+            self.config.deploy.pushFile(targetName, target)
             # (3) Apply potential options
             self.applyOptions(target)
             # (4) Build and run the command to restart the distant site and

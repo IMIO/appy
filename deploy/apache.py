@@ -121,9 +121,8 @@ class Apache:
         template = eval(type)
         localPath = self.get(config, template)
         suffix = '' if type == 'httpSingle' else ('_%s' % type)
-        dest = '%s/%s%s' % (Apache.sitesFolder, target.siteName, suffix)
+        dest = '%s/%s%s.conf' % (Apache.sitesFolder, target.siteName, suffix)
         target.copy(localPath, dest)
-        target.execute('chmod a+x %s' % dest)
         os.remove(localPath)
 
     def deploy(self):
@@ -138,6 +137,8 @@ class Apache:
         if config.protocol == 'http':
             # Create a unique http virtual host
             self.copyVirtualHost('httpSingle', config, target)
+            # Restart Apache
+            target.execute(Apache.restart)
         elif config.protocol == 'https':
             # Create a virtual host that will redirect http traffic to https,
             # and a second one that manages https.
@@ -151,7 +152,7 @@ class Apache:
                 dest = getattr(config, 'dest%s' % name.capitalize())
                 target.copy(getattr(config, name), dest)
             # Restart Apache
-            #target.execute(Apache.restart)
+            target.execute(Apache.restart)
         else:
             print(APA_P_KO % config.protocol)
             return
