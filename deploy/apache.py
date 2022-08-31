@@ -38,6 +38,7 @@ https = '''<IfModule mod_ssl.c>
   ErrorLog ${APACHE_LOG_DIR}/error.log
   CustomLog ${APACHE_LOG_DIR}/access.log combined
   SSLEngine on
+  ProxyTimeout 10800
   SSLCertificateFile |destCert|
   SSLCertificateKeyFile |destKey|
   SSLCertificateChainFile |destChain|

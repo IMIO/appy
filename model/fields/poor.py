@@ -13,10 +13,13 @@ class Poor(Rich):
 
     # Unilingual edit
     editUni = Px('''
-     <div contenteditable="true" class="xhtmlE" style=":field.getWidgetStyle()"
-          var="inputId=not lg and name or '%s_%s' % (name, lg)"
-          id=":inputId">:field.getInputValue(inRequest, requestValue, value)
-     </div>''')
+     <x var="inputId='%s_%s' % (name, lg) if lg else name">
+      <div contenteditable="true" class="xhtmlE" style=":field.getWidgetStyle()"
+           id=":'%sP' % inputId">:field.getInputValue(inRequest, requestValue,
+                                                      value)</div>
+      <!-- The hidden form field -->
+      <textarea id=":inputId" name=":inputId" style="display:none"></textarea>
+     </x>''')
 
     # Do not load ckeditor
     def getJs(self, o, layout, r, config): return

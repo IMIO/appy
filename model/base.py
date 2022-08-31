@@ -1322,6 +1322,16 @@ class Base:
           }
         }
       }
+
+      retrieveContentEditable = function(f) {
+        // Copy, in textareas, content store in content-editable divs
+        let divs = f.querySelectorAll('[contenteditable=true]'), div=null;
+        for (let i=0; i<divs.length; i++) {
+          div = divs[i];
+          if (div.innerHTML) div.nextSibling.value = div.innerHTML;
+        }
+      }
+
       submitAppyForm = function(action, gotoPage, gotoLayout) {
         let f = document.getElementById('appyForm');
         // Complete the form via the "_get_" element if present
@@ -1338,6 +1348,7 @@ class Base:
         }
         f.gotoPage.value = gotoPage;
         f.gotoLayout.value = gotoLayout;
+        retrieveContentEditable(f);
         f.submit(); clickOn(f);
       }
 
