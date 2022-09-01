@@ -94,7 +94,7 @@ class List(Field):
         <!-- Icon for adding a new row -->
         <th if="isEdit">
          <img class="clickable" src=":url('plus')" title=":_('object_add')"
-              onclick=":'insertRow(%s,%s)' % (q(tableId),q(tagId))"/>
+              onclick=":'insertRow(%s,%s)' % (q(tableId), q(tagId))"/>
         </th>
        </tr>
       </thead>

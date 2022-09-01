@@ -1605,9 +1605,9 @@ class Field:
             return int(int(width[:-2]) / 5)
         return 30 # Other units are currently not supported
 
-    def getListHeader(self, ctx):
+    def getListHeader(self, c):
         '''When p_self is used as inner-field, within a table-like rendered
            container field, this method returns the content of the header row
            corresponding to this inner field.'''
-        return ctx['_']('label', field=self)
+        return c._('label', field=self)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -803,14 +803,14 @@ class Text(Multilingual, Field):
         '''See called method's docstring'''
         return Text.computeSearchValue(self, req, value=value)
 
-    def getListHeader(self, ctx):
+    def getListHeader(self, c):
         '''If this field is structured, when used as an inner field, the
            toolbar must be rendered only once, within the container field's
            header row corresponding to this field.'''
         # Inject the toolbar when appropriate
-        if ctx.layout == 'edit' and self.showToolbar(ignoreInner=True):
-            bar = self.pxToolbar(ctx)
+        if c.layout == 'edit' and self.showToolbar(ignoreInner=True):
+            bar = self.pxToolbar(c)
         else:
             bar = ''
-        return '%s%s' % (Field.getListHeader(self, ctx), bar)
+        return '%s%s' % (Field.getListHeader(self, c), bar)
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

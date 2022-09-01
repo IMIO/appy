@@ -501,7 +501,7 @@ function askField(hook, url, layout, customParams, showChanges, className,mode){
   let fieldName = hook.split('_').pop(),
       // layout may define a host layout
       layouts = layout.split(':'),
-      params = {'layout': layouts[0], 'showChanges': showChanges};
+      params = {'layout': layouts[0], 'showChanges': showChanges || 'False'};
   if (layouts.length > 1) params['hostLayout'] = layouts[1];
   if (customParams){for (let key in customParams) params[key]=customParams[key]}
   url = url + '/' + fieldName + '/pxRender';
@@ -556,10 +556,15 @@ function doInlineSave(id, name, url, layout, ask, content, language, cancel){
 
 // Gets the value to send to the server for ajax-storing it
 function getFieldValue(tag) {
-  /* When "tag" is a checkbox, we do not get its value from the companion's
+  /* When p_tag is a checkbox, we do not get its value from the companion's
      hidden field, because, at the time this function is called, the "click"
      event that updates this value may not have been triggered yet. */
   if (tag.name.endsWith('_visible')) return (tag.checked)? 'True': 'False';
+  /* When p_tag is a hidden textarea, take the value from the preceding, poor,
+     div tag. */
+  else if (tag.tagName == 'TEXTAREA' && tag.style.display == 'none') {
+    return tag.previousSibling.innerHTML;
+  }
   else return tag.value;
 }
 
