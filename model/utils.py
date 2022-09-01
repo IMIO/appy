@@ -17,6 +17,31 @@ class Object:
     '''At every place we need an object, but without any requirement on its
        class (methods, attributes,...) we will use this minimalist class.'''
 
+    # Warning - This class is particular: attribute access has been modified in
+    #           such a way that AttributeError is never raised.
+    #
+    # Example:                 o = Object(a=1)
+    #
+    # >>> o.a
+    # >>> 1
+    # >>> o.b
+    # >>>                      (None is returned)
+    # >>> hasattr(o, 'a')
+    # >>> True
+    # >>> hasattr(o, 'b')
+    # >>> True                 It's like if any attribute was defined on it
+    # >>> 'a' in o
+    # >>> True
+    # >>> 'b' in o
+    # >>> False
+
+    # While this behaviour may be questionable and dangerous, it can be very
+    # practical for objects that can potentially contain any attribute (like an
+    # object representing HTTP request parameters or form values). Code getting
+    # attribute values can be shorter, freed from verbose "hasattr" calls.
+    # Conclusion: use this class at your own risk, if you know what you are
+    # doing (isn't it the Python spirit?)
+
     def __init__(self, **fields):
         for k, v in fields.items(): setattr(self, k, v)
 
