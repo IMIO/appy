@@ -504,8 +504,10 @@ class Deployer:
             if not self.blind:
                 commands.append(self.tail % (' -f', tailNb, target.sitePath))
             # These commands will be ran with target.siteOwner
+            command = ';'.join(commands)
             owner = siteOwner.split(':')[0]
-            command = "su %s -c '%s'" % (owner, ';'.join(commands))
+            if owner != target.sshLogin:
+                command = "su %s -c '%s'" % (owner, command)
             target.execute(command, forceExit=self.blind)
 
     def view(self):
