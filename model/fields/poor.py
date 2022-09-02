@@ -155,7 +155,7 @@ class Poor(Rich):
            given in p_target. */
         if (!target) {
           var targetId=_rsplit(toolbarId, '_', 2)[0];
-          target = document.getElementById(targetId);
+          target = document.getElementById(targetId + 'P');
         }
         var toolbar=document.getElementById(toolbarId);
         toolbar['target'] = target;
