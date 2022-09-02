@@ -45,9 +45,9 @@ class Monitoring:
         if self.checkLo:
             loLine = ''
             out, err = executeCommand('ps -ef | grep "soffice"', shell=True)
-            for line in out.split(b'\n'):
-                if b"accept=socket" in line:
-                    loLine = line.decode()
+            for line in out.split('\n'):
+                if "accept=socket" in line:
+                    loLine = line
                     break
             if not loLine:
                 success = False

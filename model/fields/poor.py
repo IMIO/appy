@@ -11,7 +11,7 @@ from appy.model.fields.rich import Rich
 class Icon:
     '''An icon from the toolbar'''
 
-    def __init__(self, name, type, label=None, icon=None, data=None,
+    def __init__(self, name, type, label=None, icon=None, data=None, args=None,
                  shortcut=None):
         # A short, unique name for the icon
         self.name = name
@@ -53,6 +53,9 @@ class Icon:
         self.icon = icon or ('icon_%s' % name)
         # The data related to this icon, as described hereabove
         self.data = data
+        # If p_data refers to a command, its optional args may be defined in
+        # p_args.
+        self.args = args
         # If a keyboard shortcut is tied to the icon, its key code is defined
         # here, as an integer. See JavasScript keycodes, https://keycode.info.
         self.shortcut = shortcut
@@ -89,24 +92,24 @@ class Icon:
         r = '<img class="iconTB" src="%s" title="%s" name="%s"' \
             ' onmouseover="switchIconBack(this, true)"' \
             ' onmouseout="switchIconBack(this, false)"' \
-            ' data-type="%s" data-data="%s" data-shortcut="%s" ' \
-            'onclick="useIcon(this)"/>' % \
+            ' data-type="%s" data-data="%s" data-args="%s" ' \
+            'data-shortcut="%s" onclick="useIcon(this)"/>' % \
              (o.buildUrl(self.icon), o.translate(self.label), self.name,
-              self.type, self.data or '', shortcut)
+              self.type, self.data or '', self.args or '', shortcut)
         # Add specific stuff if icon type is "sentences"
         if self.type == 'sentences': r = self.asSentences(r, o)
         return r
 
 # All available icons
-Icon.all = [Icon('bold',      'wrapper', data='[]',       shortcut=66),
-            Icon('italic',    'wrapper', data='&lt;&gt;', shortcut=73),
-            Icon('highlight', 'wrapper', data='{}',       shortcut=72),
-            # Non breaking space
-            Icon('blank',     'char',    data=' ',        shortcut=32),
-            # Non breaking dash
-            Icon('dash',      'char',    data='‑',        shortcut=54),
-            # Increment the field height by <data>%
-            Icon('lengthen',  'action',  data='30',       shortcut=56)]
+Icon.all = [
+  Icon('bold',      'wrapper', data='bold',    shortcut=66),
+  Icon('italic',    'wrapper', data='italic',  shortcut=73),
+  Icon('highlight', 'wrapper', data='hiliteColor', args='yellow', shortcut=72),
+  Icon('blank',     'char',    data=' ', shortcut=32), # Non breaking space
+  Icon('dash',      'char',    data='‑', shortcut=54), # Non breaking dash
+  # Increment the field height by <data>%
+  Icon('lengthen',  'action',  data='30',       shortcut=56)
+]
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Poor(Rich):
@@ -139,16 +142,17 @@ class Poor(Rich):
      js='''
       getIconsMapping = function(toolbar) {
         // Gets a mapping containing toolbar icons, keyed by their shortcut
-        var r = {}, icons=toolbar.getElementsByClassName('icon');
+        var r = {}, icons=toolbar.getElementsByClassName('iconTB');
         for (var i=0; i<icons.length; i++) {
           var icon=icons[i], key=icon.getAttribute('data-shortcut');
           if (key) r[parseInt(key)] = icon;
         }
         return r;
       }
+
       linkTextToolbar = function(toolbarId, target) {
-        /* Link the toolbar with its target textarea. Get the target textarea if
-           not given in p_target. */
+        /* Link the toolbar with its target div. Get the target div if not
+           given in p_target. */
         if (!target) {
           var targetId=_rsplit(toolbarId, '_', 2)[0];
           target = document.getElementById(targetId);
@@ -157,20 +161,21 @@ class Poor(Rich):
         toolbar['target'] = target;
         target['icons'] = getIconsMapping(toolbar);
       }
+
       switchIconBack = function(icon, selected) {
         icon.className = (selected)? 'iconTB iconTBSel': 'iconTB';
       }
-      lengthenArea = function(area, percentage) {
-        // Lengthen some text p_area by some p_percentage
+
+      lengthenDiv = function(div, percentage) {
+        // Lengthen this p_div by some p_percentage
         var rate = 1 + (percentage / 100),
-            styled = Boolean(area.style.height),
-            height = (styled)? parseInt(area.style.height): area.rows;
+            height = parseInt(div.style.minHeight);
         // Apply the rate
         height = Math.ceil(height * rate);
         // Reinject the new height to the correct area property
-        if (styled) area.style.height = String(height) + 'px';
-        else area.rows = height;
+        div.style.minHeight = String(height) + 'px';
       }
+
       injectString = function(area, s) {
         // Inject some p_s(tring) into the text p_area, where the cursor is set
         var text = area.value,
@@ -180,31 +185,25 @@ class Poor(Rich):
         area.selectionStart = area.selectionEnd = start +s.length;
         area.focus();
       }
+
       useIcon = function(icon) {
-        // Get the linked textarea (if already linked)
-        var area = icon.parentNode['target'];
-        if (!area) return;
-        var type=icon.getAttribute('data-type'),
+        // Get the linked div (if already linked)
+        let div = icon.parentNode['target'];
+        if (!div) return;
+        let type=icon.getAttribute('data-type'),
             data=icon.getAttribute('data-data'),
-            selectStart=area.selectionStart,
-            selectEnd=area.selectionEnd,
-            text=area.value;
+            args=icon.getAttribute('data-args') || null;
         if (type == 'wrapper') {
-          // Wrap the selected text within special chars
-          area.value = text.substring(0, selectStart) + data[0] + \
-                       text.substring(selectStart, selectEnd) + data[1] + \
-                       text.substring(selectEnd, area.value.length);
-          area.selectionStart = selectStart;
-          area.selectionEnd = selectEnd + 2;
-          area.focus();
+          // Wrap the selected text via the command specified in v_data
+          document.execCommand(data, false, args);
         }
         else if (type == 'char') {
           // Insert a (sequence of) char(s) into the text
-          injectString(area, data);
+          injectString(div, data);
         }
         else if (type == 'action') {
           // Actions
-          if (icon.name == 'lengthen') lengthenArea(area, parseInt(data));
+          if (icon.name == 'lengthen') lengthenDiv(div, parseInt(data));
         }
       }
       useShortcut = function(event, id) {
@@ -258,6 +257,7 @@ class Poor(Rich):
       <!-- The poor zone in itself -->
       <div contenteditable="true" class="xhtmlE" style=":field.getWidgetStyle()"
            onfocus=":field.onFocus(pid, lg, hostLayout)"
+           onkeydown="useShortcut(event)"
            id=":'%sP' % pid" >::field.getInputValue(inRequest, requestValue,
                                                     value)</div>
 
@@ -274,8 +274,15 @@ class Poor(Rich):
 
     def onFocus(self, pid, lg, hostLayout):
         '''Returns the Javascript code to execute when the poor widget gets
-           focus, in order to link it with the toolbar.'''
-        return 'initPoorContent(this)'
+           focus, in order to (a) initialise its data (if empty) and (b) link it
+           with the toolbar.'''
+        if hostLayout:
+            # We are inline-editing the (sub-)field: it has its own toolbar
+            id = pid
+        else:
+            # For inner fields, there is a unique global toolbar
+            id = '%s_%s' % (self.name, lg) if lg else self.name
+        return "initPoorContent(this);linkTextToolbar('%s_tb', this)" % id
 
     def getListHeader(self, c):
         '''When used as an inner field, the toolbar must be rendered only once,

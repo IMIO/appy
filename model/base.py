@@ -1355,10 +1355,10 @@ class Base:
       }
 
       protectAppyForm = function() {
-        window.onbeforeunload = function(e){
+        window.onbeforeunload = function(event){
         let f = document.getElementById("appyForm");
         if (f.action.value == "") {
-          let e = e || window.event;
+          let e = event || window.event;
           if (e) {e.returnValue = warn_leave_form;}
           return warn_leave_form;
           }

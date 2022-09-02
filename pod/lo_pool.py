@@ -105,7 +105,7 @@ class LO:
             # (=forceOoCall=True), if an error occurs we have nevertheless
             # an ODT or ODS to return to the user. So we produce a warning
             # instead of raising an error.
-            if (format in ren.templateTypes) and ren.forceOoCall:
+            if format in ren.templateTypes and ren.forceOoCall:
                 print(INCOMP_OD % str(pe))
             else:
                 raise pe
@@ -248,7 +248,7 @@ class LoPool:
            request.'''
         # The result is a tuple (LO, b_multiple). The boolean value indicates if
         # there are at least 2 LO instances defined in p_self.los.
-        # ~~~
+        # ~
         # Return the unique LO instance
         if isinstance(self.los, LO): return self.los, False
         # Choose among several LO instances. Read info about busy LO instances.

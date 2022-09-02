@@ -179,8 +179,8 @@ class Publisher(Program):
         '''Executes the system command p_cmd'''
         print('Executing %s...' % cmd)
         out, err = executeCommand(cmd)
-        if out: print(out.decode())
-        if err: print(err.decode())
+        if out: print(out)
+        if err: print(err)
 
     def applyLicense(self, folder):
         '''Inject the appropriate license into any .py file found in p_folder
@@ -265,7 +265,7 @@ class Publisher(Program):
         # Retrieve the path to Appy for Python 2
         command = [self.python2, '-c', 'import appy; print(appy.__path__[0])']
         out, err = executeCommand(command)
-        path2 = Path(out.decode().strip())
+        path2 = Path(out.strip())
         print('Publishing Appy %s for Python 2 & 3...' % self.version)
         # As a preamble, count the number of lines of code within latest Appy
         print('*** Stats for Appy (Python 3)...')
