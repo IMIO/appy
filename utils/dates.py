@@ -4,7 +4,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import sys, time
+import sys, time, re
 try:
     from DateTime import DateTime
     from DateTime.interfaces import DateError
@@ -24,6 +24,28 @@ S_E_KO   = 'End date cannot be prior to start date.'
 class Date:
     '''Date-related methods'''
 
+    # Regex for matching Appy-specific date parts
+    rexPart = re.compile('\%(dt|DT|mt|MT|dd)(\d?)')
+
+    # Info about evert date part. For every tuple in this data structure:
+    # - elem #1 is the prefix for the i18n label;
+    # - elem #2 is the name of the corresponding DateTime attribute.
+    infoParts = {'dt': ('day', '_aday'), 'mt': ('month', '_amon')}
+
+    @classmethod
+    def resolvePart(class_, part, date, language, _, nb=None):
+        '''Resolve this date p_part'''
+        # p_part corresponds to one of the symbols as defined in Date.rexPart
+        if part == 'dd':
+            r = str(date.day())
+        else:
+            # Get the translated text corresponding to this p_part
+            prefix, attr = Date.infoParts[part.lower()]
+            r = _('%s_%s' % (prefix, getattr(date, attr)), language=language)
+            if nb:
+                r = r[:int(nb)]
+        return r
+
     @classmethod
     def toUTC(class_, d):
         '''When manipulating DateTime instances, like p_d, errors can raise when
@@ -40,22 +62,29 @@ class Date:
         fmt = format or tool.config.ui.dateFormat
         # Resolve Appy-specific formatting symbols used for getting translated
         # names of days or months:
-        # - %dt: translated name of day
-        # - %DT: translated name of day, capitalized
-        # - %mt: translated name of month
-        # - %MT: translated name of month, capitalized
-        # - %dd: day number, but without leading '0' if < 10
-        if '%dt' in fmt or '%DT' in fmt:
-            day = tool.translate('day_%s' % date._aday, language=language)
-            fmt = fmt.replace('%dt', day.lower()).replace('%DT', day)
-        if '%mt' in fmt or '%MT' in fmt:
-            month = tool.translate('month_%s' % date._amon, language=language)
-            fmt = fmt.replace('%mt', month.lower()).replace('%MT', month)
-        if '%dd' in fmt: fmt = fmt.replace('%dd', str(date.day()))
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  %dt[nb] | translated name of day (all lowercase). If a [nb] is
+        #          | specified, only the [nb] first chars of the name will be
+        #          | kept. For example, "%DT2" applied to a Monday, in english,
+        #          | would produce "Mo".
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  %DT[nb] | translated name of day, capitalized
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  %mt[nb] | translated name of month (all lowercase)
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  %MT[nb] | translated name of month, capitalized
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  %dd     | day number, but without leading '0' if < 10
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # Resolve Appy symbols by producing a version of p_fmt whose Appy
+        # symbols have been resolved.
+        fun = lambda m: class_.resolvePart(m.group(1), date, language, \
+                                           tool.translate, nb=m.group(2))
+        fmt = Date.rexPart.sub(fun, fmt)
         # Resolve all other, standard, symbols
         r = date.strftime(fmt)
         # Append hour from tool.hourFormat
-        if withHour and date._hour or date._minute:
+        if withHour and (date._hour or date._minute):
             r += ' (%s)' % date.strftime(tool.config.ui.hourFormat)
         return r
 

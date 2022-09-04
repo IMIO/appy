@@ -649,34 +649,6 @@ class Config:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.discreetLogin = False
 
-    def formatDate(self, tool, date, format=None, withHour=True, language=None):
-        '''Returns p_date formatted as specified by p_format, or self.dateFormat
-           if not specified. If p_withHour is True, hour is appended, with a
-           format specified in self.hourFormat.'''
-        fmt = format or self.dateFormat
-        # Resolve Appy-specific formatting symbols used for getting translated
-        # names of days or months:
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #  %dt  | translated name of day
-        #  %DT  | translated name of day, capitalized
-        #  %mt  | translated name of month
-        #  %MT  | translated name of month, capitalized
-        #  %dd  | day number, but without leading '0' if < 10
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if ('%dt' in fmt) or ('%DT' in fmt):
-            day = tool.translate('day_%s' % date._aday, language=language)
-            fmt = fmt.replace('%dt', day.lower()).replace('%DT', day)
-        if ('%mt' in fmt) or ('%MT' in fmt):
-            month = tool.translate('month_%s' % date._amon, language=language)
-            fmt = fmt.replace('%mt', month.lower()).replace('%MT', month)
-        if '%dd' in fmt: fmt = fmt.replace('%dd', str(date.day()))
-        # Resolve all other, standard, symbols
-        r = date.strftime(fmt)
-        # Append hour
-        if withHour and (date._hour or date._minute):
-            r += ' (%s)' % date.strftime(self.hourFormat)
-        return r
-
     def getHeaderText(self, tool):
         '''Get the permanent text that must appear in the page header'''
         # Get the text via config attribute "test"

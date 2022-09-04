@@ -283,7 +283,13 @@ class List(Mode):
         self.batch.hook = self.hook
         self.objects = self.batch.objects
         # Show sub-titles ? Show filters ?
-        self.showSubTitles = req.showSubTitles in ('True', None)
+        if not self.class_.toggleSubTitles(self.tool, None):
+            # When toggling is disabled, always show sub-titles, do not depend
+            # on the cookie value.
+            self.showSubTitles = True
+        else:
+            # Show sub-titles depending on the cookie value
+            self.showSubTitles = req.showSubTitles in ('True', None)
         # Every matched object may be selected via a checkbox
         self.checkboxes = ui.checkboxes
         self.checkboxesId = self.outerHook + '_objs'

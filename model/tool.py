@@ -14,7 +14,6 @@ from appy.utils import Function
 from appy.model.base import Base
 from appy.model.user import User
 from appy.data import nativeNames
-from appy.utils.dates import Date
 from appy.model.group import Group
 from appy.model.fields import Show
 from appy.model.query import Query
@@ -26,6 +25,7 @@ from appy.ui.template import Template
 from appy.model.fields.ref import Ref
 from appy.server.backup import Backup
 from appy.model.searches import Search
+from appy.utils import dates as dutils
 from appy.model.fields.rich import Rich
 from appy.model.fields import Initiator
 from appy.model.carousel import Carousel
@@ -56,8 +56,8 @@ class Tool(Base):
 
     # Make some modules and classes available and/or traversable via the tool
     ui = appy.ui
-    Date = Date
     OPage = OPage
+    Date = dutils.Date
     AuthContext = AuthenticationContext
 
     # While most users have generally the read permission on the tool and
@@ -424,7 +424,7 @@ class Tool(Base):
     def formatDate(self, date, format=None, withHour=True, language=None):
         '''Check doc in called method'''
         if not date: return
-        return self.config.ui.formatDate(self, date, format, withHour, language)
+        return dutils.Date.format(self, date, format, withHour, language)
 
     def restart(self, wait=5):
         '''Restarts the currently running Appy server (S), by forking another

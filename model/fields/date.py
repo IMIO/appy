@@ -257,7 +257,7 @@ class Date(Field):
         # part "by hand".
         if '%Y' in dateFormat:
             dateFormat = dateFormat.replace('%Y', str(value.year()))
-        r = ui.formatDate(o.tool, value, dateFormat, withHour=False)
+        r = dates.Date.format(o.tool, value, dateFormat, withHour=False)
         if self.format == Date.WITH_HOUR:
             r += ' %s' % value.strftime(self.hourFormat or ui.hourFormat)
         return r
