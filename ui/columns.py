@@ -340,7 +340,7 @@ class Columns(list):
         # The name of the CSS class to apply to the whole list
         name = self.name
         # Start with global CSS rules: table width
-        r = ['.%s { width:%s }' % (name, width)]
+        r = ['.%s { width:%s }' % (name, width or 'auto')]
         # Rows' vertical alignment. Take care of not specifying row alignment
         # for the table header, when present.
         part = ':not(:first-child)' if hasHeader else ''

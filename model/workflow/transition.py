@@ -424,7 +424,7 @@ class UiTransition:
              asIcon=not inSub or tr.iconOnly">
 
       <!-- As picto or icon -->
-      <a if="asIcon" class=":'clickable' if mayTrigger else 'help fake'"
+      <a if="asIcon" class=":'clickable' if mayTrigger else 'fake'"
          var="back=transition.getBackHook(_ctx_);
               iconAttr='sicon' if inSub else 'icon';
               iconBase='siconBase' if inSub else 'iconBase';
@@ -446,7 +446,8 @@ class UiTransition:
 
        <!-- Variant with the icon outside the button -->
        <div if="tr.iconOut" class="iflex1">
-        <img src=":transition.getIconUrl()" class=":'clickable %s' % tr.iconCss"
+        <img src=":transition.getIconUrl()"
+             class=":'%s %s'%('clickable' if mayTrigger else 'fake',tr.iconCss)"
              onclick="this.nextSibling.click()"/>
         <x>:transition.pxButton</x>
        </div>

@@ -512,7 +512,7 @@ class Ref(Field):
               currentNumber=0">
       <style if="genCss">::genCss</style>
       <table id=":collapse.id" style=":collapse.style"
-             class=":tiedClass.getCssFor(tool, 'list', add=genName)">
+       class=":field.listCss or tiedClass.getCssFor(tool, 'list', add=genName)">
        <tr if="field.showHeaders">
         <x for="col in columns" var2="refField=col.field">:col.pxHeaderRef</x>
        </tr>
@@ -869,7 +869,7 @@ class Ref(Field):
       navigable=False, changeOrder=True, numbered=False, checkboxes=True,
       checkboxesDefault=False, sdefault='', scolspan=1, swidth=None,
       sheight=None, fwidth='7em', fheight='14em', sselect=None, persist=True,
-      render='list', renderMinimalSep=', ', menuIdMethod=None,
+      render='list', renderMinimalSep=', ', listCss=None, menuIdMethod=None,
       menuInfoMethod=None, menuUrlMethod=None, menuCss=None, dropdownCss=None,
       menuItemWrap=False, view=None, cell=None, buttons=None, edit=None,
       xml=None, translations=None, showActions='all', actionsDisplay='block',
@@ -1234,7 +1234,12 @@ class Ref(Field):
         # When render is "minimal" or "links", the separator used between linked
         # objects is defined here.
         self.renderMinimalSep = renderMinimalSep
-        # If render is 'menus', 2 methods must be provided.
+        # If render is "list", you may specify, in p_listCss, a default CSS
+        # class to apply to the xhtml table tag that will hold the list of
+        # object. If no CSS class is defined, the one declared by the tied
+        # class, in its "styles" static attribute, will be used.
+        self.listCss = listCss
+        # If render is "menus", 2 methods must be provided.
         # "menuIdMethod" will be called, with every linked object as single arg,
         # and must return an ID that identifies the menu into which the object
         # will be inserted.

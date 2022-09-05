@@ -12,6 +12,7 @@ h5        { font-size:9pt; margin:0; font-style:italic; font-weight:normal;
 h6        { font-size:9pt; margin:0; font-weight:bold }
 a         { text-decoration:none; color:|linkColor| }
 a:visited { color:|visitedColor| }
+a > img   { display:inline-block }
 table     { font-size:100%; border-collapse:collapse }
 td        { padding:0 }
 p         { margin:0 0 5px 0 }
@@ -103,7 +104,7 @@ input.buttonIcon { vertical-align:bottom; margin:0; border:0;
 input.buttonFixed { width:150px; padding:0 0 0 10px; margin-bottom:6px }
 .lbutton { float:left }
 div.rbutton { float:right }
-.fake { color:|warnColor| !important; cursor:help !important; font-style:italic}
+.fake, input.fake { color:|warnColor|; cursor:not-allowed; font-style:italic }
 
 /* Rich fields */
 .xhtml { background-color:transparent; padding:4px }

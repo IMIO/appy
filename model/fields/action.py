@@ -150,7 +150,7 @@ class Action(Field):
        <!-- Variant with the icon outside the button -->
        <div if="field.iconOut" class="iflex1">
         <img src=":field.getIconUrl(url)" onclick="this.nextSibling.click()"
-             class=":'clickable %s' % field.iconCss"/>
+             class=":'clickable %s' % field.iconCss" title=":label"/>
         <x>:field.pxButton</x>
        </div>
 

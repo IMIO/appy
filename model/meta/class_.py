@@ -397,7 +397,7 @@ class Class(Meta):
                        # unclickable) referring to an instance of this class,
                        # shown within lists of objects.
       'pside': None  , # [class level] *p*ortlet side: a zone within the
-                       # portlet, on thhe right side, aimed at becoming a
+                       # portlet, on the right side, aimed at becoming a
                        # colored strip if desired.
       'tbot' : None  , # [class level] *t*itle *bot*tom: a zone, on search
                        # results, below the search title, aimed at becoming a
