@@ -103,9 +103,9 @@ class Normalize:
     # are None, because lookup in dicts are more efficient.
 
     # ~~~ A common set of chars, to ignore or blankify in most situations
-    baseIgnorable = '.,:;*+=~?%^\'’"<>{}[]#|\t\\°-'
+    baseIgnorable = '.,:;*+=~?%^\'’"<>{}[]#|\t\\°-‑'
     # ~~~ The set of chars to ignore when producing a file name
-    fileNameIgnorable = asDict(baseIgnorable + ' $£€/\r\n')
+    fileNameIgnorable = asDict(baseIgnorable + '  $£€/\r\n')
     # ~~~ The set of chars to blankify when extracting text for the purpose of
     #     database indexing, with 2 variants, keeping dashes (True) or not.
     moreIgnorable = '\n/()_'

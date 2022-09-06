@@ -227,6 +227,7 @@ div.rbutton { float:right }
 .small th { background-color:|darkColor|; padding:1px 5px; height:unset;
             border:1px solid grey; color:|brightColor| }
 .small td { border:1px solid grey; padding:1px 5px }
+.small label { font-size:80% }
 .popup .grid th, .popup .grid td { border:1px solid grey }
 .calTable { font-size:95% }
 .calTable td { border:5px solid white; color:#555555; padding:10px }

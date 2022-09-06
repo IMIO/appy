@@ -27,32 +27,37 @@ od = 'application/vnd.oasis.opendocument'
 ms = 'application/vnd.openxmlformats-officedocument'
 ms2 = 'application/vnd.ms'
 
-mimeTypes = {'odt':  '%s.text' % od,
-             'ods':  '%s.spreadsheet' % od,
-             'doc':  'application/msword',
-             'docx': '%s.wordprocessingml.document' % ms,
-             'rtf':  'text/rtf',
-             'pdf':  'application/pdf'
-             }
+mimeTypes = {
+  'odt':  '%s.text' % od,
+  'ods':  '%s.spreadsheet' % od,
+  'doc':  'application/msword',
+  'docx': '%s.wordprocessingml.document' % ms,
+  'rtf':  'text/rtf',
+  'pdf':  'application/pdf',
+  'xml':  'text/xml'
+}
 
 mimeTypesExts = {
-    '%s.text' % od:        'odt',
-    '%s.spreadsheet' % od: 'ods',
-    'application/msword':  'doc',
-    'text/rtf':            'rtf',
-    'application/pdf':     'pdf',
-    'image/png':           'png',
-    'image/jpeg':          'jpg',
-    'image/pjpeg':         'jpg',
-    'image/gif':           'gif',
-    '%s.wordprocessingml.document' % ms: 'docx',
-    '%s.spreadsheetml.sheet' % ms: 'xlsx',
-    '%s.presentationml.presentation' % ms: 'pptx',
-    '%s-excel' % ms2:      'xls',
-    '%s-powerpoint' % ms2: 'ppt',
-    '%s-word.document.macroEnabled.12' % ms2: 'docm',
-    '%s-excel.sheet.macroEnabled.12' % ms2: 'xlsm',
-    '%s-powerpoint.presentation.macroEnabled.12' % ms2: 'pptm'}
+  '%s.text'        % od:  'odt',
+  '%s.spreadsheet' % od:  'ods',
+  'application/msword':   'doc',
+  'text/rtf':             'rtf',
+  'application/pdf':      'pdf',
+  'image/png':            'png',
+  'image/jpeg':           'jpg',
+  'image/pjpeg':          'jpg',
+  'image/gif':            'gif',
+  'text/xml':             'xml',
+  'application/xml':      'xml',
+  '%s.wordprocessingml.document'               % ms:  'docx',
+  '%s.spreadsheetml.sheet'                     % ms:  'xlsx',
+  '%s.presentationml.presentation'             % ms:  'pptx',
+  '%s-excel'                                   % ms2: 'xls',
+  '%s-powerpoint'                              % ms2: 'ppt',
+  '%s-word.document.macroEnabled.12'           % ms2: 'docm',
+  '%s-excel.sheet.macroEnabled.12'             % ms2: 'xlsm',
+  '%s-powerpoint.presentation.macroEnabled.12' % ms2: 'pptm'
+}
 
 def getMimeType(fileName, default='application/octet-stream'):
     '''Tries to guess mime type from p_fileName'''
