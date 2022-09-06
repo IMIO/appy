@@ -1399,7 +1399,11 @@ class Ref(Field):
         # PX.
         self.showControls = showControls
 
-        # These p_actions fields will be shown as global actions
+        # These p_actions fields will be shown as global actions. For every such
+        # action, attribute "show" must hold or return value "field" as unique
+        # possible layout. This virtual layout means that the Ref field will
+        # choose where to render this action within itself (ie, at the bottom of
+        # tied objects, together with glopbal actions).
         self.actions = actions
 
         # By default, for an indexed Ref field, the corresponding index stores
@@ -2541,7 +2545,6 @@ class Ref(Field):
             if isinstance(r[i], str):
                 r[i] = o.getObject(r[i])
             i += 1
-        print(self.name, 'Request objects are', r)
         return r
 
     def getPopupObjects(self, o, name, req, requestValue):
@@ -2735,7 +2738,11 @@ class Ref(Field):
                 i += 1
                 # Lazy-init the action if not done yet
                 if not hasattr(action, 'name'):
-                    action.init(o.class_, 'action%d' % i)
+                    name = 'action%d' % i
+                    action.init(o.class_, name)
+                    # Add the action among class fields in the metamodel, Else,
+                    # it will not be traversable as any other field.
+                    o.class_.fields[name] = action
                 r.append(action)
         return r
 

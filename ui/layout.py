@@ -410,8 +410,11 @@ class Layouts(dict):
       'xml'    , # similar to 'view', but in XML format, readable by a peer
                  # system, the 'view' layout being in XHTML format, readable
                  # by a human being ;
-      'sidebar'  # The zone in the UI situated, for left-to-right languages,
+      'sidebar', # The zone in the UI situated, for left-to-right languages,
                  # at the right of the screen.
+      'field'    # Represents the zone where some field is rendered. It means:
+                 # let the container field decide how to render some sub-field
+                 # within himself.
     )
 
     # Note that a layout will not be defined for every layout type. For example,
@@ -434,7 +437,7 @@ class Layouts(dict):
     # account, while, for most of them, this is implicit. For example, when
     # determining visibility of a field, boolean "True" implicitly denotes any
     # layout type, excepted those listed in the following attribute.
-    explicitTypes = ('sub', 'buttons', 'sidebar')
+    explicitTypes = ('sub', 'buttons', 'sidebar', 'field')
 
     # The following layouts do not accept all types of fields
     restrictedTypes = asDict(('buttons', 'sub', 'pre', 'query'))

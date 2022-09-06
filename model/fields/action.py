@@ -104,7 +104,7 @@ class Action(Field):
                 asPicto=not onCell and (picto != 'pictoB');
                 css=ui.Button.getCss(label, onCell, field.render,
                                      iconOut=field.iconOut)"
-        id=":formId" action=":field.getFormAction(o, tool, layout)"
+        id=":formId" action=":field.getFormAction(_ctx_)"
         target=":field.options and 'appyIFrame' or '_self'"
         method="post" class="inline">
 
@@ -123,7 +123,7 @@ class Action(Field):
 
       <!-- Form fields for multi-actions -->
       <x if="multi">
-       <input type="hidden" name="multi" value="True"/>
+       <input type="hidden" name="isMulti" value="True"/>
        <input type="hidden" name="searchParams"
               value=":tool.Search.encodeForReplay(req, layout)"/>
        <input type="hidden" name="checkedIds"/>
@@ -131,7 +131,7 @@ class Action(Field):
        <!-- The parameter starting with a star indicates to collect search
             criteria from the storage when present. -->
        <input type="hidden" name="_get_"
-        value=":'form:%s:multi,searchParams,checkedIds,checkedSem,*%s' % \
+        value=":'form:%s:isMulti,searchParams,checkedIds,checkedSem,*%s' % \
                 (formId, className)"/>
       </x>
 
@@ -382,32 +382,40 @@ class Action(Field):
     def renderLabel(self, layoutType):
         return # Label is rendered directly within the button
 
-    def getFormAction(self, o, tool, layout):
+    def getFormAction(self, c):
         '''Get the value of the "action" parameter to the "form" tag
            representing the action.'''
         if self.options:
             # Submitting the form will lead to creating an object, in order to
             # retrieve action's options.
-            return '%s/new' % tool.url
+            return '%s/new' % c.tool.url
         else:
-            # Submitting the form will really trigger the action. Add the name
-            # of the class in the path if p_self is a multi-action.
-            part = '@%s/' % self.container.name if layout == 'query' else ''
-            return '%s/%s%s/perform' % (o.url, part, self.name)
+            # Submitting the form will really trigger the action.
+            if c.layout == 'query':
+                # We are running a multi-action from search results. Add the
+                # name of the class in the path.
+                part = '@%s/' % self.container.name
+            elif c.multi:
+                # We are running a multi-action from a Ref field. Add the
+                # initiator object in the action sub-path.
+                part = '@:%s/' % c.o.iid
+            else:
+                part = ''
+            return '%s/%s%s/perform' % (c.o.url, part, self.name)
 
-    def getOnClick(self, ctx):
+    def getOnClick(self, c):
         '''Gets the JS code to execute when the action button is clicked'''
         # Determine the ID of the form to submit
-        o = ctx.o
-        q = ctx.q
-        formId = '%d_%s_form' % (o.iid, ctx.name)
+        o = c.o
+        q = c.q
+        formId = '%d_%s_form' % (o.iid, c.name)
         # Determine the back hook and check hook (if multi)
-        multi = ctx.multi
+        multi = c.multi
         if multi:
             back = multi.back
             check = multi.check
         else:
-            back = ctx.ohook if ctx.layout == 'cell' else None
+            back = c.ohook if c.layout == 'cell' else None
             check = None
         check = q(check) if check else 'null'
         if not self.options:
@@ -455,7 +463,8 @@ class Action(Field):
             r = Search.replay(tool, searchParams)
         else:
             # Get objets from a ref
-            r = getattr(o, req.fieldName.split('*',1)[0])
+            name = req.hook.split('_')[1]
+            r = getattr(o, name)
         # Remove those not being checked in the UI
         Search.keepCheckedResults(req, r, unchecked=ids)
         return r
@@ -470,7 +479,7 @@ class Action(Field):
             args['comment'] = o.req.popupComment
         # Is that a multi-action ? A multi-action is an action to perform on a
         # list of objects instead of a single object.
-        if req.multi:
+        if req.isMulti:
             args['objects'] = self.getTargetObjects(o, req)
         # Call method(s) in self.action
         if type(self.action) in utils.sequenceTypes:

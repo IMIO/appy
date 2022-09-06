@@ -1083,11 +1083,11 @@ msgstr "Créé par"
 
 #. Default: "On"
 msgid "Base_created"
-msgstr "Le"
+msgstr "Créé le"
 
 #. Default: "Last updated on"
 msgid "Base_modified"
-msgstr "Modifié·e le"
+msgstr "Modif."
 
 #. Default: "State"
 msgid "Base_state"

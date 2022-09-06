@@ -160,8 +160,14 @@ class Traversal:
 
     def getSpecialObject(self, name):
         '''Gets the special object named p_name'''
-        # Currenly, the only type of supported "special object" is an app class
-        return self.handler.server.model.classes.get(name).python
+        # A special object can be a class or an object
+        if name[0] == ':':
+            # It is an object
+            r = self.tool.getObject(name[1:])
+        else:
+            # It is a class
+            r = self.handler.server.model.classes.get(name).python
+        return r
 
     def getLayout(self, pxName):
         '''Determine the layout type from the currently traversed PX'''
