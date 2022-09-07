@@ -292,7 +292,8 @@ class Field:
       </x>
       <div if="not mayView">
        <img src=":svg('password')" class="iconS"/>
-       <x>:_('unauthorized')</x></div>
+       <x>:_('unauthorized')</x>
+      </div>
      </x>
 
      <!-- Any other field -->

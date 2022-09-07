@@ -21,6 +21,7 @@ from appy.model.fields.list import List
 from appy.model.fields.dict import Dict
 from appy.model.fields.text import Text
 from appy.model.fields.rich import Rich
+from appy.utils.string import Normalize
 from appy.model.fields.phase import Page
 from appy.model.utils import Object as O
 from appy.model.fields.float import Float

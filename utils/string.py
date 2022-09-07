@@ -106,6 +106,8 @@ class Normalize:
     baseIgnorable = '.,:;*+=~?%^\'’"<>{}[]#|\t\\°-‑'
     # ~~~ The set of chars to ignore when producing a file name
     fileNameIgnorable = asDict(baseIgnorable + '  $£€/\r\n')
+    # "Dash-like" chars = chars considered as word separators
+    dashLike = '-‑\'’"'
     # ~~~ The set of chars to blankify when extracting text for the purpose of
     #     database indexing, with 2 variants, keeping dashes (True) or not.
     moreIgnorable = '\n/()_'
@@ -186,9 +188,9 @@ class Normalize:
         # must be kept or not (p_keepDash and p_keepBlank).
 
         r = Normalize.string(s, class_.textRex[keepBlank][bool(keepDash)],
-                             blankify='-' if keepDash is False else None,
-                             ignore=class_.textIgnorable[bool(keepDash)],
-                             replace=class_.replacements)
+              blankify=class_.dashLike if keepDash is False else None,
+              ignore=class_.textIgnorable[bool(keepDash)],
+              replace=class_.replacements)
         # Lowerize the result if required (p_lower)
         return r.lower() if lower else r
 

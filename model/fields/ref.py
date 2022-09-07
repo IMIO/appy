@@ -512,7 +512,7 @@ class Ref(Field):
               currentNumber=0">
       <style if="genCss">::genCss</style>
       <table id=":collapse.id" style=":collapse.style"
-       class=":field.listCss or tiedClass.getCssFor(tool, 'list', add=genName)">
+             class=":field.getListCss(_ctx_)">
        <tr if="field.showHeaders">
         <x for="col in columns" var2="refField=col.field">:col.pxHeaderRef</x>
        </tr>
@@ -1581,6 +1581,20 @@ class Ref(Field):
         Px.injectRequest(context, req, o.tool, specialOnly=True)
         context.className = req.className # Not automatically injected
         return context.uiSearch.search.results
+
+    def getListCss(self, c):
+        '''Get the CSS classes to apply to the main tag for a Ref rendered as a
+           list.'''
+        if self.listCss:
+            # Use the CSS class(es) defined at the Ref level, plus a potential
+            # CSS class generated from column layouts.
+            r = self.listCss
+            if c.genName:
+                r = '%s %s' % (r, c.genName)
+        else:
+            # Use the CSS class(es) as defined on the tied class
+            r = c.tiedClass.getCssFor(c.tool, 'list', add=c.genName)
+        return r
 
     def checkParameters(self):
         '''Ensures this Ref is correctly defined'''
