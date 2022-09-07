@@ -26,13 +26,18 @@ class TextIndex(Index):
 
     @classmethod
     def toIndexed(class_, value, field, normalize=True, ignore=2,
-                  ignoreNumbers=False):
+                  ignoreNumbers=False, words=None):
         '''Splits the plain text p_value into words'''
+        # If p_words is passed, it is a dict of the form ~{s_word:None}~: every
+        # found word is added into it. Else, words are returned, as a tuple.
+        # ~
         # Words whose length is <= p_ignore are ignored, excepted, if
         # p_ignoreNumbers is False, words being numbers.
         if not value: return
         # Create a set
-        r = set()
+        noWords = words is None
+        if noWords:
+            r = set()
         if normalize:
             value = Normalize.text(value)
         for word in value.split():
@@ -42,8 +47,12 @@ class TextIndex(Index):
             else:
                 keepIt = True
             if keepIt:
-                r.add(word)
-        return tuple(r)
+                if noWords:
+                    r.add(word)
+                else:
+                    words[word] = None
+        if noWords:
+            return tuple(r)
 
     # No need to override m_toString in order to normalize the value: it will be
     # done by the global "searchable" index.

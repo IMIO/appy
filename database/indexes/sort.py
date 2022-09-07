@@ -17,7 +17,7 @@ class SortIndex(Index):
            of sorting.'''
         if not value: return
         val = value[:keep]
-        return Normalize.text(val, keepDash=None, keepBlank=False) or None
+        return Normalize.sortable(val) or None
 
     @classmethod
     def toTerm(class_, value, field):

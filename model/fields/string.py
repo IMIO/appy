@@ -293,8 +293,7 @@ class String(Multilingual, Field):
         # While the raw field value, as produced by method "getValue", may be
         # the value to use in most cases, it is not always true. For example, a
         # string like "Gaëtan" could have "gaetan" as sort value.
-        return Normalize.text(self.getValue(o) or '', keepDash=None,
-                              keepBlank=False)
+        return Normalize.sortable(self.getValue(o) or '')
 
     def getPlaceholder(self, o):
         '''Returns a placeholder for the field if defined'''

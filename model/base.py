@@ -87,8 +87,8 @@ class Base:
       # The following lambda allows to produce an index value suitable for
       # sorting. In the call to m_getShownValue, language 'en' is forced in
       # order to bypass the user language and always have a deterministic value.
-      'indexValue': lambda o, v: Normalize.text(o.getShownValue(language='en'),
-                                   keepDash=None, keepBlank=False) if v else ''}
+      'indexValue': lambda o, v:
+         Normalize.sortable(o.getShownValue(language='en')) if v else ''}
 
     title = String(**titleAttributes)
 

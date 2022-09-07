@@ -63,6 +63,7 @@ class Normalize:
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # A. The default replacement dictionary
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     # The default replacement dict is the one allowing to convert latin accented
     # chars to their non-accented equivalent chars. More precisely, it concerns
     # chars from the table named "Latin-1 Supplement" on page
@@ -75,11 +76,13 @@ class Normalize:
        'E':'ÈÉÊË', 'e':'èéêë', 'I':'ÌÍÎÏ', 'i':'ìíîï', 'N':'Ñ', 'n':'ñ',
        'O':'ÒÓÔÕÖØ', 'o':'òóôõöðø', 'U':'ÙÚÛÜ', 'u':'ùúûü', 'Y':'Ý', 'y':'ýÿ'},
        byChar=True)
-    replacements.update({'Æ':'AE', 'æ': 'ae', 'Œ':'OE', 'œ': 'oe', ' ':' '})
+    replacements.update({'Æ':'AE', 'æ': 'ae', 'Œ':'OE', 'œ': 'oe',
+                         ' ':' ', '‑':'-'})
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # B. The default regular expressions
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     # The following default regular expressions define, depending on the needs,
     # various sets of chars that will not be among chars kept as-is in the
     # result.
@@ -90,30 +93,32 @@ class Normalize:
     nonAlphanumBD = re.compile('[^a-zA-Z0-9 -]') # + blanks and dashes
     nonAlphanum_  = re.compile('[^a-zA-Z0-9_]')  # Alphanums + the underscore
     nonDigit      = re.compile('[^0-9]')
-    # Access some of the previousy defined regular expressions, depending on the
-    # fact that blanks (1) and/or dashes (2) must be matched or not.
+
+    # Access some of the previously defined regular expressions, depending on
+    # the fact that blanks (1) and/or dashes (2) must be matched or not.
     textRex = { False: { False: nonAlphanum,  True: nonAlphanumD },
                 True:  { False: nonAlphanumB, True: nonAlphanumBD }}
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # C. The default lists of chars to ignore or blankify
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     # The following lists define, depending on the needs, various lists of chars
     # to ignore or blankify. These lists are the converted to dicts whose values
     # are None, because lookup in dicts are more efficient.
 
     # ~~~ A common set of chars, to ignore or blankify in most situations
     baseIgnorable = '.,:;*+=~?%^\'’"<>{}[]#|\t\\°-‑'
+
     # ~~~ The set of chars to ignore when producing a file name
     fileNameIgnorable = asDict(baseIgnorable + '  $£€/\r\n')
-    # "Dash-like" chars = chars considered as word separators
-    dashLike = '-‑\'’"'
+
     # ~~~ The set of chars to blankify when extracting text for the purpose of
     #     database indexing, with 2 variants, keeping dashes (True) or not.
     moreIgnorable = '\n/()_'
     textIgnorable = {
       False: asDict(baseIgnorable + moreIgnorable),
-      True:  asDict(baseIgnorable.replace('-', '') + moreIgnorable)
+      True:  asDict(baseIgnorable[:-2] + moreIgnorable)
     }
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -159,47 +164,43 @@ class Normalize:
     @classmethod
     def text(class_, s, lower=True, keepDash=False, keepBlank=True):
         '''Normalizes string p_s, for producing a text being suitable for
-           purposes like database indexing or cleaning search terms.'''
+           database keyword indexing or search terms cleaning.'''
         #
         # If p_keepDash is ...
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # True  | Dashes (-) are kept.
         #       |
         #       | Example:
-        #       |
-        #       | "Jean-François" > "jean-francois"
+        #       | Jean-François > jean-francois
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # False | Dashes are replaced with blanks. Appropriate for cleaning
-        #       | search terms as encoded by a user.
+        # False | Dashes are replaced with blanks.
         #       |
         #       | Example:
-        #       |
-        #       | "Jean-François" > "jean francois"
+        #       | Jean-François > jean francois
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # None  | Dashes are completely removed from the result. Appropriate for
-        #       | producing ready-to-be-sorted values in a database index.
-        #       |
-        #       | Example:
-        #       |
-        #       | "Jean-François" > "jeanfrancois"
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # Choose the appropriate regular expression and set of chars to
-        # ignore or blankify, depending on the fact that dashes and/or blanks
+        # Choose the appropriate regular expression and set of chars to ignore
+        # or blankify, depending on the fact that dashes and/or blanks
         # must be kept or not (p_keepDash and p_keepBlank).
-
-        r = Normalize.string(s, class_.textRex[keepBlank][bool(keepDash)],
-              blankify=class_.dashLike if keepDash is False else None,
-              ignore=class_.textIgnorable[bool(keepDash)],
-              replace=class_.replacements)
+        r = Normalize.string(s, class_.textRex[keepBlank][keepDash],
+                             blankify=class_.textIgnorable[keepDash],
+                             replace=class_.replacements)
         # Lowerize the result if required (p_lower)
         return r.lower() if lower else r
+
+    @classmethod
+    def sortable(class_, s):
+        '''Normalizes p_s such that it can be used as value for sorting'''
+        return Normalize.string(s, class_.nonAlphanum,
+                                ignore=class_.textIgnorable[False],
+                                replace=class_.replacements)
 
     @classmethod
     def fileName(class_, s):
         '''Normalizes p_s, for producing a string suitable for naming a file on
            disk.'''
         return Normalize.string(s, class_.nonAlphanum,
-                   ignore=class_.fileNameIgnorable, replace=class_.replacements)
+                                ignore=class_.fileNameIgnorable,
+                                replace=class_.replacements)
 
     @classmethod
     def accents(class_, s):
