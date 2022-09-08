@@ -1079,11 +1079,11 @@ msgstr "Vue standard"
 # ~~~~ Base-related labels ~~~~
 #. Default: "By"
 msgid "Base_creator"
-msgstr "Créé par"
+msgstr "Créé par"
 
 #. Default: "On"
 msgid "Base_created"
-msgstr "Créé le"
+msgstr "Créé le"
 
 #. Default: "Last updated on"
 msgid "Base_modified"

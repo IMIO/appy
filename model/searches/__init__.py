@@ -92,8 +92,9 @@ class UiSearch:
 
         <!-- Add a new object -->
         <div if="search.add and guard.mayInstantiate(class_)"
-           var2="buttonType='small'; viaPopup=search.viaPopup; label=None;
-                 nav=mode.getNavInfo(batch.total)">:class_.pxAdd</div>
+           var2="buttonType='small'; viaPopup=search.viaPopup;
+                 nav=mode.getNavInfo(batch.total);
+                 label=search.addLabel">:class_.pxAdd</div>
 
         <!-- Perform a new search -->
         <div if="showNewSearch and mode.newSearchUrl">
@@ -260,10 +261,12 @@ class Search:
                  showPods=True, showTitle=True, showFilters=True,
                  showNav='both', navAlign='right', translated=None,
                  translatedDescr=None, checkboxes=False, checkboxesDefault=True,
-                 container=None, add=False, resultModes=None, shownInfo=None,
-                 actions=None, rowAlign='top', pageLayoutOnView=None,
-                 thumbnailCss='thumbnail', gridFiltersAlign='center',
-                 totalRows=None, noResultLabel='query_no_result', **fields):
+                 container=None, add=False, addLabel='object_add',
+                 addFromLabel='object_add_from', resultModes=None,
+                 shownInfo=None, actions=None, rowAlign='top',
+                 pageLayoutOnView=None, thumbnailCss='thumbnail',
+                 gridFiltersAlign='center', totalRows=None,
+                 noResultLabel='query_no_result', **fields):
         # "name" is mandatory, excepted in some special cases (ie, when used as
         # "select" param for a Ref field).
         self.name = name
@@ -313,6 +316,9 @@ class Search:
         self.container = container
         # Is it possible to create new "container" instances from this search ?
         self.add = add
+        # Labels for the "add" and "add from" buttons
+        self.addLabel = addLabel
+        self.addFromLabel = addFromLabel
         # There can be various ways to display query results
         self.resultModes = resultModes
         # Similar to the homonym Ref attribute, "shownInfo" defines the columns

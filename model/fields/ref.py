@@ -876,9 +876,10 @@ class Ref(Field):
       showGlobalActions=True, collapsible=False, titleMode='link',
       viewAdded=True, noValueLabel='choose_a_value', noObjectLabel='no_ref',
       noSelectableLabel='no_selectable', addLabel='object_add',
-      addIcon='add.svg', iconOut=False, iconCss='iconS', filterable=True,
-      supTitle=None, subTitle=None, toggleSubTitles=None, separator=None,
-      rowAlign='top', showControls=True, actions=None):
+      addFromLabel='object_add_from', addIcon='add.svg', iconOut=False,
+      iconCss='iconS', filterable=True, supTitle=None, subTitle=None,
+      toggleSubTitles=None, separator=None, rowAlign='top', showControls=True,
+      actions=None):
         # The class whose tied objects will be instances of
         self.class_ = class_
         # Specify "attribute" only for a back reference: it will be the name
@@ -1344,8 +1345,9 @@ class Ref(Field):
         # following label will be used to display a message. Set this attribute
         # to None if you don't want anything to appear in that case.
         self.noSelectableLabel = noSelectableLabel
-        # Label for the "add" button
+        # Labels for the "add" and "add from" buttons
         self.addLabel = addLabel
+        self.addFromLabel = addFromLabel
         # Icon for the "add" button (SVG please)
         self.addIcon = addIcon
         # If p_iconOut is False, the icon within the "add" button will be

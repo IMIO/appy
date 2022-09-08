@@ -57,7 +57,7 @@ class List(Field):
                 fieldName='%s*%d' % (field.name, rowId)">:field.pxRender</td>
       <!-- Icons -->
       <td if="isEdit" align=":dright">
-       <img class="clickable iconS" src=":svg('deleteS')"
+       <img class="clickable iconS" src=":svg('deleteL')"
             title=":_('object_delete')"
             onclick=":field.jsDeleteConfirm(_ctx_)"/>
        <img class="clickable iconS" src=":svg('arrow')"

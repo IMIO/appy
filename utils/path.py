@@ -17,16 +17,17 @@ def guessMimeType(fileName):
     fileName = str(fileName) if isinstance(fileName, Path) else fileName
     return mimetypes.guess_type(fileName)[0] or defaultMimeType
 
-def getShownSize(size):
+def getShownSize(size, unbreakable=False):
     '''Express p_size (a file size in bytes) in a human-readable way'''
+    b = ' ' if unbreakable else ' '
     # Display the size in bytes if smaller than 1024 bytes
-    if size < 1024: return '%d byte(s)' % size
+    if size < 1024: return '%d%sbyte(s)' % (size, b)
     size /= 1024 # This is the size, in Kb
-    if size < 1024: return '%s Kb' % utils.formatNumber(size, precision=1)
+    if size < 1024: return '%s%sKb' % (utils.formatNumber(size, precision=1), b)
     size /= 1024 # This is the size, in Mb
-    if size < 1024: return '%s Mb' % utils.formatNumber(size, precision=1)
+    if size < 1024: return '%s%sMb' % (utils.formatNumber(size, precision=1), b)
     size /= 1024 # This is the size, in Gb
-    return '%s Gb' % utils.formatNumber(size, precision=1)
+    return '%s%sGb' % (utils.formatNumber(size, precision=1), b)
 
 def getFolderSize(folder, nice=False, withCounts=False):
     '''Returns the size of this p_folder (all content, recursively)'''

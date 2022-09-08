@@ -1151,7 +1151,7 @@ class Field:
                   (hook, o.url, layout)
         if inlineEdit == 'icon':
             r = '<img src="%s" title="%s" class="inlineIcon iconS" %s/>%s' % \
-                (o.buildSvg('edit'), o.translate('object_edit'), onClick,
+                (o.buildSvg('editS'), o.translate('object_edit'), onClick,
                  value)
         else:
             r = '<span class="editable" %s>%s</span>' % (onClick, value)

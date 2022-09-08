@@ -411,7 +411,7 @@ class MemoryBuffer(Buffer):
 
     def getLength(self): return len(self.content)
 
-    def write(self, thing): self.content += thing
+    def write(self, thing): self.content += thing or ''
 
     def getIndex(self, podElemName):
         res = -1

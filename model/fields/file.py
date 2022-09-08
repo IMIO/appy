@@ -42,6 +42,9 @@ class FileInfo:
     BYTES = 50000
     NOT_FOUND = 'File "%s" was not found.'
 
+    # Max number of chars shown for a file's upload name
+    uploadNameMax = 30
+
     def __init__(self, fsPath, inDb=True, uploadName=None):
         '''FileInfo constructor. p_fsPath is the path of the file on disk.'''
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -108,6 +111,18 @@ class FileInfo:
             path = Path(putils.getOsTempFolder()) / folder.name / self.fsName
         return path
 
+    def getUploadName(self):
+        '''Returns the upload name, nicely formatted'''
+        # TThe upload name may be missing
+        r = self.uploadName
+        if not r: return '?'
+        # Simply return the upload name if not too long
+        keep = FileInfo.uploadNameMax
+        if len(r) <= keep: return r
+        # Return an "acronym" tag with the first chars of the name
+        return '<abbr title="%s" style="cursor:pointer">%s...</abbr>' % \
+               (r, r[:keep])
+
     def exists(self, o):
         '''Does the file really exist on the filesystem ?'''
         # If the file exists but has no content, we consider it does not exist
@@ -132,7 +147,9 @@ class FileInfo:
         '''Normalizes file p_name.'''
         return name[max(name.rfind('/'), name.rfind('\\'), name.rfind(':'))+1:]
 
-    def getShownSize(self): return putils.getShownSize(self.size)
+    def getShownSize(self):
+        '''Gets p_self's nicely formatted size'''
+        return putils.getShownSize(self.size, unbreakable=True)
 
     def replicateFile(self, src, dest):
         '''p_src and p_dest are open file handlers. This method copies content
@@ -492,10 +509,11 @@ class File(Field):
         # Display an empty value
         if not value: return '' if layout == 'cell' else '-'
         # On "edit", simply repeat the file title
-        if layout == 'edit': return value.uploadName
+        uploadName = value.getUploadName()
+        if layout == 'edit': return uploadName
         # Get the "file title", derived from the upload name and size
         size = value.getShownSize()
-        title = "%s - %s" % (value.uploadName, size)
+        title = "%s - %s" % (uploadName, size)
         # Build the URL for downloading or displaying the file
         url = '%s/%s/download' % (o.url, name)
         # For images, display them directly

@@ -600,11 +600,11 @@ class Text(Multilingual, Field):
                 fdir='row' if inToolbar else 'column'"
            style=":'float:%s;display:flex;flex-direction:%s' % (align, fdir)">
        <div>
-        <img id=":'%s_save' % tid" src=":svg('save')"
+        <img id=":'%s_save' % tid" src=":svg('saveS')"
              class=":'iconS %s' % ('clickable' if inToolbar else 'inlineIcon')"
              title=":_('object_save')"/></div>
        <div>
-        <img id=":'%s_cancel' % tid" src=":svg('cancel')"
+        <img id=":'%s_cancel' % tid" src=":svg('cancelS')"
              class=":'iconS %s' % ('clickable' if inToolbar else 'inlineIcon')"
              title=":_('object_cancel')"/></div>
       </div>
