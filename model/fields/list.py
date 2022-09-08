@@ -87,7 +87,7 @@ class List(Field):
                   totals=Totals.initialise(field, 'row', subFields, isEdit)">
       <!-- Header -->
       <thead>
-       <tr valign="middle">
+       <tr valign=":field.headerAlign">
         <th for="name, sub in subFields" if="sub"
             width=":swidths[loop.name.nb]">
          <x var="field=sub">::field.getListHeader(_ctx_)</x></th>
@@ -259,7 +259,8 @@ class List(Field):
       masterValue=None, focus=False, historized=False, mapping=None,
       generateLabel=None, label=None, subLayouts=Layouts.sub, widths=None,
       view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None, deleteConfirm=False, totalRows=None, rowClass=O):
+      translations=None, deleteConfirm=False, totalRows=None, rowClass=O,
+      headerAlign='middle'):
         # Call the base constructor
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
          show, renderable, page, group, layouts, move, False, True, None, None,
@@ -297,6 +298,9 @@ class List(Field):
         # look at class appy.model.utils.Object, because the way you define your
         # class could lead to Appy malfunctions.
         self.rowClass = rowClass
+        # Header row vertical alignment
+        self.headerAlign = headerAlign
+        # Check parameters
         self.checkParameters()
 
     def initSubFields(self, subFields):

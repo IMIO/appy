@@ -219,7 +219,7 @@ div.rbutton { float:right }
 .grid { border-collapse:separate; border-spacing:0px }
 .grid>thead>tr>th,
 .grid>tbody>tr>th { font-size:90%; text-align:left; position:sticky; top:-2px;
-                    background-color:|altColorLight| }
+                    background-color:|altColorLight|; z-index:1 }
 .grid>tbody>tr>th,
 .grid>thead>tr>th,
 .grid>tbody>tr>td { padding:|gridPadding| }
