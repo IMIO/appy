@@ -126,11 +126,12 @@ class List(Field):
             become [i] + p_rowIndex. */
 
          // Browse elements representing fields
-         var fields = row.querySelectorAll('[id^="'+tagId+'"]'),
-             newIndex = -1, id, old, elems, neww, val, w, oldIndex;
+         let fields = row.querySelectorAll('[id^="'+tagId+'"]'),
+             newIndex = -1, id, old, elems, new_, val, w, oldIndex,
+             tagTypes = ['a', 'script'], widgets=null;
 
          // Patch fields
-         for (var i=0; i<fields.length; i++) {
+         for (let i=0; i<fields.length; i++) {
            // Extract, from the table ID, the field identifier
            id = fields[i].id;
            if ((!id) || (id.indexOf('_') == -1)) continue;
@@ -145,27 +146,34 @@ class List(Field):
              oldIndex = parseInt(elems[2]);
              newIndex = (action == 'set')? rowIndex: oldIndex + rowIndex;
            }
-           neww = elems[0] + '*' + elems[1] + '*' + newIndex;
+           new_ = elems[0] + '*' + elems[1] + '*' + newIndex;
            // Replace the table ID with its new ID
-           fields[i].id = fields[i].id.replace(old, neww);
-           // Find sub-elements mentioning "old" and replace it with "neww"
+           fields[i].id = fields[i].id.replace(old, new_);
+           // Find widgets mentioning v_old and replace it with v_new_
            val = w = null;
-           var widgets = fields[i].querySelectorAll('[id^="'+elems[0]+'\*"]');
-           for (var k=0; k<widgets.length; k++) {
-             w = widgets[k];
+           widgets = fields[i].querySelectorAll('[id^="'+elems[0]+'\*"]');
+           for (let j=0; j<widgets.length; j++) {
+             w = widgets[j];
              // Patch id
              val = w.id;
-             if (val) w.id = val.replace(old, neww);
+             if (val) w.id = val.replace(old, new_);
              // Patch name
              val = w.name;
-             if (val) w.name = val.replace(old, neww);
-             // Patch href
-             if ((w.nodeName == 'A') && w.href)
-               { w.href = w.href.replace(old, neww); }
-             // Patch (and reeval) script
-             if (w.nodeName == 'SCRIPT') {
-               w.text = w.text.replace(old, neww);
-               eval(w.text);
+             if (val) w.name = val.replace(old, new_);
+           }
+           // Find other sub-tags and perform a similar replacement
+           for (let k=0; k<tagTypes.length; k++){
+             widgets = fields[i].getElementsByTagName(tagTypes[k]);
+             for (var l=0; l<widgets.length; l++) {
+               w = widgets[l];
+               // Patch href
+               if ((w.nodeName == 'A') && w.href)
+                 { w.href = w.href.replace(old, new_); }
+               // Patch (and reeval) script
+               if (w.nodeName == 'SCRIPT') {
+                 w.text = w.text.replace(old, new_);
+                 eval(w.text);
+               }
              }
            }
          }

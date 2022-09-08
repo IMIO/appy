@@ -737,7 +737,7 @@ class Class(Meta):
         href=":class_.getCreateLink(tool, createVia, addFormName, sourceField)">
       <input var="css='Small' if fromRef else 'Portlet';
                   cssOut='noIcon ' if iconOut else '';
-                  label=_(field.addFromLabel)"
+                  label=_(field.addFromLabel if field else 'object_add_from')"
          type="button" value=":label" onclick="openPopup('iframePopup')"
          class=":'%sbutton%s button' % (cssOut, css)"
          style=":'' if iconOut else svg('add', bg=True)"/>
