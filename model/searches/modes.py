@@ -226,7 +226,7 @@ class List(Mode):
      <x var="genCss=mode.columns.getCss(showHeaders, uiSearch.search.rowAlign);
              genName=mode.columns.name if genCss else None">
       <style if="genCss">::genCss</style>
-      <table class=":class_.getCssFor(tool, 'list', add=genName)">
+      <table class=":mode.getMainCss(_ctx_)">
 
        <!-- Headers, with filters and sort arrows -->
        <tr if="showHeaders">
@@ -313,6 +313,19 @@ class List(Mode):
            'checkboxes': self.checkboxes, 'checkboxesId': self.checkboxesId,
            'total': self.batch.total,
            'resultMode': self.__class__.__name__.lower()})
+
+    def getMainCss(self, c):
+        '''Get the CSS class(es) to apply to the main tag'''
+        r = self.uiSearch.search.listCss
+        if r:
+            # Use the CSS class(es) defined at the Search level, plus a
+            # potential CSS class generated from column layouts.
+            if c.genName:
+                r = '%s %s' % (r, c.genName)
+        else:
+            # Use the CSS class(es) as defined on the tied class
+            r = c.class_.getCssFor(c.tool, 'list', add=c.genName)
+        return r
 
     def getColumnInfos(self):
         '''Returns infos about search results' columns'''

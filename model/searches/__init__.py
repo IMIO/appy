@@ -259,11 +259,11 @@ class Search:
                  maxPerPage=30, default=False, colspan=1, viaPopup=None,
                  show=True, showActions='all', actionsDisplay='block',
                  showPods=True, showTitle=True, showFilters=True,
-                 showNav='both', navAlign='right', translated=None,
-                 translatedDescr=None, checkboxes=False, checkboxesDefault=True,
-                 container=None, add=False, addLabel='object_add',
-                 addFromLabel='object_add_from', resultModes=None,
-                 shownInfo=None, actions=None, rowAlign='top',
+                 showNav='both', navAlign='right', listCss=None,
+                 translated=None, translatedDescr=None, checkboxes=False,
+                 checkboxesDefault=True, container=None, add=False,
+                 addLabel='object_add', addFromLabel='object_add_from',
+                 resultModes=None, shownInfo=None, actions=None, rowAlign='top',
                  pageLayoutOnView=None, thumbnailCss='thumbnail',
                  gridFiltersAlign='center', totalRows=None,
                  noResultLabel='query_no_result', **fields):
@@ -301,6 +301,11 @@ class Search:
         self.showNav = showNav # May be "top", "bottom", "both" or None
         # Alignment for the navigation panel: can be "left", "center" or "right"
         self.navAlign = navAlign
+        # For search results shown in list mode, you may specify here a default
+        # CSS class to apply to the main table tag that will hold search
+        # results. If p_listCss is None, the CSS class declared on the class
+        # itself, in its "styles" static attribute, will be used.
+        self.listCss = listCss
         # In dict "fields", keys are names of indexed fields and values are
         # simple search values or terms built with database operators.
         self.fields = fields
@@ -790,15 +795,27 @@ class Search:
                (io.iid, ifield.name, o.iid, multi)
 
     @classmethod
-    def getAdvancedFormUrl(class_, tool, className):
-        '''Get the URL to go to when posting the advanced search form.'''
-        # This URL will contain base GET parameters: this will be a kind of
-        # mixed GET/POST request. That way, if the user is redirected to a
-        # referer URL corresponding to this URL, there will be no error: the
-        # "GET" part is "replayable" (even if, of course, it will not produce
-        # exactly the same results, the POST parameters being missing).
-        return '%s/Search/results?className=%s&source=searchForm&' \
-               'search=customSearch' % (tool.url, className)
+    def getAdvancedUrls(class_, tool, className):
+        '''Get (a) the URL to go to when posting the advanced search form and
+           (b) the URL to go back to the initiator Ref, if the search is
+           triggered from a Ref.'''
+        # URL (a) will contain base GET parameters: this will be a kind of mixed
+        # GET/POST request. That way, if the user is redirected to a referer
+        # URL corresponding to this URL, there will be no error: the "GET" part
+        # is "replayable" (even if, of course, it will not produce exactly the
+        # same results, the POST parameters being missing).
+        r = '%s/Search/results?className=%s&source=searchForm&search=' \
+            'customSearch' % (tool.url, className)
+        rinfo = tool.req.ref
+        if rinfo:
+            # Compute URL (b)
+            id, name = rinfo.split(':')
+            o = tool.getObject(id)
+            field = o.getField(name)
+            back = '%s/view?page=%s' % (o.url, field.page.name)
+        else:
+            back = None
+        return r, back
 
     # The advanced search form
     advanced = Px('''
@@ -818,8 +835,9 @@ class Search:
       </div>
 
       <!-- Form for searching objects of the requested class -->
-      <form name="search" method="post"
-            action=":tool.Search.getAdvancedFormUrl(tool, className)">
+      <form name="search" id="search_form" method="post"
+            var="postUrl,backUrl=tool.Search.getAdvancedUrls(tool,className)"
+            action=":postUrl">
        <input if="refInfo" type="hidden" name="ref" value=":refInfo"/>
 
        <!-- The search fields -->
@@ -828,11 +846,22 @@ class Search:
             style=":'grid-column:span %d' %field.scolspan">:field.pxRender</div>
        </div>
 
-       <!-- Submit button -->
-       <input var="label=_('search_button');
-                   css=ui.Button.getCss(label, small=False)"
-              type="submit" class=":css" value=":label"
-              style=":svg('search', bg='18px 18px')"/>
+       <!-- Submit -->
+       <div>
+        <input type="submit" style=":svg('search', bg='18px 18px')"
+               var="label=_('search_button');
+                    css=ui.Button.getCss(label, small=False)"
+               class=":css" value=":label"/>
+       </div>
+
+       <!-- Back -->
+       <div if="backUrl">
+        <input type="button" style=":svg('back', bg='18px 18px')"
+               var="label=_('go_back');
+                    css=ui.Button.getCss(label, small=False)"
+               class=":css" value=":label"
+               onclick=":'window.location=%s' % q(backUrl)"/>
+       </div>
       </form>
      </x>''', template=Template.px, hook='content')
 

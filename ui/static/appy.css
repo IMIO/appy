@@ -60,6 +60,7 @@ input[type=date]     { width:9em }
 input[type=datetime-local] { width:12.1em }
 select[multiple]     { border:1px solid |itextBottomColor|; margin:0;
                        background-image:none; padding:0.1em 0.3em }
+form[name=search] input[type=button] { margin:0 }
 
 .main { width:100%; border:0 }
 .mainC { font-size:93% }
