@@ -56,7 +56,8 @@ class Dict(List):
     # PX for rendering the dict (shared between pxView and pxEdit)
     pxTable = Px('''
      <table var="isEdit=layout == 'edit'" if="isEdit or value"
-            id=":'list_%s' % name" class="grid" width=":field.width"
+            id=":'list_%s' % name" class=":field.getTableCss(_ctx_)"
+            width=":field.width"
             var2="keys=field.keys(o);
                   subFields=field.getSubFields(o, layout);
                   swidths=field.getWidths(subFields);
@@ -78,13 +79,14 @@ class Dict(List):
       master=None, masterValue=None, focus=False, historized=False,
       mapping=None, generateLabel=None, label=None, subLayouts=List.Layouts.sub,
       widths=None, view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None):
+      translations=None, headerAlign='middle', listCss=None):
         # Call the base constructor
         List.__init__(self, fields, validator, multiplicity, default,
           defaultOnEdit, show, renderable, page, group, layouts, move,
           readPermission, writePermission, width, height, maxChars, colspan,
           master, masterValue, focus, historized, mapping, generateLabel, label,
-          subLayouts, widths, view, cell, buttons, edit, xml, translations)
+          subLayouts, widths, view, cell, buttons, edit, xml, translations,
+          headerAlign=headerAlign, listCss=listCss)
         # Method in "keys" must return a list of tuples (key, title): "key"
         # determines the key that will be used to store the entry in the
         # database, while "title" will get the text that will be shown in the ui

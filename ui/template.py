@@ -111,14 +111,9 @@ class Template:
     @classmethod
     def getContentStyle(class_, c):
         '''Get CSS dynamic CSS properties for the "content" zone'''
-        # Fix vertical scroll when the portlet footer is shown together with
-        # the global footer: in that case, the global height is 100% and does
-        # not take footer height into account.
-        if not c.popup and c.showFooter and c.showFooterP:
-            r = ' style="overflow-y:auto"'
-        else:
-            r = ''
-        return r
+        # Enable vertical scroll in such a way that the portlet and sidebar stay
+        # visible.
+        return '' if c.popup else ' style="overflow-y:auto"'
 
     @classmethod
     def getContent(class_, c):

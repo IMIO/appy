@@ -78,9 +78,10 @@ class List(Field):
     pxTable = Px('''
      <table var="isEdit=layout == 'edit';
                  isCell=layout == 'cell';
-                 tableId='list_%s' % name" if="isEdit or value"
+                 tableId='list_%s' % name"
+            if="isEdit or value"
             id=":tableId" width=":field.width"
-            class=":'grid' if isEdit else 'small'"
+            class=":field.getTableCss(_ctx_)"
             var2="Totals=field.Totals;
                   subFields=field.getSubFields(o, layout);
                   swidths=field.getWidths(subFields);
@@ -260,7 +261,7 @@ class List(Field):
       generateLabel=None, label=None, subLayouts=Layouts.sub, widths=None,
       view=None, cell=None, buttons=None, edit=None, xml=None,
       translations=None, deleteConfirm=False, totalRows=None, rowClass=O,
-      headerAlign='middle'):
+      headerAlign='middle', listCss=None):
         # Call the base constructor
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
          show, renderable, page, group, layouts, move, False, True, None, None,
@@ -300,6 +301,16 @@ class List(Field):
         self.rowClass = rowClass
         # Header row vertical alignment
         self.headerAlign = headerAlign
+        # CSS class to apply to the main table tag. If you let None, default
+        # will be "grid" on layout "edit" and "small" on other layouts (those
+        # CSS classes come from appy.css). In p_listCss, if you define a string,
+        # it will be understood as one (or more) CSS class(es) to apply on all
+        # layouts. If you define a dict, you can specify one (or more) CSS
+        # class(es) per layout, like in this example:
+        #
+        #                   {'edit': 'grid', 'view':'small'}
+        #
+        self.listCss = listCss
         # Check parameters
         self.checkParameters()
 
@@ -332,6 +343,17 @@ class List(Field):
         '''Ensures this List is correctly defined'''
         if not issubclass(self.rowClass, O):
             raise Exception(RC_NO_OS % self.rowClass)
+
+    def getTableCss(self, c):
+        '''Return the CSS classe(s) to apply to the main table tag'''
+        default = 'grid' if c.isEdit else 'small'
+        r = self.listCss
+        if not r:
+            # Get the default class, that depends on the current layout
+            r = default
+        elif not isinstance(r, str):
+            r = r.get(c.layout) or default
+        return r
 
     def getWidths(self, subFields):
         '''Get the widths to appply to these p_subFields'''
