@@ -125,9 +125,15 @@ class Guard:
         # Unwrap some useful objects
         self.model = handler.server.model
         self.config = handler.server.config
+        # Get the current user and store user-related attributes on p_self
+        self.initUser()
+
+    def initUser(self):
+        '''Initialise guard attributes related to the current user'''
         # Authenticate the currently logged user and get its User instance
         self.user = User.authenticate(self)
         # Remember that this user hits the server now
+        handler = self.handler
         if not handler.fake:
             handler.onlineUsers[self.user.login] = DateTime()
         # Cache info about this user

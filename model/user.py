@@ -586,7 +586,7 @@ class User(Base):
             # instance normally exists, may be requested before it is created
             # (on database initialization). This is why we may create here a
             # fake one.
-            if hasattr(handler, 'connection'):
+            if hasattr(handler, 'dbConnection'):
                 user = handler.dbConnection.root.objects.get('system') or \
                        User.System()
             else:

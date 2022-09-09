@@ -429,7 +429,7 @@ class Scheduler:
         # Store, in attribute "last", the last minute corresponding to the last
         # scheduler execution. It allows to prevent several executions of the
         # same job(s) at the same minute.
-        # ~~~
+        # ~
         self.last = time.localtime().tm_min
         # This attribute is initialised to the current minute. It means that, as
         # soon as the Appy server is started, the scheduler will not be able to

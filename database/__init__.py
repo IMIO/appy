@@ -482,6 +482,9 @@ class Database:
         tool = handler.tool = root.objects.get('tool')
         if tool is None:
             return abort(connection, TOOL_NF % dbPath, logger)
+        # Now that a connection exists, reinit the current user, that may be a
+        # fake one so far.
+        handler.guard.initUser()
         # Execute the method
         try:
             Function.scall(tool, method, raiseOnError=True)
