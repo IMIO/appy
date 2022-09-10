@@ -164,13 +164,14 @@ class FileInfo:
             dest.write(chunk)
         return size
 
-    def getBase64(self, o=None):
-        '''Returns the file content, as a base64-encoded string'''
+    def getBase64(self, o=None, asString=False):
+        '''Returns the file content, as base64-encoded bytes, or string if
+           p_asString is True.'''
         path = self.getFilePath(o) if o else self.fsPath
         f = open(path, 'rb')
         r = base64.b64encode(f.read())
         f.close()
-        return r
+        return r.decode() if asString else r
 
     def getExtension(self):
         '''Get the file extension from the MIME type or from the upload name'''
