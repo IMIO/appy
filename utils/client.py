@@ -62,7 +62,7 @@ class SoapDataEncoder:
 
     namespacedTags = {'Envelope': 's', 'Body': 's', '*': 'py'}
 
-    def __init__(self, data, namespace='http://appyframework.org'):
+    def __init__(self, data, namespace='https://appyframe.work'):
         self.data = data
         # p_data can be:
         # - a string already containing a complete SOAP message
@@ -73,13 +73,16 @@ class SoapDataEncoder:
 
     def encode(self):
         # Do nothing if we have a SOAP message already
-        if isinstance(self.data, str): return self.data
-        # self.data is here a Python object. Wrap it in a SOAP Body.
-        soap = Object(Body=self.data)
-        # Marshall it
-        marshaller = Marshaller(rootTag='Envelope', namespaces=self.ns,
-                                namespacedTags=self.namespacedTags)
-        return marshaller.marshall(soap)
+        if isinstance(self.data, str):
+            r = self.data
+        else:
+            # self.data is here a Python object. Wrap it in a SOAP Body.
+            soap = Object(Body=self.data)
+            # Marshall it
+            marshaller = Marshaller(rootTag='Envelope', namespaces=self.ns,
+                                    namespacedTags=self.namespacedTags)
+            r = marshaller.marshall(soap)
+        return r.encode()
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DigestRealm:
@@ -498,7 +501,7 @@ class Resource:
             body = FormDataEncoder(data).encode()
             headers['Content-Type'] = 'application/x-www-form-urlencoded'
         else:
-            body = data
+            body = data if isinstance(data, bytes) else data.encode()
         headers['Content-Length'] = str(len(body))
         r = self.send('POST', path, headers=headers, body=body, timeout=timeout)
         if r.code in r.redirectCodes and followRedirect:
