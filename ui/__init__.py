@@ -877,7 +877,7 @@ class Sidebar:
     def show(class_, tool, o, layout, popup):
         '''The sidebar must be shown when p_o declares to use the sidebar. If
            it must be shown, its width is returned.'''
-        if not o: return
+        if not o or popup: return
         sidebar = getattr(o.class_.python, 'sidebar', None)
         if not sidebar: return
         if callable(sidebar): sidebar = sidebar(tool)
