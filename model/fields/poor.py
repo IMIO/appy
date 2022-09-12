@@ -14,9 +14,17 @@ class AutoCorrect:
        poor field.'''
 
     # The set of standard replacements
-    chars = {
-      ':': '<code> </code>:'
-    }
+    chars = {}
+
+    # Chars that mus be prefixed with a non-breakable blank
+    nbPrefixed = (':', ';', '!', '?', '%')
+    for char in nbPrefixed:
+        chars[char] = [('code', ' '), ('text', char)]
+
+    # Replace double quotes by "guillemets" (angle quotes)
+    chars['"'] = {'if':'blankBefore',
+                  1: [('text', '«'), ('code', ' ')],
+                  0: [('code', ' '), ('text', '»')]}
 
     def inJs(self, toolbarId):
         '''Get the JS code allowing to define AutoCorrect.chars on the DOM node
@@ -129,15 +137,18 @@ class Icon:
 
 # All available icons
 Icon.all = [
-  Icon('bold',      'wrapper', data='bold',    shortcut=66),
-  Icon('italic',    'wrapper', data='italic',  shortcut=73),
+  Icon('bold',      'wrapper', data='bold', shortcut=66),
+  Icon('italic',    'wrapper', data='italic', shortcut=73),
   Icon('highlight', 'wrapper', data='hiliteColor', args='yellow', shortcut=72),
   # Insert a non breaking space
   Icon('blank',     'char',    data='code', args=' ', shortcut=32),
   # Insert a non breaking dash
   Icon('dash',      'char',    data='code', args='‑', shortcut=54),
+  Icon('bulleted',  'wrapper', data='insertUnorderedList'),
+  Icon('sub',       'wrapper', data='subscript'),
+  Icon('sup',       'wrapper', data='superscript'),
   # Increment the field height by <data>%
-  Icon('lengthen',  'action',  data='30',       shortcut=56)
+  Icon('lengthen',  'action',  data='30', shortcut=56)
 ]
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -160,7 +171,9 @@ class Poor(Rich):
        <!-- Add inline-edition icons when relevant -->
        <x if="hostLayout">:field.pxInlineActions</x>
       </div>
-      <script if="field.autoCorrect">:field.autoCorrect.inJs(tbId)</script>
+      <!-- Configure auto-correct -->
+      <script if="field.autoCorrect">::field.autoCorrect.inJs(tbId)</script>
+      <script>var nonCharCodes=[16,33,34,35,36,37,38,39,40,255];</script>
      </x> ''',
 
      css = '''
@@ -182,7 +195,7 @@ class Poor(Rich):
         return r;
       }
 
-      linkTextToolbar = function(toolbarId, target) {
+      linkToolbar = function(toolbarId, target) {
         /* Link the toolbar with its target div. Get the target div if not
            given in p_target. */
         if (!target) {
@@ -191,6 +204,7 @@ class Poor(Rich):
         }
         var toolbar=document.getElementById(toolbarId);
         toolbar['target'] = target;
+        target['toolbar'] = toolbar;
         target['icons'] = getIconsMapping(toolbar);
       }
 
@@ -254,13 +268,70 @@ class Poor(Rich):
           if (icon.name == 'lengthen') lengthenDiv(div, parseInt(data));
         }
       }
-      useShortcut = function(event, id) {
-        if ((event.ctrlKey) && (event.keyCode in event.target['icons'])) {
-          // Perform the icon's action
-          useIcon(event.target['icons'][event.keyCode]);
-          event.preventDefault();
+
+      setCaret = function(div) {
+        let sel = window.getSelection(),
+            range = sel.getRangeAt(0),
+            tag=range.startContainer.parentNode;
+        if (tag.tagName == 'CODE') {
+          range.setStartAfter(tag);
         }
       }
+
+      blankBefore = function(div) {
+        /* Returns true if there is a blank (or nothing) before the currently
+           selected char within p_div. */
+        let sel = window.getSelection(),
+            range = sel.getRangeAt(0),
+            offset = range.startOffset;
+        if ((offset == 0) || (range.startContainer.nodeType != Node.TEXT_NODE)){
+          return true;
+        }
+        let prev = range.startContainer.textContent[range.startOffset-1];
+        return (prev === ' ') || (prev === ' '); // Breaking and non-breaking
+      }
+
+      applyAutoCorrect = function(div, nodes) {
+        /* Apply an auto-correction by injecting these p_nodes into p_div, at
+           the current cursor position. */
+        if ('if' in nodes) {
+          // The replacement to choose depends on a condition
+          let condition = eval(nodes['if'])(div),
+              key = (condition)? 1: 0;
+          applyAutoCorrect(div, nodes[key]);
+        }
+        else {
+          for (let i=0; i<nodes.length; i++) {
+            injectTag(div, nodes[i][0], nodes[i][1]);
+          }
+        }
+      }
+
+      // Triggered when the user hits a key in a poor
+      onPoorKeyDown = function(event) {
+        let div = event.target;
+        if (event.ctrlKey) {
+          // Manage keyboard shortcuts
+          if (event.keyCode in div['icons']) {
+            // Perform the icon's action
+            setCaret(div);
+            useIcon(div['icons'][event.keyCode]);
+            event.preventDefault();
+          }
+        }
+        else if (!nonCharCodes.includes(event.keyCode)) {
+          // Ensure the caret is at a correct place for inserting text
+          setCaret(div);
+          // Perform auto-correction when relevant
+          let autoCorrect = div['toolbar'].autoCorrect;
+          if (autoCorrect && event.key in autoCorrect) {
+            // Insert the replacement nodes instead of this char
+            applyAutoCorrect(div, autoCorrect[event.key]);
+            event.preventDefault();
+          }
+        }
+      }
+
       injectSentence = function(event) {
         let tag = event.target;
         // Close the dropdown
@@ -311,7 +382,7 @@ class Poor(Rich):
       <!-- The poor zone in itself -->
       <div contenteditable="true" class="xhtmlE" style=":field.getWidgetStyle()"
            onfocus=":field.onFocus(pid, lg, hostLayout)"
-           onkeydown="useShortcut(event)"
+           onkeydown="onPoorKeyDown(event)"
            id=":'%sP' % pid" >::field.getInputValue(inRequest, requestValue,
                                                     value)</div>
 
@@ -362,7 +433,7 @@ class Poor(Rich):
         else:
             # For inner fields, there is a unique global toolbar
             id = '%s_%s' % (self.name, lg) if lg else self.name
-        return "initPoorContent(this);linkTextToolbar('%s_tb', this)" % id
+        return "initPoorContent(this);linkToolbar('%s_tb', this)" % id
 
     def getListHeader(self, c):
         '''When used as an inner field, the toolbar must be rendered only once,

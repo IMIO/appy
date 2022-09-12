@@ -30,7 +30,7 @@ ul        { line-height:1.2em; margin:0 0 0.2em 0.6em;  padding:0;
             list-style:none outside none }
 ul li     { margin:0; background-image:url("../appy/li.gif");
             padding:0 0 5px 20px; background-repeat:no-repeat;
-            background-position:0 4px }
+            background-position:0 6px }
 img       { border:0; vertical-align:middle }
 audio     { margin:2px 0 }
 select    { border:none; border-bottom:1px solid |itextBottomColor|;
