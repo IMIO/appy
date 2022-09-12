@@ -6,6 +6,26 @@
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
 from appy.model.fields.rich import Rich
+from appy.utils import string as sutils
+
+#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class AutoCorrect:
+    '''Defines the set of automatic corrections that will occur as you type in a
+       poor field.'''
+
+    # The set of standard replacements
+    chars = {
+      ':': '<code> </code>:'
+    }
+
+    def inJs(self, toolbarId):
+        '''Get the JS code allowing to define AutoCorrect.chars on the DOM node
+           representing the poor toolbar.'''
+        return "document.getElementById('%s').autoCorrect=%s;" % \
+               (toolbarId, sutils.getStringFrom(self.chars))
+
+# The default unique AutoCorrect object
+AutoCorrect.default = AutoCorrect()
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Icon:
@@ -59,6 +79,8 @@ class Icon:
         # If a keyboard shortcut is tied to the icon, its key code is defined
         # here, as an integer. See JavasScript keycodes, https://keycode.info.
         self.shortcut = shortcut
+        # Precompute this boolean
+        self.isSentences = type == 'sentences'
 
     def asSentences(self, r, o):
         '''For an icon of type "sentences", wraps the icon into a div allowing
@@ -73,7 +95,8 @@ class Icon:
             else:
                 info = ''
             div = '<div class="sentence"><a class="clickable" ' \
-                  'onclick="injectSentence(this)" title="%s">%s</a>%s</div>' % \
+                  'onmousedown="injectSentence(event)" ' \
+                  'title="%s">%s</a>%s</div>' % \
                   (sentence, Px.truncateValue(sentence, width=65), info)
             sentences.append(div)
         # Add a warning message if no sentence has been found
@@ -89,15 +112,19 @@ class Icon:
     def get(self, o):
         '''Returns the HTML chunk representing this icon'''
         shortcut = str(self.shortcut) if self.shortcut else ''
+        # For sentences, use event "mousedown" and not "onclick". That way,
+        # focus is kept on the current poor. Else, if focus must be forced back
+        # to the poor, the current position within it is lost.
+        onclick = 'onmousedown' if self.isSentences else 'onclick'
         r = '<img class="iconTB" src="%s" title="%s" name="%s"' \
             ' onmouseover="switchIconBack(this, true)"' \
             ' onmouseout="switchIconBack(this, false)"' \
             ' data-type="%s" data-data="%s" data-args="%s" ' \
-            'data-shortcut="%s" onclick="useIcon(this)"/>' % \
+            'data-shortcut="%s" %s="useIcon(this)"/>' % \
              (o.buildUrl(self.icon), o.translate(self.label), self.name,
-              self.type, self.data or '', self.args or '', shortcut)
+              self.type, self.data or '', self.args or '', shortcut, onclick)
         # Add specific stuff if icon type is "sentences"
-        if self.type == 'sentences': r = self.asSentences(r, o)
+        if self.isSentences: r = self.asSentences(r, o)
         return r
 
 # All available icons
@@ -127,11 +154,14 @@ class Poor(Rich):
 
     # The toolbar
     pxToolbar = Px('''
-     <div class="toolbar" id=":tbid|field.name + '_tb'">
-      <x for="icon in field.Icon.all">::icon.get(o)</x>
-      <!-- Add inline-edition icons when relevant -->
-      <x if="hostLayout">:field.pxInlineActions</x>
-     </div>''',
+     <x var="tbId=tbid|field.name + '_tb'">
+      <div class="toolbar" id=":tbId">
+       <x for="icon in field.Icon.all">::icon.get(o)</x>
+       <!-- Add inline-edition icons when relevant -->
+       <x if="hostLayout">:field.pxInlineActions</x>
+      </div>
+      <script if="field.autoCorrect">:field.autoCorrect.inJs(tbId)</script>
+     </x> ''',
 
      css = '''
       .toolbar { height: 24px; margin: 2px 0 }
@@ -176,16 +206,6 @@ class Poor(Rich):
         height = Math.ceil(height * rate);
         // Reinject the new height to the correct area property
         div.style.minHeight = String(height) + 'px';
-      }
-
-      injectString = function(area, s) {
-        // Inject some p_s(tring) into the text p_area, where the cursor is set
-        var text = area.value,
-                   start=area.selectionStart;
-        area.value = text.substring(0, start) + s + \
-                     text.substring(area.selectionEnd, area.value.length);
-        area.selectionStart = area.selectionEnd = start +s.length;
-        area.focus();
       }
 
       injectTag = function(div, tname, content){
@@ -241,11 +261,17 @@ class Poor(Rich):
           event.preventDefault();
         }
       }
-      injectSentence = function(atag) {
-        var area = atag.parentNode.parentNode.parentNode.parentNode['target'];
-        if (!area) return;
-        // Inject it
-        injectString(area, atag.getAttribute('title'));
+      injectSentence = function(event) {
+        let tag = event.target;
+        // Close the dropdown
+        let dropdown = tag.parentNode.parentNode;
+        dropdown.style.display = 'none';
+        // Find the corresponding poor
+        let div = dropdown.parentNode.parentNode['target'];
+        if (!div) return;
+        // Inject the sentence in it
+        injectTag(div, 'text', tag.title);
+        event.preventDefault();
       }
      ''')
 
@@ -292,6 +318,32 @@ class Poor(Rich):
       <!-- The hidden form field -->
       <textarea id=":pid" name=":pid" style="display:none"></textarea>
      </x>''')
+
+    def __init__(self, validator=None, multiplicity=(0,1), default=None,
+      defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
+      layouts=None, move=0, indexed=False, mustIndex=True, indexValue=None,
+      searchable=False, filterField=None, readPermission='read',
+      writePermission='write', width=None, height=None, maxChars=None,
+      colspan=1, master=None, masterValue=None, focus=False, historized=False,
+      mapping=None, generateLabel=None, label=None, sdefault='', scolspan=1,
+      swidth=None, fwidth=10, sheight=None, persist=True, documents=False,
+      languages=('en',), languagesLayouts=None, viewSingle=False,
+      inlineEdit=False, view=None, cell=None, buttons=None, edit=None,
+      xml=None, translations=None, inject=False, valueIfEmpty='',
+      viewCss='xhtml', autoCorrect=AutoCorrect.default):
+        # Call the base constructor
+        super().__init__(validator, multiplicity, default, defaultOnEdit,
+          show, renderable, page, group, layouts, move, indexed, mustIndex,
+          indexValue, searchable, filterField, readPermission, writePermission,
+          width, height, maxChars, colspan, master, masterValue, focus,
+          historized, mapping, generateLabel, label, sdefault, scolspan, swidth,
+          fwidth, sheight, persist, None, None, documents, None,
+          languages, languagesLayouts, viewSingle, inlineEdit, 'Standard',
+          view, cell, buttons, edit, xml, translations, inject, valueIfEmpty,
+          viewCss)
+        # As-you-type replacements are defined by placing an Autocorrect object
+        # in this attribute.
+        self.autoCorrect = autoCorrect
 
     # Do not load ckeditor
     def getJs(self, o, layout, r, config): return
