@@ -105,8 +105,10 @@ Icon.all = [
   Icon('bold',      'wrapper', data='bold',    shortcut=66),
   Icon('italic',    'wrapper', data='italic',  shortcut=73),
   Icon('highlight', 'wrapper', data='hiliteColor', args='yellow', shortcut=72),
-  Icon('blank',     'char',    data=' ', shortcut=32), # Non breaking space
-  Icon('dash',      'char',    data='‑', shortcut=54), # Non breaking dash
+  # Insert a non breaking space
+  Icon('blank',     'char',    data='code', args=' ', shortcut=32),
+  # Insert a non breaking dash
+  Icon('dash',      'char',    data='code', args='‑', shortcut=54),
   # Increment the field height by <data>%
   Icon('lengthen',  'action',  data='30',       shortcut=56)
 ]
@@ -186,6 +188,32 @@ class Poor(Rich):
         area.focus();
       }
 
+      injectTag = function(div, tname, content){
+        /* Inject, within p_div, a tag this p_tname and p_content. Inject it
+           where the cursor is currently positioned. If text is selected, it is
+           removed. */
+        let sel = window.getSelection(),
+            range = sel.getRangeAt(0),
+            node;
+        // Delete the currently selected text, if any
+        if (!range.collapsed) range.deleteContents();
+        /* Create and insert the p_tag. If p_tname is "text", insert p_content,
+           but not surrounded by any tag. */
+        if (tname == 'text') {
+          node = document.createTextNode(content);
+        }
+        else {
+          node = document.createElement(tname);
+          node.appendChild(document.createTextNode(content));
+        }
+        range.insertNode(node);
+        // Move the cursor after the inserted node
+        range.setStartAfter(node);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
       useIcon = function(icon) {
         // Get the linked div (if already linked)
         let div = icon.parentNode['target'];
@@ -199,7 +227,7 @@ class Poor(Rich):
         }
         else if (type == 'char') {
           // Insert a (sequence of) char(s) into the text
-          injectString(div, data);
+          injectTag(div, data, args);
         }
         else if (type == 'action') {
           // Actions
