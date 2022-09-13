@@ -1451,7 +1451,7 @@ class Field:
             # appy.Object.
             value = outer.getValue(o)
             row = value[i]
-            setattr(row, inner, reqValue)
+            setattr(row, inner, self.getStorableValue(o, reqValue))
             value[i] = row.clone()
             # Store the complete value again on p_o
             o.values[outer.name] = value

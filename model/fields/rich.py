@@ -336,20 +336,20 @@ class Rich(Multilingual, Field):
         r = Field.getHistoryValue(self, o, value, i, language, empty=None)
         return empty if not r else self.getDiffValue(o, i, language)
 
-    def getUniStorableValue(self, o, value):
-        '''Gets the p_value as can be stored in the database within p_obj'''
+    def getUniStorableValue(self, o, value, wrap=True):
+        '''Gets the p_value as can be stored in the database within p_o'''
         if not value: return value
         # Clean the value. When image upload is enabled, ckeditor inserts some
         # "style" attrs (ie for image size when images are resized). So in this
         # case we can't remove style-related information.
         try:
-            value = Cleaner().clean(value)
+            value = Cleaner().clean(value, wrap=wrap)
         except SAXParseException as err:
             # Try to remove chars known for producing SAX errors ...
             value = StringCleaner.clean(value)
             # ... then, re-try
             try:
-                value = Cleaner().clean(value)
+                value = Cleaner().clean(value, wrap=wrap)
             except SAXParseException as err:
                 # Errors while parsing p_value can't prevent the user from
                 # storing it.

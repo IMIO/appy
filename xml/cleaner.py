@@ -127,13 +127,13 @@ class Cleaner(Parser):
         # Remove whitespace
         current = self.env.currentContent
         if not current or (current[-1] == '\n'):
-            toAdd = content.lstrip(u'\n\r\t')
+            toAdd = content.lstrip('\n\r\t')
         else:
             toAdd = content
         # Re-transform XML special chars to entities
         self.env.currentContent += Escape.xml(toAdd)
 
-    def clean(self, s):
+    def clean(self, s, wrap=True):
         '''Cleaning XHTML code p_s allows to produce a Appy-compliant,
            ZODB-storable string.'''
         # a. Every <p> or <li> must be on a single line (ending with a carriage
@@ -149,7 +149,11 @@ class Cleaner(Parser):
         # 'ignoreContent' is True if, within the currently ignored tag, we must
         # also ignore its content.
         self.env.ignoreContent = False
-        return self.parse('<x>%s</x>' % s)
+        # If p_wrap is False, p_s is expected to already have a root tag. Else,
+        # it may contain a sequence of tags that must be surrounded by a root
+        # tag.
+        s = '<x>%s</x>' % s if wrap else s
+        return self.parse(s)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class StringCleaner:

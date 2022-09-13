@@ -223,8 +223,14 @@ class Text2Html:
                 self.add('</%s>' % tag, '')
                 self.add('</%s>' % self.p)
         else:
-            t = not start and '/' or ''
-            self.add('<%s%s>' % (t, tag))
+            suffix = '\n'
+            if start:
+                t = ''
+                if tag == self.p:
+                    suffix = ''
+            else:
+                t = '/'
+            self.add('<%s%s>' % (t, tag), suffix)
 
     def convertText(self, text):
         '''Converts, within p_text, some chars according to self.replacements
@@ -276,13 +282,14 @@ class Text2Html:
                 # Is this the last bullet ?
                 isLast = self.isLast(rows, i, '- ')
                 if isLast:
-                    start= '<li class="%s">' % self.lastLiClass
-                    end = '</li>'
                     inList = False
+                    if self.lastLiClass:
+                        css = ' class="%s"' % self.lastLiClass
+                    else:
+                        css = ''
                 else:
-                    start = '<li>'
-                    end = '</li>'
-                self.add('%s%s%s' % (start, self.convertText(row[2:]), end))
+                    css = ''
+                self.add('<li%s>%s</li>' % (css, self.convertText(row[2:])))
                 # Add the end list tag when relevant
                 if isLast: self.addTag('ul', start=False)
             elif row.startswith('|'):

@@ -1,4 +1,4 @@
-'''Injection of external content into XHTML chunks from Rich fields'''
+'''Injection of external content into XHTML chunks from Rich/Poor fields'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
@@ -16,7 +16,7 @@ PX_KO       = 'Error while executing PX "%s": %s'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Injector:
-    '''Implements the "injection" mechanism in a Rich field'''
+    '''Implements the "injection" mechanism in a Rich/Poor field'''
 
     # More information on field "inject", defined in class
     # appy.model.fields.rich.Rich.

@@ -1534,11 +1534,6 @@ function initFocus(pageId){
   if (elem) elem.focus();
 }
 
-// Initialises empty XHTML content for a poor widget
-function initPoorContent(div) {
-  if (!div.innerHTML) div.innerHTML = emptyDiv;
-}
-
 // Functions for making popups draggable
 function dragStart(event) {
   // Create a "drag" object to remember the current popup position

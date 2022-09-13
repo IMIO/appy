@@ -1326,7 +1326,7 @@ class XhtmlPreprocessor:
         # If p_html is True, p_s is supposed to be valid HTML: void tags must be
         # converted to XHTML's self-closing start tags. If p_pre is True, "pre"
         # tags are converted to one-cell tables. If p_inject is True,
-        # injections, as defined by the appy Rich field, are performed.
+        # injections, as defined by the appy Rich or Poor field, are performed.
 
         if s is None: s = ''
         # Surround p_s with a tag in order to get a XML-compliant file (we need

@@ -321,7 +321,7 @@ class LayoutF(Layout):
       </x>
      </div>''')
 
-    def __init__(self, layoutString, style=None, css=None, other=None,
+    def __init__(self, layoutString=None, style=None, css=None, other=None,
                  derivedType=None):
         # Call the base constructor
         super().__init__(layoutString, style=style, css=css, other=other,
@@ -455,10 +455,12 @@ class Layouts(dict):
         if search: search = self['search'] = self.getLayoutFrom(search)
         # Derive unspecified layouts from the existing ones, when possible
         if edit and not view:
-            view = self['view'] = Layout(other=edit, derivedType='view')
+            class_ = edit.__class__
+            view = self['view'] = class_(other=edit, derivedType='view')
         if view and not search:
             # Do not derive a search layout from a view: because most search
             # forms are similar, use a standard layout else.
+            class_ = view.__class__
             self['search'] = Layout('l-f')
 
     def getLayoutFrom(self, this):

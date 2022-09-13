@@ -7,6 +7,7 @@
 from appy.px import Px
 from appy.model.fields.rich import Rich
 from appy.utils import string as sutils
+from appy.pod.xhtml2odt import XhtmlPreprocessor
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class AutoCorrect:
@@ -120,9 +121,9 @@ class Icon:
     def get(self, o):
         '''Returns the HTML chunk representing this icon'''
         shortcut = str(self.shortcut) if self.shortcut else ''
-        # For sentences, use event "mousedown" and not "onclick". That way,
-        # focus is kept on the current poor. Else, if focus must be forced back
-        # to the poor, the current position within it is lost.
+        # Use event "mousedown" and not "onclick". That way, focus is kept on
+        # the current poor. Else, if focus must be forced back to the poor, the
+        # current position within it will be lost.
         onclick = 'onmousedown' if self.isSentences else 'onclick'
         r = '<img class="iconTB" src="%s" title="%s" name="%s"' \
             ' onmouseover="switchIconBack(this, true)"' \
@@ -159,9 +160,9 @@ class Poor(Rich):
     Icon = Icon
 
     # Unilingual view
-    viewUni = cellUni = Px('''
-     <x>::field.getInlineEditableValue(o, value or '-', layout, name=name,
-                                       language=lg)</x>''')
+    viewUni = cellUni = Px('''<div
+     class=":field.getAttribute(o, 'viewCss')">::field.getInlineEditableValue(o,
+       value or '-', layout, name=name, language=lg)</div>''')
 
     # The toolbar
     pxToolbar = Px('''
@@ -252,6 +253,7 @@ class Poor(Rich):
         // Get the linked div (if already linked)
         let div = icon.parentNode['target'];
         if (!div) return;
+        div.focus();
         let type=icon.getAttribute('data-type'),
             data=icon.getAttribute('data-data'),
             args=icon.getAttribute('data-args') || null;
@@ -340,11 +342,16 @@ class Poor(Rich):
         // Find the corresponding poor
         let div = dropdown.parentNode.parentNode['target'];
         if (!div) return;
+        div.focus();
         // Inject the sentence in it
         injectTag(div, 'text', tag.title);
         event.preventDefault();
       }
-     ''')
+
+      // Initialises empty XHTML content for a poor widget
+      initPoorContent = function(div) {
+        if (!div.innerHTML) div.innerHTML = emptyDiv;
+      }''')
 
     # Buttons for saving or canceling while inline-editing the field, rendered
     # within its toolbar.
@@ -355,11 +362,11 @@ class Poor(Rich):
                 fdir='row' if inToolbar else 'column'"
            style=":'float:%s;display:flex;flex-direction:%s' % (align, fdir)">
        <div>
-        <img id=":'%s_save' % pid" src=":svg('save')"
+        <img id=":'%s_save' % pid" src=":svg('saveS')"
              class=":'iconS %s' % ('clickable' if inToolbar else 'inlineIcon')"
              title=":_('object_save')"/></div>
        <div>
-        <img id=":'%s_cancel' % pid" src=":svg('cancel')"
+        <img id=":'%s_cancel' % pid" src=":svg('cancelS')"
              class=":'iconS %s' % ('clickable' if inToolbar else 'inlineIcon')"
              title=":_('object_cancel')"/></div>
       </div>
@@ -401,7 +408,7 @@ class Poor(Rich):
       languages=('en',), languagesLayouts=None, viewSingle=False,
       inlineEdit=False, view=None, cell=None, buttons=None, edit=None,
       xml=None, translations=None, inject=False, valueIfEmpty='',
-      viewCss='xhtml', autoCorrect=AutoCorrect.default):
+      viewCss='xhtmlV', autoCorrect=AutoCorrect.default):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
@@ -453,4 +460,20 @@ class Poor(Rich):
         # Do not show the toolbar if the field is an inner field, provided this
         # check must be performed.
         return True if ignoreInner else not self.isInner()
+
+    def validateUniValue(self, o, value):
+        '''As a preamble, ensure p_value is XHTML'''
+        value = XhtmlPreprocessor.preprocess(value, html=True, pre=False)
+        return super().validateUniValue(o, value)
+
+    def getUniStorableValue(self, o, value):
+        '''Gets the p_value as can be stored in the database within p_o'''
+        if not value or value == '<br>': return
+        # Ensure p_value is XHTML
+        value = XhtmlPreprocessor.preprocess(value, html=True, pre=False)
+        r = super().getUniStorableValue(o, value, wrap=False)
+        # The preprocessor has wrapped p_value in a root tag for having valid
+        # XML: unwrap it now. p_self.r ends with a carriage return, so it is
+        # -5 and not -4.
+        return r[3:-5]
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
