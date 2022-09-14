@@ -6,8 +6,8 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import re
 
-from appy.xml import Parser
 from appy.xml.escape import Escape
+from appy.xml import Parser, XHTML_SC
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Cleaner(Parser):
@@ -30,9 +30,6 @@ class Cleaner(Parser):
 
     # Tags that require a line break to be inserted after them
     lineBreakTags = ('p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'td', 'th')
-
-    # No-end tags
-    noEndTags = ('br', 'img')
 
     def __init__(self, env=None, caller=None, raiseOnError=True,
                  tagsToIgnoreWithContent=tagsToIgnoreWithContent,
@@ -88,13 +85,13 @@ class Cleaner(Parser):
                 if name in attrs: continue
                 r += ' %s="%s"' % (name, value)
         # Close the tag if it is a no-end tag
-        suffix = '/>' if tag in self.noEndTags else '>'
+        suffix = '/>' if tag in XHTML_SC else '>'
         self.r.append('%s%s' % (r, suffix))
 
     def endElement(self, tag):
         e = self.env
-        if e.ignoreTag and (tag in self.tagsToIgnore) and \
-           (tag == e.currentTags[-1][0]):
+        if e.ignoreTag and tag in self.tagsToIgnore and \
+           tag == e.currentTags[-1][0]:
             # Pop the currently ignored tag
             e.currentTags.pop()
             if e.currentTags:
@@ -107,10 +104,10 @@ class Cleaner(Parser):
             # This is the end of a sub-tag within a region that we must ignore
             pass
         else:
-            if self.env.currentContent:
-                self.r.append(self.env.currentContent)
+            if e.currentContent:
+                self.r.append(e.currentContent)
             # Close the tag only if it is a no-end tag.
-            if tag not in self.noEndTags:
+            if tag not in XHTML_SC:
                 # Add a line break after the end tag if required (ie: xhtml
                 # differ needs to get paragraphs and other elements on separate
                 # lines).
@@ -120,7 +117,7 @@ class Cleaner(Parser):
                 else:
                     suffix = ''
                 self.r.append('</%s>%s' % (tag, suffix))
-            self.env.currentContent = ''
+            e.currentContent = ''
 
     def characters(self, content):
         if self.env.ignoreContent: return
@@ -140,7 +137,7 @@ class Cleaner(Parser):
         #    return); else, appy.utils.diff will not be able to compute XHTML
         #    diffs;
         # b. Optimize size: HTML comments are removed
-        self.env.currentContent = ''
+        # ~
         # The stack of currently parsed elements (will contain only ignored
         # ones).
         self.env.currentTags = []

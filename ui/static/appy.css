@@ -127,9 +127,10 @@ div.rbutton { float:right }
 .xhtmlV { padding:5px; font-size:105% }
 .xhtmlE div, .xhtmlV div { padding-bottom:0.3em }
 .xhtmlE code, .xhtmlV code { background-color:lightgrey }
-.xhtmlE table td,
-.xhtmlV table td { border:1px solid |darkColor| !important;
-                   padding: 4px !important}
+.xhtmlE table td, .xhtmlE table th,
+.xhtmlV table td, .xhtmlV table th {
+  border:1px solid |darkColor| !important; padding: 4px !important;
+  color:|darkColor| }
 .clickable { cursor:pointer !important }
 .disabled { opacity:0.3 }
 .unclickable { pointer-events:none; cursor:default }

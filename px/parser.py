@@ -2,9 +2,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy.xml import Environment, Parser
 from appy.pod.buffers import MemoryBuffer
-from appy.pod.xhtml.tags import SELF_CLOSING
+from appy.xml import Environment, Parser, XHTML_SC
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PxEnvironment(Environment):
@@ -105,7 +104,7 @@ class PxParser(Parser):
                     ignorableAttrs += (name,)
                     break
             buffer.dumpStartElement(elem, attrs, ignoreAttrs=ignorableAttrs,
-                                    noEndTag=elem in SELF_CLOSING, hook=hook,
+                                    noEndTag=elem in XHTML_SC, hook=hook,
                                     renamedAttrs=self.renamedAttributes)
 
     def endElement(self, elem):
@@ -118,7 +117,7 @@ class PxParser(Parser):
             buffer.addExpression(content)
             e.currentContent = ''
         # Dump the end element into the current buffer
-        if elem != 'x' and elem not in SELF_CLOSING:
+        if elem != 'x' and elem not in XHTML_SC:
             e.currentBuffer.dumpEndElement(elem)
         # If this element is the main element of the current buffer, we must
         # pop it and continue to work in the parent buffer.

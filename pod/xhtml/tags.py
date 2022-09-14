@@ -1,13 +1,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from appy.xml import XHTML_SC
 from appy.xml.escape import Escape
 from appy.model.utils import Object as O
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Self-closing XHTML tags
-n = None
-SELF_CLOSING = {'area':n, 'base':n, 'br':n, 'col':n, 'command':n, 'embed':n,
-                'hr':n, 'img':n, 'input':n, 'keygen':n, 'link':n, 'menuitem':n,
-                'meta':n, 'param':n, 'source':n, 'track':n, 'wbr':n}
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ChildrenIterator:
@@ -91,7 +85,7 @@ class Tag:
         # The class name (name of a Tag sub-class)
         self.className = self.__class__.__name__
         # Is that a self-closing tag ?
-        self.selfClosing = name in SELF_CLOSING
+        self.selfClosing = name in XHTML_SC
         # Tag's attributes. CSS class(es) are extracted in self.css while other
         # attributes are stored in self.attrs.
         self.css = None

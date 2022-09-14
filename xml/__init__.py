@@ -10,12 +10,19 @@ from html.entities import entitydefs as htmlEntities
 from xml.parsers.expat import XML_PARAM_ENTITY_PARSING_NEVER
 from xml.sax.handler import ContentHandler, ErrorHandler, feature_external_ges
 
+from appy.utils import asDict
+
 # Constants  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 xmlPrologue = '<?xml version="1.0" encoding="utf-8" ?>\n'
 xhtmlPrologue = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" '\
                 '"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
 
-#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Self-closing XHTML tags  - - - - - - - - - - - - - - - - - - - - - - - - - - -
+XHTML_SC = asDict(('area', 'base', 'br', 'col', 'command', 'embed', 'hr',
+                   'img', 'input', 'keygen', 'link', 'menuitem', 'meta',
+                   'param', 'source', 'track', 'wbr'))
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Tag:
     '''Represents an XML tag'''
 
@@ -63,6 +70,7 @@ class Environment:
         # so far.
         self.namespaces = {} # ~{s_namespaceUri: s_namespaceName}~
         self.currentTag = None # The currently parsed tag
+        self.currentContent = '' # Currently collected tag content
         self.parser = None
 
     def manageNamespaces(self, attrs):
