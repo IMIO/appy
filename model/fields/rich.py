@@ -313,10 +313,14 @@ class Rich(Multilingual, Field):
             r = value
         return r
 
+    def getXhtmlCleaner(self):
+        '''Returns a Cleaner instance tailored to p_self'''
+        return Cleaner()
+
     def validateUniValue(self, o, value):
         '''Ensure p_value as will be stored (=cleaned) is valid XHTML'''
         try:
-            Cleaner().clean(value)
+            self.getXhtmlCleaner().clean(value)
         except SAXParseException as err:
             # Try after removing problematic chars
             value = StringCleaner.clean(value)
@@ -342,19 +346,22 @@ class Rich(Multilingual, Field):
         # Clean the value. When image upload is enabled, ckeditor inserts some
         # "style" attrs (ie for image size when images are resized). So in this
         # case we can't remove style-related information.
+        cleaner = self.getXhtmlCleaner()
         try:
-            value = Cleaner().clean(value, wrap=wrap)
+            value = cleaner.clean(value, wrap=wrap)
         except SAXParseException as err:
             # Try to remove chars known for producing SAX errors ...
             value = StringCleaner.clean(value)
             # ... then, re-try
             try:
-                value = Cleaner().clean(value, wrap=wrap)
+                value = self.getXhtmlCleaner().clean(value, wrap=wrap)
             except SAXParseException as err:
                 # Errors while parsing p_value can't prevent the user from
                 # storing it.
                 o.log(XML_ERROR % (self.name, o.id, str(err)), type='warning')
-        # Manage maxChars
+        # Manage maxChars. Truncating p_value will produce a corrupted chunk of
+        # XHTML: the objective here, in allowing size restrictions, is to avoid
+        # people or robots to inject large, insidious, content.
         max = self.maxChars
         if max and (len(value) > max): value = value[:max]
         return value

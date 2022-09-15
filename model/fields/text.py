@@ -56,7 +56,7 @@ class Replacements:
     whitespace = (' ', ' ')
 
     # Regular expression for replacing special markers (see "replacementFun"
-    # attribute below.
+    # attribute below).
     regex = re.compile('\*(.+?)\*')
 
     def __init__(self, replacements=None):
@@ -248,7 +248,7 @@ class Text2Html:
 
     def applyPreListClass(self):
         '''Apply the CSS class in self.preListClass to the last paragraph in
-           self.res.'''
+           p_self.res.'''
         r = self.res
         if not r: return
         i = len(r) - 1

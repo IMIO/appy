@@ -42,6 +42,8 @@ class Date:
             # Get the translated text corresponding to this p_part
             prefix, attr = Date.infoParts[part.lower()]
             r = _('%s_%s' % (prefix, getattr(date, attr)), language=language)
+            # Translated texts are capitalized. Lowerize it when needed.
+            r = r.lower() if part.islower() else r
             if nb:
                 r = r[:int(nb)]
         return r

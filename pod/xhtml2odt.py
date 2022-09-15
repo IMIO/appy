@@ -1320,7 +1320,7 @@ class XhtmlPreprocessor:
                (class_.prePara, content.replace('\n', class_.preParaN))
 
     @classmethod
-    def preprocess(class_, s, html=False, pre=True, inject=False):
+    def preprocess(class_, s, html=False, pre=True, inject=False, root='p'):
         '''Converts string p_s to valid XHTML and r_eturns it'''
 
         # If p_html is True, p_s is supposed to be valid HTML: void tags must be
@@ -1332,7 +1332,7 @@ class XhtmlPreprocessor:
         # Surround p_s with a tag in order to get a XML-compliant file (we need
         # a root tag). We also remove special blank chars that produce SAX
         # parsing errors.
-        s = '<p>%s</p>' % s.replace('\f', '').replace('\v', '')
+        s = '<%s>%s</%s>' % (root, s.replace('\f', '').replace('\v', ''), root)
         # Convert, when required, HTML void tags to XHTML self-closing tags
         if html: s = class_.voidTag.sub(class_.patchTag, s)
         # Integrate, when required, chunks of code files

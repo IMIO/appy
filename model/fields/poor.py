@@ -5,6 +5,7 @@
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
+from appy.xml.cleaner import Cleaner
 from appy.model.fields.rich import Rich
 from appy.utils import string as sutils
 from appy.pod.xhtml2odt import XhtmlPreprocessor
@@ -461,6 +462,12 @@ class Poor(Rich):
         # check must be performed.
         return True if ignoreInner else not self.isInner()
 
+    def getXhtmlCleaner(self):
+        '''Returns a Cleaner instance tailored to p_self'''
+        # More strict cleaning than the Rich
+        return Cleaner(attrsToIgnore=Cleaner.attrsToIgnoreStrict,
+                       attrsToAdd=Cleaner.attrsToAddStrict)
+
     def validateUniValue(self, o, value):
         '''As a preamble, ensure p_value is XHTML'''
         value = XhtmlPreprocessor.preprocess(value, html=True, pre=False)
@@ -470,10 +477,7 @@ class Poor(Rich):
         '''Gets the p_value as can be stored in the database within p_o'''
         if not value or value == '<br>': return
         # Ensure p_value is XHTML
-        value = XhtmlPreprocessor.preprocess(value, html=True, pre=False)
-        r = super().getUniStorableValue(o, value, wrap=False)
-        # The preprocessor has wrapped p_value in a root tag for having valid
-        # XML: unwrap it now. p_self.r ends with a carriage return, so it is
-        # -5 and not -4.
-        return r[3:-5]
+        value = XhtmlPreprocessor.preprocess(value, html=True, pre=False,
+                                             root='x')
+        return super().getUniStorableValue(o, value, wrap=False)
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

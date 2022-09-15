@@ -20,16 +20,20 @@ class Cleaner(Parser):
     # Tags that will be removed from the result, but whose content will be kept
     tagsToIgnoreKeepContent = ('x', 'html', 'body', 'font', 'center',
                                'blockquote')
-    # Attributes to ignore
+
+    # Attributes to ignore, lax or strict
     attrsToIgnore = ('id', 'name', 'class', 'lang', 'rules')
+    attrsToIgnoreStrict = attrsToIgnore + ('style',)
 
     # Attrs to add, if not present, to ensure good formatting, be it at the web
     # or ODT levels.
     attrsToAdd = {'table': {'cellpadding':'6', 'cellspacing':'0', 'border':'1'},
                   'tr':    {'valign': 'top'}}
+    attrsToAddStrict = {}
 
     # Tags that require a line break to be inserted after them
-    lineBreakTags = ('p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'td', 'th')
+    lineBreakTags = ('p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                     'td', 'th')
 
     def __init__(self, env=None, caller=None, raiseOnError=True,
                  tagsToIgnoreWithContent=tagsToIgnoreWithContent,
