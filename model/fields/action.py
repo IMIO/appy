@@ -144,7 +144,7 @@ class Action(Field):
        <div style=":'display:%s' % config.ui.pageDisplay">::inputTitle</div>
       </a>
 
-      <!-- As button -->
+      <!-- As button or icon -->
       <x if="not asPicto">
 
        <!-- Variant with the icon outside the button -->

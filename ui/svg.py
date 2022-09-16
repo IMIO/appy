@@ -24,4 +24,7 @@ class Config:
         self.flashyColor = '#009ba4'
         # An alternate showy color
         self.showyColor = '#dab823'
+        # Colors to apply so some (out)lines within the image
+        self.drawColorA = '#c9c7c5'
+        self.drawColorB = '#777777'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

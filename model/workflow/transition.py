@@ -435,7 +435,7 @@ class UiTransition:
                     if mayTrigger else ''">
        <img src=":url(getattr(tr, iconAttr), base=getattr(tr, iconBase),
                       ram=getattr(tr,iconRam))"
-            class=":picto|'iconS'"/>
+            class=":picto|tr.iconCss"/>
        <div style=":'display:%s' % config.ui.pageDisplay"
             if="not inSub">::label</div>
       </a>
