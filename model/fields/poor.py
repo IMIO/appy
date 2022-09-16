@@ -160,6 +160,9 @@ class Poor(Rich):
     # Make some classes available here
     Icon = Icon
 
+    # A poor-coded non-breaking space
+    nbsp = '<code> </code>'
+
     # Unilingual view
     viewUni = cellUni = Px('''<div
      class=":field.getAttribute(o, 'viewCss')">::field.getInlineEditableValue(o,

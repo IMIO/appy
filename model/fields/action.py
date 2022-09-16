@@ -464,7 +464,7 @@ class Action(Field):
         else:
             # Get objets from a ref
             name = req.hook.split('_')[1]
-            r = getattr(o, name)
+            r = list(getattr(o, name))
         # Remove those not being checked in the UI
         Search.keepCheckedResults(req, r, unchecked=ids)
         return r
