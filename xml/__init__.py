@@ -162,7 +162,7 @@ class Parser(ContentHandler, ErrorHandler):
 
     def warning(self, error): pass
 
-    def parse(self, xml, source='string'):
+    def parse(self, xml, source='string', encoding='utf-8'):
         '''Parses a XML stream'''
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If p_source | p_xml...
@@ -182,10 +182,11 @@ class Parser(ContentHandler, ErrorHandler):
         self.parser.setFeature(feature_external_ges, False)
         inputSource = InputSource()
         if source == 'string':
-            xml = xml.decode() if isinstance(xml, bytes) else xml
+            xml = xml.decode(encoding) if isinstance(xml, bytes) else xml
             xml = io.StringIO(xml)
         else:
-            xml = xml if isinstance(xml, io.IOBase) else open(xml)
+            xml = xml if isinstance(xml, io.IOBase) \
+                      else open(xml, encoding=encoding)
         inputSource.setByteStream(xml)
         self.parser.parse(inputSource)
         xml.close()
