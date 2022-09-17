@@ -309,7 +309,7 @@ class Ref(Field):
 
       <!-- Fields on layout "sub" -->
       <x if="not popup and ifield.showActions == 'all'"
-         var2="fields=o.getFields(layout, 'main');
+         var2="fields=o.getFields(layout);
                layout='cell'; ajaxSingle=False">
        <!-- Call px "cell" and not "render" to avoid having a table -->
        <x for="field in fields"

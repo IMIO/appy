@@ -330,7 +330,7 @@ class Field:
 
         <!-- Fields on layout "sub" -->
         <x if="not popup and uiSearch.showActions == 'all'"
-           var2="fields=o.getFields(layout, 'main'); layout='cell'">
+           var2="fields=o.getFields(layout); layout='cell'">
          <!-- Call cell and not pxRender to avoid having a table -->
          <x for="field in fields"
             var2="name=field.name;
