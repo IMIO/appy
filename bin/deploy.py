@@ -65,6 +65,10 @@ class Deploy(Program):
                    'still available if not applied via the "site" command.' % \
                    (DEB_O, INIT_D % ('lo', LO_SV),
                     DEB_O, INIT_D % (SITE_NAME, SITE_SV))
+    HELP_METHOD  = '["update" command only] When restarting a target after ' \
+                   'having updated it, the specified method will be ' \
+                   'executed, just after methog tool::onInstall. This method ' \
+                   'must exist on the distant tool.'
     HELP_BLIND   = '["update" command only] If set, when updating several ' \
                    'targets, there is no stop between each one (such stops ' \
                    'allow to consult the target\'s app.log to ensure ' \
@@ -88,17 +92,17 @@ class Deploy(Program):
     def defineArguments(self):
         '''Define the allowed arguments for this program'''
         parser = self.parser
+        add = parser.add_argument
         # Positional arguments
-        parser.add_argument('app', help=Deploy.HELP_APP)
-        parser.add_argument('site', help=Deploy.HELP_SITE)
-        parser.add_argument('command', help=Deploy.HELP_COMMAND)
+        add('app', help=Deploy.HELP_APP)
+        add('site', help=Deploy.HELP_SITE)
+        add('command', help=Deploy.HELP_COMMAND)
         # Optional arguments
-        parser.add_argument('-t', '--target', dest='target',
-                            help=Deploy.HELP_TARGET)
-        parser.add_argument('-o', '--options', dest='options',
-                            help=Deploy.HELP_OPTIONS)
-        parser.add_argument('-b', '--blind', dest='blind',
-                            help=Deploy.HELP_BLIND, action='store_true')
+        add('-t', '--target' , dest='target' , help=Deploy.HELP_TARGET)
+        add('-o', '--options', dest='options', help=Deploy.HELP_OPTIONS)
+        add('-m', '--method' , dest='method' , help=Deploy.HELP_METHOD)
+        add('-b', '--blind'  , dest='blind'  , help=Deploy.HELP_BLIND,
+                               action='store_true')
 
     def analyseOptions(self):
         '''Ensure options are coherent w.r.t the command'''
@@ -132,11 +136,13 @@ class Deploy(Program):
             self.options = args.options.split(',')
         else:
             self.options = None
+        self.method = args.method
         self.analyseOptions()
 
     def run(self):
         return Deployer(self.app, self.site, self.command, self.target,
-                        options=self.options, blind=self.blind).run()
+                        options=self.options, method=self.method,
+                        blind=self.blind).run()
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if __name__ == '__main__': Deploy().run()

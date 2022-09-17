@@ -279,7 +279,7 @@ class Deployer:
     manyTargetsCommands = ('update', 'view')
 
     def __init__(self, appPath, sitePath, command, targetName=None,
-                 options=None, blind=False):
+                 options=None, method=None, blind=False):
         # The path to the app
         self.appPath = appPath
         # The path to the reference, local site, containing targets definition
@@ -290,6 +290,9 @@ class Deployer:
         self.targetName = targetName
         # Options
         self.options = options or ()
+        # When restarting the distant site after having updated it, must a
+        # m_method be run?
+        self.method = method
         # Must the "update" command be run blind ?
         self.blind = blind
         # Will hold the list of Target instances corresponding to p_targetName
@@ -499,6 +502,8 @@ class Deployer:
             #     possibly display its log file.
             commands = []
             restart = '%s/bin/site restart' % target.sitePath
+            if self.method:
+                restart = '%s -m %s' % (restart, self.method)
             commands.append(restart)
             # Display the site's app.log (if not blind)
             if not self.blind:
