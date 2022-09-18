@@ -21,6 +21,7 @@ from appy.model.mover import Mover
 from appy.database import Database
 from appy.ui.layout import Layouts
 from appy.xml.escape import Escape
+from appy.database.log import Viewer
 from appy.ui.template import Template
 from appy.model.fields.ref import Ref
 from appy.server.backup import Backup
@@ -345,7 +346,7 @@ class Tool(Base):
       page=Page('database', phase='admin', show=forAdmin,
                 label='Tool_page_database'), **ta)
 
-    # View site's confif.py from the UI
+    # View site's config.py from the UI
     def getConfigPy(self):
         '''Display the content of this Appy site's config.py file'''
         with open('%s/config.py' % self.config.server.sitePath, 'r') as f:
@@ -354,6 +355,10 @@ class Tool(Base):
     configPy = Computed(method=getConfigPy,
       page=Page('configPy', phase='admin', show=forAdmin,
                 label='Tool_page_configPy'), **ta)
+
+    logsViewer = Computed(method=Viewer.run,
+      page=Page('logsViewer', phase='admin', show=forAdmin,
+                label='Tool_page_logsViewer'), **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #  Monitoring

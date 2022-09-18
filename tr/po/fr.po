@@ -1777,6 +1777,14 @@ msgstr "config.py"
 msgid "Tool_configPy"
 msgstr "Contenu du fichier config.py de ce site"
 
+#. Default: "Logs"
+msgid "Tool_page_logsViewer"
+msgstr "Logs"
+
+#. Default: "Log files' content"
+msgid "Tool_logsViewer"
+msgstr "Contenu des fichiers de log"
+
 #. Default: "Synchronize external users"
 msgid "Tool_synchronizeExternalUsers"
 msgstr "Synchro LDAP"
