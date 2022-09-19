@@ -381,13 +381,15 @@ class Px:
         return value
 
     @staticmethod
-    def truncateText(text, width=20, suffix='...', tag='abbr'):
+    def truncateText(text, width=20, suffix='...', tag='abbr', css=None):
         '''Truncates p_text to max p_width chars. If the text is longer than
-           p_width, the truncated part is put in a "abbr" xhtml tag.'''
+           p_width, the truncated part is put in a xhtml p_tag.'''
+        # Optional p_css class(es) are applied to the p_tag
         width = width or 20 # p_width could be None
+        css = ' class="%s"' % css if css else ''
         if len(text) > width:
-            text = '<%s title="%s">%s%s</%s>' % \
-                   (tag, text, text[:width], suffix, tag)
+            text = '<%s title="%s"%s>%s%s</%s>' % \
+                   (tag, text, css, text[:width], suffix, tag)
         return text
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

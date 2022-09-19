@@ -253,7 +253,7 @@ class UiPhase:
         </div>
 
         <!-- Page name and icons -->
-        <x var="label=Px.truncateText(pag.getLabel(), 25)">
+        <x var="label=Px.truncateText(pag.getLabel(), 25, css='clickable')">
          <a if="viewUrl" href=":viewUrl">::label</a>
          <a if="not viewUrl" class="unallowed">::label</a>
         </x>

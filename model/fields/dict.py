@@ -48,7 +48,7 @@ class Dict(List):
      <x if="not rId">::text.get(field)</x>
      <tr if="rId" valign="top" class=":'even' if loop.rId.odd else 'odd'">
       <x>:field.pxFirstCell</x>
-      <td class="discreet">::text</td>
+      <td><b>::text</b></td>
       <td for="subName, field in subFields" if="field" align="center"
           var2="fieldName='%s*%s' % (field.name, rowId)">:field.pxRender</td>
      </tr>''')
@@ -63,7 +63,7 @@ class Dict(List):
                   swidths=field.getWidths(subFields);
                   o=alto|o">
       <!-- Header -->
-      <tr valign="bottom">
+      <tr valign=":field.headerAlign">
        <th width=":swidths[0]"></th>
        <th for="subName, sub in subFields" if="sub"
            width=":swidths[loop.subName.nb + 1]">::sub.getListHeader(_ctx_)</th>

@@ -160,6 +160,8 @@ class Ref(Field):
         l = Layouts(edit=Layout(base, width=None), view=Layout('l-f'))
         gld = Layouts(edit=Layout('d2-lf;rv=', width=None), view='f')
         # Wide layout for a Ref with add=True: it must be 100% wide
+        # "t": with *t*op space
+        t = Layouts(Layout(base, css='topSpace'))
         a = Layouts(edit=Layout(base), view=Layout(base))
         # "d" stands for "description": a description label is added, on view
         wd = Layouts(view=Layout('l-d-f'))
