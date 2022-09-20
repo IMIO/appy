@@ -468,8 +468,10 @@ class Poor(Rich):
     def getXhtmlCleaner(self):
         '''Returns a Cleaner instance tailored to p_self'''
         # More strict cleaning than the Rich
+        tagsToIgnore = Cleaner.tagsToIgnoreWithContentStrict
         return Cleaner(attrsToIgnore=Cleaner.attrsToIgnoreStrict,
-                       attrsToAdd=Cleaner.attrsToAddStrict)
+                       attrsToAdd=Cleaner.attrsToAddStrict,
+                       tagsToIgnoreWithContent=tagsToIgnore)
 
     def validateUniValue(self, o, value):
         '''As a preamble, ensure p_value is XHTML'''

@@ -14,8 +14,9 @@ class Cleaner(Parser):
     '''Cleans XHTML content, so it becomes ready to be stored into a
        Appy-compliant format.'''
 
-    # Tags that will never be in the result, content included
+    # Tags that will never be in the result, content included, lax or strict
     tagsToIgnoreWithContent = ('style', 'head')
+    tagsToIgnoreWithContentStrict = tagsToIgnoreWithContent + ('br',)
 
     # Tags that will be removed from the result, but whose content will be kept
     tagsToIgnoreKeepContent = ('x', 'html', 'body', 'font', 'center',
@@ -23,7 +24,7 @@ class Cleaner(Parser):
 
     # Attributes to ignore, lax or strict
     attrsToIgnore = ('id', 'name', 'class', 'lang', 'rules')
-    attrsToIgnoreStrict = attrsToIgnore + ('style', 'br')
+    attrsToIgnoreStrict = attrsToIgnore + ('style',)
 
     # Attrs to add, if not present, to ensure good formatting, be it at the web
     # or ODT levels.
