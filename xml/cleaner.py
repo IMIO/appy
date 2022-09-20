@@ -23,7 +23,7 @@ class Cleaner(Parser):
 
     # Attributes to ignore, lax or strict
     attrsToIgnore = ('id', 'name', 'class', 'lang', 'rules')
-    attrsToIgnoreStrict = attrsToIgnore + ('style',)
+    attrsToIgnoreStrict = attrsToIgnore + ('style', 'br')
 
     # Attrs to add, if not present, to ensure good formatting, be it at the web
     # or ODT levels.
