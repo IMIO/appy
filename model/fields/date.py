@@ -51,7 +51,7 @@ class Date(Field):
 
     edit = Px('''
      <!-- Native variant -->
-     <input if="field.native" name=":name"
+     <input if="field.native" name=":name" id=":name"
             type=":field.nativeWidgets[field.format]"
             value=":field.getNativeValue(
              field.getInputValue(inRequest, requestValue, rawValue))"/>
