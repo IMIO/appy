@@ -190,9 +190,10 @@ class Normalize:
     @classmethod
     def sortable(class_, s):
         '''Normalizes p_s such that it can be used as value for sorting'''
-        return Normalize.string(s, class_.nonAlphanum,
-                                ignore=class_.textIgnorable[False],
-                                replace=class_.replacements)
+        r = Normalize.string(s, class_.nonAlphanum,
+                             ignore=class_.textIgnorable[False],
+                             replace=class_.replacements)
+        return r.lower()
 
     @classmethod
     def fileName(class_, s):

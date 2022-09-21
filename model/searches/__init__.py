@@ -883,7 +883,7 @@ class Search:
 
     live = Px('''
      <div var="searchLabel=_('search_button')" class=":liveCss">
-      <img src=":svg('search')"/>
+      <img src=":svg('search')" class="iconM"/>
       <div style="position: relative">
        <input type="text" name="w_searchable" autocomplete="off"
               id=":'%s_LSinput' % pre" class="inputSearch"
