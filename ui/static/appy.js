@@ -37,6 +37,29 @@ function post(action, params, target) {
   f.submit();
 }
 
+// Fills dict p_d with elements from form p_f
+function form2dict(f, d) {
+  // Get the other params
+  let name, value, elem, elems = f.elements;
+  for (let i=0; i < elems.length; i++) {
+    elem = elems[i];
+    // Ignore unnamed form elements
+    name = elem.name;
+    if (!name) continue;
+    // Get the field value
+    if (elem.type == 'checkbox') {
+      value = (elem.checked)? '1':'0';
+    }
+    else {
+      value = elem.value;
+      // Escape it when relevant
+      if (name == 'popupComment') value = encodeURIComponent(value);
+    }
+    // Store the value on p_d
+    d[name] = value;
+  }
+}
+
 function quote(s) { return '\'' + s + '\''}
 
 // Convert HTML text, containing entities and "br" tags, to pure text
@@ -356,16 +379,7 @@ function askAjax(hook, form, params, waiting) {
       d.params['action'] = parts.join('*');
     }
     // Get the other params
-    let name, value, elems = f.elements;
-    for (let i=0; i < elems.length; i++) {
-      // Ignore unnamed form elements
-      name = elems[i].name;
-      if (!name) continue;
-      // Escape the value when relevant
-      value = elems[i].value;
-      if (name == 'popupComment') value = encodeURIComponent(value);
-      d.params[name] = value;
-    }
+    form2dict(f, d.params);
   }
   // Get p_params if given. Note that they override anything else.
   if (params) {

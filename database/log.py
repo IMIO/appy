@@ -128,49 +128,100 @@ class Viewer:
     modes = ('tail',)
 
     # Attributes having sense in "tail" mode
-    maxTail     = 500  # Max number of retrieved lines
-    defaultTail = 100  # Default number of retrieved lines
+    bounded = O( # Values having min and max bounds
+     n           = O(max=500, min=3, default=100), # Number of retrieved lines
+     refreshRate = O(max=30 , min=3, default=5)  , # Refresh rate (seconds)
+    )
     chunkSize   = 1024 # Number of bytes retrieved at a time
 
     # The main PX
     px = Px('''
      <!-- Controls -->
-     <div>
-      <img src=":svg('refresh')" class="clickable iconM"
-           onclick="refreshLogZone()"/>
-     </div>
+     <form class="logControls" id="logForm">
+
+      <!-- Refresh every x seconds -->
+      <div class="textual">
+       <input name="refreshAuto" type="checkbox" style="with:2sm"
+              checked=":req.refreshAuto in (None, '1')"/>
+       <span>Refresh every
+        <input var="b=viewer.bounded.refreshRate" name="refreshRate"
+               type="number" min=":b.min" max=":b.max" class="editNB rateR"
+               value=":viewer.getBounded(req, 'refreshRate')"/> seconds
+       </span>
+      </div>
+
+      <!-- Tail mode: Get last x lines -->
+      <div class="textual">Get last
+       <input var="b=viewer.bounded.n" name="n" type="number" min=":b.min"
+              max=":b.max" class="editNB tailN"
+              value=":viewer.getBounded(req, 'n')"/> lines
+      </div>
+
+      <!-- Refresh now -->
+      <input type="button" onclick="refreshLogZone()" value="Update"/>
+     </form>
 
      <!-- The file content -->
      <pre id="logContent" class="logText">:content</pre>
      <script>:viewer.getAjaxData(_ctx_)</script>
-     <script>logToBottom()</script>''',
+     <script>initViewer()</script>''',
 
      js='''
-      logToBottom = function() {
-        let content=document.getElementById("logContent");
-        content.scrollTop = content.scrollHeight;
-      }
-
       // Ajax-refresh the log zone
       refreshLogZone = function() {
-        askField('1_logsViewer', siteUrl+'/tool', 'view');
+        let f = document.getElementById('logForm'),
+            params = {},
+            hook = '1_logsViewer';
+        // Remove any existing timeout
+        clearTimeoutField(hook);
+        form2dict(f, params);
+        askField(hook, siteUrl+'/tool', 'view', params);
+      }
+
+      initViewer = function() {
+        // Set, when appropriate, a timeout for automatic refresh
+        let f = document.getElementById('logForm'),
+            cb = f['refreshAuto'],
+            hook = '1_logsViewer';
+        if (cb.checked) {
+          let delay = parseInt(f['refreshRate'].value) * 1000;
+          setTimeoutField(hook, refreshLogZone, delay);
+        }
+        // Scroll to the content end
+        let content=document.getElementById("logContent");
+        content.scrollTop = content.scrollHeight;
       }''',
 
-     css='''.logText {overflow:auto;width:65vw;height:75vh }''')
+     css='''.logControls { display:flex; align-items:center; gap:1em }
+            .textual { display:flex; align-items:center; font-size:90%;
+                       color:grey }
+            .logText { overflow:auto;width:65vw;height:65vh }
+            .editNB { margin:0 0.1em 0 0.3em; text-align:center }
+            .rateR { width:2.5em }
+            .tailN { width:4em; margin-right:0.4em }
+            #logForm input[type=button] {
+              color:black; padding:0.3em 0.7em; text-transform:none;
+              font-size:80%; border:1px solid grey }''')
 
     def __init__(self, tool):
         self.tool = tool
+
+    def getBounded(self, req, type):
+        '''Get the bounded value of this p_type'''
+        b = Viewer.bounded[type]
+        r = req[type]
+        if r is None:
+            r = b.default
+        else:
+            r = int(r)
+        r = min(r, b.max)
+        return max(b.min, r)
 
     def tail(self, f):
         '''Mimics the unix-like tool "tail" by returning the n last lines from
            file p_f.'''
         # Get the number of lines to retrieve
-        req = self.tool.req
-        if req.n:
-            n = int(req.n)
-        else:
-            n = Viewer.defaultTail
-        n = min(n, Viewer.maxTail)
+        n = self.getBounded(self.tool.req, 'n')
         # Go to the end of the file
         f.seek(0, 2)
         current = f.tell() # The current position in the file
@@ -225,8 +276,8 @@ class Viewer:
         return self.px(context)
 
     def getAjaxData(self, c):
-        '''Creates the Ajax data allwing to Ajax-refresh the log zone'''
-        return "new AjaxData('%s','GET', null, '1_logsViewer')" % c.tool.url
+        '''Creates the Ajax data allowing to Ajax-refresh the log zone'''
+        return "new AjaxData('%s', 'GET', null, '1_logsViewer')" % c.tool.url
 
     @classmethod
     def run(class_, tool):
