@@ -239,7 +239,7 @@ class Viewer:
                 # smaller than the chunk size.
                 f.seek(0,0)
                 # Read what was not been read yet
-                blocks.append(f.read(current))
+                chunks.append(f.read(current))
                 break
             # Count how much lines were encountered in the current chunk
             remaining -= chunks[-1].count(b'\n')
