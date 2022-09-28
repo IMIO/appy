@@ -145,23 +145,21 @@ class Config:
         return 'sso: %s with login key=%s' % (name, self.loginKey)
 
     def extractEncoding(self, headers):
-        '''What is the encoding of retrieved page?'''
+        '''What is the encoding of retrieved page ?'''
         # Encoding can have a forced value
         if self.encoding: return self.encoding
-        if 'CONTENT_TYPE' in headers:
-            res = None
-            for elem in headers['CONTENT_TYPE'].split(';'):
+        if 'Content-Type' in headers:
+            for elem in headers['Content-Type'].split(';'):
                 elem = elem.strip()
                 if elem.startswith('charset='): return elem[8:].strip()
         # This is the default encoding according to HTTP 1.1
         return 'iso-8859-1'
 
-    def getUserParams(self, req):
-        '''Formats the user-related data from the request (HTTP headers), as a
-           dict of params usable for creating or updating the corresponding
+    def getUserParams(self, headers):
+        '''Format and return user-related data from request p_headers, as a dict
+           of parameters being usable for creating or updating the corresponding
            Appy user.'''
-        res = {}
-        headers = req._orig_env
+        r = {}
         encoding = self.extractEncoding(headers)
         decodeFunction = self.decodeFunction
         for keyAttr, appyName in self.ssoAttributes.items():
@@ -170,17 +168,17 @@ class Config:
             keyName = getattr(self, keyAttr)
             if not keyName: continue
             # Get the value for this header if found in the request
-            value = headers.get('HTTP_%s' % keyName, None)
+            value = headers.get(keyName)
             if value:
                 # Apply standard character decoding
                 value = value.decode(encoding)
                 # Apply specific decoding if any
                 if decodeFunction: value = decodeFunction(value)
-                res[appyName] = value.encode('utf-8')
-        return res
+                r[appyName] = value.encode()
+        return r
 
-    def extractUserLogin(self, guard):
-        '''Identify the user from HTTP headers'''
+    def extractUserLogin(self, headers):
+        '''Identify the user from HTTP p_headers'''
         # Check if SSO is enabled
         if not self.enabled: return
         # If the user to identify exists, but as a user from another
@@ -189,7 +187,7 @@ class Config:
         #   converted to a SSO user;
         # - else, there is a problem: log a warning and force an identification
         #   failure.
-        login = headers and headers.get('HTTP_%s' % self.loginKey, None)
+        login = headers.get(self.loginKey) if headers else None
         if login:
             # Apply a transform to the login when relevant
             if self.ldap: login = self.ldap.applyLoginTransform(login)
@@ -308,19 +306,18 @@ class Config:
                         if self.afterLinkGroup:
                             self.afterLinkGroup(user, group)
 
-    def extractUserInfo(self, source, isRequest=True):
-        '''By default, this method extracts, from HTTP headers present in the
-           request (p_source), user data (name, login...), roles and groups.
-
-           If p_isRequest is False, p_source is an already extracted list of
-           prerogatives.'''
-        if isRequest:
-            req = source
+    def extractUserInfo(self, source, fromHeaders=True):
+        '''This method extracts, from HTTP headers present in p_source, user
+           data (name, login...), roles and groups.'''
+        # But if p_fromHeaders is False, p_source is an already extracted list
+        # of prerogatives.
+        if fromHeaders:
+            headers = source
             # Extract simple user attributes
-            params = self.getUserParams(req)
+            params = self.getUserParams(headers)
             # Extract user global roles and groups
-            roles, groups2 = self.extractUserPrerogatives('role', req)
-            groups, roles2 = self.extractUserPrerogatives('group', req)
+            roles, groups2 = self.extractUserPrerogatives('role', headers)
+            groups, roles2 = self.extractUserPrerogatives('group', headers)
         else:
             params = None
             roles, groups2 = self.convertUserPrerogatives('role', source)
@@ -372,14 +369,15 @@ class Config:
             user.log(msg, noUser=True)
             user.do('reactivate', doHistory=False, comment=msg)
 
-    def createUser(self, tool, login, source, isRequest=True, userParams=None):
+    def createUser(self, tool, login, source, fromHeaders=True,
+                   userParams=None):
         '''Creates the local User copy of a SSO user, from user info as present
-           in the request (p_source, if p_isRequest is True), or via an already
-           extracted list of prerogatives (p_source) if p_isRequest is False. In
-           this latter case, p_userParams is a dict containing user parameters
-           (login, name, first name, etc).'''
+           in the request headers (p_source, if p_fromHeaders is True), or via
+           an already extracted list of prerogatives (p_source) if p_fromHeaders
+           is False. In this latter case, p_userParams is a dict containing user
+           parameters (login, name, first name, etc).'''
         # Extract info about the user to create
-        params, roles, groups = self.extractUserInfo(source, isRequest)
+        params, roles, groups = self.extractUserInfo(source, fromHeaders)
         if userParams:
             if params: userParams.update(params)
             params = userParams
@@ -391,7 +389,7 @@ class Config:
         if self.groupKey: self.setGroups(tool, user, groups)
         # Custom User initialization
         if self.userOnEdit: self.userOnEdit(user, created=True)
-        if isRequest:
+        if fromHeaders:
             tool.log(SSO_CREA % (login, user.title), noUser=True)
         return user
 
