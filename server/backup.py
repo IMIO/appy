@@ -69,6 +69,9 @@ class Config:
         self.afterCommand = None
         # Example: ['umount', '/mnt/backup']
 
+        # Seconds to wait before executing p_self.afterCommand
+        self.afterCommandWait = 0
+
         # The list of email recipients that will receive an email containing
         # details about the backup procedure.
         self.emails = []
@@ -320,8 +323,11 @@ class Backup:
         self.copyFiles()
         # Copy the log files when relevant
         if full: self.copyLogs()
-        # Execute the "after command" if defined
-        config.afterCommand: self.runCommand(config.afterCommand)
+        # Execute the "after command" if defined (after a potential delay)
+        if config.afterCommand:
+            if config.afterCommandWait:
+                time.sleep(config.afterCommandWait)
+            self.runCommand(config.afterCommand)
         # Send operation details by email when relevant
         self.messages.append(DETAILS)
         if config.emails: self.sendMails()
