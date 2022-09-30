@@ -111,14 +111,14 @@ class FileInfo:
             path = Path(putils.getOsTempFolder()) / folder.name / self.fsName
         return path
 
-    def getUploadName(self):
+    def getUploadName(self, shorten=True):
         '''Returns the upload name, nicely formatted'''
-        # TThe upload name may be missing
+        # The upload name may be missing
         r = self.uploadName
         if not r: return '?'
         # Simply return the upload name if not too long
         keep = FileInfo.uploadNameMax
-        if len(r) <= keep: return r
+        if len(r) <= keep or not shorten: return r
         # Return an "acronym" tag with the first chars of the name
         return '<abbr title="%s" style="cursor:pointer">%s...</abbr>' % \
                (r, r[:keep])
@@ -150,6 +150,11 @@ class FileInfo:
     def getShownSize(self):
         '''Gets p_self's nicely formatted size'''
         return putils.getShownSize(self.size, unbreakable=True)
+
+    def getNameAndSize(self, shorten=True):
+        '''Gets the file name and size, nicely formatted'''
+        return "%s - %s" % (self.getUploadName(shorten=shorten),
+                            self.getShownSize())
 
     def replicateFile(self, src, dest):
         '''p_src and p_dest are open file handlers. This method copies content
@@ -510,29 +515,27 @@ class File(Field):
         # Display an empty value
         if not value: return '' if layout == 'cell' else '-'
         # On "edit", simply repeat the file title
-        uploadName = value.getUploadName()
-        if layout == 'edit': return uploadName
-        # Get the "file title", derived from the upload name and size
-        size = value.getShownSize()
-        title = "%s - %s" % (uploadName, size)
+        if layout == 'edit': return value.getUploadName()
         # Build the URL for downloading or displaying the file
         url = '%s/%s/download' % (o.url, name)
         # For images, display them directly
         if self.isImage:
             # Define a max width when relevant
             viewWidth = self.getAttribute(o, 'viewWidth')
-            css = ' style="max-width: %s"' % viewWidth if viewWidth else ''
-            return '<img src="%s" title="%s"%s/>' % (url, title, css)
+            css = ' style="max-width:%s"' % viewWidth if viewWidth else ''
+            return '<img src="%s" title="%s"%s/>' % \
+                   (url, value.getNameAndSize(shorten=False), css)
         # For non-images, display a link for downloading it, as an icon when
         # relevant.
         if self.render == 'icon':
             iurl = o.buildUrl(self.icon, base=self.iconBase, ram=self.iconRam)
-            content = '<img src="%s" title="%s"/>' % (iurl, title)
+            content = '<img src="%s" title="%s"/>' % \
+                      (iurl, value.getNameAndSize(shorten=False))
             # On "view", we have place, so display "title" besides the icon
             suffix = title if layout == 'view' else ''
         else:
             # Display textual information only
-            content = title
+            content = value.getNameAndSize()
             suffix = ''
         # Style the suffix
         if suffix: suffix = '<span class="refLink">%s</span>' % suffix
