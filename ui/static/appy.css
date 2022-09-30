@@ -402,3 +402,12 @@ th input { margin:0 !important}
 .checkAll { vertical-align:middle; margin-right:8px }
 .total td { text-align:center; border-top:2px solid |darkColor|;
             font-weight:bold; background-color:|oddColor| }
+
+/* Make "title" attributes appear on mobile devices */
+@media (pointer:coarse), (hover:none) {
+  [title] { position:relative; display:inline-flex; justify-content:center }
+  [title]:hover::after {
+    content:attr(title); position:absolute; top:90%; color:|brightColor|;
+    background-color:|darkColor|; border:1px solid; width:fit-content;
+    padding:3px; font-size:12px; text-align:left }
+}
