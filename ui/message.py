@@ -66,6 +66,11 @@ class Message:
                  padding: 10px; z-index: 15; font-weight: bold }
       .message a { color:|messageLinkColor| }
       .messageP { width: 80%; top: 35% }
+      @media only screen and (hover:none) and (pointer:coarse) {
+        .message { width:100%; bottom:0; text-align:center; padding:2em 0;
+                   font-size:160% }
+        .message img { margin:0 1em 0 0; width:2em }
+      }
 
       @keyframes fade {
         0% { opacity: 0 }

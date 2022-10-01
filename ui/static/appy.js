@@ -1,6 +1,7 @@
 var lsTimeout,  // Timout for the live search
     podTimeout, // Timeout for checking status of pod downloads
-    emptyDiv='<div></div>';
+    emptyDiv = '<div></div>',
+    queryMobile = 'only screen and (hover:none) and (pointer:coarse)';
 
 // Builds the URL to a static resource named p_name
 function buildUrl(name) { return siteUrl + '/static/appy/' + name }
@@ -1227,20 +1228,23 @@ function openPopup(popupId, msg, width, height, css, back, commentLabel) {
   }
   // Get the popup
   let popup = document.getElementById(popupId),
-      frame = popupId == 'iframePopup'; // Is it the "iframe" popup ?
+      frame = popupId == 'iframePopup', // Is it the "iframe" popup ?
+      mobile = window.matchMedia(queryMobile).matches, // Mobile device ?,
+      deltaX = (mobile)? 40: 300,
+      deltaY = (mobile)? 40: 100;
   /* Define height and width. For non-iframe popups, do not set its height: it
      will depend on its content. */
-  if (!width)  { width =  (frame)? window.innerWidth -300: null }
-  if (!height) { height = (frame)? window.innerHeight-100: null }
-  if (width) popup.style.width = width.toFixed() + 'px';
+  if (!width || mobile) { width =  (frame)? window.innerWidth -deltaX: null }
+  if (!height|| mobile) { height = (frame)? window.innerHeight-deltaY: null }
+  if (width)  popup.style.width = width.toFixed() + 'px';
   if (height) popup.style.height = height.toFixed() + 'px';
   if (frame) {
     // Set the enclosed iframe dimensions and show the mask
     let iframe = document.getElementById('appyIFrame');
-    iframe.style.width = (width - 20).toFixed() + 'px';
-    iframe.style.height = (height - 20).toFixed() + 'px';
+    iframe.style.width  = (width -20).toFixed() + 'px';
+    iframe.style.height = (height-20).toFixed() + 'px';
+    if (!mobile) setMask();
     popup['back'] = back;
-    setMask();
   }
   // Apply the CSS class to the popup
   popup.className = (css)? 'popup ' + css: 'popup';

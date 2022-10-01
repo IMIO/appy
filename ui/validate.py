@@ -165,13 +165,13 @@ class Validator:
         # Trigger field-specific validation
         self.intraFieldValidation()
         if self.errors:
-            o.say(self.errorMessage)
+            o.say(self.errorMessage, fleeting=False)
             return self.gotoEdit()
 
         # Trigger inter-field validation
         msg = self.interFieldValidation() or self.errorMessage
         if self.errors:
-            o.say(msg)
+            o.say(msg, fleeting=False)
             return self.gotoEdit()
 
         # Before saving data, must we ask a confirmation by the user ?
@@ -191,4 +191,4 @@ class Validator:
         else:
             array = 'null'
         return 'var errors = %s;' % array
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
