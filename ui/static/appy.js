@@ -1290,13 +1290,15 @@ function closePopup(popupId, clean, tryCancel) {
 }
 
 function updateAppyMessage(message) {
-  // Retrieve the message zone. Reloading the fader will clone the zone.
-  let zone = getNode(':appyMessageContent').parentNode,
-      newZone = zone.fader.stop(true),
-      content = getNode(':appyMessageContent');
+  // Must the message be fleeting or not ?
+  let fleeting = message && message[0] == '*',
+      content = (fleeting)? message.substring(1): message,
+      zone = getNode(':appyMessageContent').parentNode;
+  // Restarting the fader has the effect of cloning the v_zone
+  if (fleeting) zone = zone.fader.stop(true);
   // Fill the message zone with the message to display
-  content.innerHTML = message;
-  newZone.style.display = 'block';
+  getNode(':appyMessageContent').innerHTML = content;
+  zone.style.display = 'block';
 }
 
 // Function triggered when an action needs to be confirmed by the user

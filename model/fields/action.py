@@ -38,7 +38,7 @@ class ActionInitiator(Initiator):
             self.backFromPopupUrl = msg
             r = None
         else:
-            r = msg
+            r = msg or None
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

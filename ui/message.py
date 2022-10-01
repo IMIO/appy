@@ -16,13 +16,23 @@ class Message:
         '''Returns the list of messages to show to a web page'''
         # Do not consume anything if p_unlessRedirect is True and we are
         # redirecting the user.
-        if unlessRedirect and ('Appy-Redirect' in handler.resp.headers): return
+        if unlessRedirect and 'Appy-Redirect' in handler.resp.headers:
+            return None, 'null'
         # Try to get messages from the 'AppyMessage' cookie
         message = handler.req.AppyMessage
         if message:
+            # Must it be fleeting or not ?
+            if message.startswith('*'):
+                fleeting = 'true' # JS-encoded
+                message = message[1:]
+            else:
+                fleeting = 'false' # JS-encoded
             # Dismiss the cookie
             handler.resp.setCookie('AppyMessage', 'deleted')
-            return urllib.parse.unquote(message)
+            r = urllib.parse.unquote(message), fleeting
+        else:
+            r = None, 'null'
+        return r
 
     @classmethod
     def hasValidationErrors(class_, handler):
@@ -35,7 +45,7 @@ class Message:
      <div id="appyMessage"
           var="validErrors=ui.Message.hasValidationErrors(handler)"
           style=":'display:none' if not validErrors else 'display:block'">
-      <script>Message.init(appyMessage)</script>
+      <script>Message.init(appyMessage,true)</script>
 
       <!-- The icon for closing the message -->
       <img src=":svg('close')" class="clickable iconS popupI"
@@ -46,8 +56,9 @@ class Message:
       <div if="validErrors"
            var2="validator=handler.validator">:handler.validator.pxErrors</div>
      </div>
-     <script var="messages=ui.Message.consumeAll(handler)"
-             if="messages">::'Message.show(%s)' % q(messages)</script>''',
+     <script var="messages,fleeting=ui.Message.consumeAll(handler)"
+             if="messages">::'Message.show(%s,%s)' % (q(messages), fleeting)
+     </script>''',
 
      css='''
       .message { position: fixed; bottom: 30px; right: 0px;
@@ -89,23 +100,31 @@ class Message:
        // Static methods for managing the message zone
        class Message {
 
+         // Enable the fader
+         static enableFader(node) {
+           node.className += ' fadedOut';
+           node.addEventListener('mouseenter',
+             function(event) {event.target.fader.stop()});
+         }
+
          // Initialises the DOM node representing the "message" zone
          static init(node, noAnim) {
+           // Always create a Fader objet, even if not be directly used
            new Fader(node);
            node.className = 'message';
-           if (!noAnim) {
-             node.className += ' fadedOut';
-             node.addEventListener('mouseenter',
-               function(event) {event.target.fader.stop()});
-           }
+           if (!noAnim) Message.enableFader(node);
            else node.onmouseenter = null;
          }
 
          // Display the message zone
-         static show(message) {
-           var zone = getNode('appyMessageContent');
+         static show(message, fleeting) {
+           let zone = getNode('appyMessageContent'),
+               parent = zone.parentNode;
+           // Enable the fader if the p_message must be p_fleeting
+           if (fleeting) Message.enableFader(parent);
+           // Display the p_message
            zone.innerHTML = message;
-           zone.parentNode.style.display = 'block';
+           parent.style.display = 'block';
          }
        }
        ''')

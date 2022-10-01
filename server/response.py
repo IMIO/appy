@@ -68,6 +68,9 @@ class Response:
         self.codePhrase = None
         # The message to be returned to the user
         self.message = None
+        # Fill this message be fleeting ? (= will it disappear after some
+        # seconds in the UI ?)
+        self.fleetingMessage = True
         # Response base headers, returned for any response, be it static or
         # dynamic.
         if handler.fake:
@@ -135,12 +138,17 @@ class Response:
         '''Deletes the cookie having this p_name'''
         self.setCookie(name, 'deleted')
 
-    def addMessage(self, message):
+    def addMessage(self, message, fleeting=None):
         '''Adds a message to p_self.message'''
         if self.message is None:
             self.message = message
         else:
             self.message = '%s<br/>%s' % (self.message, message)
+        # Update fleetingness. If several messages were added with different
+        # fleeting flavours, the last non-None p_fleeting value will override
+        # any previous one.
+        if fleeting is not None:
+            self.fleetingMessage = fleeting
 
     def goto(self, url=None, message=None, fromPopup=False):
         '''Redirect the user to p_url'''
@@ -157,7 +165,7 @@ class Response:
             self.headers['Location'] = url or self.handler.headers['Referer']
 
     def ungoto(self):
-        '''Undo a pevious call to m_goto'''
+        '''Undo a previous call to m_goto'''
         self.code = HTTPStatus.OK
         if 'Location' in self.headers:
             del self.headers['Location']
@@ -222,7 +230,6 @@ class Response:
         '''Compresses p_content and add the appropriate response header
            "Content-Encoding". The compressed version of p_content is
            returned.'''
-        # It must be compressed
         r = BytesIO()
         with gzip.GzipFile(fileobj=r, mode='wb') as f: f.write(content)
         self.headers['Content-Encoding'] = 'gzip'
@@ -288,6 +295,8 @@ class Response:
         handler = self.handler
         if self.message is not None:
             quoted = urllib.parse.quote(self.message)
+            if self.fleetingMessage:
+                quoted = '*%s' % quoted
             self.setCookie('AppyMessage', quoted)
         # Prepare the response content
         content, path = self.prepareContent(content, path)

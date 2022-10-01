@@ -339,9 +339,9 @@ class Base:
         '''Logs a p_message of some p_type'''
         return self.H().log('app', type, message)
 
-    def say(self, message):
+    def say(self, message, fleeting=None):
         '''Adds p_message to the global message returned in the response'''
-        self.resp.addMessage(message)
+        self.resp.addMessage(message, fleeting=fleeting)
 
     def goto(self, url=None, message=None, fromPopup=False):
         '''Return to some p_url or to the referer page. If you want to come back

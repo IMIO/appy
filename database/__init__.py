@@ -680,7 +680,7 @@ class Database:
         # In the remaining of this method, at various places, we will check if
         # p_o has already been deleted or not. Indeed, p_o may just have been a
         # transient object whose only use was to collect data from the UI.
-        # ---
+        # ~
         # Call the custom "onEditEarly" if available. This method is called
         # *before* potentially linking p_o to its initiator.
         if isTemp:
