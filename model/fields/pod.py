@@ -326,8 +326,10 @@ class Pod(Field):
       .objectActions .iconP { width:16px }
       .podi { position:relative }
       .phase .fmt { top:54px; right:14px; font-size:100% }
+      .phaseC .fmt { top:34px; right:11px; font-size:90% }
       .objectActions .fmt { top:0; right:-8px; font-size:69% }
-      .phase .iconP { width:|podPWidth| }''',
+      .phase .iconP { width:|podPWidth| }
+      .phaseC .iconP { width:|podPWidthC| }''',
 
      js='''
       setPodIcon = function(icon, key, fmt, defaults, empty, merged) {
