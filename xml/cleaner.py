@@ -6,6 +6,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import re
 
+from appy.utils import asDict
 from appy.xml.escape import Escape
 from appy.xml import Parser, XHTML_SC
 
@@ -33,13 +34,14 @@ class Cleaner(Parser):
     attrsToAddStrict = {}
 
     # Tags that require a line break to be inserted after them
-    lineBreakTags = ('p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-                     'td', 'th')
+    lineBreakTags = asDict(('p','div','li','td','th',
+                            'h1','h2','h3','h4','h5','h6'))
 
     def __init__(self, env=None, caller=None, raiseOnError=True,
                  tagsToIgnoreWithContent=tagsToIgnoreWithContent,
                  tagsToIgnoreKeepContent=tagsToIgnoreKeepContent,
-                 attrsToIgnore=attrsToIgnore, attrsToAdd=attrsToAdd):
+                 attrsToIgnore=attrsToIgnore, attrsToAdd=attrsToAdd,
+                 poorCoded=False):
         # Call the base constructor
         Parser.__init__(self, env, caller, raiseOnError)
         self.tagsToIgnoreWithContent = tagsToIgnoreWithContent
@@ -48,6 +50,9 @@ class Cleaner(Parser):
         self.tagsToIgnore = tagsToIgnoreWithContent + tagsToIgnoreKeepContent
         self.attrsToIgnore = attrsToIgnore
         self.attrsToAdd = attrsToAdd
+        # Is this cleaner made for cleaning poor-coded chunks of XHTML? If yes,
+        # some specific action will be undergone.
+        self.poorCoded = poorCoded
 
     def startDocument(self):
         # The result will be cleaned XHTML, joined from self.r
@@ -57,25 +62,39 @@ class Cleaner(Parser):
     def endDocument(self):
         self.r = ''.join(self.r)
 
+    def dumpCurrentContent(self, beforeEnd=None):
+        '''Dumps (if any) the current content as stored on p_self.env'''
+        # Do nothing if there is no current content
+        e = self.env
+        content = e.currentContent
+        if not content: return
+        # If the current content must be dumped before closing an end tag
+        # representing a paragraph (p_beforeEnd), right-strip the content.
+        if beforeEnd and beforeEnd in Cleaner.lineBreakTags:
+            content = content.rstrip()
+        # Add the current content to the result
+        self.r.append(content)
+        # Reinitialise the current content to the empty string
+        e.currentContent = ''
+
     def startElement(self, tag, attrs):
         e = self.env
+        e.inCode = tag == 'code'
         # Dump any previously gathered content if any
-        if e.currentContent:
-            self.r.append(e.currentContent)
-            e.currentContent = ''
+        self.dumpCurrentContent()
+        # Ignore this tag when appropriate
         if e.ignoreTag and e.ignoreContent: return
         if tag in self.tagsToIgnore:
             e.ignoreTag = True
             if tag in self.tagsToIgnoreWithContent:
                 e.ignoreContent = True
-            else:
+            else: # v_tag is in p_self.tagsToIgnoreKeepContent
                 e.ignoreContent = False
             e.currentTags.append( (tag, e.ignoreContent) )
             return
         # Add a line break before the start tag if required (ie: xhtml differ
         # needs to get paragraphs and other elements on separate lines).
-        if (tag in self.lineBreakTags) and self.r and \
-           (self.r[-1][-1] != '\n'):
+        if tag in Cleaner.lineBreakTags and self.r and self.r[-1][-1] != '\n':
             prefix = '\n'
         else:
             prefix = ''
@@ -97,6 +116,9 @@ class Cleaner(Parser):
         e = self.env
         if e.ignoreTag and tag in self.tagsToIgnore and \
            tag == e.currentTags[-1][0]:
+            # Dump possible content if it must not be ignored
+            if not e.ignoreContent:
+                self.dumpCurrentContent(beforeEnd=tag)
             # Pop the currently ignored tag
             e.currentTags.pop()
             if e.currentTags:
@@ -109,31 +131,37 @@ class Cleaner(Parser):
             # This is the end of a sub-tag within a region that we must ignore
             pass
         else:
-            if e.currentContent:
-                self.r.append(e.currentContent)
-            # Close the tag only if it is a no-end tag.
+            self.dumpCurrentContent(beforeEnd=tag)
+            # Close the tag only if it is a no-end tag
             if tag not in XHTML_SC:
                 # Add a line break after the end tag if required (ie: xhtml
                 # differ needs to get paragraphs and other elements on separate
                 # lines).
-                if (tag in self.lineBreakTags) and self.r and \
-                   (self.r[-1][-1] != '\n'):
+                if tag in Cleaner.lineBreakTags and self.r and \
+                   self.r[-1][-1] != '\n':
                     suffix = '\n'
                 else:
                     suffix = ''
                 self.r.append('</%s>%s' % (tag, suffix))
-            e.currentContent = ''
+        if tag == 'code':
+            e.inCode = False
 
     def characters(self, content):
-        if self.env.ignoreContent: return
-        # Remove whitespace
-        current = self.env.currentContent
-        if not current or (current[-1] == '\n'):
+        e = self.env
+        if e.ignoreContent: return
+        if self.poorCoded and e.inCode and content == ' ':
+            # Some browsers replace non-breaking spaces injected by the poor JS
+            # code, by standard spaces. Ensure, within "code" tags, every space
+            # is a non-breaking one.
+            content = ' '
+        # Remove leading whitespace
+        current = e.currentContent
+        if not current or current[-1] == '\n':
             toAdd = content.lstrip('\n\r\t')
         else:
             toAdd = content
         # Re-transform XML special chars to entities
-        self.env.currentContent += Escape.xml(toAdd)
+        e.currentContent += Escape.xml(toAdd)
 
     def clean(self, s, wrap=True):
         '''Cleaning XHTML code p_s allows to produce a Appy-compliant,
@@ -151,6 +179,8 @@ class Cleaner(Parser):
         # 'ignoreContent' is True if, within the currently ignored tag, we must
         # also ignore its content.
         self.env.ignoreContent = False
+        # Are we in a "code" tag ?
+        self.env.inCode = False
         # If p_wrap is False, p_s is expected to already have a root tag. Else,
         # it may contain a sequence of tags that must be surrounded by a root
         # tag.

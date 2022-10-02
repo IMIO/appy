@@ -193,7 +193,7 @@ class Poor(Rich):
       getIconsMapping = function(toolbar) {
         // Gets a mapping containing toolbar icons, keyed by their shortcut
         var r = {}, icons=toolbar.getElementsByClassName('iconTB');
-        for (var i=0; i<icons.length; i++) {
+        for (let i=0; i<icons.length; i++) {
           var icon=icons[i], key=icon.getAttribute('data-shortcut');
           if (key) r[parseInt(key)] = icon;
         }
@@ -228,20 +228,25 @@ class Poor(Rich):
       }
 
       injectTag = function(div, tname, content){
-        /* Inject, within p_div, a tag this p_tname and p_content. Inject it
-           where the cursor is currently positioned. If text is selected, it is
-           removed. */
+        /* Inject, within p_div, a tag with this p_tname and p_content. Inject
+           it where the cursor is currently positioned. If text is selected, it
+           is removed. */
         let sel = window.getSelection(),
             range = sel.getRangeAt(0),
             node;
         // Delete the currently selected text, if any
         if (!range.collapsed) range.deleteContents();
-        /* Create and insert the p_tag. If p_tname is "text", insert p_content,
-           but not surrounded by any tag. */
+        // Create and insert the p_tag
         if (tname == 'text') {
+          // Particular case #1: insert p_content, but not surrounded by any tag
           node = document.createTextNode(content);
         }
+        else if (tname == 'node') {
+          // Particular case #2: the node is already built in p_content
+          node = content;
+        }
         else {
+          // Create the node named p_tname, with this p_content
           node = document.createElement(tname);
           node.appendChild(document.createTextNode(content));
         }
@@ -352,6 +357,84 @@ class Poor(Rich):
         event.preventDefault();
       }
 
+      var unbreakableChars = [' ', '‑'];
+
+      getNextUnbreakable = function(s) {
+        /* Get the next unbreakable char and its position in p_s, as a dict
+           ~{'char':s_unbreakable, 'index':i_index}~. Returns null if p_s does
+           not contain any unbreakable char. */
+        let r, j, char;
+        for (let i=0; i<unbreakableChars.length; i++) {
+          char = unbreakableChars[i];
+          j = s.indexOf(char);
+          if (j != -1) {
+            // An unbreakable char has been found
+            if (!r) {
+              // This is the first encountered unbreakable char
+              r = {'char':char, 'index':j};
+            }
+            else {
+              // Set or keep, in v_r, the char having the smallest index
+              if (j < r['index']) {
+                r['char'] = char;
+                r['index'] = j;
+              }
+            }
+          }
+        }
+        return r;
+      }
+
+      injectContent = function(node, content) {
+        /* Inject this textual p_content into this p_node. Any unbreakable space
+           or dash found within p_content is converted to a "code" sub-tag. */
+        let tail = content,
+            unbreak, part, sub;
+        // Loop until we have "consumed" p_content in its entirety
+        while (tail) {
+          // Find the next unbreakable char
+          unbreak = getNextUnbreakable(tail);
+          if (!unbreak) {
+            // No more unbreakable char: add p_tail as text child to p_node
+            node.appendChild(document.createTextNode(tail));
+            tail = '';
+          }
+          else {
+            /* Add, to p_node, a text child with p_tail's part being before the
+               unbreakable char. */
+            if (unbreak['index'] > 0) {
+              part = tail.substring(0, unbreak['index']);
+              node.appendChild(document.createTextNode(part));
+            }
+            // Add a "code" sub-tag containing the unbreakable char
+            sub = document.createElement('code');
+            sub.appendChild(document.createTextNode(unbreak['char']));
+            node.appendChild(sub);
+            // Remove v_tail's "consumed" part
+            tail = tail.substring(unbreak['index']+1);
+          }
+        }
+      }
+
+      // Insert pasted data into a poor field
+      getPastedData = function(event) {
+        // Prevent data to be directly injected
+        event.stopPropagation();
+        event.preventDefault();
+        // Get pasted data via the clipboard API
+        let clipboardData = event.clipboardData || window.clipboardData,
+            pastedData = clipboardData.getData('Text');
+        if (!pastedData) return;
+        // Split v_pastedData into paragraphs
+        let paras = pastedData.split('\\n'), para, div;
+        for (let i=0; i<paras.length; i++) {
+          para = paras[i];
+          node = document.createElement('div');
+          injectContent(node, para);
+          injectTag(event.target.parentNode, 'node', node);
+        }
+      }
+
       // Initialises empty XHTML content for a poor widget
       initPoorContent = function(div) {
         if (!div.innerHTML) div.innerHTML = emptyDiv;
@@ -393,7 +476,7 @@ class Poor(Rich):
       <!-- The poor zone in itself -->
       <div contenteditable="true" class="xhtmlE" style=":field.getWidgetStyle()"
            onfocus=":field.onFocus(pid, lg, hostLayout)"
-           onkeydown="onPoorKeyDown(event)"
+           onpaste="getPastedData(event)" onkeydown="onPoorKeyDown(event)"
            id=":'%sP' % pid" >::field.getInputValue(inRequest, requestValue,
                                                     value)</div>
 
@@ -471,7 +554,7 @@ class Poor(Rich):
         tagsToIgnore = Cleaner.tagsToIgnoreWithContentStrict
         return Cleaner(attrsToIgnore=Cleaner.attrsToIgnoreStrict,
                        attrsToAdd=Cleaner.attrsToAddStrict,
-                       tagsToIgnoreWithContent=tagsToIgnore)
+                       tagsToIgnoreWithContent=tagsToIgnore, poorCoded=True)
 
     def validateUniValue(self, o, value):
         '''As a preamble, ensure p_value is XHTML'''
