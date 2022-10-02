@@ -34,8 +34,12 @@ class Cleaner(Parser):
     attrsToAddStrict = {}
 
     # Tags that require a line break to be inserted after them
-    lineBreakTags = asDict(('p','div','li','td','th',
-                            'h1','h2','h3','h4','h5','h6'))
+    lineBreakTags = asDict(('p', 'div', 'li', 'td', 'th',
+                            'h1', 'h2', 'h3', 'h4', 'h5', 'h6'))
+
+    # Tags to completely remove if being empty
+    removeIfEmptyTags = asDict(('p', 'div', 'ul', 'li',
+                                'h1', 'h2', 'h3', 'h4', 'h5', 'h6'))
 
     def __init__(self, env=None, caller=None, raiseOnError=True,
                  tagsToIgnoreWithContent=tagsToIgnoreWithContent,
@@ -112,6 +116,13 @@ class Cleaner(Parser):
         suffix = '/>' if tag in XHTML_SC else '>'
         self.r.append('%s%s' % (r, suffix))
 
+    def tagIsEmpty(self, tag):
+        '''This ending p_tag has just been encountered. The method returns True
+           if we are about dumping an empty tag, which is the case if we find
+           its start tag as the last element in p_self.r.'''
+        last = self.r[-1].strip()
+        return (last == '<%s>' % tag) or last.startswith('<%s ' % tag)
+
     def endElement(self, tag):
         e = self.env
         if e.ignoreTag and tag in self.tagsToIgnore and \
@@ -134,15 +145,21 @@ class Cleaner(Parser):
             self.dumpCurrentContent(beforeEnd=tag)
             # Close the tag only if it is a no-end tag
             if tag not in XHTML_SC:
-                # Add a line break after the end tag if required (ie: xhtml
-                # differ needs to get paragraphs and other elements on separate
-                # lines).
-                if tag in Cleaner.lineBreakTags and self.r and \
-                   self.r[-1][-1] != '\n':
-                    suffix = '\n'
+                # ... but do not close it, and even remove it entirely, if being
+                #     empty and listed among "removeIfEmptyTags" tags.
+                if tag in Cleaner.removeIfEmptyTags and self.r and \
+                   self.tagIsEmpty(tag):
+                    del self.r[-1]
                 else:
-                    suffix = ''
-                self.r.append('</%s>%s' % (tag, suffix))
+                    # Add a line break after the end tag if required (ie: xhtml
+                    # differ needs to get paragraphs and other elements on
+                    # separate lines).
+                    if tag in Cleaner.lineBreakTags and self.r and \
+                       self.r[-1][-1] != '\n':
+                        suffix = '\n'
+                    else:
+                        suffix = ''
+                    self.r.append('</%s>%s' % (tag, suffix))
         if tag == 'code':
             e.inCode = False
 

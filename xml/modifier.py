@@ -105,7 +105,10 @@ class Modifier(Parser):
                 condition = tagFound
             if condition:
                 j = part.index('>')
-                r[i] = '%s class="%s">%s' % (part[:j], css, part[j+1:])
+                start = part[:j]
+                # Avoid adding the p_css class if one is already set
+                if 'class=' not in start:
+                    r[i] = '%s class="%s">%s' % (start, css, part[j+1:])
                 break
             previous = r[i]
             i -= 1
@@ -163,7 +166,7 @@ class Modifier(Parser):
         '''Returns p_s, modified'''
         # Add variables to the environment
         # ~
-        # Have I alreadu encountered the first paragraph ?
+        # Have I already encountered the first paragraph ?
         self.env.firstParaMet = False
         # Parse (wrapped) p_s
         r = self.parse('<x>%s</x>' % s)
