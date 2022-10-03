@@ -111,15 +111,18 @@ class Normalize:
     baseIgnorable = '.,:;*+=~?%^\'’"<>{}[]#|\t\\°-‑'
 
     # ~~~ The set of chars to ignore when producing a file name
-    fileNameIgnorable = asDict(baseIgnorable + '  $£€/\r\n')
+    moreIgnorableA = '  $£€/\r\n'
+    fileNameIgnorable = asDict(baseIgnorable + moreIgnorableA)
 
     # ~~~ The set of chars to blankify when extracting text for the purpose of
-    #     database indexing, with 2 variants, keeping dashes (True) or not.
-    moreIgnorable = '\n/()_'
+    #     database indexing or keywords cleaning, with 2 variants, keeping
+    #     dashes (True) or not.
+    moreIgnorableB = '\n/()_'
     textIgnorable = {
-      False: asDict(baseIgnorable + moreIgnorable),
-      True:  asDict(baseIgnorable[:-2] + moreIgnorable)
+      False: asDict(baseIgnorable + moreIgnorableB),
+      True:  asDict(baseIgnorable[:-2] + moreIgnorableB)
     }
+    indexIgnorable = asDict(baseIgnorable + moreIgnorableA + moreIgnorableB)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Base method normalizing chars by blankifying, ignoring, replacing or
@@ -191,7 +194,7 @@ class Normalize:
     def sortable(class_, s):
         '''Normalizes p_s such that it can be used as value for sorting'''
         r = Normalize.string(s, class_.nonAlphanum,
-                             ignore=class_.textIgnorable[False],
+                             ignore=class_.indexIgnorable,
                              replace=class_.replacements)
         return r.lower()
 
