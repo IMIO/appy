@@ -155,7 +155,7 @@ class Cleaner(Parser):
                     # differ needs to get paragraphs and other elements on
                     # separate lines).
                     if tag in Cleaner.lineBreakTags and self.r and \
-                       self.r[-1][-1] != '\n':
+                       not self.r[-1].endswith('\n'):
                         suffix = '\n'
                     else:
                         suffix = ''
