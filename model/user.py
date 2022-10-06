@@ -424,8 +424,9 @@ class User(Base):
         # authentication cookie with its new password.
         if self == user:
             self.guard.Cookie.updatePassword(self.H(), password)
-        return True, self.translate('new_password_text',
+        message = self.translate('new_password_text',
                                     mapping={'password': password})
+        self.say(message, fleeting=False)
 
     def showResetPassword(self):
         '''Action "reset password" is available to anyone having write access to

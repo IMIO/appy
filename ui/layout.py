@@ -607,6 +607,7 @@ Layouts.dvs = Layouts(edit=b, view='l-d-f')
 # "Grid" group-related layouts
 Layouts.gn  = Layouts(Layout('f;rvl=', width=None))
 Layouts.gd  = Layouts(Layout('frvl-d', width='99%'))
+Layouts.dg  = Layouts(Layout('d-frvl', width='99%'))
 Layouts.gdn = Layouts(edit=Layout('d2-f;rvl=', width=None), view=Layout('f'))
 Layouts.gh  = Layouts('fhrvl')
 Layouts.gdh = Layouts('fhrvl-d')

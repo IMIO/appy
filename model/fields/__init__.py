@@ -193,7 +193,8 @@ class Field:
 
     # Some global static variables
     nullValues = (None, '', [], {}, ())
-    validatorTypes = (types.FunctionType, type(re.compile('')))
+    validatorTypes = (types.FunctionType, types.MethodType,
+                      type(re.compile('')))
     labelTypes = ('label', 'descr', 'help')
     viewLayouts = ('view', 'cell')
     cellLayouts = ('cell', 'query')
