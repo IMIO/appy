@@ -694,17 +694,17 @@ function toggleCb(checkbox) {
       cbType = parts[1],
       // Get the DOM node storing checkbox-related data
       node = document.getElementById(hook),
-      // Get the array storing checkbox statuses
+      // Get the array storing checkbox statuses ~{i_iid: i_insertOrder}~
       statuses = node['_appy_' + cbType + '_cbs'],
       // Get the array semantics
       semantics = node['_appy_' + cbType + '_sem'],
       id = checkbox.value;
   if (semantics == 'unchecked') {
-    if (!checkbox.checked) statuses[id] = null;
+    if (!checkbox.checked) statuses[id] = Object.keys(statuses).length;
     else {if (id in statuses) delete statuses[id]};
   }
   else { // semantics is 'checked'
-    if (checkbox.checked) statuses[id] = null;
+    if (checkbox.checked) statuses[id] = Object.keys(statuses).length;
     else {if (id in statuses) delete statuses[id]};
   }
 }
@@ -1093,13 +1093,17 @@ function onAdd(direction, addForm, objectId) {
   f.submit();
 }
 
-function stringFromDict(d, keysOnly) {
+function stringFromDict(d, keysOnly, sortByValue) {
   /* Gets a comma-separated string form dict p_d. If p_keysOnly is True, only
      keys are dumped. Else, "key:value" pairs are included. */
   let elem, r = [];
   for (let key in d) {
     elem = (keysOnly)? key: key + ':' + d[key];
     r.push(elem);
+  }
+  if (sortByValue) {
+    // Sort the result by using p_d's values as sort key
+    r.sort(function cmp(a,b) { return (d[a] > d[b])? 1:-1 });
   }
   return r.join();
 }
@@ -1482,7 +1486,7 @@ function onSelectObjects(popupId, initiatorId, objectUrl, mode, onav,
   /* Objects have been selected in a popup, to be linked via a Ref with
      link='popup'. Get them. */
   let node = document.getElementById(popupId),
-      uids = stringFromDict(node['_appy_objs_cbs'], true),
+      uids = stringFromDict(node['_appy_objs_cbs'], true, true),
       semantics = node['_appy_objs_sem'];
   // Show an error message if no element is selected
   if ((semantics == 'checked') && (!uids)) {
