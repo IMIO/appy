@@ -78,7 +78,8 @@ setup(name = "appy", version = "{version}",
       packages = findPackages(base),
       package_dir = {'appy': base + os.sep + 'appy'},
       package_data = {'':["*.*"]},
-      install_requires = dependencies, python_requires = python)
+      install_requires = dependencies, python_requires = python,
+      scripts=['src/appy/bin/appy'])
 '''
 
 readMe = '''

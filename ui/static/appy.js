@@ -1,6 +1,5 @@
 var lsTimeout,  // Timout for the live search
     podTimeout, // Timeout for checking status of pod downloads
-    emptyDiv = '<div></div>',
     queryMobile = 'only screen and (hover:none) and (pointer:coarse)';
 
 // Builds the URL to a static resource named p_name

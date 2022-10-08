@@ -178,7 +178,7 @@ class Poor(Rich):
       </div>
       <!-- Configure auto-correct -->
       <script if="field.autoCorrect">::field.autoCorrect.inJs(tbId)</script>
-      <script>var nonCharCodes=[16,33,34,35,36,37,38,39,40,255];</script>
+      <script>var nonCharCodes=[8,16,33,34,35,36,37,38,39,40,46,255];</script>
      </x> ''',
 
      css = '''
@@ -190,11 +190,233 @@ class Poor(Rich):
      ''',
 
      js='''
+      class Surgeon {
+        /* Manipulates DOM nodes to manage poor-coded non-breakable chars (NBs)
+           and perform other various DOM triturations.
+
+           The Poor field allows to visualize NBs with a grey background. It
+           does so by wrapping any NB into a "code" tag containing a single
+           TextNode whose sole content is a single UTF-8 char being the NB. */
+
+        // Supported NB UTF-8 chars
+        static nbChars = [' ', '‑'];
+
+        constructor(text) {
+          // A string possibly containing UBs to convert
+          this.text = text;
+          /* If p_text contains NBs, p_this.text will contain (after execution
+             of m_proceed) the p_text part found before the first NB is met.
+             Then, p_this.nodes will contain code tags and text nodes
+             representing the rest of the p_text. If p_text is only made of NBs,
+             p_this.text will be the empty string at the end of the process. */
+          this.nodes = null; // Will store an array, if needed
+          this.proceed();
+        }
+
+        getNextNB(s) {
+          /* Get the next NB and its position in this p_s(tring), as a dict
+
+                     ~{'char':s_nb, 'index':i_index}~.
+
+             Returns null if p_s does not contain any NB. */
+          let r, j;
+          // Walk all possible NBs
+          for (const char of Surgeon.nbChars) {
+            j = s.indexOf(char);
+            if (j != -1) {
+              // A NB has been found
+              if (!r) {
+                // This is the first encountered NB
+                r = {'char':char, 'index':j};
+              }
+              else {
+                // Set or keep, in v_r, the char having the smallest index
+                if (j < r['index']) {
+                  r['char'] = char;
+                  r['index'] = j;
+                }
+              }
+            }
+          }
+          return r;
+        }
+
+        addNode(node) {
+          // Adds this p_node to p_this.nodes
+          if (!this.nodes) this.nodes = [];
+          this.nodes.push(node);
+        }
+
+        proceed() {
+          /* Extracts NBs from p_this.text, and possibly push parts of it in
+             p_this.nodes (see constructor) */
+          let tail = this.text,
+              found = false, // true if at least one NB is found
+              unbreak, part, code;
+          // Loop until we have "consumed" p_tail in its entirety
+          while (tail) {
+            // Find the next NB
+            unbreak = this.getNextNB(tail);
+            if (!unbreak) {
+              // No more NB: possibly store v_tail as a TextNode
+              if (found) this.addNode(document.createTextNode(tail));
+              tail = '';
+            }
+            else {
+              // Manage the text part found before the NB
+              if (unbreak['index'] > 0) {
+                part = tail.substring(0, unbreak['index']);
+                if (!found) {
+                  // 1st found NB: p_part must be stored in p_this.text
+                  this.text = part;
+                }
+                else { // Add a TextNode in p_this.nodes
+                  this.addNode(document.createTextNode(part));
+                }
+              }
+              else if (!found) { this.text = '' }
+              // Add a code tag containing the NB
+              code = document.createElement('code');
+              code.appendChild(document.createTextNode(unbreak['char']));
+              this.addNode(code);
+              // Remove v_tail's "consumed" part
+              tail = tail.substring(unbreak['index']+1);
+              found = true;
+            }
+          }
+        }
+
+        static wrapNodes(nodes) {
+          // Wrap this array of p_nodes into a "div" tag
+          let r = document.createElement('div');
+          for (const node of nodes) r.appendChild(node);
+          return r;
+        }
+
+        getNodes(wrapped) {
+          /* After p_proceed has done its job, this method returns an array of
+             nodes [TextNode(this.text)] + this.nodes if p_wrapped is false, or
+             a "div" tag having these nodes as children else. */
+          let r = this.nodes || [];
+          if (this.text) {
+            r.unshift(document.createTextNode(this.text));
+          }
+          // Wrap those nodes as children of a main "div" tag if requested
+          if (wrapped) r = Surgeon.wrapNodes(r);
+          return r;
+        }
+
+        replaceText(textNode) {
+          // Text in p_textNode must be replaced with the work of the surgeon
+          let parent = textNode.parentNode,
+              last = textNode.nextSibling;
+          // Put the leading text in p_textNode if found
+          if (this.text) {
+            // A part of the text must stay in p_textNode
+            textNode.data = this.text;
+          }
+          // Insert the additional nodes
+          for (const node of this.nodes) {
+            parent.insertBefore(node, last);
+            last = node.nextSibling;
+          }
+          // Remove p_textNode if it became empty
+          if (!this.text) parent.removeChild(textNode);
+        }
+
+        static cutAt(range) {
+          // Cut and return the tail of the current selection
+          let current = range.startContainer, r=[];
+          if (current.nodeType == Node.TEXT_NODE) {
+            // Cut a TextNode in 2 pieces
+            let i = range.startOffset,
+                tail = current.substring(i);
+            if (tail) {
+              r.push(document.createTextNode(tail));
+              current.data = current.data.substring(0, i);
+            }
+            current = current.parentNode;
+          }
+          else {
+            // Cut a container tag whose child nodes are probably TextNodes
+            let children = current.childNodes,
+                i = children.length - 1,
+                j = range.startOffset, child;
+            while (i >= j) {
+              child = current.removeChild(children[i]);
+              r.unshift(child);
+              i = i-1;
+            }
+          }
+          // Position the cursor after the cut element
+          range.setStartAfter(current);
+          range.collapse(true);
+          return r;
+        }
+
+        static insertAt(selection, range, node, moveAfter) {
+          /* Inserts p_node at the position indicated by p_selection and
+             p_range. If p_moveAfter is true, the cursor is moved to the end of
+             the inserted node. */
+          range.insertNode(node);
+          if (moveAfter) range.setStartAfter(node);
+          // Reinitialise the range
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+
+        static inject(type, content, outer) {
+          /* Inject, within the currently selected poor, an element of this
+             p_type, with this p_content. Inject it where the cursor is
+             currently positioned. If text is selected, it is removed. If
+             p_outer is true, one or several paragraphs are inserted. */
+          let sel = window.getSelection(),
+              range = sel.getRangeAt(0),
+              many = false, node;
+          // Delete the currently selected text, if any
+          if (!range.collapsed) range.deleteContents();
+          // Create, when relevant, the element to insert
+          if (type == 'text') { // Insert string p_content as a TextNode
+            node = document.createTextNode(content);
+          }
+          else if (type == 'node') { // Insert the node passed in p_content
+            node = content;
+          }
+          else if (type == 'array') { // Insert p_content = an array of nodes
+            node = content;
+            many = true;
+          }
+          else { // Create the node named p_type, with this p_content
+            node = document.createElement(type);
+            node.appendChild(document.createTextNode(content));
+          }
+          // Insert the element(s)
+          node = (many)? node : [node];
+          let first = true, paraTail;
+          for (const nod of node) {
+            if (first) {
+              if (outer) {
+                /* Cut the remaining of the current paragraph: it will be
+                   reinserted after all nodes will have been inserted. */
+                paraTail = Surgeon.cutAt(range);
+              }
+              first = false;
+            }
+            Surgeon.insertAt(sel, range, nod, true);
+          }
+          // Reinsert v_paraTail if present
+          if (paraTail) {
+            Surgeon.insertAt(sel, range, Surgeon.wrapNodes(paraTail), false);
+          }
+        }
+      }
+
       getIconsMapping = function(toolbar) {
         // Gets a mapping containing toolbar icons, keyed by their shortcut
-        var r = {}, icons=toolbar.getElementsByClassName('iconTB');
-        for (let i=0; i<icons.length; i++) {
-          var icon=icons[i], key=icon.getAttribute('data-shortcut');
+        var r = {}, icons=toolbar.getElementsByClassName('iconTB'), key;
+        for (const icon of icons) {
+          key = icon.getAttribute('data-shortcut');
           if (key) r[parseInt(key)] = icon;
         }
         return r;
@@ -227,37 +449,6 @@ class Poor(Rich):
         div.style.minHeight = String(height) + 'px';
       }
 
-      injectTag = function(div, tname, content){
-        /* Inject, within p_div, a tag with this p_tname and p_content. Inject
-           it where the cursor is currently positioned. If text is selected, it
-           is removed. */
-        let sel = window.getSelection(),
-            range = sel.getRangeAt(0),
-            node;
-        // Delete the currently selected text, if any
-        if (!range.collapsed) range.deleteContents();
-        // Create and insert the p_tag
-        if (tname == 'text') {
-          // Particular case #1: insert p_content, but not surrounded by any tag
-          node = document.createTextNode(content);
-        }
-        else if (tname == 'node') {
-          // Particular case #2: the node is already built in p_content
-          node = content;
-        }
-        else {
-          // Create the node named p_tname, with this p_content
-          node = document.createElement(tname);
-          node.appendChild(document.createTextNode(content));
-        }
-        range.insertNode(node);
-        // Move the cursor after the inserted node
-        range.setStartAfter(node);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
-
       useIcon = function(icon) {
         // Get the linked div (if already linked)
         let div = icon.parentNode['target'];
@@ -272,7 +463,7 @@ class Poor(Rich):
         }
         else if (type == 'char') {
           // Insert a (sequence of) char(s) into the text
-          injectTag(div, data, args);
+          Surgeon.inject(data, args);
         }
         else if (type == 'action') {
           // Actions
@@ -281,11 +472,33 @@ class Poor(Rich):
       }
 
       setCaret = function(div) {
+        // Ensure the caret is correctly positioned before encoding text
         let sel = window.getSelection(),
             range = sel.getRangeAt(0),
-            tag=range.startContainer.parentNode;
-        if (tag.tagName == 'CODE') {
-          range.setStartAfter(tag);
+            current = range.startContainer;
+        if (current == div) {
+          /* Structural problem: an empty para must be created and the caret
+             must be positioned inside it. As a preamble, remove any silly br
+             that would be present. */
+          let child;
+          for (let i=div.childNodes.length-1; i>=0; i--) {
+            child = div.childNodes[i];
+            if (child.tagName === 'BR') div.removeChild(child);
+          }
+          let para = document.createElement('div'),
+              text = para.appendChild(document.createTextNode(''));
+          div.appendChild(para);
+          range.setStart(text, 0);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        else if (current.parentNode.tagName == 'CODE') {
+          // Nothing can be encoded in a code tag, position the caret after it
+          range.setStartAfter(current.parentNode);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
         }
       }
 
@@ -312,15 +525,15 @@ class Poor(Rich):
           applyAutoCorrect(div, nodes[key]);
         }
         else {
-          for (let i=0; i<nodes.length; i++) {
-            injectTag(div, nodes[i][0], nodes[i][1]);
-          }
+          for (const node of nodes) Surgeon.inject(node[0], node[1]);
         }
       }
 
       // Triggered when the user hits a key in a poor
       onPoorKeyDown = function(event) {
+        // Block change observation and manage this change ourselves
         let div = event.target;
+        div.changeFromEvent = true;
         if (event.ctrlKey) {
           // Manage keyboard shortcuts
           if (event.keyCode in div['icons']) {
@@ -330,15 +543,17 @@ class Poor(Rich):
             event.preventDefault();
           }
         }
-        else if (!nonCharCodes.includes(event.keyCode)) {
-          // Ensure the caret is at a correct place for inserting text
-          setCaret(div);
-          // Perform auto-correction when relevant
-          let autoCorrect = div['toolbar'].autoCorrect;
-          if (autoCorrect && event.key in autoCorrect) {
-            // Insert the replacement nodes instead of this char
-            applyAutoCorrect(div, autoCorrect[event.key]);
-            event.preventDefault();
+        else {
+          if (!nonCharCodes.includes(event.keyCode)) {
+            // Ensure the caret is at a correct place for inserting text
+            setCaret(div);
+            // Perform auto-correction when relevant
+            let autoCorrect = div['toolbar'].autoCorrect;
+            if (autoCorrect && event.key in autoCorrect) {
+              // Insert the replacement nodes instead of this char
+              applyAutoCorrect(div, autoCorrect[event.key]);
+              event.preventDefault();
+            }
           }
         }
       }
@@ -353,91 +568,74 @@ class Poor(Rich):
         if (!div) return;
         div.focus();
         // Inject the sentence in it
-        injectTag(div, 'text', tag.title);
+        Surgeon.inject('text', tag.title);
         event.preventDefault();
-      }
-
-      var unbreakableChars = [' ', '‑'];
-
-      getNextUnbreakable = function(s) {
-        /* Get the next unbreakable char and its position in p_s, as a dict
-           ~{'char':s_unbreakable, 'index':i_index}~. Returns null if p_s does
-           not contain any unbreakable char. */
-        let r, j, char;
-        for (let i=0; i<unbreakableChars.length; i++) {
-          char = unbreakableChars[i];
-          j = s.indexOf(char);
-          if (j != -1) {
-            // An unbreakable char has been found
-            if (!r) {
-              // This is the first encountered unbreakable char
-              r = {'char':char, 'index':j};
-            }
-            else {
-              // Set or keep, in v_r, the char having the smallest index
-              if (j < r['index']) {
-                r['char'] = char;
-                r['index'] = j;
-              }
-            }
-          }
-        }
-        return r;
-      }
-
-      injectContent = function(node, content) {
-        /* Inject this textual p_content into this p_node. Any unbreakable space
-           or dash found within p_content is converted to a "code" sub-tag. */
-        let tail = content,
-            unbreak, part, sub;
-        // Loop until we have "consumed" p_content in its entirety
-        while (tail) {
-          // Find the next unbreakable char
-          unbreak = getNextUnbreakable(tail);
-          if (!unbreak) {
-            // No more unbreakable char: add p_tail as text child to p_node
-            node.appendChild(document.createTextNode(tail));
-            tail = '';
-          }
-          else {
-            /* Add, to p_node, a text child with p_tail's part being before the
-               unbreakable char. */
-            if (unbreak['index'] > 0) {
-              part = tail.substring(0, unbreak['index']);
-              node.appendChild(document.createTextNode(part));
-            }
-            // Add a "code" sub-tag containing the unbreakable char
-            sub = document.createElement('code');
-            sub.appendChild(document.createTextNode(unbreak['char']));
-            node.appendChild(sub);
-            // Remove v_tail's "consumed" part
-            tail = tail.substring(unbreak['index']+1);
-          }
-        }
       }
 
       // Insert pasted data into a poor field
       getPastedData = function(event) {
-        // Prevent data to be directly injected
+        // Block change observation and manage this change ourselves
+        let div = event.target;
+        div.changeFromEvent = true;
+        // Prevent data to be directly injected into v_div
         event.stopPropagation();
         event.preventDefault();
         // Get pasted data via the clipboard API
         let clipboardData = event.clipboardData || window.clipboardData,
             pastedData = clipboardData.getData('Text');
         if (!pastedData) return;
-        // Split v_pastedData into paragraphs
-        let paras = pastedData.split('\\n'), para, div;
-        for (let i=0; i<paras.length; i++) {
-          para = paras[i];
-          node = document.createElement('div');
-          injectContent(node, para);
-          injectTag(event.target.parentNode, 'node', node);
+        // Split v_pastedData into paragraphs.
+        let paras = pastedData.split('\\n'),
+            first = paras.shift();
+            surgeon = new Surgeon(first);
+        /* Insert the 1st line as simple series of TextNodes + "code" tags for
+           NB chars. */
+        Surgeon.inject('array', surgeon.getNodes(false));
+        // Insert the next lines as "div" tags
+        if (paras.length > 0) {
+          // Replace every paragraph with a "div" tag
+          for (let i=0; i < paras.length; i++) {
+            surgeon = new Surgeon(paras[i]);
+            paras[i] = surgeon.getNodes(true);
+          }
+          Surgeon.inject('array', paras, true);
         }
       }
 
-      // Initialises empty XHTML content for a poor widget
-      initPoorContent = function(div) {
-        if (!div.innerHTML) div.innerHTML = emptyDiv;
+      // Callback function to execute when mutations are observed
+      const onPoorMutation = (mutationList, observer) => {
+        let target = observer.target, surgeon;
+        for (const mutation of mutationList) {
+          if (mutation.type === 'characterData') {
+            // Text has changed: handle this, if not already done by an event
+            if (!target.changeFromEvent) {
+              // Replace NBs with their poor equivalent (if found)
+              surgeon = new Surgeon(mutation.target.data);
+              if (surgeon.nodes) surgeon.replaceText(mutation.target);
+            }
+          }
+          target.changeFromEvent = false; // Reinitialise the flag
+        }
+      }
+
+      /* Events to observe. Even "childList" is only interesting to reinitialise
+         the "changeFromEvent" flag after a "paste" event occurred. */
+      const poorObserveEvents = { characterData: true, subtree: true,
+                                  childList: true };
+
+      // Initialises an observer on a poor field
+      initPoorObserver = function(tag, isID) {
+        let div = (isID)? document.getElementById(tag) :tag,
+            observer = div.changeObserver;
+        if (!observer) div.changeObserver= new MutationObserver(onPoorMutation);
+        div.changeObserver.target = div; // Find p_div from the callback
+        div.changeObserver.observe(div, poorObserveEvents);
+        /* Add a flag indicating if the last change that occurred on this p_div
+           came from an event (paste, keydown) or not (third-party software
+           updating the DOM tree rooted at p_div). If false, it indicates that
+           we have no info about the last change. If true, we know the last
+           change came from an event. */
+        div.changeFromEvent = false;
       }''')
 
     # Buttons for saving or canceling while inline-editing the field, rendered
@@ -479,9 +677,11 @@ class Poor(Rich):
            onpaste="getPastedData(event)" onkeydown="onPoorKeyDown(event)"
            id=":'%sP' % pid" >::field.getInputValue(inRequest, requestValue,
                                                     value)</div>
-
       <!-- The hidden form field -->
       <textarea id=":pid" name=":pid" style="display:none"></textarea>
+
+      <!-- Add a change observer -->
+      <script>:'initPoorObserver(%s,true)' % q(pid+'P')</script>
      </x>''')
 
     def __init__(self, validator=None, multiplicity=(0,1), default=None,
@@ -527,7 +727,7 @@ class Poor(Rich):
         else:
             # For inner fields, there is a unique global toolbar
             id = '%s_%s' % (self.name, lg) if lg else self.name
-        return "initPoorContent(this);linkToolbar('%s_tb', this)" % id
+        return "linkToolbar('%s_tb', this)" % id
 
     def getListHeader(self, c):
         '''When used as an inner field, the toolbar must be rendered only once,
