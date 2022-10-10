@@ -1705,10 +1705,11 @@ class Ref(Field):
         return self.getValue(o, single=False)[:]
 
     def setRequestValue(self, o):
-        '''The emptiness condition differs from the Field.setRequestValue'''
-        value = self.getCopyValue(o)
+        '''The "request form" for a Ref value is a list of string-encoded
+           iids.'''
+        value = self.getValue(o, single=False)
         if value != Ref.empty:
-            o.req[self.name] = value
+            o.req[self.name] = [str(tied.iid) for tied in value]
 
     def getComparableValue(self, o):
         '''Return a copy of field value on p_o'''

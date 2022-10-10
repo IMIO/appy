@@ -53,12 +53,10 @@ class Switch(Field):
 
     def getChosenFields(self, o, layout='view', fieldset=None):
         '''Returns, among self.fields, the chosen sub-set, as a "flat" list of
-           Field instances.
-
-           More precisely, r_ is a tuple (name, fields), "name" being the name
-           of the chosen fieldset and "fields" being the flat list of
-           corresponding fields.
-        '''
+           Field instances.'''
+        # More precisely, r_ is a tuple (name, fields), "name" being the name of
+        # the chosen fieldset and "fields" being the flat list of corresponding
+        # fields.
         req = o.req
         # Determine the name of the chosen fieldset. Get it from p_fieldset or
         # from the request.
