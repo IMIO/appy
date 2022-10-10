@@ -310,6 +310,7 @@ class Poor(Rich):
           // Text in p_textNode must be replaced with the work of the surgeon
           let parent = textNode.parentNode,
               last = textNode.nextSibling;
+          if (!parent) return; // May happen with Chromium
           // Put the leading text in p_textNode if found
           if (this.text) {
             // A part of the text must stay in p_textNode
@@ -322,6 +323,13 @@ class Poor(Rich):
           }
           // Remove p_textNode if it became empty
           if (!this.text) parent.removeChild(textNode);
+          // Set the cursor at the end of the replaced text
+          let range = document.createRange(),
+              sel = window.getSelection();
+          range.setStartAfter(parent.lastChild);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
         }
 
         static cutAt(range) {

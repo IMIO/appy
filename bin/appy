@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# ~license~
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Meta-script, deployed under the name /usr/bin/appy, running any other script
+# lying in appy/bin.
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from appy.bin import Program
+
+class MetaScript(Program):
+    '''Calls any script from appy/bin, using syntax: appy <script>'''
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
