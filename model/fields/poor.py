@@ -542,8 +542,9 @@ class Poor(Rich):
         // Block change observation and manage this change ourselves
         let div = event.target;
         div.changeFromEvent = true;
-        if (event.ctrlKey) {
-          // Manage keyboard shortcuts
+        if (event.ctrlKey || (event.altKey && event.keyCode == 32)) {
+          /* Manage keyboard shortcuts. Key "alt" is allowed as alternative to
+             "ctrl" when hitting "space" (32) (for Mac users). */
           if (event.keyCode in div['icons']) {
             // Perform the icon's action
             setCaret(div);
