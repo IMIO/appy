@@ -217,7 +217,7 @@ div.rbutton { float:right }
 .list>tbody>tr>td { font-size:94% }
 .list>tbody>tr>th,
 .list>thead>tr>th { font-weight:bold; background-color:rgba(255,255,255,0.8);
-                    position:sticky; top:-2px; height:3em;
+                    position:sticky; top:-30px; height:3em;
                     border-bottom:2px solid |darkColor|; z-index:1 }
 .list a { font-weight:bold }
 .compact { font-size:95%; width:100% }
