@@ -898,8 +898,8 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
   let slaves = (slave)? [slave]: getSlaves(master),
       masterValues = getMasterValues(master),
       slaveryValues;
-  for (let i=0; i < slaves.length; i++) {
-    slaveryValues = getSlaveInfo(slaves[i], 'masterValues', master.id);
+  for (const slave of slaves) {
+    slaveryValues = getSlaveInfo(slave, 'masterValues', master.id);
     if (slaveryValues[0] != '+') {
       // Update slaves visibility depending on master values
       let showSlave = false;
@@ -911,7 +911,7 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
       // Is this slave also a master ?
       let subMaster;
       if (!slave) {
-        let innerId = slaves[i].id.split('_').pop(),
+        let innerId = slave.id.split('_').pop(),
             innerField = document.getElementById(innerId);
         // Inner-field may be absent (ie, in the case of a group)
         if (innerField && (innerField.className == ('master_' + innerId))) {
@@ -921,7 +921,7 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
       // Show or hide this slave
       if (showSlave) {
         // Show the slave
-        slaves[i].style.display = '';
+        slave.style.display = '';
         if (subMaster) {
           // Recompute its own slave's visibility
           updateSlaves(subMaster, null, objectUrl, layoutType, className);
@@ -929,7 +929,7 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
       }
       else {
         // Hide the slave
-        slaves[i].style.display = 'none';
+        slave.style.display = 'none';
         if (subMaster && (subMaster.style.display != 'none')) {
           // Hide its own slaves, too
           let subSlaves = getSlaves(subMaster);
@@ -942,10 +942,10 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
     else if (ajax) {
       /* Ajax requests are disabled when initializing slaves via m_initSlaves
          below. Update slaves' values depending on master values. */
-      let slaveId = slaves[i].id,
+      let slaveId = slave.id,
           slaveName = slaveId.split('_')[1],
           params = getFormData();
-      params['className'] = className;
+      if (className) params['className'] = className;
       askField(slaveId, objectUrl, layoutType, params, false, className,'POST');
     }
   }
