@@ -179,10 +179,15 @@ function getAjaxChunk(pos) {
       if (rq.onGet) rq.onGet(rq, injected);
       // Refresh the whole page if requested
       let goto = rq.xhr.getResponseHeader('Appy-Redirect');
-      if (goto) window.top.location = goto;
-      // Display the Appy message if present
-      let msg = readCookie('AppyMessage');
-      if (msg) { updateAppyMessage(msg); createCookie('AppyMessage', ''); }
+      if (goto) {
+        window.top.location = goto;
+        // Do not "consume" any message here: let v_goto do it
+      }
+      else {
+        // Display the Appy message if present
+        const msg = readCookie('AppyMessage');
+        if (msg) { updateAppyMessage(msg); createCookie('AppyMessage', ''); }
+      }
     }
     rq.freed = 1;
   }
