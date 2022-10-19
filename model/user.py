@@ -317,9 +317,9 @@ class User(Base):
         # The user itself, owner of himself, can consult his roles
         if user.hasRole('Owner', self): return Show.E_
 
-    roles = Select(show=showRoles, indexed=True, width=40, height=10, fwidth='3em',
-                   validator=Selection(lambda o: o.model.getGrantableRoles(o)),
-                   render='checkbox', **pm)
+    roles = Select(show=showRoles, indexed=True, width=40, height=10,
+      fwidth='3em', validator=Selection(lambda o: o.model.getGrantableRoles(o)),
+      render='checkbox', **pm)
 
     def getRoles(self, compute=False, guard=None):
         '''Returns all the global roles granted to this user. Not simply

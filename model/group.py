@@ -17,7 +17,7 @@ from appy.model.fields.group import Group as FieldGroup
 class Group(Base):
     '''Base class representing a group'''
 
-    workflows.Owner
+    workflow = workflows.Owner
 
     m = {'group': FieldGroup('main', style='grid', hasLabel=False),
          'width': 25, 'indexed': True, 'layouts': Layouts.g, 'label': 'Group'}
