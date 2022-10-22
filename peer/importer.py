@@ -163,10 +163,15 @@ class Importer:
         r = getattr(self.distant, field.name, None)
         if not r: return
         # Manage name clashes
-        if isinstance(r, list) and len(r) == 2 and \
-           isinstance(r[0], types.MethodType):
-            # A name clash
-            r = r[1]
+        if isinstance(r, list) and len(r) == 2:
+            # Detect name clashes
+            if isinstance(r[0], types.MethodType):
+                r = r[1]
+            elif isinstance(r[1], types.MethodType):
+                r = r[0]
+        if isinstance(r, types.MethodType):
+            # There is no data: v_r is probably just an Object method
+            r = None
         # Ensure the result is a list
         if isinstance(r, str): r = [r]
         return r
