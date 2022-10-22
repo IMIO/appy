@@ -609,9 +609,11 @@ class Database:
         # Find the class corresponding to p_className
         class_ = handler.server.model.classes.get(className)
         if not class_: raise self.Error(CLASS_NF % className)
+        # The guard may be absent (example: a User instance is being created
+        # during the authentication process).
+        guard = getattr(handler, 'guard', None)
         # Security check
-        guard = handler.guard
-        if secure:
+        if guard and secure:
             guard.mayInstantiate(class_, checkInitiator=True, raiseOnError=True)
         # The root database object
         root = handler.dbConnection.root
@@ -625,7 +627,8 @@ class Database:
         if custom: self.exists(id=id, store=root.objects, raiseError=True)
         # Create the object
         id = id or iid
-        o = class_.new(iid, id, guard.userLogin, initialComment, initialState)
+        userLogin = guard.userLogin if guard else 'system'
+        o = class_.new(iid, id, userLogin, initialComment, initialState)
         # Store the newly created object in the database
         store[iid] = o
         if custom:
