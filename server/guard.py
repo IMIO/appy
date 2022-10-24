@@ -433,13 +433,13 @@ class Guard:
     # content.
     pxLoginBottom = Px('')
 
-    def getLoginLogo(self, discreet, url):
+    def getLoginLogo(self, tool, discreet, url):
         '''Returns the possibly clickable logo to include in the login box'''
         # Compute the "img" tag representing the logo
         r = '<img src="%s"/>' % url('loginLogo')
         # Wrap it, when appropriate, in a link allowing to go back to the public
         # or home page.
-        if discreet == 'home':
+        if discreet == 'home' and tool.defaultPage:
             r = '<a onclick="goto(siteUrl+\'/tool/public\')" ' \
                 'class="clickable">%s</a>' % r
         elif discreet:
@@ -482,7 +482,7 @@ class Guard:
            onclick="toggleLoginBox(false)" class="clickable iconXS"/>
 
       <!-- A (possibly clickable) logo -->
-      <div align="center">::guard.getLoginLogo(discreet, url)</div>
+      <div align="center">::guard.getLoginLogo(tool, discreet, url)</div>
 
       <h1>::_('app_name')</h1>
       <center class="sub">:_('please_connect')</center>

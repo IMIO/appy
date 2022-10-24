@@ -248,6 +248,8 @@ class Config:
         self.altColorLight = '#e9f2f3'
         # Color for some selected text
         self.selectColor = self.brightColor
+        # Background color for fields with focus=True
+        self.focusColorBg = '#ced0d8'
         # Row background colors for most list-based data
         self.evenColor = 'rgba(243,243,247,0.7)'
         self.oddColor = 'rgba(255,255,255,0.5)'

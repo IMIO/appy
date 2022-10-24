@@ -177,7 +177,7 @@ class Validation:
         if self.email: mailing = self.getMailingInfo(calendar, o)
         # Validate or discard events
         for action in ('validated', 'discarded'):
-            if action not in req: continue
+            if not req[action]: continue
             for info in req[action].split(','):
                 if req.render == 'month':
                     # Every checkbox corresponds to an event at a given date,
@@ -877,7 +877,7 @@ class Calendar(Field):
      </div>''',
 
      css='''.calSelect { margin:10px 0; color:|selectColor|; font-size:95% }
-            .calSpan { margin-bottom:3px; font-size:92%; color:|darkColor| }
+            .calSpan { margin-bottom:3px; font-size:92%; color:|selectColor| }
             .calSpan input { color:|selectColor|; text-align:center }
      ''')
 
@@ -1671,20 +1671,19 @@ class Calendar(Field):
 
     def getApplicableEventTypesAt(self, o, date, eventTypes, preComputed,
                                   forBrowser=False):
-        '''Returns the event types that are applicable at a given p_date. More
-           precisely, it returns an object with 2 attributes:
-           * "events" is the list of applicable event types;
-           * "message", not empty if some event types are not applicable,
-                        contains a message explaining those event types are
-                        not applicable.
-        '''
+        '''Returns the event types that are applicable at a given p_date'''
+        # More precisely, it returns an object with 2 attributes:
+        # * "events" is the list of applicable event types;
+        # * "message", not empty if some event types are not applicable,
+        #              contains a message explaining those event types are
+        #              not applicable.
         if not eventTypes: return # There may be no event type at all
         if not self.applicableEvents:
             # Keep p_eventTypes as is
             message = None
         else:
             eventTypes = eventTypes[:]
-            message = self.applicableEvents(p, date, eventTypes, preComputed)
+            message = self.applicableEvents(o, date, eventTypes, preComputed)
         r = O(eventTypes=eventTypes, message=message)
         if forBrowser:
             r.eventTypes = ','.join(r.eventTypes)
@@ -2260,6 +2259,7 @@ class Calendar(Field):
         return "new AjaxData('%s/%s/pxTotalsFromAjax','GET',{},'%s_%s','%s')" %\
                (o.url, self.name, hook, suffix, hook)
 
+    traverse['validateEvents'] = 'perm:write'
     def validateEvents(self, o):
         '''Validate or discard events from the request'''
         return self.validation.do(o, self)

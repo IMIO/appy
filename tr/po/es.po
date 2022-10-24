@@ -895,7 +895,7 @@ msgstr ""
 msgid "validate_events"
 msgstr ""
 
-#. Default: "All the checked events will be confirmed, while the unchecked ones will be discarded. The concerned user(s) will be warned. Are you sure?"
+#. Default: "All the checked events will be confirmed, while the unchecked ones will be discarded.\n\nThe concerned user·s will be warned.\n\nAre you sure ?"
 msgid "validate_events_confirm"
 msgstr ""
 

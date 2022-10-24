@@ -713,6 +713,7 @@ class User(Base):
             else:
                 # Return the clear password to the UI
                 message = _('new_password_text', mapping={'password': password})
+            self.resp.fleetingMessage = False
             # The user will need to change it at next login
             self.changePasswordAtNextLogin = True
         page = self.req.page or 'main'

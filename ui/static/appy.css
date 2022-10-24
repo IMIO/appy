@@ -143,7 +143,7 @@ div.rbutton { float:right }
 .nbref { text-align:center }
 .buttons { margin-left:4px }
 .rel { position:relative }
-.focus { margin:7px 0; padding:7px; background-color:#ced0d8;
+.focus { margin:7px 0; padding:7px; background-color:|focusColorBg|;
          border-radius:2px 2px 2px 2px; box-shadow:0 2px 4px #A9A9A9;
          font-weight:bold; color:|darkColor| }
 .focus td { padding:4px 0px 4px 4px }
@@ -278,7 +278,7 @@ div.rbutton { float:right }
 .shead { font-size:90%; margin:0; color:|darkColor| }
 th input { margin:0 !important}
 .hidden { visibility:hidden }
-.simpleLabel { text-transform:none; padding-right:3px; color:|darkColor| }
+.simpleLabel { text-transform:none; padding-right:3px; color:|selectColor| }
 .trLabel { margin:0.5em 0; border-bottom:1px dashed |altColor| }
 .trLabel img { width:18px; margin:0 10px 5px 0 }
 .section1 { font-size:120%; margin:0.45em 0em 0.1em 0;

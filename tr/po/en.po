@@ -896,9 +896,9 @@ msgstr "Cannot create such an event in the ${slot} slot."
 msgid "validate_events"
 msgstr "Validate events"
 
-#. Default: "All the checked events will be confirmed, while the unchecked ones will be discarded. The concerned user(s) will be warned. Are you sure?"
+#. Default: "All the checked events will be confirmed, while the unchecked ones will be discarded.\n\nThe concerned user·s will be warned.\n\nAre you sure ?"
 msgid "validate_events_confirm"
-msgstr "All the checked events will be confirmed, while the unchecked ones will be discarded. The concerned user(s) will be warned. Are you sure?"
+msgstr "All the checked events will be confirmed, while the unchecked ones will be discarded.\n\nThe concerned user·s will be warned.\n\nAre you sure ?"
 
 #. Default: "${validated} event(s) was (were) validated and ${discarded} was (were) discarded."
 msgid "validate_events_done"
