@@ -270,6 +270,16 @@ class String(Multilingual, Field):
     def validateUniValue(self, o, value): return
 
     @classmethod
+    def getRange(class_, value):
+        '''If p_value ends with a star, returns a range. Else, it returns
+           p_value unchanged.'''
+        # Leave the value untouched if already correct
+        if isinstance(value, in_) or not value.endswith('*'): return value
+        # Build and return a range
+        prefix = value[:-1]
+        return in_(prefix, prefix + 'z')
+
+    @classmethod
     def computeSearchValue(class_, field, req, value=None):
         '''Potentially apply a transform to search value in p_req and possibly
            define an interval of search values.'''
@@ -279,10 +289,7 @@ class String(Multilingual, Field):
         if getattr(field, 'transform', None):
             r = field.applyTransform(r)
         # Define a range if the search term ends with a *
-        if r.endswith('*'):
-            prefix = r[:-1]
-            r = in_(prefix, prefix + 'z')
-        return r
+        return class_.getRange(r)
 
     def getSearchValue(self, req, value=None):
         '''See called method's docstring'''

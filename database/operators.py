@@ -161,13 +161,12 @@ class and_(Operator):
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class in_(Operator):
     '''Defines a range of values by specifying lower and upper bounds'''
-    # ~~~
+    #
     # If you want to specify a range whose upper bound is defined, but with no
     # lower bound, use value None as lower bound, as in: qi=in_(None, 155).
-    # ~~~
+    #
     # If you want to specify a range whose lower bound is defined, but with no
     # upper bound, use value None as upper bound, as in: qi=in_(100, None).
-    # ~~~
 
     def __init__(self, *values):
         if len(values) != 2:
