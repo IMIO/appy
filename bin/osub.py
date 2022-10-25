@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 '''Checks or updates a sub-pod template imported into a main one via a statement
    "do...from pod", using attribute "managePageStyles" being an integer value.

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 '''Removes any formatting within notes in an odt or ods document'''
 

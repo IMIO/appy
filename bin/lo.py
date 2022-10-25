@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 '''Contacts LibreOffice (LO) in server mode for test purposes'''
 

@@ -613,6 +613,7 @@ class Action:
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Event(Persistent):
     '''A calendar event as will be stored in the database'''
+
     def __init__(self, eventType, timeslot='main'):
         self.eventType = eventType
         self.timeslot = timeslot
@@ -644,8 +645,8 @@ class Event(Persistent):
 
     def sameAs(self, other):
         '''Is p_self the same as p_other?'''
-        return (self.eventType == other.eventType) and \
-               (self.timeslot == other.timeslot)
+        return self.eventType == other.eventType and \
+               self.timeslot == other.timeslot
 
     def getDayPart(self, field):
         '''What is the day part taken by this event ?'''

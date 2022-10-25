@@ -416,6 +416,7 @@ class Config:
         self.podPWidthC = '35px' # Width for the POD icons in *c*ompact phases
         self.podITopC = '21px' # *I*con's text top position on *c*ell layouts
         self.podIRightC = '3px' # *I*con's text right position on *c*ell layouts
+        self.podSelFSize = '70%' # *F*ont size for pod *sel*ectors
         self.sfDirection = 'row' # *s*earch *f*ilter direction: set
                                  # "row-reverse" to position the search/funnel
                                  # icon before the search field.

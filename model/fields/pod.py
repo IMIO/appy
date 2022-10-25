@@ -313,7 +313,7 @@ class Pod(Field):
       .tpod { display:flex; align-items:center; gap:0.2em }
       .mpod { gap:0.1em }
       .mpod .tpod { gap:0; margin-left:-1px }
-      .tpod select { margin:0 0 0 4px; font-size:70% }
+      .tpod select { margin:0 0 0 4px; font-size:|podSelFSize| }
       .tpod .ssel { appearance:none; padding:2px 7px; font-size:67%;
                     cursor:pointer }
       

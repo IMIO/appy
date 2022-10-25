@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 '''This script allows to perform a "grep" command that will be applied on files
    content.xml and styles.xml within all ODF files (odt and ods) found within a

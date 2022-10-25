@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 '''Publishes the Appy framework on PyPI'''
 
@@ -64,9 +64,11 @@ base = 'py%d' % sys.version_info[0]
 if base == 'py3':
     dependencies = ['zodb', 'DateTime', 'python-ldap']
     python = '>=3.6'
+    scripts = ['py3/appy/bin/appy']
 else:
     dependencies = []
     python = '>=2.4'
+    scripts = None
 
 setup(name = "appy", version = "{version}",
       description = "The Appy framework",
@@ -79,7 +81,7 @@ setup(name = "appy", version = "{version}",
       package_dir = {'appy': base + os.sep + 'appy'},
       package_data = {'':["*.*"]},
       install_requires = dependencies, python_requires = python,
-      scripts=['src/appy/bin/appy'])
+      scripts = scripts)
 '''
 
 readMe = '''
