@@ -248,7 +248,7 @@ div.rbutton { float:right }
 .timeline { font-size:85%; color:#555555 }
 .timeline>tbody>tr { height:18px }
 .timeline>tbody>tr>th { background-color:|brightColor|; text-align:center;
-                        border:none; padding:0 1px !important }
+                        border:none; height:auto; padding:0 1px !important }
 .timeline>tbody>tr>td { text-align:center; padding:0 1px;
                         border:2px solid #f7f7f7 }
 .timeline a { font-size:100% !important }

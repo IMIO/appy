@@ -251,6 +251,7 @@ class Validation:
                      (counts['validated'], counts['discarded'], part))
         # Send the emails
         if self.email: mailing.send()
+        o.resp.fleetingMessage = False
         return o.translate('validate_events_done', mapping=counts)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

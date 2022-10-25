@@ -321,15 +321,21 @@ class User(Base):
       fwidth='3em', validator=Selection(lambda o: o.model.getGrantableRoles(o)),
       render='checkbox', **pm)
 
-    def getRoles(self, compute=False, guard=None):
-        '''Returns all the global roles granted to this user. Not simply
-           self.roles, but also "ungrantable roles" (like Anonymous or
-           Authenticated) and roles inherited from group membership.
+    def addRole(self, role):
+        '''Adds p_role among p_self.roles'''
+        r = self.roles or []
+        r.append(role)
+        self.values['roles'] = r
 
-           If p_compute is False and p_self is the currently logged user, roles
-           are retrieved from the guard, that caches it. Else, they are really
-           computed.
-        '''
+    def getRoles(self, compute=False, guard=None):
+        '''Returns all the global roles granted to this user'''
+        # The method returns not simply self.roles, but also "ungrantable roles"
+        # (like Anonymous or Authenticated) and roles inherited from group
+        # membership.
+        #
+        # If p_compute is False and p_self is the currently logged user, roles
+        # are retrieved from the guard, that caches it. Else, they are really
+        # computed.
         guard = guard or self.guard
         # Return the cached value on the guard when appropriate
         if not compute and self.login == guard.userLogin:

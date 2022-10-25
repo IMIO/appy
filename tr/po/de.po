@@ -203,6 +203,10 @@ msgstr "von"
 msgid "date_to"
 msgstr "bis"
 
+#. Default: "on"
+msgid "date_on"
+msgstr ""
+
 #. Default: "or"
 msgid "search_or"
 msgstr "odr"

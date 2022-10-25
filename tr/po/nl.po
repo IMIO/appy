@@ -203,6 +203,10 @@ msgstr "Van"
 msgid "date_to"
 msgstr "tot"
 
+#. Default: "on"
+msgid "date_on"
+msgstr ""
+
 #. Default: "or"
 msgid "search_or"
 msgstr "of"

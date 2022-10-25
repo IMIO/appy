@@ -204,6 +204,10 @@ msgstr "Du"
 msgid "date_to"
 msgstr "au"
 
+#. Default: "on"
+msgid "date_on"
+msgstr "le"
+
 #. Default: "or"
 msgid "search_or"
 msgstr "ou"

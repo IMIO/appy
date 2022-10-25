@@ -22,8 +22,8 @@ class Col:
     pxHeader = Px('''
      <th>
       <div if="col.header" class="ghead">
-       <span class="htitle" if="col.headerLabel != False">::Px.truncateText(
-         _(col.headerLabel or field.labelId))</span>
+       <span if="col.headerLabel != False"
+             class="htitle" >::col.getHeaderText(_ctx_, field)</span>
 
        <div class="thead" var="field, filterPx=field.getFilterField()">
 
@@ -54,8 +54,8 @@ class Col:
     pxHeaderRef = Px('''
      <th>
       <div if="col.header" class="ghead">
-       <span class="htitle" if="col.headerLabel != False">::Px.truncateText(
-         _(col.headerLabel or refField.labelId))</span>
+       <span if="col.headerLabel != False"
+             class="htitle">::col.getHeaderText(_ctx_, refField)</span>
 
        <div class="thead">
 
@@ -68,6 +68,17 @@ class Col:
        </div>
       </div>
      </th>''')
+
+    def getHeaderText(self, c, field):
+        '''Returns the text to dump in p_self being a header cell'''
+        # Get the translated text for the column label, or, if not specified,
+        # the field label.
+        r = c._(c.col.headerLabel or field.labelId)
+        if not r.startswith('<'):
+            # v_r is probably a "abbr" or "acronym" tag. That case, do not try
+            # to shorten it if too long.
+            r = Px.truncateText(r)
+        return r
 
     # A non-specific column renders a field value
     def getCell(c):

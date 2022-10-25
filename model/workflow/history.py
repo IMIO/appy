@@ -437,7 +437,7 @@ class History(PersistentList):
           <x>:user.getTitleFromLogin(o.creator)</x> 
 
          <!-- Creation and last modification dates -->
-         <x>:_('Base_created')</x> 
+         <x>:_('date_on')</x>
          <x var="created=o.created; modified=o.modified">
           <x>:tool.Date.format(tool, created, withHour=True)</x>
           <x if="modified != created">&mdash;

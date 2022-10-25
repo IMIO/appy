@@ -202,7 +202,11 @@ msgstr "From"
 
 #. Default: "to"
 msgid "date_to"
-msgstr "tos"
+msgstr "to"
+
+#. Default: "on"
+msgid "date_on"
+msgstr "on"
 
 #. Default: "or"
 msgid "search_or"

@@ -203,6 +203,10 @@ msgstr "Da"
 msgid "date_to"
 msgstr "a"
 
+#. Default: "on"
+msgid "date_on"
+msgstr ""
+
 #. Default: "or"
 msgid "search_or"
 msgstr "o"
