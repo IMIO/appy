@@ -52,7 +52,7 @@ licenses = {
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 setupPy = '''import os, sys
-from distutils.core import setup
+from setuptools import setup
 def findPackages(base):
     r = []
     for dir, dns, fns in os.walk(base + os.sep + 'appy'):
@@ -228,8 +228,11 @@ class Publisher(Program):
                         with sub.open('w') as f: f.write('# Appy')
                 else:
                     FolderDeleter.delete(str(sub))
-            # Delete .svn folders
-            for svn in folder.glob('**/.svn'): FolderDeleter.delete(str(svn))
+            # Delete .git folders and .gitignore files
+            for git in folder.glob('**/.git'): FolderDeleter.delete(str(git))
+            gignore = folder / '.gitignore'
+            if gignore.is_file():
+                gignore.unlink()
             # Inject the appropriate license in Python files
             self.applyLicense(folder)
             # Inject the Appy version in version.py
