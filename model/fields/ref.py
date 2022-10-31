@@ -1036,28 +1036,29 @@ class Ref(Field):
         # the user will get a confirm popup.
         self.unlinkConfirm = unlinkConfirm
 
-        # When an object is inserted through this Ref field, at what position is
-        # it inserted ? If "insert" is:
+        # When an object is inserted through this Ref field, where is it
+        # inserted ? If "insert" is:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #   None   | it will be inserted at the end;
+        #   None   | it will be inserted at the end of tied objects ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # "start"  | it will be inserted at the start of the tied objects;
+        # "start"  | it will be inserted at the start of the tied objects ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # a method | (called with the object to insert as single arg), its
         #          | return value (a number or a tuple of numbers) will be used
         #          | to insert the object at the corresponding position (this
         #          | method will also be applied to other objects to know where
-        #          | to insert the new one);
+        #          | to insert the new one) among tied objects ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # a tuple  | ('sort', method), the given method (called with the object
-        # ('sort', | to insert as single arg) will be used to sort tied objects
-        #  method) | and will be given as param "key" of the standard Python
-        #          | method "sort" applied on the list of tied objects.
+        # a tuple  | it will be inserted among tied objects; then, the passed
+        # ('sort', | method (called with the object to insert as single arg)
+        #  method) | will be used to sort tied objects and will be given as
+        #          | param "key" of the standard Python method "sort" applied
+        #          | on the list of tied objects.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # With the ('sort', method) tuple, a full sort is performed and may
         # completely change the order of tied objects; with value "method"
-        # alone, the tied object is inserted at some given place: tied other
-        # tied objects are more maintained in the order of their insertion.
+        # alone, the tied object is inserted at some given place: other tied
+        # objects are more maintained in the order of their insertion.
         self.insert = insert
 
         # Immediately before an object is going to be linked via this Ref field,
