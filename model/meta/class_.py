@@ -573,7 +573,7 @@ class Class(Meta):
     def getGroupedSearches(self, tool, ctx):
         '''Returns an object with 2 attributes:
            * "searches" stores the searches defined for this class, as instances
-             of the run-time-specific class appy.model.searches.UiSearch;
+             of the run-time-specific class appy.model.searches.ui.UiSearch;
            * "default" stores the search being the default one.
         '''
         searches = []

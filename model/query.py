@@ -5,6 +5,7 @@
 from appy.px import Px
 from appy.model.base import Base
 from appy.ui.layout import Layouts
+from appy.model.searches import Search
 from appy.database.operators import or_
 from appy.model.fields.group import Group
 from appy.model.searches.modes import Mode
@@ -12,7 +13,6 @@ from appy.model.fields.string import String
 from appy.model.fields.integer import Integer
 from appy.model.fields.boolean import Boolean
 from appy.model.workflow.standard import Owner
-from appy.model.searches import Search, UiSearch
 from appy.model.fields.select import Select, Selection
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -112,8 +112,7 @@ class Query(Base):
     pageLayoutOnView = String(layouts=Layouts.gd, **qp)
 
     def getSearch(self):
-        '''Creates the Search and UiSearch instances corresponding to this
-           query.'''
+        '''Creates the Search instance corresponding to this query'''
         # Get the expression related to p_self.states
         states = self.states
         if len(states) == 1:

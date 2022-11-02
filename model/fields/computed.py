@@ -3,11 +3,11 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
+from appy.model.searches import Search
 from appy.model.fields.text import Text
 from appy.model.fields import Field, Show
 from appy.ui.layout import Layouts, Layout
 from appy.model.fields.string import String
-from appy.model.searches import Search, UiSearch
 
 # Error messages - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 UNFREEZ   = 'This field is unfreezable.'
