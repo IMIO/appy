@@ -24,10 +24,73 @@ REPLAY_S    = 'Class "%s": replaying search "%s"...'
 REPLAY_OK   = 'Fetched %d object(s).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class MayAdd:
+    '''This class answers the question: may the user create a new instance of
+       some class on a page showing search results ?'''
+
+    # The answer to the question is not simply "yes" or "no"
+    NO     = 0
+    SEARCH = 1 # Yes: we are on a search with add=True: instances can be
+               # created from it, to be tied to the current container object
+    REF    = 2 # Yes: we are in a popup for selecting an object to be tied via a
+               # Ref, but the object we want does not exist and it can be
+               # created by the user.
+
+    def __init__(self, ui):
+        # May instances be added? One of the hereabove constants is stored here.
+        self.value = MayAdd.NO
+        # If yes (MayAdd.REF) and if the object must not be created in the
+        # initiator Ref, store info about the alternate initiator.
+        self.io = self.ifield = None
+        # If MayAdd.REF, the JS code to execute when coming back from the popup
+        # is not the standard one: the specific code to execute will be stored
+        # in the following attribute.
+        self.backCode = None
+        self.compute(ui)
+
+    def compute(self, ui):
+        '''Compute p_self.value for the current c.uiSearch'''
+        if ui.search.add:
+            # We are in the case SEARCH
+            self.value = MayAdd.SEARCH
+        else:
+            # Are we in the case REF ? In other words, is the search used to
+            # select objects to be inserted into a Ref field being add=True ?
+            init = ui.initiator
+            if not init or not isinstance(init, initiators.RefInitiator): return
+            ifield = init.field
+            if not ifield.add: return
+            # Get the base object and field from which to create this object,
+            # if different from the current Ref.
+            insert = ifield.insert
+            if isinstance(insert, tuple) and insert[0] == 'field':
+                io, ifield = insert[1](init.o)
+                # Ensure the user is allowed to modify this Ref
+                if io.allows(ifield.writePermission):
+                    self.io = io
+                    self.ifield = ifield
+                    self.value = MayAdd.REF
+                else:
+                    self.value = MayAdd.NO
+            else:
+                # The user is already selecting an object to insert in the
+                # current Ref: consequently, he is already allowed to modify it.
+                self.value = MayAdd.REF
+            # Initialise attribute "backCode" when relevant
+            if self.value:
+                self.backCode = "setBackCode('%s','%s',id)" % \
+                                (init.hook, init.o.iid)
+
+    def __bool__(self): return bool(self.value)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class UiSearch:
     '''Instances of this class are generated on-the-fly for manipulating a
        Search instance from the User Interface.'''
+
+    # Make some classes available here
     Mode = Mode
+    MayAdd = MayAdd
 
     # Rendering a search
     view = Px('''
@@ -46,8 +109,10 @@ class UiSearch:
              empty=mode.empty;
              search=uiSearch.search;
              class_=search.container;
+             mayAdd=uiSearch.MayAdd(uiSearch);
              showNewSearch=showNewSearch|True;
              showHeaders=showHeaders|True;
+             showTop=not popup or mayAdd;
              totals=search.Totals.initialise(search, 'o', mode.columns)
                     if mode.isSummable() else None;
              specific=uiSearch.getResultsTop(mode, ajax)">
@@ -60,10 +125,10 @@ class UiSearch:
       <script>::mode.getAjaxData()</script>
 
       <!-- The top zone -->
-      <div class="sTop" if="not popup">
+      <div if="showTop" class=":'' if popup else 'sTop'">
 
        <!-- Title -->
-       <div if="search.showTitle" class="pageTitle">
+       <div if="not popup and search.showTitle" class="pageTitle">
         <x>::uiSearch.translated</x>
         <x if="mode.batch and not empty">
          <span var="css=class_.getCssFor(tool, 'sep')"
@@ -91,10 +156,11 @@ class UiSearch:
         </div>
 
         <!-- Add a new object -->
-        <div if="search.add and guard.mayInstantiate(class_)"
-           var2="buttonType='small'; viaPopup=search.viaPopup;
-                 nav=mode.getNavInfo(batch.total);
-                 label=search.addLabel">:class_.pxAdd</div>
+        <div if="mayAdd and guard.mayInstantiate(class_)"
+             var2="buttonType='small'; label=search.addLabel;
+                   viaPopup=False if mayAdd else search.viaPopup;
+                   nav=mode.getNavInfo(batch.total, mayAdd);
+                   onClick=mayAdd.backCode">:class_.pxAdd</div>
 
         <!-- Perform a new search -->
         <div if="showNewSearch and mode.newSearchUrl">
@@ -105,7 +171,7 @@ class UiSearch:
        </x>
 
        <!-- (Top) navigation -->
-       <div if="mode.batch and uiSearch.showTopNav" class="snav"
+       <div if="mode.batch and uiSearch.showTopNav and not mayAdd" class="snav"
             style=":search.getNavMargins()">:mode.batch.pxNavigate</div>
 
        <!-- Pod templates -->

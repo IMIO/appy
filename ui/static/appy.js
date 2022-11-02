@@ -986,23 +986,43 @@ function initSlaves(objectUrl, layoutType) {
   }
 }
 
-function backFromPopup() {
+function setBackCode(hook, id) {
+  /* Set, on the iframe popup, info allowing to back from it by ajax-refreshing
+     the initiator field having this p_id and being rendered in this p_hook. */
+  let popup = getNode('iframePopup', true),
+      code = `askField(':${hook}','${siteUrl}/${id}','edit',params,false)`;
+  popup.backHook = hook;
+  popup.backCode = code;
+}
+
+function backFromPopup(id) {
   // Close the iframe popup when required
-  let close = readCookie('closePopup');
+  const close = readCookie('closePopup');
   if (close == 'no') return;
   // Reset the timer, the cookie and close the popup
   createCookie('closePopup', 'no');
-  let popup = closePopup('iframePopup'),
-      timer = popup.popupTimer;
+  const popup = closePopup('iframePopup'),
+        timer = popup.popupTimer;
   clearInterval(timer);
   if (close != 'yes') {
-    // We must load a specific URL in the main page
+    // Load a specific URL in the main page
     window.parent.location = atob(close.slice(2,-1));
   }
   else {
-    // We must ajax-refresh, on the main page, the node as defined in the popup
-    let nodeId = popup['back'], node=(nodeId)? getNode(':' + nodeId): null;
-    if (node) { askAjax(':' + nodeId); }
+    /* Ajax-refresh, on the main page, the node as defined in the popup, or
+       execute a custom JS code if specified. */
+    let nodeId = popup.backHook,
+        backCode = popup.backCode,
+        node = (nodeId)? getNode(':' + nodeId): null;
+    if (node) {
+      if (backCode) {
+        /* Put p_id as parameter to pass to the back code, if it does not
+           correspond to a temp object. */
+        const params = (id < 1)? {}: {'selected':id, 'semantics':'checked'};
+        eval(backCode);
+      }
+      else askAjax(':' + nodeId);
+    }
     else window.parent.location = window.parent.location;
   }
 }
@@ -1237,7 +1257,7 @@ function openPopup(popupId, msg, width, height, css, back, commentLabel) {
   // Get the popup
   let popup = document.getElementById(popupId),
       frame = popupId == 'iframePopup', // Is it the "iframe" popup ?
-      mobile = window.matchMedia(queryMobile).matches, // Mobile device ?,
+      mobile = window.matchMedia(queryMobile).matches, // Mobile device ?
       deltaX = (mobile)? 40: 300,
       deltaY = (mobile)? 40: 100;
   /* Define height and width. For non-iframe popups, do not set its height: it
@@ -1248,11 +1268,11 @@ function openPopup(popupId, msg, width, height, css, back, commentLabel) {
   if (height) popup.style.height = height.toFixed() + 'px';
   if (frame) {
     // Set the enclosed iframe dimensions and show the mask
-    let iframe = document.getElementById('appyIFrame');
+    const iframe = document.getElementById('appyIFrame');
     iframe.style.width  = (width -20).toFixed() + 'px';
     iframe.style.height = (height-20).toFixed() + 'px';
     if (!mobile) setMask();
-    popup['back'] = back;
+    popup.backHook = back;
   }
   // Apply the CSS class to the popup
   popup.className = (css)? 'popup ' + css: 'popup';

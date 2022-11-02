@@ -1334,7 +1334,7 @@ class Base:
       }
 
       submitAppyForm = function(action, gotoPage, gotoLayout) {
-        let f = document.getElementById('appyForm');
+        const f = document.getElementById('appyForm');
         // Complete the form via the "_get_" element if present
         if (action != 'cancel') completeAppyForm(f);
         f.action.value = action;
@@ -1343,7 +1343,7 @@ class Base:
              yet to close it. The timer hereafter will regularly check if the
              popup must be closed. */
           createCookie('closePopup', 'no');
-          let popup = getNode('iframePopup', true);
+          const popup = getNode('iframePopup', true);
           // Set a timer for checking when we must close the iframe popup
           popup.popupTimer = setInterval(backFromPopup, 700);
         }
@@ -1416,7 +1416,7 @@ class Base:
             # Remove the lock set on the current page
             Lock.remove(self, page)
         # If we are in a popup, render a minimalist HTML page that will close it
-        if popup: return Iframe.goBack(self.tool, initiator)
+        if popup: return Iframe.goBack(self, initiator)
         # Determine, if not defined yet, the URL to go back to
         if self.gotoSet(): return
         self.goto(url or (self.req.referer if isTemp else self.getGotoUrl()))
@@ -1453,7 +1453,7 @@ class Base:
         if text is None or not guard.mayView(self):
             if popup:
                 if text: self.say(text)
-                return Iframe.goBack(tool, initiator)
+                return Iframe.goBack(self, initiator)
             elif not self.gotoSet():
                 self.goto(tool.computeHomePage(), message=text)
             return
@@ -1462,7 +1462,7 @@ class Base:
         self.say(text)
         # Come back from the popup if we were in it
         if popup and req.gotoLayout == 'view':
-            return Iframe.goBack(tool, initiator)
+            return Iframe.goBack(self, initiator)
         # Go to wherever has been defined, if already defined
         if self.gotoSet(): return
         # Go to the appropriate URL

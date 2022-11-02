@@ -143,6 +143,7 @@ class SearchInitiator:
         return 'search.%s.%s.0.0' % (self.info[0], self.info[1])
 
     def isComplete(self):
-        '''The initiator is considered to be complete if "obj" is not empty'''
+        '''The initiator is considered to be complete if p_self.o is not
+           empty.'''
         return self.o
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

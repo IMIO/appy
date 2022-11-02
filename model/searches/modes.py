@@ -374,11 +374,20 @@ class List(Mode):
             r = value in values
         return r
 
-    def getNavInfo(self, number):
+    def getNavInfo(self, number, mayAdd=None):
         '''Gets the navigation string corresponding to the element having this
            p_number within the list of results.'''
-        return 'search.%s.%s.%d.%d' % (self.class_.name, self.uiSearch.name, \
-                                    self.batch.start + number, self.batch.total)
+        if mayAdd is None or mayAdd.io is None:
+            # A standard search nav string
+            r = 'search.%s.%s.%d.%d' % (self.class_.name, self.uiSearch.name,
+                                        self.batch.start + number,
+                                        self.batch.total)
+        else:
+            # We are in the context of creating an object from a search: the nav
+            # string must be converted to a ref-based string.
+            total = mayAdd.io.countRefs(mayAdd.ifield.name)
+            r = 'ref.%d.%s.0.%d' % (mayAdd.io.iid, mayAdd.ifield.name, total)
+        return r
 
     def getRefUrl(self):
         '''See Mode::getRefUrl's docstring'''
@@ -657,11 +666,11 @@ class Calendar(Mode):
         # For example, for an p_o(bject) starting at "1975/12/11 12:00" and
         # ending at "1975/12/13 14:00", m_addEntries will produce the following
         # entries:
-        #      key "19751211"  >  value ("start+", obj)
-        #      key "19751212"  >  value ("pass", obj)
-        #      key "19751213"  >  value ("end", obj)
-        # ~~~
-        # Get p_obj's start and end dates
+        #      key "19751211"  >  value ("start+", o)
+        #      key "19751212"  >  value ("pass", o)
+        #      key "19751213"  >  value ("end", o)
+        # ~
+        # Get p_o's start and end dates
         fmt = Calendar.dayKey
         start = o.date
         startKey = start.strftime(fmt)
@@ -674,7 +683,7 @@ class Calendar(Mode):
             self.addEntry(startKey, ('start', o))
         else:
             # Insert one event per day, provided the events are in the grid
-            # ~~~
+            # ~
             # Add one entry at the start day
             if start >= gridFirst:
                 self.addEntry(startKey, ('start+', o))

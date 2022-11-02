@@ -754,7 +754,16 @@ class Class(Meta):
       None     : O(css='', bgIcon=None, bgSize=None)
     }
 
-    # Form for creating instances of this class from the portlet or a search
+    # Form for creating instances of this class from the portlet or a search.
+    # Input variables:
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # "viaPopup" | (boolean) Indicates if the form must be opened in a popup.
+    #            | Can be True only if we are not already in the popup.
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # "onClick"  | (optional string) Alternate JS code to execute when clicking
+    #            | on the "add" button.
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     pxAdd = Px('''
      <form var="createVia=class_.getCreateVia(tool); className=class_.name"
            if="createVia" class="addForm" name=":'%s_add' % className"
@@ -772,7 +781,7 @@ class Class(Meta):
       <!-- Create from an empty form -->
       <input class=":styles.css" value=":text" title=":text" type="submit"
         style=":svg(styles.bgIcon, bg=styles.bgSize) if styles.bgIcon else ''"
-        onclick=":target.getOnClick('searchResults')"/>
+        onclick=":target.getOnClick('searchResults', onClick=onClick)"/>
 
       <!-- Create from a pre-filled form when relevant -->
       <div if="createVia != 'form'" class="addFrom"

@@ -784,7 +784,7 @@ class LinkTarget:
         # Does the link lead to a popup ?
         if popup or forcePopup:
             toPopup = True
-        elif popup == False:
+        elif popup is False:
             toPopup = False
         else:
             toPopup = class_ and hasattr(class_, 'popup')
@@ -805,9 +805,12 @@ class LinkTarget:
         else:
             self.onClick = ''
 
-    def getOnClick(self, back, o=None):
+    def getOnClick(self, back, o=None, onClick=None):
         '''Gets the "onClick" attribute, taking into account p_back DOM node ID
            that was unknown at the time the LinkTarget instance was created.'''
+        # If p_onClick is passed, force this code to execute instead of the
+        # default code.
+        if onClick: return onClick
         # If we must not come back from a popup, return an empty string
         r = self.onClick
         if not r: return r

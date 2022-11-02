@@ -50,11 +50,11 @@ class Decoder:
            structure. JSON dicts are converted to Python objects.'''
         try:
             return class_.convertValue(eval(jsonData, class_.context))
-        except SyntaxError:
+        except SyntaxError as err:
             # The presence of char "\r" may pose problem
             jsonData = jsonData.replace('\r', '')
             try:
                 return class_.convertValue(eval(jsonData, class_.context))
             except SyntaxError as err:
-                raise Exception(UNREADABLE % jsonData)
+                raise SyntaxError(UNREADABLE % jsonData)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -25,7 +25,8 @@ ATTR_EXISTS = 'Attribute "%s" already exists on class "%s". Note that ' \
               'several back Refs pointing to the same class must have ' \
               'different names, ie: back=Ref(attribute="every_time_a_' \
               'distinct_name",...).'
-ADD_LK_KO   = 'Parameters "add" and "link" can\'t both be used.'
+ADD_LK_KO   = 'Parameters "add" and "link" can only be used together for ' \
+              'mono-valued forward Refs, with attribute "link" being "popup".'
 BACK_COMP   = 'Only forward Refs may be composite.'
 BACK_1_COMP = 'The backward Ref of a composite Ref must have an upper ' \
               'multiplicity of 1. Indeed, a component can not be contained ' \
@@ -434,8 +435,7 @@ class Ref(Field):
                sourceField=prefixedName">:class_.pxAddFrom</x>
      </x>''')
 
-    # Button allowing to select from a popup objects to be linked via the Ref
-    # field.
+    # Button allowing to select, from a popup, objects to be linked via the Ref
 
     pxLink = Px('''
      <x var="repl=popupMode == 'repl';
@@ -1007,7 +1007,7 @@ class Ref(Field):
         self.link = link
         self.linkInPopup = False
         # Determine the PX to use when editing a Ref, based on attribute "link"
-        if link == True:
+        if link is True:
             px = Ref.pxEditSelect
         elif link in ('radio', 'checkbox'):
             px = Ref.pxEditRC
@@ -1039,21 +1039,30 @@ class Ref(Field):
         # When an object is inserted through this Ref field, where is it
         # inserted ? If "insert" is:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #   None   | it will be inserted at the end of tied objects ;
+        #   None    | it will be inserted at the end of tied objects ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # "start"  | it will be inserted at the start of the tied objects ;
+        # "start"   | it will be inserted at the start of the tied objects ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # a method | (called with the object to insert as single arg), its
-        #          | return value (a number or a tuple of numbers) will be used
-        #          | to insert the object at the corresponding position (this
-        #          | method will also be applied to other objects to know where
-        #          | to insert the new one) among tied objects ;
+        # a method  | (called with the object to insert as single arg), its
+        #           | return value (a number or a tuple of numbers) will be used
+        #           | to insert the object at the corresponding position (this
+        #           | method will also be applied to other objects to know where
+        #           | to insert the new one) among tied objects ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # a tuple  | it will be inserted among tied objects; then, the passed
-        # ('sort', | method (called with the object to insert as single arg)
-        #  method) | will be used to sort tied objects and will be given as
-        #          | param "key" of the standard Python method "sort" applied
-        #          | on the list of tied objects.
+        # a tuple   | it will be inserted among tied objects; then, the passed
+        # ('sort',  | method (called with the object to insert as single arg)
+        #  method)  | will be used to sort tied objects and will be given as
+        #           | param "key" of the standard Python method "sort" applied
+        #           | on the list of tied objects ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # a tuple   | [only if link="popup"] the passed method, called with no
+        # ('field', | arg, must return a tuple (o, field): the object(s) to
+        #   method) | insert will be added into this field rather than into the
+        #           | current one. This is only appropriate with a Ref field
+        #           | being addadble (add=True) *and* linkable (link="popup"):
+        #           | if the user creates a new object to link, this object must
+        #           | not necessarily be added as tied object via the current
+        #           | Ref.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # With the ('sort', method) tuple, a full sort is performed and may
         # completely change the order of tied objects; with value "method"
@@ -1603,18 +1612,21 @@ class Ref(Field):
 
     def checkParameters(self):
         '''Ensures this Ref is correctly defined'''
-        # For forward Refs, "add" and "link" can't both be used
-        if not self.isBack and (self.add and self.link):
-            raise Exception(ADD_LK_KO)
+        linkPopup = self.link == 'popup'
+        # Attributes "add" and "link" can be used altogether, but only for
+        # forward monovalued Refs with link == "popup".
+        if self.add and self.link:
+            if self.isBack or not linkPopup or self.isMultiValued():
+                raise Exception(ADD_LK_KO)
         # If link is "popup", "select" must hold a Search instance
-        if (self.link == 'popup') and \
+        if linkPopup and \
            (not isinstance(self.select, Search) and not callable(self.select)):
             raise Exception(LK_POP_ERR)
         # Valid link modes depend on multiplicities
         multiple = self.isMultiValued()
-        if multiple and (self.link == 'radio'):
+        if multiple and self.link == 'radio':
             raise Exception(RADIOS_KO)
-        if not multiple and (self.link == 'checkbox'):
+        if not multiple and self.link == 'checkbox':
             raise Exception(CBS_KO)
         # A Ref with link="dropdown" must have max multiplicity being 1
         if multiple and self.link == 'dropdown':
@@ -1630,12 +1642,11 @@ class Ref(Field):
         '''Showability for a Ref adds more rules w.r.t base field rules'''
         r = Field.isShowable(self, o, layout)
         if not r: return r
-        # We add here specific Ref rules for preventing to show the field under
-        # some inappropriate circumstances.
+        # Ther are specific Ref rules for preventing to show the field under
+        # inappropriate circumstances.
         isEdit = layout == 'edit'
         if isEdit:
-            if self.mayAdd(o): return
-            if self.link in (False, 'list'): return
+            if not self.editPx: return
         if self.isBack:
             if isEdit: return
             else: return getattr(o, self.name, None)
@@ -2110,31 +2121,33 @@ class Ref(Field):
             # Abort object linking if required by p_self.beforeLink
             if r == False: return 0
         # Where must we insert the object ?
+        insert = self.insert
         if at and at.insertObject in refs:
             # Insertion logic is overridden by this Position instance, that
             # imposes obj's position within tied objects.
             refs.insert(at.getInsertIndex(refs), p)
-        elif not self.insert or not executeMethods:
+        elif not insert or not executeMethods:
             refs.append(p)
-        elif self.insert == 'start':
+        elif insert == 'start':
             refs.insert(0, p)
-        elif callable(self.insert):
+        elif callable(insert):
             # It is a method. Use it on every tied object until we find where to
             # insert the new object.
-            insertOrder = self.insert(o, p)
+            insertOrder = insert(o, p)
             i = 0
             inserted = False
             while i < len(refs):
-                if self.insert(o, refs[i]) > insertOrder:
+                if insert(o, refs[i]) > insertOrder:
                     refs.insert(i, p)
                     inserted = True
                     break
                 i += 1
             if not inserted: refs.append(p)
-        else:
-            # It is a tuple ('sort', method). Perform a full sort.
+        elif isinstance(insert, tuple):
             refs.append(p)
-            refs.sort(key=lambda q: self.insert[1](o, q))
+            if insert[0] == 'sort':
+                # It is a tuple ('sort', method). Perform a full sort.
+                refs.sort(key=lambda q: insert[1](o, q))
         # Update the back reference (if existing)
         if not back and self.back:
             # Disable security when required
