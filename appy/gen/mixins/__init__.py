@@ -627,7 +627,8 @@ class BaseMixin:
         resp = self.REQUEST.RESPONSE
         resp.setHeader('Content-Type', 'text/xml;charset=utf-8')
         # Check if the user is allowed to consult this object
-        if not self.mayView(): return XmlMarshaller().marshall('Unauthorized')
+        if not self.mayView():
+            return XmlMarshaller().marshall('Unauthorized_%s' % self.id)
         if not action:
             marshaller = XmlMarshaller(rootTag=self.getClass().__name__,
                                        dumpUnicode=True)
