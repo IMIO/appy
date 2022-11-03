@@ -529,8 +529,8 @@ class File(Field):
         # relevant.
         if self.render == 'icon':
             iurl = o.buildUrl(self.icon, base=self.iconBase, ram=self.iconRam)
-            content = '<img src="%s" title="%s"/>' % \
-                      (iurl, value.getNameAndSize(shorten=False))
+            title = value.getNameAndSize(shorten=False)
+            content = '<img src="%s" title="%s"/>' % (iurl, title)
             # On "view", we have place, so display "title" besides the icon
             suffix = title if layout == 'view' else ''
         else:
