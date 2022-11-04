@@ -7,8 +7,35 @@
 import re
 
 from appy.utils import asDict
+from appy.utils.css import Styles
 from appy.xml.escape import Escape
 from appy.xml import Parser, XHTML_SC
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Preprocessor:
+    '''Preprocesses data in the objective of producing valid XHTML, before being
+       cleaned by the Cleaner.'''
+
+    @classmethod
+    def run(class_, s, paraTag='div'):
+        '''Launches the preprocessor on p_s. Returns p_s if it seems to be XML,
+           or a modified, XML-ed version if not.'''
+
+        # To save processing, the idea is not to be 100% sure that p_s is valid
+        # XML. The idea is to handle the most frequently encountered problem:
+        # p_s contains one or more lines of text not being surrounded by any
+        # tag.
+
+        # This kind of problem emanates from the Poor field, that does receive
+        # data from a contenteditable browser field that does not necessarily
+        # contain valid XHTML (it may possibly contain raw text).
+        if not s or s.startswith('<'): return s
+        r = []
+        for line in s.split('\n'):
+            if not line.startswith('<'):
+                line = '<%s>%s</%s>' % (paraTag, line, paraTag)
+            r.append(line)
+        return '\n'.join(r)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Cleaner(Parser):
@@ -27,6 +54,12 @@ class Cleaner(Parser):
     attrsToIgnore = ('id', 'name', 'class', 'lang', 'rules')
     attrsToIgnoreStrict = attrsToIgnore + ('style',)
 
+    # If the "styles" attribute is not ignored, what CSS properties, within
+    # such attributes, must be kept ? In strict mode, only property
+    # "background-color" is kept, because it is used by the Poor field to define
+    # highlighted text.
+    propertiesToKeepStrict = asDict(('background-color',))
+
     # Attrs to add, if not present, to ensure good formatting, be it at the web
     # or ODT levels.
     attrsToAdd = {'table': {'cellpadding':'6', 'cellspacing':'0', 'border':'1'},
@@ -44,8 +77,8 @@ class Cleaner(Parser):
     def __init__(self, env=None, caller=None, raiseOnError=True,
                  tagsToIgnoreWithContent=tagsToIgnoreWithContent,
                  tagsToIgnoreKeepContent=tagsToIgnoreKeepContent,
-                 attrsToIgnore=attrsToIgnore, attrsToAdd=attrsToAdd,
-                 poorCoded=False):
+                 attrsToIgnore=attrsToIgnore, propertiesToKeep=None,
+                 attrsToAdd=attrsToAdd, poorCoded=False, preprocess=False):
         # Call the base constructor
         Parser.__init__(self, env, caller, raiseOnError)
         self.tagsToIgnoreWithContent = tagsToIgnoreWithContent
@@ -53,10 +86,15 @@ class Cleaner(Parser):
         self.tagsToIgnoreKeepContent = tagsToIgnoreKeepContent
         self.tagsToIgnore = tagsToIgnoreWithContent + tagsToIgnoreKeepContent
         self.attrsToIgnore = attrsToIgnore
+        # CSS properties to keep, when "styles" attributes are not ignored.
+        # If None is set, it means: any property is kept.
+        self.propertiesToKeep = propertiesToKeep
         self.attrsToAdd = attrsToAdd
         # Is this cleaner made for cleaning poor-coded chunks of XHTML? If yes,
         # some specific action will be undergone.
         self.poorCoded = poorCoded
+        # Must the preprocessor be use to ensure input is XHTML ?
+        self.preprocess = preprocess
 
     def startDocument(self):
         # The result will be cleaned XHTML, joined from self.r
@@ -80,6 +118,15 @@ class Cleaner(Parser):
         self.r.append(content)
         # Reinitialise the current content to the empty string
         e.currentContent = ''
+
+    def cleanStyleAttribute(self, value):
+        '''Returns the cleaned version of the "style" attribute p_value,
+           potentially modified, depending on p_self.propertiesToKeep.'''
+        toKeep = self.propertiesToKeep
+        # v_toKeep being None indicates to any vallue must be kept
+        if toKeep is None: return value
+        styles = Styles(**Styles.parse(value, asDict=True))
+        return styles.asString(keep=Cleaner.propertiesToKeepStrict)
 
     def startElement(self, tag, attrs):
         e = self.env
@@ -106,6 +153,9 @@ class Cleaner(Parser):
         # Include the found attributes, excepted those that must be ignored
         for name, value in attrs.items():
             if name in self.attrsToIgnore: continue
+            # Clean "style" attribute, according to p_self.propertiesToKeep
+            if name == 'style':
+                value = self.cleanStyleAttribute(value)
             r += ' %s="%s"' % (name, Escape.xml(value))
         # Include additional attributes if required
         if tag in self.attrsToAdd:
@@ -183,6 +233,8 @@ class Cleaner(Parser):
     def clean(self, s, wrap=True):
         '''Cleaning XHTML code p_s allows to produce a Appy-compliant,
            ZODB-storable string.'''
+        # Preamble: preprocess p_s if needed
+        if self.preprocess: s = Preprocessor.run(s)
         # a. Every <p> or <li> must be on a single line (ending with a carriage
         #    return); else, appy.utils.diff will not be able to compute XHTML
         #    diffs;

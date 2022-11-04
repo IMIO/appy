@@ -1012,6 +1012,10 @@ msgstr "Italic (Ctrl+I)"
 msgid "icon_highlight"
 msgstr "Highlight (Ctrl+H)"
 
+#. Default: "Remove format (Ctrl+M)"
+msgid "icon_unformat"
+msgstr "Remove format (Ctrl+M)"
+
 #. Default: "Non breaking blank (PC: Ctrl+space, Mac: Alt+Shift+space)"
 msgid "icon_blank"
 msgstr "Non breaking blank (PC: Ctrl+space, Mac: Alt+Shift+space)"

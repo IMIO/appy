@@ -1397,9 +1397,18 @@ class Base:
            returns, as an object ~O(o,field)~, the initiator object being
            responsible for the popup opening, in the base window.'''
         req = self.req
+        # Return None if we are not in the popup
         if req.popup in (None, 'False', '0'): return
+        # Get popup initiator evidence from the request
         if 'search' in req and ',' in req.search:
-            id, name, mode = req.search.split(',')
+            key = 'search'
+        elif 'inav' in req and ',' in req.inav:
+            key = 'inav' # The *i*nitiator *nav*igation string
+        else:
+            key = None
+        # If evidence was found, get and return initiator object and field
+        if key:
+            id, name, mode = req[key].split(',')
             o = self.getObject(id)
             return O(o=o, field=o.getField(name))
 

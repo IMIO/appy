@@ -1011,6 +1011,10 @@ msgstr ""
 msgid "icon_highlight"
 msgstr ""
 
+#. Default: "Remove format (Ctrl+M)"
+msgid "icon_unformat"
+msgstr ""
+
 #. Default: "Non breaking blank (PC: Ctrl+space, Mac: Alt+Shift+space)"
 msgid "icon_blank"
 msgstr ""

@@ -775,6 +775,7 @@ class Class(Meta):
       <input type="hidden" name="template_" value=""/>
       <input type="hidden" name="insert" value=""/>
       <input type="hidden" name="nav" value=":nav"/>
+      <input type="hidden" name="inav" value=""/>
       <input type="hidden" name="popup"
            value=":'True' if (popup or (target.target!='_self')) else 'False'"/>
 

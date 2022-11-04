@@ -193,33 +193,46 @@ class Value:
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Styles:
-    '''This class represents a set of styles collected from:
-       * an HTML "style" attribute;
-       * other attributes like "width";
-       * an HTML tag itself (ie, <b>, <i>...).
-       Moreover, it can refer to externally defined CSS classes (mentioned in a
-       "class" attribute) in its attribute "classes".
-    '''
+    '''Represents a set of CSS properties'''
+
+    # Those properties may be collected from:
+    # * an HTML "style" attribute;
+    # * other attributes like "width";
+    # * an HTML tag itself (ie, <b>, <i>...).
+
+    # Moreover, it can refer to externally defined CSS classes (mentioned in a
+    # "class" attribute) in its attribute "classes".
+
     # The correspondance between XHTML attributes and CSS properties. Within
     # CSS property names, dashes have been removed because they are used as
     # names for Python instance attributes.
     xhtml2css = {'width': 'width', 'height': 'height', 'align': 'text-align',
                  'cellspacing': 'border-spacing', 'border': 'border'}
+
     # CSS properties whose values can be combined
     combinable = ('textdecoration',)
+
     # CSS combined properties (= that can be split into individual properties)
     combined = ('margin',)
+
     # Directions in use in combined CSS properties (padding, margin, etc),
     # defined in the standard order.
     directions = ('top', 'right', 'bottom', 'left')
+
     # Values, on combined attributes, that prevent splitting
     unsplittable = ('auto',)
+
     # Values that must be ignored
     ignore = {'*': {'auto':None, 'initial':None, 'inherit':None}}
+
     # Values specified in ignore['*'] must not be ignored for these attributes
     ignoreExcept = {'auto': {'table-layout':None}}
+
     # The '!important' CSS rule
     importantRule = '!important'
+
+    # Map from internal property names to CSS names
+    internalToCss = {'backgroundcolor': 'background-color'}
 
     @classmethod
     def parse(class_, value, asDict=False):
@@ -241,7 +254,7 @@ class Styles:
            another Styles instance, given in p_other. A Styles instance
            can also be initialised from p_kwargs representing CSS attributes.
            CSS styles defined in p_kwargs override those in p_other, that, in
-           turn,override any existing value. Within p_kwargs, CSS attribute
+           turn, override any existing value. Within p_kwargs, CSS attribute
            names must not contain any dash (it would produce illegal Python
            code).'''
         # The content of a potential "class" attribute in p_attrs
@@ -277,13 +290,13 @@ class Styles:
         self.split()
 
     def __repr__(self):
-        res = '<CSS'
+        r = '<CSS'
         for name, value in self.__dict__.items():
             if name == 'classes':
-                if value: res += ' %s::%s' % (name, value)
+                if value: r += ' %s::%s' % (name, value)
             else:
-                res += ' %s:%s' % (name, value)
-        return res + '>'
+                r += ' %s:%s' % (name, value)
+        return r + '>'
 
     def __bool__(self):
         # Count all attributes but "classes" that is always present
@@ -427,6 +440,19 @@ class Styles:
                 i += 1
                 self.add('%s-%s' % (prop, direction), value[i])
             delattr(self, prop)
+
+    def asString(self, keep=None):
+        '''Reifies p_self as a semi-colon-separated list of CSS properties.
+           Ignores any property whose name is in p_ignore.'''
+        r = []
+        for iname, value in self.__dict__.items():
+            name = Styles.internalToCss.get(iname) or iname
+            if keep is None or name in keep:
+                # This v_name must be part of the result, excepted if it
+                # represents the "classes" attribute.
+                if name != 'classes':
+                    r.append('%s:%s' % (name, value))
+        return ';'.join(r)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # For some XHTML tags, we define CssStyle instances containing one or several

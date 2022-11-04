@@ -1012,6 +1012,10 @@ msgstr "Italique (Ctrl+I)"
 msgid "icon_highlight"
 msgstr "Fluoté (Ctrl+H)"
 
+#. Default: "Remove format (Ctrl+M)"
+msgid "icon_unformat"
+msgstr "Enlever le formatage (Ctrl+M)"
+
 #. Default: "Non breaking blank (PC: Ctrl+space, Mac: Alt+Shift+space)"
 msgid "icon_blank"
 msgstr "Espace insécable (PC: Ctrl+espace, Mac: Alt+Shift+espace)"

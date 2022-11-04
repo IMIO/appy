@@ -142,6 +142,7 @@ Icon.all = [
   Icon('bold',      'wrapper', data='bold', shortcut=66),
   Icon('italic',    'wrapper', data='italic', shortcut=73),
   Icon('highlight', 'wrapper', data='hiliteColor', args='yellow', shortcut=72),
+  Icon('unformat',  'wrapper', data='removeFormat', shortcut=77),
   # Insert a non breaking space
   Icon('blank',     'char',    data='code', args=' ', shortcut=32),
   # Insert a non breaking dash
@@ -761,8 +762,8 @@ class Poor(Rich):
         '''Returns a Cleaner instance tailored to p_self'''
         # More strict cleaning than the Rich
         tagsToIgnore = Cleaner.tagsToIgnoreWithContentStrict
-        return Cleaner(attrsToIgnore=Cleaner.attrsToIgnoreStrict,
-                       attrsToAdd=Cleaner.attrsToAddStrict,
+        return Cleaner(attrsToAdd=Cleaner.attrsToAddStrict, preprocess=True,
+                       propertiesToKeep=Cleaner.propertiesToKeepStrict,
                        tagsToIgnoreWithContent=tagsToIgnore, poorCoded=True)
 
     def validateUniValue(self, o, value):
