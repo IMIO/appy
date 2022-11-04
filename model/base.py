@@ -3,6 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import persistent
+
 from appy.px import Px
 from appy.ui import Iframe
 from appy.ui.layout import Layout
@@ -1390,6 +1391,17 @@ class Base:
                 if criteria and '_ref' in criteria: ref = criteria['_ref']
             if ref:
                 return self.getObject(ref.split(':')[0])
+
+    def getPopupInitiator(self):
+        '''If the UI is currently positioned in the iframe popup, this method
+           returns, as an object ~O(o,field)~, the initiator object being
+           responsible for the popup opening, in the base window.'''
+        req = self.req
+        if req.popup in (None, 'False', '0'): return
+        if 'search' in req and ',' in req.search:
+            id, name, mode = req.search.split(',')
+            o = self.getObject(id)
+            return O(o=o, field=o.getField(name))
 
     def getFolder(self, create=False, withRelative=False):
         '''Gets, as a pathlib.Path instance, the folder where binary files

@@ -9,6 +9,7 @@ from http import HTTPStatus
 from appy.px import Px
 from appy.ui.js import Quote
 from appy.utils import Traceback
+from appy.xml.escape import Escape
 from appy.ui.template import Template
 from appy.utils import MessageException
 
@@ -69,13 +70,13 @@ class Error:
             elif isinstance(error, traversal.handler.guard.Error) and text:
                 # Unauthorized. Do not display the standard message if a
                 # specific message has been produced.
-                r = text
+                r = Escape.xhtml(text)
             else:
                 # Produce a standard message, completed with an optional
                 # additional message (in p_text).
                 r = _(Error.byCode[code]['label'])
                 if text:
-                    r += '<div class="discreet">%s</div>' % text
+                    r += '<div class="discreet">%s</div>' % Escape.xhtml(text)
         return r
 
     @classmethod
