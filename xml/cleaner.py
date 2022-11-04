@@ -12,32 +12,6 @@ from appy.xml.escape import Escape
 from appy.xml import Parser, XHTML_SC
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Preprocessor:
-    '''Preprocesses data in the objective of producing valid XHTML, before being
-       cleaned by the Cleaner.'''
-
-    @classmethod
-    def run(class_, s, paraTag='div'):
-        '''Launches the preprocessor on p_s. Returns p_s if it seems to be XML,
-           or a modified, XML-ed version if not.'''
-
-        # To save processing, the idea is not to be 100% sure that p_s is valid
-        # XML. The idea is to handle the most frequently encountered problem:
-        # p_s contains one or more lines of text not being surrounded by any
-        # tag.
-
-        # This kind of problem emanates from the Poor field, that does receive
-        # data from a contenteditable browser field that does not necessarily
-        # contain valid XHTML (it may possibly contain raw text).
-        if not s or s.startswith('<'): return s
-        r = []
-        for line in s.split('\n'):
-            if not line.startswith('<'):
-                line = '<%s>%s</%s>' % (paraTag, line, paraTag)
-            r.append(line)
-        return '\n'.join(r)
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Cleaner(Parser):
     '''Cleans XHTML content, so it becomes ready to be stored into a
        Appy-compliant format.'''
@@ -78,7 +52,7 @@ class Cleaner(Parser):
                  tagsToIgnoreWithContent=tagsToIgnoreWithContent,
                  tagsToIgnoreKeepContent=tagsToIgnoreKeepContent,
                  attrsToIgnore=attrsToIgnore, propertiesToKeep=None,
-                 attrsToAdd=attrsToAdd, poorCoded=False, preprocess=False):
+                 attrsToAdd=attrsToAdd, poorCoded=False):
         # Call the base constructor
         Parser.__init__(self, env, caller, raiseOnError)
         self.tagsToIgnoreWithContent = tagsToIgnoreWithContent
@@ -93,8 +67,6 @@ class Cleaner(Parser):
         # Is this cleaner made for cleaning poor-coded chunks of XHTML? If yes,
         # some specific action will be undergone.
         self.poorCoded = poorCoded
-        # Must the preprocessor be use to ensure input is XHTML ?
-        self.preprocess = preprocess
 
     def startDocument(self):
         # The result will be cleaned XHTML, joined from self.r
@@ -233,8 +205,6 @@ class Cleaner(Parser):
     def clean(self, s, wrap=True):
         '''Cleaning XHTML code p_s allows to produce a Appy-compliant,
            ZODB-storable string.'''
-        # Preamble: preprocess p_s if needed
-        if self.preprocess: s = Preprocessor.run(s)
         # a. Every <p> or <li> must be on a single line (ending with a carriage
         #    return); else, appy.utils.diff will not be able to compute XHTML
         #    diffs;

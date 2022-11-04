@@ -762,13 +762,14 @@ class Poor(Rich):
         '''Returns a Cleaner instance tailored to p_self'''
         # More strict cleaning than the Rich
         tagsToIgnore = Cleaner.tagsToIgnoreWithContentStrict
-        return Cleaner(attrsToAdd=Cleaner.attrsToAddStrict, preprocess=True,
+        return Cleaner(attrsToAdd=Cleaner.attrsToAddStrict,
                        propertiesToKeep=Cleaner.propertiesToKeepStrict,
                        tagsToIgnoreWithContent=tagsToIgnore, poorCoded=True)
 
     def validateUniValue(self, o, value):
         '''As a preamble, ensure p_value is XHTML'''
-        value = XhtmlPreprocessor.preprocess(value, html=True, pre=False)
+        value = XhtmlPreprocessor.preprocess(value, html=True, pre=False,
+                                             paraTag='div')
         return super().validateUniValue(o, value)
 
     def getUniStorableValue(self, o, value):
@@ -776,6 +777,6 @@ class Poor(Rich):
         if not value or value == '<br>': return
         # Ensure p_value is XHTML
         value = XhtmlPreprocessor.preprocess(value, html=True, pre=False,
-                                             root='x')
+                                             root='x', paraTag='div')
         return super().getUniStorableValue(o, value, wrap=False)
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

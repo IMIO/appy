@@ -1320,15 +1320,40 @@ class XhtmlPreprocessor:
                (class_.prePara, content.replace('\n', class_.preParaN))
 
     @classmethod
-    def preprocess(class_, s, html=False, pre=True, inject=False, root='p'):
+    def taggify(class_, s, tag='p'):
+        '''Returns p_s if it seems to be XML, or a modified, XML-ed version if
+           not, where every line of raw text is surrounded by this p_tag.'''
+        # To save processing, the idea is not to be 100% sure that p_s is valid
+        # XML. The idea is to handle the most frequently encountered problem:
+        # p_s contains one or more lines of text not being surrounded by any
+        # tag.
+
+        # This kind of problem mainly emanates from the Poor field, that does
+        # receive data from a contenteditable browser field that does not
+        # necessarily contain valid XHTML (it may possibly contain raw text).
+        if not s or s.startswith('<'): return s
+        r = []
+        for line in s.split('\n'):
+            if not line.startswith('<'):
+                line = '<%s>%s</%s>' % (tag, line.strip(), tag)
+            r.append(line)
+        return '\n'.join(r)
+
+    @classmethod
+    def preprocess(class_, s, html=False, pre=True, inject=False, root='p',
+                   paraTag=None):
         '''Converts string p_s to valid XHTML and r_eturns it'''
 
         # If p_html is True, p_s is supposed to be valid HTML: void tags must be
         # converted to XHTML's self-closing start tags. If p_pre is True, "pre"
         # tags are converted to one-cell tables. If p_inject is True,
         # injections, as defined by the appy Rich or Poor field, are performed.
-
         if s is None: s = ''
+
+        # If a p_paraTag is specified (typically, "div" or "p"), if p_s is raw
+        # text, every line of it will eb surrounded by this p_paraTag.
+        if paraTag: s = class_.taggify(s, tag=paraTag)
+
         # Surround p_s with a tag in order to get a XML-compliant file (we need
         # a root tag). We also remove special blank chars that produce SAX
         # parsing errors.
