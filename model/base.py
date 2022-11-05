@@ -1278,6 +1278,7 @@ class Base:
        <input type="hidden" name="popup" value=":popup"/>
        <input type="hidden" name="page" value=":page"/>
        <input type="hidden" name="nav" value=":req.nav or ''"/>
+       <input type="hidden" name="inav" value=":req.inav or ''"/>
        <input type="hidden" name="referer"
               value=":req.referer or o.referer or ''"/>
        <input type="hidden" name="_get_" value=":req._get_ or ''"/>
@@ -1511,7 +1512,7 @@ class Base:
         # Create the params to add to the URL leading to the new object's edit
         # page.
         params = {'sub':'edit', 'page':'main', 'nav':'no',
-                  'popup': req.popup == 'True'}
+                  'inav':req.inav or '', 'popup': req.popup == 'True'}
         initiator = self.getInitiator()
         if initiator:
             # Transmit initiator information in the next request (as well as

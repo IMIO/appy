@@ -33,6 +33,11 @@ class MayAdd:
         # is not the standard one: the specific code to execute will be stored
         # in the following attribute.
         self.backCode = None
+        # When MayAdd.REF, the "inav" (*i*nitiator *nav*igation) string allows
+        # to remember the Ref object being at the start of the whole process.
+        # While "backCode" is meant to be used by the browser, inav is meant to
+        # be used by the web server.
+        self.inav = ''
         self.compute(ui)
 
     def compute(self, ui):
@@ -63,10 +68,11 @@ class MayAdd:
                 # The user is already selecting an object to insert in the
                 # current Ref: consequently, he is already allowed to modify it.
                 self.value = MayAdd.REF
-            # Initialise attribute "backCode" when relevant
+            # Initialise attributes "backCode" and "inav" when relevant
             if self.value:
                 self.backCode = "setBackCode('%s','%s',id)" % \
                                 (init.hook, init.o.iid)
+                self.inav = init.o.req.search
 
     def __bool__(self): return bool(self.value)
 
@@ -146,7 +152,7 @@ class UiSearch:
         <div if="mayAdd and guard.mayInstantiate(class_)"
              var2="buttonType='small'; label=search.addLabel;
                    viaPopup=False if mayAdd else search.viaPopup;
-                   nav=mode.getNavInfo(batch.total, mayAdd);
+                   nav=mode.getNavInfo(batch.total, mayAdd); inav=mayAdd.inav;
                    onClick=mayAdd.backCode">:class_.pxAdd</div>
 
         <!-- Perform a new search -->

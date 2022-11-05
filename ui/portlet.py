@@ -207,7 +207,7 @@ class Portlet:
 
          <!-- Create instances of this class -->
          <div if="guard.mayInstantiate(class_)"
-              var2="buttonType='portlet'; nav='no'; label=None;
+              var2="buttonType='portlet'; nav='no'; inav=''; label=None;
                     onClick=None">:class_.pxAdd</div>
 
          <!-- Searches -->
