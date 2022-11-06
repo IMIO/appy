@@ -10,6 +10,7 @@ from appy.model.workflow import Role
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
     '''Model configuration'''
+
     def __init__(self):
         # The "root" classes are those that will get their menu in the user
         # interface. Put their names in the list below. If you leave the list
@@ -49,6 +50,7 @@ class Config:
 class Model:
     '''Represents an application's model = the base Appy model, completed and
        extended by the application model.'''
+
     class Error(Exception): pass
 
     # Names of base classes forming the base Appy model, in package appy.model,
@@ -99,32 +101,32 @@ class Model:
             r = [self.classes[name] for name in r]
         return r
 
-    def getRoles(self, base=None, local=None, grantable=None):
+    def getRoles(self, base=None, local=None, grantable=None, sorted=False):
         '''Produces a list of all the roles used within all workflows and
            classes defined in this app.'''
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If p_base is...
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # True  | it keeps only standard Appy roles;
         # False | it keeps only roles which are specific to this app;
         # None  | it has no effect (so it keeps both roles).
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If p_local is...
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # True  | it keeps only local roles. A local role is granted to a user
         #       | or group, is stored and applies on a single object only;
         # False | it keeps only global roles. A global role is granted to a
         #       | group or user and applies everywhere throughout the app,
         #       | independently of any object;
         # None  | it has no effect (so it keeps both roles).
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If p_grantable is...
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # True  | it keeps only roles that a Manager can grant;
         # False | if keeps only ungrantable roles (ie those that are implicitly
         #       | granted by the system like role "Authenticated";
         # None  | it has no effect (so it keeps both roles).
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         r = {} # ~{s_roleName: Role_role}~
         # Collect roles from workflow states and transitions
         for workflow in self.workflows.values():
@@ -144,7 +146,10 @@ class Model:
                 role = Role(role)
             r[role.name] = role
         # Filter the result according to parameters and return a list
-        return [role for role in r.values() if role.match(base,local,grantable)]
+        r = [role for role in r.values() if role.match(base,local,grantable)]
+        if sorted:
+            r.sort(key= lambda r:r.name.lower())
+        return r
 
     def getGrantableRoles(self, o):
         '''Returns the list of global roles that can be granted to a user'''

@@ -132,6 +132,7 @@ class Migrator:
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Updater:
     '''Creates or updates translation files for an app'''
+
     # The updater is implemented as a visitor walking a appy.model.Model
     # instance and producing the appropriate i18n labels for every model
     # element. For every such element, a method named "visit<element>" is
@@ -337,16 +338,22 @@ class Updater:
 
     def collectLabels(self):
         '''Collect all labels by visiting model elements'''
+        # Roles, classes and workflows are sorted by name, in order to avoid
+        # retrieving it in a different order from one machine to another.
         model = self.model
         # Add a label for every role
-        for role in model.getRoles(base=None):
+        for role in model.getRoles(base=None, sorted=True):
             self.addLabel(*role.getLabel(withDefault=False))
         # Browse model classes
-        for name, class_ in model.classes.items():
+        classes = list(model.classes.items())
+        classes.sort(key=lambda o:o[0])
+        for name, class_ in classes:
             if class_.type != 'base':
                 self.visitClass(name, class_)
         # Browse model workflows
-        for name, workflow in model.workflows.items():
+        workflows = list(model.workflows.items())
+        workflows.sort(key=lambda o:o[0])
+        for name, workflow in workflows:
             self.visitWorkflow(name, workflow)
 
     def updateFiles(self):
@@ -355,12 +362,12 @@ class Updater:
         # 2 "pot" files exist (or will exist in a few milliseconds) in
         # p_self.trFolder, with their corresponding "po" files (one per
         # supported language):
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # <appName>.pot | will contain all i18n labels automatically managed by
         #               | Appy and that were collected in p_self.labels;
         #  Custom.pot   | will contain all additional labels managed "by hand"
         #               | by the app's developer.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         counts = {True: 0, False: 0} # Count automatic and custom labels
         for pot in ('%s.pot' % self.appName, 'Custom.pot'):
             isCustom = pot == 'Custom.pot'
