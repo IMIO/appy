@@ -29,7 +29,7 @@ MAIL_NSENT = '%s: mail sending failed (%s).'
 CONNECT_OK = "Connected to %s in %.2f''."
 NO_G_U     = 'Inexistent %s(s) %s.'
 NO_REC     = 'No mail recipient for "%s".'
-NO_RECS    = 'No recipient for sending mail about %s %s with %s %s.'
+NO_RECS    = 'No recipient for sending mail about %s %s with %s(s) %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -293,6 +293,8 @@ def sendMailIf(config, o, privilege, subject, body, attachments=None,
         sendMail(config, recipients, subject, body, attachments, log=log,
                  replyTo=replyTo)
     elif log:
+        if isinstance(privilege, (list, tuple)):
+            privilege = ', '.join(privilege)
         log(NO_RECS % (o.class_.name.lower(), o.id, pt, privilege),
                        type='warning')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

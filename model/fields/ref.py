@@ -1508,7 +1508,7 @@ class Ref(Field):
         r.changeNumber = not r.inPickList and r.numbered and r.changeOrder and \
                          total > 3
         r.checkboxesEnabled = self.getAttribute(o, 'checkboxes')
-        r.checkboxes = r.checkboxesEnabled and (total > 1 or c.popup)
+        r.checkboxes = r.checkboxesEnabled
         r.collapse = self.getCollapseInfo(o, r.inPickList)
         r.showSubTitles = req.showSubTitles in ('True', None)
         # Add more variables if we are in the context of a single object
@@ -2039,15 +2039,15 @@ class Ref(Field):
            collecting batch-related information that might be present in the
            request.'''
         r = Batch(hook=hook)
+        # The total nb of elements may be in the request (when ajax-called)
+        total = req.total
+        if total: r.total = int(total)
         # When using any render mode, "list" excepted, all objects must be shown
         if render != 'list': return r
         # Get the index of the first object to show
         r.start = int(req['%s_start' % hook] or req.start or 0)
         # Get batch size
         r.size = int(req.maxPerPage or self.maxPerPage)
-        # The total nb of elements may be in the request (when ajax-called)
-        total = req.total
-        if total: r.total = int(total)
         return r
 
     def getBatchFor(self, hook, objects):
@@ -2516,7 +2516,7 @@ class Ref(Field):
     def getRenderMode(self, layout):
         '''Gets the render mode, determined by self.render and some
            exceptions.'''
-        if layout == 'view' and self.render == 'menus': return 'list'
+        if self.render == 'menus' and layout == 'view': return 'list'
         return self.render
 
     def getTitleMode(self, o, selector):
