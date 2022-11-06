@@ -138,7 +138,11 @@ class RunningTotals(dict):
         #
         # Extract the field name from p_col
         if isinstance(col, tuple):
-            name = col[1].name
+            # The field corresponding to this column may be None if it is not
+            # currently showable. In that case, do not dump any cell at all.
+            field = col[1]
+            if field is None: return ''
+            name = field.name
         elif isinstance(col.field, str):
             name = col.field
         else:
