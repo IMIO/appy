@@ -769,7 +769,8 @@ class Class(Meta):
            if="createVia" class="addForm" name=":'%s_add' % className"
            var2="styles=class_.addStyles[buttonType];
                  target=ui.LinkTarget(class_.python, popup=viaPopup);
-                 text=_(label or 'object_add')"
+                 text=_(label or 'object_add');
+                 onClick=onClick|None"
            action=":'%s/new' % tool.url" target=":target.target">
       <input type="hidden" name="className" value=":className"/>
       <input type="hidden" name="template_" value=""/>
