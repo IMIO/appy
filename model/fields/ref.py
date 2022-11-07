@@ -2705,8 +2705,6 @@ class Ref(Field):
         if not objects: return o.translate(self.noObjectLabel)
         r = []
         for tied in objects:
-            if isinstance(tied, int):
-                tied = o.getObject(tied)
             title = self.getReferenceLabel(o, tied, True)
             if links and tied.allows('read'):
                 # Wrap the title in a link
