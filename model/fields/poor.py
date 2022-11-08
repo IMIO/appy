@@ -15,26 +15,33 @@ class AutoCorrect:
     '''Defines the set of automatic corrections that will occur as you type in a
        poor field.'''
 
-    # The set of standard replacements
-    chars = {}
+    # Standard replacements: chars being prefixed with a nbsp
+    standard = {}
 
     # Chars that mus be prefixed with a non-breakable blank
     nbPrefixed = (':', ';', '!', '?', '%')
     for char in nbPrefixed:
-        chars[char] = [('code', ' '), ('text', char)]
+        standard[char] = [('code', ' '), ('text', char)]
 
     # Replace double quotes by "guillemets" (angle quotes)
-    chars['"'] = {'if':'blankBefore',
-                  1: [('text', '«'), ('code', ' ')],
-                  0: [('code', ' '), ('text', '»')]}
+    quotes = {'"': {'if':'blankBefore',
+                    1: [('text', '«'), ('code', ' ')],
+                    0: [('code', ' '), ('text', '»')]}}
+
+    def __init__(self, standard=True, quotes=True):
+        '''Produces a specific auto-correct configuration'''
+        r = {}
+        if standard: r.update(AutoCorrect.standard)
+        if quotes:   r.update(AutoCorrect.quotes)
+        self.chars = r
 
     def inJs(self, toolbarId):
-        '''Get the JS code allowing to define AutoCorrect.chars on the DOM node
+        '''Get the JS code allowing to define p_self.chars on the DOM node
            representing the poor toolbar.'''
         return "document.getElementById('%s').autoCorrect=%s;" % \
                (toolbarId, sutils.getStringFrom(self.chars))
 
-# The default unique AutoCorrect object
+# Default AutoCorrect configuration
 AutoCorrect.default = AutoCorrect()
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -160,6 +167,7 @@ class Poor(Rich):
 
     # Make some classes available here
     Icon = Icon
+    AutoCorrect = AutoCorrect
 
     # A poor-coded non-breaking space
     nbsp = '<code> </code>'
