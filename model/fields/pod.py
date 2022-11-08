@@ -394,7 +394,7 @@ class Pod(Field):
 
       setPodIcons = function(id, defaults, empty, collectSelectors, merged) {
         // Set POD icon's visibility and updates v_defaults when appropriate
-        let node=document.getElementById(id),
+        let node=getNode(':'+id),
             icons=node.querySelectorAll("[id^='" + id + "']"),
             key=fmt=icon=null,
             selectors=(collectSelectors)? []:null;

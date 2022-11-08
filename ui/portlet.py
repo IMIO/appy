@@ -192,7 +192,7 @@ class Portlet:
              var="searches=class_.getGroupedSearches(tool, _ctx_);
                   labelPlural=_(className + '_plural');
                   indexable=class_.isIndexable();
-                  viaPopup=False">
+                  viaPopup=None">
          <div class="portletTitle">
           <a if="indexable"
              var="queryParam=searches.default.name if searches.default else ''"
