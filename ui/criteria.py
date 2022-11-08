@@ -43,7 +43,7 @@ class Criteria:
         if not criteria: return
         # Criteria are present but not cached. Get them from the request,
         # unmarshal and cache them.
-        r = eval(criteria)
+        r = class_.evaluate(criteria)
         # Copy aims at keeping key "_ref" that may be removed
         handler.cache.criteria = r.copy()
         return r
