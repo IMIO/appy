@@ -317,7 +317,7 @@ class RefSiblings(Siblings):
         '''Get the sibling object at this p_index'''
         try:
             r = self.siblings[index]
-        except ValueError:
+        except (ValueError, IndexError) as err:
             r = None
         return r
 

@@ -2,8 +2,9 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import re
+import re, urllib.parse
 from DateTime import DateTime
+
 from appy.utils import string as sutils
 
 # Importing database operators is required when evaluating criteria expressions
@@ -18,6 +19,16 @@ class Criteria:
         # This attribute will store the dict of search criteria, ready to be
         # injected in a Search class for performing a search in the catalog.
         self.criteria = None
+
+    @classmethod
+    def evaluate(class_, criteria):
+        '''Evaluate the criteria as carried in the request'''
+        try:
+            r = eval(criteria)
+        except SyntaxError:
+            # It may be URL-encoded
+            r = eval(urllib.parse.unquote(criteria))
+        return r
 
     @classmethod
     def readFromRequest(class_, handler):
