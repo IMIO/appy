@@ -1508,7 +1508,7 @@ class Ref(Field):
         r.changeNumber = not r.inPickList and r.numbered and r.changeOrder and \
                          total > 3
         r.checkboxesEnabled = self.getAttribute(o, 'checkboxes')
-        r.checkboxes = r.checkboxesEnabled
+        r.checkboxes = r.checkboxesEnabled and total
         r.collapse = self.getCollapseInfo(o, r.inPickList)
         r.showSubTitles = req.showSubTitles in ('True', None)
         # Add more variables if we are in the context of a single object
@@ -2162,7 +2162,7 @@ class Ref(Field):
            Ref field and return the number of objects truly unlinked.'''
         # For an explanation about parameters p_back, p_secure and
         # p_executeMethods, check m_linkObject above.
-        # ~~~
+        # ~~
         # Security check
         if secure:
             o.guard.mayEdit(o, self.writePermission, raiseError=True)

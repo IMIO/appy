@@ -13,6 +13,13 @@ class Boolean(Field):
     yesNo = {'true': 'yes', 'false': 'no', True: 'yes', False: 'no'}
     trueFalse = {True: 'true', False: 'false'}
 
+    # In some situations, if may be appropriate to consider False as an empty
+    # value for a boolean field.
+    nullValuesVariants = {
+      True:  (None, False), # False is considered to represent emptiness
+      False: (None,)        # False does not represent emptiness
+    }
+
     class Layouts(Layouts):
         '''Boolean-specific layouts'''
 
@@ -125,7 +132,7 @@ class Boolean(Field):
       mapping=None, generateLabel=None, label=None, sdefault=False, scolspan=1,
       swidth=None, sheight=None, persist=True, render='checkbox',
       inlineEdit=False, view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None):
+      translations=None, falseMeansEmpty=False):
         # By default, a boolean is edited via a checkbox. It can also be edited
         # via 2 radio buttons (p_render="radios").
         self.render = render
@@ -137,6 +144,8 @@ class Boolean(Field):
           swidth, sheight, persist, inlineEdit, view, cell, buttons, edit, xml,
           translations)
         self.pythonType = bool
+        # Must value False be interpreted as an empty value or not ?
+        self.nullValues = Boolean.nullValuesVariants[falseMeansEmpty]
 
     def getValue(self, o, name=None, layout=None, single=None):
         '''Never returns "None". Returns always "True" or "False", even if

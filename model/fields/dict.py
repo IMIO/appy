@@ -213,4 +213,9 @@ class Dict(List):
         newer = history.getNewer(self, value, i-1)
         diffTexts = history[i].getDiffTexts(o)
         return self.getDiffValue(o, value, newer, diffTexts)
+
+    def iterValues(self, o):
+        '''Returns an iterator over p_self's values on p_o'''
+        values = getattr(o, self.name)
+        return values.itervalues() if values else ()
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

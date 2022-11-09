@@ -502,4 +502,25 @@ class List(Field):
                 message = subField.validate(o, getattr(row, name, None))
                 if message:
                     setattr(errors, '%s*%d' % (subField.name, i), message)
+
+    def iterValues(self, o):
+        '''Returns an iterator over p_self's rows on p_o'''
+        # For a List, the iterator is simply p_self's value on p_o. List sub-
+        # classes may override this.
+        return getattr(o, self.name) or ()
+
+    def subIsEmpty(self, o, name):
+        '''Returns True if, for all rows defined on p_o for p_self, sub-field
+           p_name is empty.'''
+        # Get p_self's value on p_o (bypass any default value)
+        rows = o.values.get(self.name)
+        if not rows: return True
+        # Get the sub-field with this p_name
+        sub = self.getField(name)
+        if not sub: return
+        # As soon as a p_sub not-empty value is found on a row, return False
+        for row in self.iterValues(o):
+            if not sub.isEmptyValue(row, getattr(row, name)):
+                return
+        return True
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

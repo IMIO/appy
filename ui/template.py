@@ -118,9 +118,9 @@ class Template:
     @classmethod
     def getContent(class_, c):
         '''Returns the page content, with the sub-header when relevant'''
-        r = '<div class="%s"%s>%s</div>' % (class_.getCssFor('content', c),
-                                            class_.getContentStyle(c),
-                                            c.content(c, applyTemplate=False))
+        r = '<div id="content" class="%s"%s>%s</div>' % \
+            (class_.getCssFor('content', c), class_.getContentStyle(c),
+             c.content(c, applyTemplate=False))
         # Add the burger button to expand the portlet. Indeed, when the header
         # is inlaid into the portlet, the burger button being within ths header
         # is unavailable.
