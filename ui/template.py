@@ -118,7 +118,7 @@ class Template:
     @classmethod
     def getContent(class_, c):
         '''Returns the page content, with the sub-header when relevant'''
-        r = '<div id="content" class="%s"%s>%s</div>' % \
+        r = '<div id="appyContent" class="%s"%s>%s</div>' % \
             (class_.getCssFor('content', c), class_.getContentStyle(c),
              c.content(c, applyTemplate=False))
         # Add the burger button to expand the portlet. Indeed, when the header
