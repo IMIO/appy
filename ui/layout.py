@@ -223,12 +223,12 @@ class Layout:
     @staticmethod
     def derive(layout, derivedType):
         '''Returns a layout derived from p_layout'''
-        res = layout
+        r = layout
         for letter in Layout.derivedRepls[derivedType]:
-            res = res.replace(letter, '')
+            r = r.replace(letter, '')
         # Strip the derived layout
-        res = res.lstrip(Layout.rowDelms); res = res.lstrip(Layout.cellDelms)
-        return res
+        r = r.lstrip(Layout.rowDelms); r = r.lstrip(Layout.cellDelms)
+        return r
 
     def addCssClasses(self, css):
         '''Adds a single or a group of p_css classes'''
@@ -265,7 +265,7 @@ class Layout:
                 rowContent += char
         # Manage the last row if any
         if rowContent:
-            self.rows.append(Row(rowContent, 'middle'))
+            self.rows.append(Row(rowContent, self.rowDelimiters['-']))
 
     def getRowIndex(self, char):
         '''Gets the index of the row containing this p_char. If p_char is not
