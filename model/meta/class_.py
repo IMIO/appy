@@ -526,6 +526,18 @@ class Class(Meta):
            storing index values for instances of this class ?'''
         return getattr(self.concrete, 'indexable', True)
 
+    def getCatalog(self, o):
+        '''Returns the catalog tied to p_self, if it exists'''
+        if not self.isIndexable(): return
+        return o.H().dbConnection.root.catalogs.get(self.name)
+
+    def getIndex(self, o, name):
+        '''Returns the index having this p_name, from p_self's catalog, if it
+           exists.'''
+        catalog = self.getCatalog(o)
+        if catalog:
+            return catalog.get(name)
+
     def getListPods(self, tool):
         '''Finds, among p_self's fields, those being Pod fields showable on
            search results.'''

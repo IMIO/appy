@@ -19,6 +19,21 @@ from appy.ui.layout import Layout, Layouts
 from appy.utils.dates import getLastDayOfMonth
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+TL_W_EVTS   = 'A timeline calendar has the objective to display a series of ' \
+              'other calendars. Its own calendar is disabled: it is useless ' \
+              'to define event types for it.'
+MISS_EN_M   = "When param 'eventTypes' is a method, you must give another " \
+              "method in param 'eventNameMethod'."
+TSLOT_USED  = 'An event is already defined at this timeslot.'
+DAY_FULL    = 'No more place for adding this event.'
+TOTALS_KO   = 'Totals can only be specified for timelines (render == ' \
+              '"timeline").'
+S_MONTHS_KO = 'Strict months can only be used with timeline calendars.'
+ACT_MISS    = 'Action "%s" does not exist or is not visible.'
+UNSORT_EVTS = 'Events must be sorted if you want to get spanned events to be ' \
+              'grouped.'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Timeslot:
     '''A timeslot defines a time range within a single day'''
 
@@ -678,22 +693,6 @@ class Calendar(Field):
     Event = Event
     IterSub = utils.IterSub
 
-    # Error messages
-    TIMELINE_WITH_EVENTS = 'A timeline calendar has the objective to display ' \
-      'a series of other calendars. Its own calendar is disabled: it is ' \
-      'useless to define event types for it.'
-    MISSING_EVENT_NAME_METHOD = "When param 'eventTypes' is a method, you " \
-      "must give another method in param 'eventNameMethod'."
-    TIMESLOT_USED = 'An event is already defined at this timeslot.'
-    DAY_FULL = 'No more place for adding this event.'
-    TOTALS_MISUSED = 'Totals can only be specified for timelines ' \
-      '(render == "timeline").'
-    STRICT_MONTHS_MISUSED = 'Strict months can only be used with timeline ' \
-      'calendars.'
-    ACTION_NOT_FOUND = 'Action "%s" does not exist or is not visible.'
-    UNSORTED_EVENTS = 'Events must be sorted if you want to get spanned ' \
-      'events to be grouped.'
-
     timelineBgColors = {'Fri': '#dedede', 'Sat': '#c0c0c0', 'Sun': '#c0c0c0'}
     validCbStatuses = {'validated': True, 'discarded': False}
 
@@ -1135,12 +1134,12 @@ class Calendar(Field):
         # give, in p_eventNameMethod, a method that will accept a single arg
         # (=one of the event types from your dynamic list) and return the "name"
         # of this event as it must be shown to the user.
-        self.eventTypes = eventTypes
-        if (render == 'timeline') and eventTypes:
-            raise Exception(Calendar.TIMELINE_WITH_EVENTS)
+        self.eventTypes = eventTypes or ()
+        if render == 'timeline' and eventTypes:
+            raise Exception(TL_W_EVTS)
         self.eventNameMethod = eventNameMethod
         if callable(eventTypes) and not eventNameMethod:
-            raise Exception(Calendar.MISSING_EVENT_NAME_METHOD)
+            raise Exception(MISS_EN_M)
         # Among event types, for some users, only a subset of it may be created.
         # "allowedEventTypes" is a method that must accept the list of all
         # event types as single arg and must return the list/tuple of event
@@ -1265,12 +1264,12 @@ class Calendar(Field):
         # In a timeline calendar, if you want to specify additional rows
         # representing totals, give in "totalRows" a list of Totals instances
         # (see above).
-        if totalRows and (self.render != 'timeline'):
-            raise Exception(Calendar.TOTALS_MISUSED)
+        if totalRows and self.render != 'timeline':
+            raise Exception(TOTALS_KO)
         self.totalRows = totalRows or []
         # Similarly, you can specify additional columns in "totalCols"
-        if totalCols and (self.render != 'timeline'):
-            raise Exception(Calendar.TOTALS_MISUSED)
+        if totalCols and self.render != 'timeline':
+            raise Exception(TOTALS_KO)
         self.totalCols = totalCols or []
         # A validation process can be associated to a Calendar event. It
         # consists in identifying validators and letting them "convert" event
@@ -1323,8 +1322,8 @@ class Calendar(Field):
         # When rendering a timeline, if p_strictMonths is True, only days of the
         # current month will be shown. Else, complete weeks will be shown,
         # potentially including some days from the previous and next months.
-        if strictMonths and (self.render != 'timeline'):
-            raise Exception(Calendar.STRICT_MONTHS_MISUSED)
+        if strictMonths and self.render != 'timeline':
+            raise Exception(S_MONTHS_KO)
         self.strictMonths = strictMonths
         # ~~~ Call the base constructor ~~~
         # The "validator" attribute, allowing field-specific validation, behaves
@@ -1849,7 +1848,7 @@ class Calendar(Field):
         '''
         # Prevent wrong combinations of parameters
         if groupSpanned and not sorted:
-            raise Exception(Calendar.UNSORTED_EVENTS)
+            raise Exception(UNSORT_EVTS)
         r = []
         if self.name not in o.values: return r
         # Compute "min" and "max" tuples
@@ -2002,9 +2001,9 @@ class Calendar(Field):
         # The following errors should not occur if we have a normal user behind
         # the ui.
         for e in events:
-            if e.timeslot == timeslot: return Calendar.TIMESLOT_USED
-            elif e.timeslot == 'main': return Calendar.DAY_FULL
-        if events and (timeslot == 'main'): return Calendar.DAY_FULL
+            if e.timeslot == timeslot: return TSLOT_USED
+            elif e.timeslot == 'main': return DAY_FULL
+        if events and timeslot == 'main': return DAY_FULL
         # Get the Timeslot and check if, at this timeslot, it is allowed to
         # create an event of p_eventType.
         for slot in self.timeslots:
@@ -2350,7 +2349,7 @@ class Calendar(Field):
             if act.name == name:
                 action = act
                 break
-        if not action: raise Exception(Calendar.ACTION_NOT_FOUND % name)
+        if not action: raise Exception(ACT_MISS % name)
         # Get the selected cells
         selected = []
         tool = o.tool

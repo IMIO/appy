@@ -143,6 +143,13 @@ def getLastDayOfMonth(date, hour=None):
     return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def sameDay(date, other):
+    '''Do p_date and p_other occur at the same day ?'''
+    d1 = date.year() , date.month() , date.day()
+    d2 = other.year(), other.month(), other.day()
+    return d1 == d2
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def getDayInterval(date):
     '''Returns a tuple (startOfDay, endOfDay) representing the whole day into
        which p_date occurs.'''

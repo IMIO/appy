@@ -262,8 +262,8 @@ class Hour(Field):
             r = 0
         else:
             # Compute the intersection, as a new range [start, end]
-            start = (startA > startB) and startA or startB
-            end = (endA > endB) and endB or endA
+            start = startA if startA > startB else startB
+            end = endB if endA > endB else endA
             r = class_.getDuration(start, end)
         return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

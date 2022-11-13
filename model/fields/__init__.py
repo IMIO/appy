@@ -29,6 +29,7 @@ UNINDEXED    = 'Field "%s": cannot retrieve catalog version of unindexed field.'
 AJAX_EDITED  = 'Ajax-edited %s%s on %s.'
 METH_ERROR   = 'Method %s:\n%s'
 DEF_ERR      = 'Field %d.%s: error. %s.'
+MUST_IDX_MET = 'Value for parameter "mustIndex" must be a method.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Show:
@@ -483,7 +484,7 @@ class Field:
         # is True.
         self.mustIndex = mustIndex
         if not mustIndex and not callable(mustIndex):
-            raise Exception('Value for param "mustIndex" must be a method.')
+            raise Exception(MUST_IDX_MET)
         # For an indexed field, the value stored in the index is deduced from
         # the field value and type. If you want to store, in the index, a value
         # being transformed in some way, specify, in parameter "indexValue" a
