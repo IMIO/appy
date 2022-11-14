@@ -728,7 +728,7 @@ class Ref(Field):
           style=":field.getWidgetStyle()">
 
       <!-- (Un)check all -->
-      <div if="field.link == 'checkbox' and len(objects) &gt; 1"
+      <div if="field.checkAll and field.link=='checkbox' and len(objects) &gt;1"
            class="divAll" var="allId='%s_all' % name">
        <input type="checkbox" class="checkAll" id=":allId" name=":allId"
               onclick="toggleCheckboxes(this)"/>
@@ -881,7 +881,7 @@ class Ref(Field):
       addFromLabel='object_add_from', addIcon='add.svg', iconOut=False,
       iconCss='iconS', filterable=True, supTitle=None, subTitle=None,
       toggleSubTitles=None, separator=None, rowAlign='top', showControls=True,
-      actions=None):
+      actions=None, checkAll=True):
         # The class whose tied objects will be instances of
         self.class_ = class_
         # Specify "attribute" only for a back reference: it will be the name
@@ -980,7 +980,7 @@ class Ref(Field):
         # "checkbox" | the user will, on "edit", choose objects from checkboxes.
         #            | This mode is valid for fields with a max multiplicity
         #            | being higher than 1.
-        #            | ~~~
+        #            | ~
         #            | Note that choosing "radio"/"checkbox" instead of boolean
         #            | value "True" is appropriate if the number of objects from
         #            | which to choose is low ;
@@ -1429,6 +1429,12 @@ class Ref(Field):
         # p_indexAttribute is not "iid", p_emptyIndexValue must also be a non-
         # digit string.
         self.indexAttribute = indexAttribute
+
+        # When link="checkbox", by default, an additional checkbox will be
+        # rendered, allowing to select or unselect all possible values. If this
+        # global checkbox must not be rendered, set the following attribute to
+        # False.
+        self.checkAll = checkAll
 
         # Call the base constructor
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
