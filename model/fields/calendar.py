@@ -383,6 +383,7 @@ class Totals:
        totals computed from other rows/columns (representing agendas), specify
        it via Totals instances (see Agenda fields "totalRows" and "totalCols"
        below).'''
+
     def __init__(self, name, label, onCell, initValue=0):
         # "name" must hold a short name or acronym and will directly appear
         # at the beginning of the row. It must be unique within all Totals
@@ -393,22 +394,29 @@ class Totals:
         self.label = label
         # A method that will be called every time a cell is walked in the
         # agenda. It will get these args:
-        # * date        - the date representing the current day (a DateTime
-        #                 instance);
-        # * other       - the Other instance representing the currently walked
-        #                 calendar;
-        # * events      - the list of events (as Event instances) defined at
-        #                 that day in this calendar. Be careful: this can be
-        #                 None;
-        # * total       - the Total instance (see above) corresponding to the
-        #                 current column;
-        # * last        - a boolean that is True if we are walking the last
-        #                 shown calendar;
-        # * checked     - a value "checked" indicating the status of the
-        #                 possible validation checkbox corresponding to this
-        #                 cell. If there is a checkbox in this cell, the value
-        #                 will be True or False; else, the value will be None.
-        # * preComputed - the result of Calendar.preCompute (see below)
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #    date     | The date representing the current day (a DateTime
+        #             | instance) ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #    other    | The Other instance representing the currently walked
+        #             | calendar ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #    events   | The list of events (as Event instances) defined at that
+        #             | day in this calendar. Be careful: this can be None ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #    total    | The Total instance (see above) corresponding to the
+        #             | current column ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #    last     | A boolean that is True if we are walking the last shown
+        #             | calendar ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #   checked   | A value "checked" indicating the status of the possible
+        #             | validation checkbox corresponding to this cell. If there
+        #             | is a checkbox in this cell, the value will be True or
+        #             | False; else, the value will be None.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # preComputed | The result of Calendar.preCompute (see below).
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.onCell = onCell
         # "initValue" is the initial value given to created Total instances
         self.initValue = initValue
@@ -431,23 +439,33 @@ class Layer:
         # in its "title" attribute, while "content" will be shown within the
         # cell. If nothing must be shown at all, None must be returned.
         # This method must accept those args:
-        # * date        - the currently walked day (a DateTime instance);
-        # * other       - the Other instance representing the currently walked
-        #                 calendar;
-        # * events      - the list of events (as a list of custom Object
-        #                 instances whose attribute "event" points to an Event
-        #                 instance) defined at that day in this calendar.
-        # * preComputed - the result of Calendar.preCompute (see below)
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #   date      | The currently walked day (a DateTime instance) ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #   other     | The Other instance representing the currently walked
+        #             | calendar ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #   events    | The list of events (as a list of custom Object instances
+        #             | whose attribute "event" points to an Event instance)
+        #             | defined at that day in this calendar ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # preComputed | The result of Calendar.preCompute (see below).
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.onCell = onCell
         # Is this layer activated by default ?
         self.activeByDefault = activeByDefault
         # "legend" is a method that must produce legend items that are specific
         # to this layer. The method must accept no arg and must return a list of
-        # objects (you can use class appy.Object) having these attributes:
-        # * name        - the legend item name as shown in the calendar
-        # * style       - the content of the "style" attribute that will be
-        #                 applied to the little square ("td" tag) for this item;
-        # * content     - the content of this "td" (if any).
+        # objects (you can use class appy.model.utils.Object) having these
+        # attributes:
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #   name   | The legend item name as shown in the calendar ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #   style  | The content of the "style" attribute that will be applied
+        #          | to the little square ("td" tag) for this item ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  content | The content of this "td" (if any).
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.legend = legend
         # When p_merge is False, if the layer contains info for a given day, the
         # base info will be hidden. Else, it will be merged.
@@ -489,13 +507,13 @@ class Legend:
                   align="center">:entry.content or '&nbsp;'</td></tr>
          </table>
         </td>
-        <td style=":field.legend.getCssText()">:entry.name</td>
+        <td style=":field.legend.getCssText()">::entry.name</td>
        </x>
       </tr>
      </table>''')
 
     def __init__(self, position='bottom', cols=4, width='115px', entryName=None,
-                 concatenate=', ', update=None):
+                 concatenate=', ', update=None, showEntrySeveral=True):
         # The legend can be positioned at the "bottom" or to the "right" of the
         # timeline
         self.position = position
@@ -523,6 +541,13 @@ class Legend:
         # A method that will, once the legend is build, receive it a single arg
         # and possibly update it if necessary.
         self.update = update
+        # When multiple events are present in a single cell, this latter is
+        # rendered in a specific way, in order to indicate that several events
+        # are "hidden" in it. By default, the legend entry for this specific
+        # case is present in the legend. If you are sure this case will never
+        # happen in your calendar, you can remove the default entry from the
+        # legend by setting attribute p_showEntrySeveral to False.
+        self.showEntrySeveral = showEntrySeveral
 
     def getCss(self):
         '''Gets the CSS class(es) for the legend table'''
@@ -566,10 +591,11 @@ class Legend:
                 entry = byStyle[style]
                 entryName = self.getEntryNameFor(o, eventType, allEventNames)
                 entry.name = '%s%s%s' % (entry.name, concat, entryName)
-        # Add the background indicating that several events are hidden behind
-        # the timeline cell
-        r.append(O(name=_('several_events'), content='',
-                   style=url('angled', bg=True)))
+        # Add, if appropriate, the background indicating that several events are
+        # hidden behind a timeline cell.
+        if self.showEntrySeveral:
+            r.append(O(name=_('several_events'), content='',
+                       style=url('angled', bg=True)))
         # Add layer-specific items
         for layer in field.layers:
             if layer.name not in activeLayers: continue
