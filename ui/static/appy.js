@@ -1327,7 +1327,7 @@ function updateAppyMessage(message) {
       content = (fleeting)? message.substring(1): message,
       zone = getNode(':appyMessageContent').parentNode;
   // Restarting the fader has the effect of cloning the v_zone
-  if (fleeting) zone = zone.fader.stop(true);
+  zone = zone.fader.stop(fleeting);
   // Fill the message zone with the message to display
   getNode(':appyMessageContent').innerHTML = content;
   zone.style.display = 'block';
