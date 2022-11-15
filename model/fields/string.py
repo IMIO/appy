@@ -10,10 +10,10 @@ from appy import utils
 from appy.px import Px
 from appy.data import Countries
 from appy.model.fields import Field
-from appy.database.operators import in_
 from appy.utils.string import Normalize
 from appy.xml.cleaner import StringCleaner
 from appy.ui.layout import Layouts, Layout
+from appy.database.operators import Operator, in_
 from appy.model.fields.multilingual import Multilingual
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -274,7 +274,7 @@ class String(Multilingual, Field):
         '''If p_value ends with a star, returns a range. Else, it returns
            p_value unchanged.'''
         # Leave the value untouched if already correct
-        if isinstance(value, in_) or not value.endswith('*'): return value
+        if isinstance(value, Operator) or not value.endswith('*'): return value
         # Build and return a range
         prefix = value[:-1]
         return in_(prefix, prefix + 'z')
