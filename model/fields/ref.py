@@ -1449,7 +1449,7 @@ class Ref(Field):
         # Initialise filterPx when relevant. If you want to disable filtering
         # although it could be proposed, set p_filterable to False. This can be
         # useful when there would be too many values to filter.
-        if self.link == True and indexed and filterable:
+        if self.link in (True, 'checkbox') and indexed and filterable:
             self.filterPx = 'pxFilterSelect'
         # The *f*ilter width and height
         self.fwidth = fwidth
