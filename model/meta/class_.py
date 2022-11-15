@@ -408,6 +408,10 @@ class Class(Meta):
                        # objects.
       'sub'  : None  , # [object level] The zone displaying an object's actions
                        # on a list of objects, under or besides its title.
+      'popup': None,   # [object level] A CSS class to apply to the main popup
+                       # tag, when an object is rendered in the iframe popup. It
+                       # is useless to define standard CSS class "popup", which
+                       # is applied in all cases.
     }
 
     def getCssFor(self, o, zone, add=None):

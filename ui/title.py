@@ -115,7 +115,7 @@ class Title:
         isSelect = mode == 'select'
         tcss = oclass.getCssFor(o, 'title')
         classAttr = class_.getClassAttribute(tcss, css, isSelect)
-        
+
         # Get the title, with highlighted parts when relevant
         titleIsPx = False
         if not title:

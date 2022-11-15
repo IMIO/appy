@@ -815,10 +815,9 @@ class LinkTarget:
         r = self.onClick
         if not r: return r
         if o:
-            # Get a specific CSS class to apply to the popup
+            # Get the CSS class to apply to the popup
             css = o.class_.getCssFor(o, 'popup')
-            css = css if css == 'popup' else ('%s popup' % css)
-            css = "'%s'" % css
+            css = "'%s'" % css if css else 'null'
         else:
             css = 'null'
         return r[:-1] + ",%s,'%s')" % (css, back)
