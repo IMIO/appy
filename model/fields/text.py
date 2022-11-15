@@ -15,7 +15,7 @@ from appy.model.fields import Field
 from appy.utils import string as sutils
 from appy.xml.cleaner import StringCleaner
 from appy.ui.layout import Layouts, Layout
-from appy.database.operators import or_, in_
+from appy.database.operators import and_, in_
 from appy.database.indexes.text import TextIndex
 from appy.model.fields.multilingual import Multilingual
 
@@ -778,13 +778,18 @@ class Text(Multilingual, Field):
     def validateUniValue(self, o, value): return
 
     def getFilterValue(self, value):
-        '''Normalizes p_value and ensures it ends with a star'''
-        return '%s*' % sutils.Normalize.text(value).strip()
+        '''Manipulates p_value such that it can become pertinent search
+           keyword(s).'''
+        r = sutils.Normalize.text(value).strip()
+        # Suffix it with a star only if there is a single keyword
+        if ' ' not in r:
+            r = '%s*' % r
+        return r
 
     @classmethod
     def computeSearchValue(class_, field, req, value=None):
         '''Converts text encoded in a search form into a range search or into
-           individual words within an or-operator.'''
+           individual words within an and-operator.'''
         r = Field.getSearchValue(field, req, value=value).strip()
         if not r: return r
         if r.endswith('*'):
@@ -800,7 +805,7 @@ class Text(Multilingual, Field):
             if not r:
                 r = ''
             elif len(r) > 1:
-                r = or_(*r)
+                r = and_(*r)
             else:
                 r = r[0]
         return r
