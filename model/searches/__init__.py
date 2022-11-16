@@ -360,7 +360,7 @@ class Search:
             # Search among static or dynamic searches
             r = modelClass.getSearch(name, tool)
         # The search may not exist
-        if not r: tool.raiseUnauthorized(tool.translate('search_broken'))
+        if not r: tool.raiseMessage(tool.translate('search_broken'))
         # Return a UiSearch if required
         return r if not ui else UiSearch(r, tool, ctx, initiator, name)
 
@@ -501,7 +501,8 @@ class Search:
 
     # Display results of a search whose name is in the request
     results = Px('''
-     <div var="hook=uiSearch.getRootHook()" id=":hook">
+     <div var="x=uiSearch|tool.raiseMessage(_('search_broken'));
+               hook=uiSearch.getRootHook()" id=":hook">
       <script>:uiSearch.getCbJsInit(mode.outerHook)</script>
       <x if="not mode.inField">::ui.Globals.getForms(tool)</x>
 
