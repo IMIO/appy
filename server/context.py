@@ -187,7 +187,9 @@ class AuthenticationContext:
     # This method must not be overridden
     def getName(self, tool, user, context):
         '''Returns the name of some given p_context'''
-        for ctx, name in self.getContexts(tool, user):
+        contexts = self.getContexts(tool, user)
+        if not contexts: return
+        for ctx, name in contexts:
             if ctx == context:
                 return name
 

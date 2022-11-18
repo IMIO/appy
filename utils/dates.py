@@ -241,7 +241,7 @@ def periodsIntersect(start1, end1, start2, end2):
        [start2, end2] ?'''
     # p_start1 and p_start2 must be DateTime instances.
     # p_end1 and p_end2 may be DateTime instances or None.
-    # ~~~
+    # ~
     # Convert all parameters to seconds since the epoch
     end1 = sys.maxsize if end1 is None else end1.millis()
     end2 = sys.maxsize if end2 is None else end2.millis()
