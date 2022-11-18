@@ -25,7 +25,7 @@ formatsByTemplate = {'.odt': ('pdf', 'doc', 'docx', 'odt'),
 
 # UI-friendly acronyms for output formats
 uiFormats = {'pdf':'PDF', 'doc':'DOC', 'docx':'DOX', 'odt':'ODT',
-             'xls':'XLS', 'xlsx':'XLX', 'ods':'ODS'}
+             'xls':'XLS', 'xlsx':'XLX', 'ods':'ODS', 'csv':'CSV'}
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Evaluator:

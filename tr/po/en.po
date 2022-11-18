@@ -472,6 +472,10 @@ msgstr "XLS (Microsoft Excel)"
 msgid "xlsx"
 msgstr "XLSX (Microsoft Excel)"
 
+#. Default: "CSV"
+msgid "csv"
+msgstr "CSV (Comma-Separated Values)"
+
 #. Default: "frozen"
 msgid "frozen"
 msgstr "frozen"
