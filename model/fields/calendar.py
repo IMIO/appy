@@ -504,7 +504,7 @@ class Legend:
         <td align="center">
          <table width="13px">
           <tr><td style=":entry.style"
-                  align="center">:entry.content or '&nbsp;'</td></tr>
+                  align="center">::entry.content or '&nbsp;'</td></tr>
          </table>
         </td>
         <td style=":field.legend.getCssText()">::entry.name</td>
