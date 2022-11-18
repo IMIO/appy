@@ -181,7 +181,7 @@ class Pod(Field):
 
     # Icon allowing to generate a given template in a given format
     pxIcon = Px('''
-     <div class="clickable podi"
+     <div class="clickable podi" data-crumb=":info.crumb or ''"
           data-autoclick=":'0' if dropdownEnabled else '1'"
        var="fname=field.getIconText(fmt, frozen, onCell);
             linkId=field.getTagId(_ctx_, fmt);
@@ -513,6 +513,7 @@ class Pod(Field):
         f.podFormat.value = podFormat;
         f.queryData.value = queryData;
         f.customParams.value = customParams || '';
+        f.crumb.value = node.getAttribute('data-crumb') || '';
         manageQueryData(f, queryData, checkHook);
         if (mailing) {
           f.mailing.value = mailing;
@@ -573,7 +574,7 @@ class Pod(Field):
       optimalColumnWidths=False, distributeColumns=None, script=None,
       pdfOptions='ExportNotes=True', tabbedCR=False, fonts=None, confirm=False,
       raiseOnError=False, action=None, beforeAction=None, multiObjects=False,
-      finalizeFunction=None):
+      finalizeFunction=None, crumb=None):
         # Param "template" stores the path to the pod template(s). If there is
         # a single template, a string is expected. Else, a list or tuple of
         # strings is expected. Every such path must be relative to your
@@ -807,6 +808,23 @@ class Pod(Field):
         # One or several "finalize" function(s) can be passed. Consult the
         # Renderer constructor for more info.
         self.finalizeFunction = finalizeFunction
+        # The "crumb" defines some additional info on your pod field, allowing
+        # to give more context for producing a pod result. Suppose you have a
+        # pod field defined on a class named Activity, representing activities
+        # for children. Every activity occurs at several periods ; beyond the
+        # wish to get a pod result containing all children registered to all
+        # periods, you also want your users to be able to produce a pod for each
+        # period. So you decide to build a custom widget with one table per
+        # period; on every such table, you want to reuse the global pod field,
+        # but for producing a result for that specific period only. This is
+        # possible by defining a "crumb". In the example, the crumb is the
+        # period identifier. Thanks to it, the pod field may "find its way" and
+        # know what specific pod to produce among all possible results (one per
+        # period + the global one). It is like Tom Thumb leaving a bread crumb
+        # on its path to find it back later. Attribute "crumb" must contain a
+        # method accepting no arg and returning a string. This string will then
+        # be available in the POD context, as request attribute req.crumb.
+        self.crumb = crumb
         # Call the base constructor
         Field.__init__(self, None, (0,1), None, None, show, renderable, page,
           group, layouts, move, False, True, None, None, False, None,
@@ -943,16 +961,18 @@ class Pod(Field):
     def getVisibleTemplates(self, o):
         '''Returns, among self.template, the template(s) that can be shown'''
         r = []
+        # Compute a crumb if any
+        crumb = self.crumb(o) if self.crumb else None
         if not self.showTemplate:
             # Show them all in the formats specified in self.formats
             for template in self.template:
-                r.append(O(template=template, formats=self.formats,
+                r.append(O(template=template, formats=self.formats, crumb=crumb,
                            freezeFormats=self.getFreezeFormats(o, template)))
         else:
             for template in self.template:
                 formats = self.getVisibleFormats(o, template)
                 if not formats: continue
-                r.append(O(template=template, formats=formats,
+                r.append(O(template=template, formats=formats, crumb=crumb,
                            freezeFormats=self.getFreezeFormats(o, template)))
         # Compute the already frozen documents, and update the available formats
         # accordingly when self.showFrozenOnly is True.
@@ -1101,7 +1121,7 @@ class Pod(Field):
 
     def getValue(self, o, name=None, layout=None, template=None, format=None,
                  result=None, queryData=None, computeCustomContext=None,
-                 secure=True, executeAction=True, single=None):
+                 secure=True, executeAction=True, single=None, crumb=None):
         '''For a pod field, getting its value means computing a pod document or
            returning a frozen one.'''
         # A pod field differs from other field types because there can be
@@ -1417,7 +1437,7 @@ class Pod(Field):
         format = req.podFormat
         mailing = req.mailing
         # Generate a (or get a frozen) document
-        r = self.getValue(o, template=template, format=format,
+        r = self.getValue(o, template=template, format=format, crumb=req.crumb,
                           queryData=req.queryData, computeCustomContext=True)
         if isinstance(r, str):
             # An error has occurred, and "r" contains the error message

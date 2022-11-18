@@ -102,6 +102,7 @@ class Globals:
       <input type="hidden" name="queryData"/>
       <input type="hidden" name="criteria"/>
       <input type="hidden" name="customParams"/>
+      <input type="hidden" name="crumb"/>
       <input type="hidden" name="checkedIds"/>
       <input type="hidden" name="checkedSem"/>
       <input type="hidden" name="freezeAction"/>
