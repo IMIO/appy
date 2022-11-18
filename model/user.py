@@ -319,7 +319,7 @@ class User(Base):
 
     roles = Select(show=showRoles, indexed=True, width=40, height=10,
       fwidth='3em', validator=Selection(lambda o: o.model.getGrantableRoles(o)),
-      render='checkbox', **pm)
+      render='checkbox', checkAll=False, **pm)
 
     def addRole(self, role):
         '''Adds p_role among p_self.roles'''

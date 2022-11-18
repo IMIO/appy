@@ -166,7 +166,8 @@ class Select(Field):
      <div if="not isSelect" style=":field.getWidgetStyle()">
 
       <!-- (Un)check all -->
-      <div if="field.render == 'checkbox' and len(possibleValues) &gt; 1"
+      <div if="field.render == 'checkbox' and field.checkAll and
+               (len(possibleValues) &gt; 1)"
            class="divAll" var="allId='%s_all' % name">
        <input type="checkbox" class="checkAll" id=":allId" name=":allId"
               onclick="toggleCheckboxes(this)"/>
@@ -244,7 +245,8 @@ class Select(Field):
       sdefault='', scolspan=1, swidth=None, sheight=None, fwidth='7em',
       fheight=None, persist=True, inlineEdit=False, view=None, cell=None,
       buttons=None, edit=None, xml=None, translations=None,
-      noValueLabel='choose_a_value', render='select', svalidator=None):
+      noValueLabel='choose_a_value', render='select', svalidator=None,
+      checkAll=True):
         # When choosing a value in a select widget, the entry representing no
         # value is translated according the label defined in attribute
         # "noValueLabel". The default one is something like "[ choose ]", but if
@@ -281,6 +283,11 @@ class Select(Field):
         # Validator to use on the *s*earch form. This has sense only if you use
         # a Selection instance as validator.
         self.svalidator = svalidator or validator
+        # When render="checkbox", by default, an additional checkbox will be
+        # rendered, allowing to select or unselect all possible values. If this
+        # global checkbox must not be rendered, set the following attribute to
+        # False.
+        self.checkAll = checkAll
         # Default width, height and maxChars
         if width is None:
             self.width = 30
