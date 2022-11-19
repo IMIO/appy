@@ -2,17 +2,19 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Some of the imports below are just there to belong to the interpreter context
+
 import io
-from DateTime import DateTime # Just to have it in the interpreter context
+from DateTime import DateTime
 from contextlib import redirect_stdout
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
-# Some of these imports are just there to put names in the interpreter context
 
 from appy.px import Px
 from appy.utils import Traceback
 from appy.xml.escape import Escape
 from appy.model.fields import Field
+from appy.model.fields.hour import Hour
 from appy.utils import string as sutils
 from appy.database.operators import or_, and_, in_
 
