@@ -16,6 +16,7 @@ from appy.model.workflow.transition import Transition
 # Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 UN_TRAV   = 'Untraversable element "%s" while traversing %s.'
 TRAV_KO   = 'Unknown traversal type "%s".'
+TR_INF_NN = 'Traversal info is None.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NotFound(Exception):
@@ -207,6 +208,10 @@ class Traversal:
                     r = self.user.login == info
                 else:
                     raise self.handler.guard.Error(TRAV_KO % type)
+        elif info is None:
+            # This should not happen
+            r = False
+            self.tool.log(TR_INF_NN, type='warning')
         else:
             # A tuple or list of logically OR'ed infos. Having at least one of
             # the listed prerogatives allows the user to traverse.
