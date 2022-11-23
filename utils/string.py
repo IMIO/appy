@@ -243,11 +243,24 @@ class Variables:
     withStars = re.compile('\*(\w+?)\*', re.S)
 
     @classmethod
-    def replace(class_, s, o, stars=False):
-        '''Replaces, in string p_s, any variable matching class_.definition with
-           a value as found on the homonym attribute stored on this
+    def getValue(class_, o, name, o2=None):
+        '''Get the value of the attribute having this p_name on this
            p_o(bject).'''
-        fun = lambda match: getattr(o, match.group(1))
+        # If the attribute does not exist on p_o, and p_o2 is passed, try to get
+        # its value on p_o2.
+        try:
+            return getattr(o, name)
+        except AttributeError as err:
+            if o2 is None:
+                raise err
+            return class_.getValue(o2, name)
+
+    @classmethod
+    def replace(class_, s, o, stars=False, o2=None):
+        '''Replaces, in string p_s, any variable matching class_.withStars (if
+           p_stars is True) or class_.withPipes (if p_stars if False) with a
+           value as found on the homonym attribute stored on this p_o(bject).'''
+        fun = lambda match: class_.getValue(o, match.group(1), o2)
         rex = class_.withStars if stars else class_.withPipes
         return rex.sub(fun, s)
 

@@ -227,8 +227,8 @@ class Px:
                     css = self.css
                     if css:
                         # Patch CSS if a CSS patcher is found
-                        css = context['_css_'](css) if '_css_' in context \
-                                                    else css
+                        css = context['_css_'](css, context.get('o')) \
+                              if '_css_' in context else css
                         r = ('<style>%s</style>\n' % css) + r
             # Include the prologue
             if self.prologue:

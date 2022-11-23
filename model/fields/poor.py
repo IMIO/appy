@@ -18,15 +18,15 @@ class AutoCorrect:
     # Standard replacements: chars being prefixed with a nbsp
     standard = {}
 
-    # Chars that mus be prefixed with a non-breakable blank
+    # Chars that must be prefixed with a non-breakable space
     nbPrefixed = (':', ';', '!', '?', '%')
     for char in nbPrefixed:
-        standard[char] = [('code', ' '), ('text', char)]
+        standard[char] = [('text', ' %s' % char)]
 
     # Replace double quotes by "guillemets" (angle quotes)
     quotes = {'"': {'if':'blankBefore',
-                    1: [('text', '«'), ('code', ' ')],
-                    0: [('code', ' '), ('text', '»')]}}
+                    1: [('text', '« ')],
+                    0: [('text', ' »')]}}
 
     def __init__(self, standard=True, quotes=True):
         '''Produces a specific auto-correct configuration'''
@@ -58,12 +58,9 @@ class Icon:
         # p_type      | p_data
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "wrapper"   | the icon corresponds to a portion of text that will be
-        #             | wrapped around a start and end char. p_data contains 2
-        #             | chars: the start and end wrapper chars.
-        #             | 
-        #             | For example, icon "bold" is of type "wrapper", with data
-        #             | being "[]". When applied to selected text "hello", it
-        #             | becomes "[hello]".
+        #             | wrapped around some tag, using browser function
+        #             | document.execCommand. p_data contains the command to
+        #             | pass to this function.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "char"      | the icon corresponds to a char to insert into the field.
         #             | p_data is the char to insert.
@@ -150,10 +147,10 @@ Icon.all = [
   Icon('italic',    'wrapper', data='italic', shortcut=73),
   Icon('highlight', 'wrapper', data='hiliteColor', args='yellow', shortcut=72),
   Icon('unformat',  'wrapper', data='removeFormat', shortcut=77),
-  # Insert a non breaking space
-  Icon('blank',     'char',    data='code', args=' ', shortcut=32),
+  # Insert a non-breaking space
+  Icon('blank',     'char',    data=' ', shortcut=32),
   # Insert a non breaking dash
-  Icon('dash',      'char',    data='code', args='‑', shortcut=54),
+  Icon('dash',      'char',    data='‑', shortcut=54),
   Icon('bulleted',  'wrapper', data='insertUnorderedList'),
   Icon('sub',       'wrapper', data='subscript'),
   Icon('sup',       'wrapper', data='superscript'),
@@ -169,11 +166,8 @@ class Poor(Rich):
     Icon = Icon
     AutoCorrect = AutoCorrect
 
-    # A poor-coded non-breaking space
-    nbsp = '<code> </code>'
-
     # Unilingual view
-    viewUni = cellUni = Px('''<div
+    viewUni = cellUni = Px('''<div style=":field.getWidgetStyle(False)"
      class=":field.getAttribute(o, 'viewCss')">::field.getInlineEditableValue(o,
        value or '-', layout, name=name, language=lg)</div>''')
 
@@ -187,7 +181,8 @@ class Poor(Rich):
       </div>
       <!-- Configure auto-correct -->
       <script if="field.autoCorrect">::field.autoCorrect.inJs(tbId)</script>
-      <script>var nonCharCodes=[8,16,33,34,35,36,37,38,39,40,46,255];</script>
+      <script>var nonCharCodes=[0,8,9,13,16,18,20,33,34,35,36,37,38,39,40,46,
+                                219,225,229,255];</script>
      </x> ''',
 
      css = '''
@@ -200,145 +195,13 @@ class Poor(Rich):
 
      js='''
       class Surgeon {
-        /* Manipulates DOM nodes to manage poor-coded non-breakable chars (NBs)
-           and perform other various DOM triturations.
-
-           The Poor field allows to visualize NBs with a grey background. It
-           does so by wrapping any NB into a "code" tag containing a single
-           TextNode whose sole content is a single UTF-8 char being the NB. */
-
-        // Supported NB UTF-8 chars
-        static nbChars = [' ', '‑'];
-
-        constructor(text) {
-          // A string possibly containing UBs to convert
-          this.text = text;
-          /* If p_text contains NBs, p_this.text will contain (after execution
-             of m_proceed) the p_text part found before the first NB is met.
-             Then, p_this.nodes will contain code tags and text nodes
-             representing the rest of the p_text. If p_text is only made of NBs,
-             p_this.text will be the empty string at the end of the process. */
-          this.nodes = null; // Will store an array, if needed
-          this.proceed();
-        }
-
-        getNextNB(s) {
-          /* Get the next NB and its position in this p_s(tring), as a dict
-
-                     ~{'char':s_nb, 'index':i_index}~.
-
-             Returns null if p_s does not contain any NB. */
-          let r, j;
-          // Walk all possible NBs
-          for (const char of Surgeon.nbChars) {
-            j = s.indexOf(char);
-            if (j != -1) {
-              // A NB has been found
-              if (!r) {
-                // This is the first encountered NB
-                r = {'char':char, 'index':j};
-              }
-              else {
-                // Set or keep, in v_r, the char having the smallest index
-                if (j < r['index']) {
-                  r['char'] = char;
-                  r['index'] = j;
-                }
-              }
-            }
-          }
-          return r;
-        }
-
-        addNode(node) {
-          // Adds this p_node to p_this.nodes
-          if (!this.nodes) this.nodes = [];
-          this.nodes.push(node);
-        }
-
-        proceed() {
-          /* Extracts NBs from p_this.text, and possibly push parts of it in
-             p_this.nodes (see constructor) */
-          let tail = this.text,
-              found = false, // true if at least one NB is found
-              unbreak, part, code;
-          // Loop until we have "consumed" p_tail in its entirety
-          while (tail) {
-            // Find the next NB
-            unbreak = this.getNextNB(tail);
-            if (!unbreak) {
-              // No more NB: possibly store v_tail as a TextNode
-              if (found) this.addNode(document.createTextNode(tail));
-              tail = '';
-            }
-            else {
-              // Manage the text part found before the NB
-              if (unbreak['index'] > 0) {
-                part = tail.substring(0, unbreak['index']);
-                if (!found) {
-                  // 1st found NB: p_part must be stored in p_this.text
-                  this.text = part;
-                }
-                else { // Add a TextNode in p_this.nodes
-                  this.addNode(document.createTextNode(part));
-                }
-              }
-              else if (!found) { this.text = '' }
-              // Add a code tag containing the NB
-              code = document.createElement('code');
-              code.appendChild(document.createTextNode(unbreak['char']));
-              this.addNode(code);
-              // Remove v_tail's "consumed" part
-              tail = tail.substring(unbreak['index']+1);
-              found = true;
-            }
-          }
-        }
+        // Performs various DOM triturations
 
         static wrapNodes(nodes) {
           // Wrap this array of p_nodes into a "div" tag
           let r = document.createElement('div');
           for (const node of nodes) r.appendChild(node);
           return r;
-        }
-
-        getNodes(wrapped) {
-          /* After p_proceed has done its job, this method returns an array of
-             nodes [TextNode(this.text)] + this.nodes if p_wrapped is false, or
-             a "div" tag having these nodes as children else. */
-          let r = this.nodes || [];
-          if (this.text) {
-            r.unshift(document.createTextNode(this.text));
-          }
-          // Wrap those nodes as children of a main "div" tag if requested
-          if (wrapped) r = Surgeon.wrapNodes(r);
-          return r;
-        }
-
-        replaceText(textNode) {
-          // Text in p_textNode must be replaced with the work of the surgeon
-          let parent = textNode.parentNode,
-              last = textNode.nextSibling;
-          if (!parent) return; // May happen with Chromium
-          // Put the leading text in p_textNode if found
-          if (this.text) {
-            // A part of the text must stay in p_textNode
-            textNode.data = this.text;
-          }
-          // Insert the additional nodes
-          for (const node of this.nodes) {
-            parent.insertBefore(node, last);
-            last = node.nextSibling;
-          }
-          // Remove p_textNode if it became empty
-          if (!this.text) parent.removeChild(textNode);
-          // Set the cursor at the end of the replaced text
-          let range = document.createRange(),
-              sel = window.getSelection();
-          range.setStartAfter(parent.lastChild);
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
         }
 
         static cutAt(range) {
@@ -480,7 +343,7 @@ class Poor(Rich):
         }
         else if (type == 'char') {
           // Insert a (sequence of) char(s) into the text
-          Surgeon.inject(data, args);
+          Surgeon.inject('text', data);
         }
         else if (type == 'action') {
           // Actions
@@ -510,25 +373,23 @@ class Poor(Rich):
           sel.removeAllRanges();
           sel.addRange(range);
         }
-        else if (current.parentNode.tagName == 'CODE') {
-          // Nothing can be encoded in a code tag, position the caret after it
-          range.setStartAfter(current.parentNode);
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
       }
 
       blankBefore = function(div) {
         /* Returns true if there is a blank (or nothing) before the currently
            selected char within p_div. */
-        let sel = window.getSelection(),
-            range = sel.getRangeAt(0),
-            offset = range.startOffset;
-        if ((offset == 0) || (range.startContainer.nodeType != Node.TEXT_NODE)){
-          return true;
+        const sel = window.getSelection(),
+              range = sel.getRangeAt(0),
+              offset = range.startOffset;
+        if (offset == 0) return true;
+        let container = range.startContainer, prev;
+        if (container.nodeType == Node.TEXT_NODE) {
+          prev = container.textContent[offset-1];
         }
-        let prev = range.startContainer.textContent[range.startOffset-1];
+        else {
+          prev = container.childNodes[offset-1].data.slice(-1);
+        }
+        console.log('Previous char is' + prev);
         return (prev === ' ') || (prev === ' '); // Breaking and non-breaking
       }
 
@@ -550,7 +411,6 @@ class Poor(Rich):
       onPoorKeyDown = function(event) {
         // Block change observation and manage this change ourselves
         let div = event.target;
-        div.changeFromEvent = true;
         if (event.ctrlKey || (event.altKey && event.keyCode == 32)) {
           /* Manage keyboard shortcuts. Key "alt" is allowed as alternative to
              "ctrl" when hitting "space" (32) (for Mac users). */
@@ -570,6 +430,10 @@ class Poor(Rich):
             if (autoCorrect && event.key in autoCorrect) {
               // Insert the replacement nodes instead of this char
               applyAutoCorrect(div, autoCorrect[event.key]);
+              event.preventDefault();
+            }
+            else if (!event.isComposing) {
+              Surgeon.inject('text', event.key);
               event.preventDefault();
             }
           }
@@ -592,9 +456,7 @@ class Poor(Rich):
 
       // Insert pasted data into a poor field
       getPastedData = function(event) {
-        // Block change observation and manage this change ourselves
         let div = event.target;
-        div.changeFromEvent = true;
         // Prevent data to be directly injected into v_div
         event.stopPropagation();
         event.preventDefault();
@@ -602,58 +464,23 @@ class Poor(Rich):
         let clipboardData = event.clipboardData || window.clipboardData,
             pastedData = clipboardData.getData('Text');
         if (!pastedData) return;
-        // Split v_pastedData into paragraphs.
+        // Split v_pastedData into paragraphs
         let paras = pastedData.split('\\n'),
-            first = paras.shift();
-            surgeon = new Surgeon(first);
-        /* Insert the 1st line as simple series of TextNodes + "code" tags for
-           NB chars. */
-        Surgeon.inject('array', surgeon.getNodes(false));
+            para = paras.shift();
+        /* Add the first line as simple text in the current paragraph (an empty
+           paragraph being added by setCaret if v_div is empty). */
+        setCaret(div);
+        Surgeon.inject('text', para);
         // Insert the next lines as "div" tags
         if (paras.length > 0) {
           // Replace every paragraph with a "div" tag
           for (let i=0; i < paras.length; i++) {
-            surgeon = new Surgeon(paras[i]);
-            paras[i] = surgeon.getNodes(true);
+            para = document.createElement('div');
+            para.appendChild(document.createTextNode(paras[i]));
+            paras[i] = para;
           }
           Surgeon.inject('array', paras, true);
         }
-      }
-
-      // Callback function to execute when mutations are observed
-      const onPoorMutation = (mutationList, observer) => {
-        let target = observer.target, surgeon;
-        for (const mutation of mutationList) {
-          if (mutation.type === 'characterData') {
-            // Text has changed: handle this, if not already done by an event
-            if (!target.changeFromEvent) {
-              // Replace NBs with their poor equivalent (if found)
-              surgeon = new Surgeon(mutation.target.data);
-              if (surgeon.nodes) surgeon.replaceText(mutation.target);
-            }
-          }
-          target.changeFromEvent = false; // Reinitialise the flag
-        }
-      }
-
-      /* Events to observe. Even "childList" is only interesting to reinitialise
-         the "changeFromEvent" flag after a "paste" event occurred. */
-      const poorObserveEvents = { characterData: true, subtree: true,
-                                  childList: true };
-
-      // Initialises an observer on a poor field
-      initPoorObserver = function(tag, isID) {
-        let div = (isID)? document.getElementById(tag) :tag,
-            observer = div.changeObserver;
-        if (!observer) div.changeObserver= new MutationObserver(onPoorMutation);
-        div.changeObserver.target = div; // Find p_div from the callback
-        div.changeObserver.observe(div, poorObserveEvents);
-        /* Add a flag indicating if the last change that occurred on this p_div
-           came from an event (paste, keydown) or not (third-party software
-           updating the DOM tree rooted at p_div). If false, it indicates that
-           we have no info about the last change. If true, we know the last
-           change came from an event. */
-        div.changeFromEvent = false;
       }''')
 
     # Buttons for saving or canceling while inline-editing the field, rendered
@@ -690,16 +517,14 @@ class Poor(Rich):
       <x if="not showToolbar and hostLayout">:field.pxInlineActions</x>
 
       <!-- The poor zone in itself -->
-      <div contenteditable="true" class="xhtmlE" style=":field.getWidgetStyle()"
+      <div contenteditable="true" class="xhtmlE"
+           style=":field.getWidgetStyle(True)"
            onfocus=":field.onFocus(pid, lg, hostLayout)"
            onpaste="getPastedData(event)" onkeydown="onPoorKeyDown(event)"
            id=":'%sP' % pid" >::field.getInputValue(inRequest, requestValue,
                                                     value)</div>
       <!-- The hidden form field -->
       <textarea id=":pid" name=":pid" style="display:none"></textarea>
-
-      <!-- Add a change observer -->
-      <script>:'initPoorObserver(%s,true)' % q(pid+'P')</script>
      </x>''')
 
     def __init__(self, validator=None, multiplicity=(0,1), default=None,
@@ -713,7 +538,7 @@ class Poor(Rich):
       languages=('en',), languagesLayouts=None, viewSingle=False,
       inlineEdit=False, view=None, cell=None, buttons=None, edit=None,
       xml=None, translations=None, inject=False, valueIfEmpty='',
-      viewCss='xhtmlV', autoCorrect=AutoCorrect.default):
+      viewCss='xhtmlV', autoCorrect=AutoCorrect.default, font=None):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
@@ -727,13 +552,35 @@ class Poor(Rich):
         # As-you-type replacements are defined by placing an Autocorrect object
         # in this attribute.
         self.autoCorrect = autoCorrect
+        # If you want to use a specific font shipped with Appy, set its name in
+        # attribute "font". Currently, there is only a single font being
+        # available:
+        #                          NimbusSans-NBV
+        #
+        # It is a variant of the open soure font "Nimbus Sans", but whose
+        # *N*on-*B*reaking chars are made *V*isible, the same way they are in
+        # word processors, when mode "Show formatting marks" is enabled.
+        #
+        # WARNING
+        #
+        # In order to be loaded by the browser, the font as defined here must
+        # also be defined in the UI config, within list config.ui.customFonts.
+        self.font = font
 
     # Do not load ckeditor
     def getJs(self, o, layout, r, config): return
 
-    def getWidgetStyle(self):
+    def getWidgetStyle(self, edit):
         '''Returns style for the main poor tag'''
-        return 'width:%s;min-height:%s' % (self.width, self.height)
+        # Potentially use a specific font shipped with Appy
+        font = 'font-family:"%s",sans-serif' % self.font if self.font else None
+        if edit:
+            r = 'width:%s;min-height:%s' % (self.width, self.height)
+            if font:
+                r = '%s;%s' % (r, font)
+        else:
+            r = font if font else ''
+        return r
 
     def onFocus(self, pid, lg, hostLayout):
         '''Returns the Javascript code to execute when the poor widget gets

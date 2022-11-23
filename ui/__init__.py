@@ -223,6 +223,12 @@ class Config:
         # injected into all the pages from your app.
         self.googleFonts = ('Rajdhani',)
 
+        # You may need to use custom fonts, loaded via font-face CSS at-rules.
+        # Appy itself contains at least one custom font (see
+        # appy/model/fields/poor.py). Any such font must be declared in the
+        # following attribute using its short name, ie, "NimbusSans-NBV".
+        self.customFonts = []
+
         # If you want to add specific CSS classes to some standard Appy parts,
         # specify a function in the following attribute. The function will
         # receive, as args, the name of the concerned part, the current root PX
@@ -756,10 +762,11 @@ class Config:
             r = tool.allows('write')
         return r
 
-    def patchCss(self, css):
+    def patchCss(self, css, o=None):
         '''Replaces variables possibly defined in this p_css code with values
            from p_self.'''
-        return Variables.replace(css, self)
+        # Values from p_self can be extended to also include values from p_o
+        return Variables.replace(css, self, o2=o)
 
     def getUserText(self, user):
         '''Get the text to show within the user link'''

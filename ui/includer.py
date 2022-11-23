@@ -4,9 +4,15 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+F_FILE_KO   = 'Appy does not have custom font "%s".'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Includer:
     '''Produces chunks of XHTML for including external files like CSS and
        Javascript files.'''
+
+    # Custom Appy fonts
+    fonts = {'NimbusSans-NBV': 'appy/NimbusSans-NBV.otf'}
 
     @classmethod
     def css(class_, url, version=None):
@@ -26,6 +32,20 @@ class Includer:
            page.'''
         return '<script>var siteUrl="%s", sameSite="%s"</script>' % \
                (tool.siteUrl, tool.config.server.sameSite)
+
+    @classmethod
+    def getFontFaces(class_, tool, fonts):
+        '''Generate font-face at-rules, for every font defined in p_fonts'''
+        r = ''
+        for font in fonts:
+            fontFile = class_.fonts.get(font)
+            if not fontFile:
+                tool.log(F_FILE_KO % font, type='warning')
+                continue
+            url = '%s/static/%s' % (tool.siteUrl, fontFile)
+            r += '@font-face {font-family:"%s"; src:url("%s") ' \
+                 'format("opentype")}' % (font, url)
+        return '<style>%s</style>' % r
 
     @classmethod
     def getGlobal(class_, handler, config, dir):
@@ -48,13 +68,17 @@ class Includer:
                 r.append(class_.css(tool.buildUrl(name, ram=True),
                                     version=sconfig.versions.get(name)))
         # Get CSS include for Google Fonts, when some of them are in use
-        if config.ui.googleFonts:
-            r.append(class_.css(config.ui.getFontsInclude()))
+        ui = config.ui
+        if ui.googleFonts:
+            r.append(class_.css(ui.getFontsInclude()))
         # Get Javascript files
         for base, path in sconfig.map.items():
             for jsFile in path.glob('*.js'):
                 r.append(class_.js(tool.buildUrl(jsFile.name, base=base),
                                    version=sconfig.versions.get(jsFile.name)))
+        # Get font-face declarations, when relevant
+        if ui.customFonts:
+            r.append(class_.getFontFaces(tool, ui.customFonts))
         # Initialise global JS variables
         r.append(class_.vars(tool))
         return '\n'.join(r)
