@@ -410,7 +410,8 @@ class Poor(Rich):
       onPoorKeyDown = function(event) {
         // Block change observation and manage this change ourselves
         let div = event.target;
-        if (event.ctrlKey || (event.altKey && event.keyCode == 32)) {
+        if (event.ctrlKey || event.metaKey ||
+            (event.altKey && event.keyCode == 32)) {
           /* Manage keyboard shortcuts. Key "alt" is allowed as alternative to
              "ctrl" when hitting "space" (32) (for Mac users). */
           if (event.keyCode in div['icons']) {
