@@ -468,7 +468,6 @@ class Poor(Rich):
         /* For the first paragraph, if we are at the root of the (empty)
            contenteditable zone, wrap it in a paragraph. Else, inject text in
            the current paragraph. */
-        console.log('Contenteditable ? ' + event.target.getAttribute('contenteditable'));
         if (event.target.getAttribute('contenteditable') === 'true') {
             setCaret(event.target);
         }
