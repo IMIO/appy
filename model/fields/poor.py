@@ -413,7 +413,9 @@ class Poor(Rich):
         if (event.ctrlKey || event.metaKey ||
             (event.altKey && event.keyCode == 32)) {
           /* Manage keyboard shortcuts. Key "alt" is allowed as alternative to
-             "ctrl" when hitting "space" (32) (for Mac users). */
+             "ctrl" when hitting "space" (32) (for Mac users), while key "meta"
+             seems to be a replacement for "ctrl" on Mac for some shortcuts like
+             cut and paste. */
           if (event.keyCode in div['icons']) {
             // Perform the icon's action
             setCaret(div);
@@ -461,7 +463,7 @@ class Poor(Rich):
         event.preventDefault();
         // Get pasted data via the clipboard API
         let clipboardData = event.clipboardData || window.clipboardData,
-            pastedData = clipboardData.getData('Text');
+            pastedData = clipboardData.getData('text');
         if (!pastedData) return;
         // Split v_pastedData into paragraphs
         let paras = pastedData.split('\\n'),
@@ -483,6 +485,13 @@ class Poor(Rich):
           }
           Surgeon.inject('array', paras, true);
         }
+      }
+
+      // Mamipulates data copied withi a poor field
+      getCopiedData = function(event) {
+        const sel = document.getSelection();
+        event.clipboardData.setData('text/plain', sel.toString());
+        event.preventDefault();
       }''')
 
     # Buttons for saving or canceling while inline-editing the field, rendered
@@ -522,7 +531,8 @@ class Poor(Rich):
       <div contenteditable="true" class="xhtmlE"
            style=":field.getWidgetStyle(True)"
            onfocus=":field.onFocus(pid, lg, hostLayout)"
-           onpaste="getPastedData(event)" onkeydown="onPoorKeyDown(event)"
+           onpaste="getPastedData(event)" oncopy="getCopiedData(event)"
+           onkeydown="onPoorKeyDown(event)"
            id=":'%sP' % pid" >::field.getInputValue(inRequest, requestValue,
                                                     value)</div>
       <!-- The hidden form field -->
