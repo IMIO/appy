@@ -182,7 +182,7 @@ class Poor(Rich):
       <!-- Configure auto-correct -->
       <script if="field.autoCorrect">::field.autoCorrect.inJs(tbId)</script>
       <script>var nonCharCodes=[0,8,9,13,16,18,20,33,34,35,36,37,38,39,40,46,
-                                219,225,229,255];</script>
+                                219,224,225,229,255];</script>
      </x> ''',
 
      css = '''
