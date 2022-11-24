@@ -52,7 +52,7 @@ class Cleaner(Parser):
                  tagsToIgnoreWithContent=tagsToIgnoreWithContent,
                  tagsToIgnoreKeepContent=tagsToIgnoreKeepContent,
                  attrsToIgnore=attrsToIgnore, propertiesToKeep=None,
-                 attrsToAdd=attrsToAdd, poorCoded=False):
+                 attrsToAdd=attrsToAdd):
         # Call the base constructor
         Parser.__init__(self, env, caller, raiseOnError)
         self.tagsToIgnoreWithContent = tagsToIgnoreWithContent
@@ -64,9 +64,6 @@ class Cleaner(Parser):
         # If None is set, it means: any property is kept.
         self.propertiesToKeep = propertiesToKeep
         self.attrsToAdd = attrsToAdd
-        # Is this cleaner made for cleaning poor-coded chunks of XHTML? If yes,
-        # some specific action will be undergone.
-        self.poorCoded = poorCoded
 
     def startDocument(self):
         # The result will be cleaned XHTML, joined from self.r
@@ -102,7 +99,6 @@ class Cleaner(Parser):
 
     def startElement(self, tag, attrs):
         e = self.env
-        e.inCode = tag == 'code'
         # Dump any previously gathered content if any
         self.dumpCurrentContent()
         # Ignore this tag when appropriate
@@ -182,17 +178,10 @@ class Cleaner(Parser):
                     else:
                         suffix = ''
                     self.r.append('</%s>%s' % (tag, suffix))
-        if tag == 'code':
-            e.inCode = False
 
     def characters(self, content):
         e = self.env
         if e.ignoreContent: return
-        if self.poorCoded and e.inCode and content == ' ':
-            # Some browsers replace non-breaking spaces injected by the poor JS
-            # code, by standard spaces. Ensure, within "code" tags, every space
-            # is a non-breaking one.
-            content = ' '
         # Remove leading whitespace
         current = e.currentContent
         if not current or current[-1] == '\n':
@@ -218,8 +207,6 @@ class Cleaner(Parser):
         # 'ignoreContent' is True if, within the currently ignored tag, we must
         # also ignore its content.
         self.env.ignoreContent = False
-        # Are we in a "code" tag ?
-        self.env.inCode = False
         # If p_wrap is False, p_s is expected to already have a root tag. Else,
         # it may contain a sequence of tags that must be surrounded by a root
         # tag.

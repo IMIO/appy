@@ -389,7 +389,6 @@ class Poor(Rich):
         else {
           prev = container.childNodes[offset-1].data.slice(-1);
         }
-        console.log('Previous char is' + prev);
         return (prev === ' ') || (prev === ' '); // Breaking and non-breaking
       }
 
@@ -456,8 +455,7 @@ class Poor(Rich):
 
       // Insert pasted data into a poor field
       getPastedData = function(event) {
-        let div = event.target;
-        // Prevent data to be directly injected into v_div
+        // Prevent data to be directly injected
         event.stopPropagation();
         event.preventDefault();
         // Get pasted data via the clipboard API
@@ -467,9 +465,13 @@ class Poor(Rich):
         // Split v_pastedData into paragraphs
         let paras = pastedData.split('\\n'),
             para = paras.shift();
-        /* Add the first line as simple text in the current paragraph (an empty
-           paragraph being added by setCaret if v_div is empty). */
-        setCaret(div);
+        /* For the first paragraph, if we are at the root of the (empty)
+           contenteditable zone, wrap it in a paragraph. Else, inject text in
+           the current paragraph. */
+        console.log('Contenteditable ? ' + event.target.getAttribute('contenteditable'));
+        if (event.target.getAttribute('contenteditable') === 'true') {
+            setCaret(event.target);
+        }
         Surgeon.inject('text', para);
         // Insert the next lines as "div" tags
         if (paras.length > 0) {
@@ -619,7 +621,7 @@ class Poor(Rich):
         tagsToIgnore = Cleaner.tagsToIgnoreWithContentStrict
         return Cleaner(attrsToAdd=Cleaner.attrsToAddStrict,
                        propertiesToKeep=Cleaner.propertiesToKeepStrict,
-                       tagsToIgnoreWithContent=tagsToIgnore, poorCoded=True)
+                       tagsToIgnoreWithContent=tagsToIgnore)
 
     def validateUniValue(self, o, value):
         '''As a preamble, ensure p_value is XHTML'''
