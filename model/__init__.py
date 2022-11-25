@@ -5,6 +5,8 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import pathlib
+
+from appy.px import Px
 from appy.model.workflow import Role
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -155,4 +157,38 @@ class Model:
         '''Returns the list of global roles that can be granted to a user'''
         return [(role.name, o.translate('role_%s' % role.name)) \
                 for role in self.grantableRoles]
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                                  PX
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    view = Px('''
+     <x var="className=req.className; model=o.model">
+      <h2>Root classes (+tool) </h2>
+
+      <!-- Class selector -->
+      <select name="classes" var="murl='%s/view?page=model' % tool.url"
+        onchange=":'goto(&quot;%s&amp;className=&quot; + this.value)' % murl">
+       <option value="">-</option>
+       <option for="class_ in model.getRootClasses()" var2="name=class_.name"
+               value=":name" selected=":name == className">:name</option>
+       <option value="Tool">Tool</option>
+      </select>
+
+      <!-- The current class -->
+      <x if="className"
+         var2="class_=model.classes[className]">:class_.pxBox</x>
+     </x>''',
+
+     css='''
+      .mbox>tbody>tr>:nth-child(2) { border:none; background-color:transparent;
+        padding-left:0 }
+      .mbox>tbody>tr>th { text-transform:none; font-size:100%;
+                          text-align:center }
+      .mbox>tbody>tr>td { border-bottom:none; border-top:none }
+      .mbox>tbody>tr:last-child>td:first-child { border-bottom:1px solid black }
+      a.bref, a.bref:visited {
+        padding:0 0.4em; border: 1px solid black; font-weight:bold;
+        background-color:|darkColor|; color:|brightColor| }
+     ''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -9,6 +9,7 @@ import appy.ui
 from appy.tr import po
 from appy.px import Px
 from appy import Config
+from appy.model import Model
 from appy.server import Server
 from appy.utils import Function
 from appy.model.base import Base
@@ -345,6 +346,10 @@ class Tool(Base):
     databaseInfo = Computed(method=Database.view, layouts='f',
       page=Page('database', phase='admin', show=forAdmin,
                 label='Tool_page_database'), **ta)
+
+    modelInfo = Computed(method=Model.view, layouts='f',
+      page=Page('model', phase='admin', show=forAdmin,
+                label='Tool_page_model'), **ta)
 
     # View site's config.py from the UI
     def getConfigPy(self):

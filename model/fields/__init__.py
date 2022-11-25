@@ -435,6 +435,10 @@ class Field:
            onclick=":'askBunchFiltered(%s,%s)' % (q(mode.hook), q(name))"/>
      </div>''')
 
+    # Representation of this field within a class-diagram' class box
+    pxBox = Px('''<tr><td><x>:field.name</x> : <x>:field.type</x></td>
+                      <td></td></tr>''')
+
     def __init__(self, validator, multiplicity, default, defaultOnEdit, show,
       renderable, page, group, layouts, move, indexed, mustIndex, indexValue,
       emptyIndexValue, searchable, filterField, readPermission, writePermission,
@@ -698,6 +702,17 @@ class Field:
         '''Does this type definition allow to define multiple values?'''
         maxOccurs = self.multiplicity[1]
         return maxOccurs is None or maxOccurs > 1
+
+    def umlMultiplicities(self):
+        '''Return p_self's multiplicities in UML format'''
+        s, e = self.multiplicity
+        if e is None:
+            r = '*' if s == 0 else ('%d..*' % s)
+        elif e == s:
+            r = str(s)
+        else:
+            r = '%d..%d' % (s, e)
+        return r
 
     def isSortable(self, inRefs=False):
         '''Can fields of this type be used for sorting purposes, when sorting

@@ -2794,6 +2794,31 @@ class Ref(Field):
             if subName == action.name:
                 return action
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #      Representation of this field within a class-diagram' class box
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    pxBox = Px('''<tr><td></td><td>::field.getAssocLine(tool)</td></tr>''')
+
+    def getAssocLine(self, tool):
+        '''Returns the chunk of code allowing to render this Ref as an
+           association within a class diagram.'''
+        # What kind of association ? Composite or not ?
+        assoc = '◆―' if self.composite else '⸺'
+        # Compute back information
+        back = self.back
+        if back:
+            sback = ' %s %s' % (back.umlMultiplicities(), back.name)
+            assoc2 = '―◆' if back.composite else '⸺'
+        else:
+            sback = ''
+            assoc2 = '⸺'
+        cname = self.class_.__name__
+        return '%s%s ⸻ %s %s %s<a class="bref" href="%s/view?page=model&' \
+               'className=%s">%s</a>' % (assoc, sback, self.name,
+                                         self.umlMultiplicities(), assoc2,
+                                         tool.url, cname, cname)
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def autoref(class_, field):
     '''Defines, a posteriori, a Ref from one class the same one, or to another

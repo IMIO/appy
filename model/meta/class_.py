@@ -808,4 +808,12 @@ class Class(Meta):
      </form>''',
 
      css='''.addFrom input { margin-left:0 }''')
+
+    # PX representing a class-diagram-like box for this class
+    pxBox = Px('''
+     <table class="small mbox">
+      <tr><th>:class_.name</th><th></th></tr>
+      <!-- Fields -->
+      <x for="field in class_.fields.values()">:field.pxBox</x>
+     </table>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
