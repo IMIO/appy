@@ -2818,10 +2818,10 @@ class Ref(Field):
             assoc2 = '⸺'
             breindex = ''
         cname = self.class_.__name__
-        return '%s%s%s ⸻ %s%s %s %s<a class="bref" href="%s/view?page=model&' \
-               'className=%s">%s</a>' % (assoc, sback, breindex, self.name,
-                                         reindex, self.umlMultiplicities(),
-                                         assoc2, tool.url, cname, cname)
+        return '%s%s%s ⸻ %s%s %s %s<a class="bref" href="%s/view?page=' \
+               'model&className=%s">%s</a>' % \
+               (assoc, sback, breindex, self.name, reindex,
+                self.umlMultiplicities(), assoc2, tool.url, cname, cname)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def autoref(class_, field):
