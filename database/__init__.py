@@ -162,6 +162,12 @@ class Database:
     # Database-specific exception class
     class Error(Exception): pass
 
+    # Make some classes available here
+    Catalog = Catalog
+
+    # Some elements will be traversable
+    traverse = {'Catalog': 'Manager'}
+
     # ZODB exceptions that identify a conflict error
     ConflictErrors = (transaction.interfaces.TransactionFailedError,
                       transaction.interfaces.TransientError,

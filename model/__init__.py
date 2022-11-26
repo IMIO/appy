@@ -190,5 +190,6 @@ class Model:
       a.bref, a.bref:visited {
         padding:0 0.4em; border: 1px solid black; font-weight:bold;
         background-color:|darkColor|; color:|brightColor| }
+      .boxIcon { width:1.4em; float:right; padding-top:2px }
      ''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

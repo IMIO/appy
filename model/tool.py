@@ -60,6 +60,7 @@ class Tool(Base):
     ui = appy.ui
     OPage = OPage
     Date = dutils.Date
+    Database = Database
     AuthContext = AuthenticationContext
 
     # While most users have generally the read permission on the tool and

@@ -15,16 +15,25 @@ from BTrees.OOBTree import OOBTree
 from BTrees.IOBTree import IOBTree
 from BTrees.IIBTree import IITreeSet, intersection
 
+from appy.model.utils import Object as O
 from appy.database.operators import Operator
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 VAL_KO     = 'Index "%s" in catalog "%s": wrong %s "%s".'
 INDEX_ERR  = 'Error while indexing %s::%s.'
 INDEX_REC  = 'Recomputing index %s:%s...'
+REC_CONF   = 'You are about to completely recompute index %s::%s.<br/><br/>' \
+             'It currently contains %d value(s) for %d object(s).<br/><br/>' \
+             'Do it ?'
+RECOMP_OK  = 'Index %s::%s successfully recomputed.<br/><br/>' \
+             '#Values went from %d to %d.<br/>#Objects went from %d to %d.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Index(persistent.Persistent):
     '''Abstract base class for any index'''
+
+    # Some elements will be traversable
+    traverse = {}
 
     # Index-specific exception class
     class Error(Exception): pass
@@ -279,8 +288,40 @@ class Index(persistent.Persistent):
         root = handler.dbConnection.root
         catalog.populate(root, handler, {catalog.name:[self]}, forceLog=True)
 
+    traverse['reload'] = 'Manager'
+    @classmethod
+    def reload(class_, tool):
+        '''UI-triggered action that entirely recomputes the index mentioned in
+           the request, by calling m_recompute.'''
+        # Get the index to recompute from the request
+        req = tool.req
+        class_ = tool.model.classes.get(req.catalog)
+        index = tool.getCatalog(class_)[req.index]
+        # Remember the index metrics before recomputation
+        stats = O(valuesBefore=len(index.byValue),
+                  objectsBefore=len(index.byObject))
+        index.recompute(tool)
+        # Compute index metrics after recomputation
+        stats.valuesAfter = len(index.byValue)
+        stats.objectsAfter = len(index.byObject)
+        tool.say(RECOMP_OK % (class_.name, index.name,
+                              stats.valuesBefore, stats.valuesAfter,
+                              stats.objectsBefore, stats.objectsAfter),
+                 fleeting=False)
+        tool.goto() # the referer page
+
+    def getAction(self, o):
+        '''Returns the icon allowing to entirely reindex this index'''
+        name = self.name
+        cname = self.catalog.name
+        msg = REC_CONF % (cname, name, len(self.byValue), len(self.byObject))
+        js = "askConfirm('url','%s/Database/Catalog/Index/reload?" \
+             "catalog=%s&index=%s','%s')" % (o.tool.url, cname, name, msg)
+        return '<img class="clickable boxIcon" src="%s" onclick="%s" ' \
+               'title="Recompute the tied index"/>' % (o.buildSvg('refresh'),js)
+
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # Conversion methods
+    #                            Conversion methods
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     @classmethod

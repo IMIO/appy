@@ -436,8 +436,12 @@ class Field:
      </div>''')
 
     # Representation of this field within a class-diagram' class box
-    pxBox = Px('''<tr><td><x>:field.name</x> : <x>:field.type</x></td>
-                      <td></td></tr>''')
+    pxBox = Px('''
+     <tr>
+      <td><x>:field.name</x> : <x>:field.type</x>
+          <x if="field.indexed">::field.getReindexAction(o)</x></td>
+      <td></td>
+     </tr>''')
 
     def __init__(self, validator, multiplicity, default, defaultOnEdit, show,
       renderable, page, group, layouts, move, indexed, mustIndex, indexValue,
@@ -1192,16 +1196,21 @@ class Field:
         catalog = o.getCatalog(self.container)
         return catalog.get(self.name) if catalog else None
 
+    def getReindexAction(self, o):
+        '''Render an icon allowing to entirely reindex p_self's index'''
+        index = self.getIndex(o)
+        return index.getAction(o) if index else ''
+
     def getIndexValue(self, o, searchable=False, raw=False):
         '''Return a version for this field value on p_o being ready for indexing
            purposes.'''
         # If p_searchable is True, the value must be a string because it is
         # meant to be included in index "searchable".
-        # ~
+        #
         # If p_raw is True, instead of returning the internal value ready to be
         # indexed, it returns the value before being converted to its internal
         # index representation.
-        # ~
+        #
         # Must we produce an index value ?
         if not self.getAttribute(o, 'mustIndex'): return
         # The indexed value is based on the stored field value

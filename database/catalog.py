@@ -65,7 +65,11 @@ class Changes:
 class Catalog(PersistentMapping):
     '''Catalog of database indexes for a given class'''
 
-    traverse = {}
+    # Make some classes available here
+    Index = Index
+
+    # Some elements will be traversable
+    traverse = {'Index': 'Manager'}
 
     # Catalog-specific exception class
     class Error(Exception): pass
