@@ -60,4 +60,7 @@ class RefIndex(Index):
             # Several objects
             r = ' '.join([tied.getShownValue() for tied in value])
         return r
+
+    # The CSS class to use when rendering the "recompute" icon for a Ref index
+    boxIconCss = 'boxIconR'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

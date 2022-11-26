@@ -310,6 +310,10 @@ class Index(persistent.Persistent):
                  fleeting=False)
         tool.goto() # the referer page
 
+    # The CSS class to use when rendering the "recompute" icon. May be
+    # overridden by Index sub-classes;
+    boxIconCss = 'boxIcon'
+
     def getAction(self, o):
         '''Returns the icon allowing to entirely reindex this index'''
         name = self.name
@@ -317,8 +321,9 @@ class Index(persistent.Persistent):
         msg = REC_CONF % (cname, name, len(self.byValue), len(self.byObject))
         js = "askConfirm('url','%s/Database/Catalog/Index/reload?" \
              "catalog=%s&index=%s','%s')" % (o.tool.url, cname, name, msg)
-        return '<img class="clickable boxIcon" src="%s" onclick="%s" ' \
-               'title="Recompute the tied index"/>' % (o.buildSvg('refresh'),js)
+        return '<img class="clickable %s" src="%s" onclick="%s" ' \
+               'title="Recompute the tied index"/>' % \
+               (self.boxIconCss, o.buildSvg('refresh'), js)
 
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                            Conversion methods

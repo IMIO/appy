@@ -2805,19 +2805,23 @@ class Ref(Field):
            association within a class diagram.'''
         # What kind of association ? Composite or not ?
         assoc = '◆―' if self.composite else '⸺'
+        # Can this field be reindexed ?
+        reindex = self.getReindexAction(tool) if self.indexed else ''
         # Compute back information
         back = self.back
         if back:
             sback = ' %s %s' % (back.umlMultiplicities(), back.name)
             assoc2 = '―◆' if back.composite else '⸺'
+            breindex = back.getReindexAction(tool) if back.indexed else ''
         else:
             sback = ''
             assoc2 = '⸺'
+            breindex = ''
         cname = self.class_.__name__
-        return '%s%s ⸻ %s %s %s<a class="bref" href="%s/view?page=model&' \
-               'className=%s">%s</a>' % (assoc, sback, self.name,
-                                         self.umlMultiplicities(), assoc2,
-                                         tool.url, cname, cname)
+        return '%s%s%s ⸻ %s%s %s %s<a class="bref" href="%s/view?page=model&' \
+               'className=%s">%s</a>' % (assoc, sback, breindex, self.name,
+                                         reindex, self.umlMultiplicities(),
+                                         assoc2, tool.url, cname, cname)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def autoref(class_, field):
