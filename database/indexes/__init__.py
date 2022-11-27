@@ -308,6 +308,7 @@ class Index(persistent.Persistent):
                               stats.valuesBefore, stats.valuesAfter,
                               stats.objectsBefore, stats.objectsAfter),
                  fleeting=False)
+        tool.H().commit = True
         tool.goto() # the referer page
 
     # The CSS class to use when rendering the "recompute" icon. May be
