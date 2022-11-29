@@ -177,8 +177,8 @@ class Config:
                 r[appyName] = value.encode()
         return r
 
-    def extractUserLogin(self, headers):
-        '''Identify the user from HTTP p_headers'''
+    def extractUserLogin(self, handler):
+        '''Identify the user from HTTP p_handler.headers'''
         # Check if SSO is enabled
         if not self.enabled: return
         # If the user to identify exists, but as a user from another
@@ -187,11 +187,13 @@ class Config:
         #   converted to a SSO user;
         # - else, there is a problem: log a warning and force an identification
         #   failure.
+        headers = handler.headers
         login = headers.get(self.loginKey) if headers else None
         if login:
             # Apply a transform to the login when relevant
             if self.ldap: login = self.ldap.applyLoginTransform(login)
             # Search for this user
+            tool = handler.tool
             user = tool.search1('User', login=login)
             if user and user.source != 'sso':
                 # Convert it when relevant

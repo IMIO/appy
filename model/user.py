@@ -575,7 +575,7 @@ class User(Base):
         if not login or login == '_s_s_o_':
             sso = handler.config.security.sso
             if sso:
-                login = sso.extractUserLogin(handler.headers)
+                login = sso.extractUserLogin(handler)
                 if login: place = 'sso'
         # e. If all identification methods failed, identify the user as "anon"
         return login or 'anon', password, ctx, place
