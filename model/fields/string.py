@@ -79,9 +79,7 @@ class String(Multilingual, Field):
        id=":inputId" name=":inputId" size=":field.getInputSize()"
        maxlength=":field.maxChars" placeholder=":placeholder"
        value=":field.getInputValue(inRequest, requestValue, value)"
-       style=":'text-transform:%s;%s' % \
-               (field.transform, field.getInputSize(False))"
-       readonly=":field.isReadonly(o)"/>''')
+       style=":field.getWidgetStyle()" readonly=":field.isReadonly(o)"/>''')
 
     search = Px('''
      <input type="text" maxlength=":field.maxChars" size=":field.swidth"
@@ -204,7 +202,7 @@ class String(Multilingual, Field):
       persist=True, transform='none', placeholder=None, languages=('en',),
       languagesLayouts=None, viewSingle=False, inlineEdit=False, view=None,
       cell=None, buttons=None, edit=None, xml=None, translations=None,
-      readonly=False, stripped=True):
+      readonly=False, stripped=True, alignOnEdit='left'):
         # Does this field store an URL ?
         self.isUrl = validator == String.URL
         # "placeholder", similar to the HTML attribute of the same name, allows
@@ -226,6 +224,9 @@ class String(Multilingual, Field):
         # Must the field content be stripped as soon as it is encoded by the
         # user ?
         self.stripped = stripped
+        # On "edit", the alignment of the string encoded in the value can be
+        # "left", "right" or "center".
+        self.alignOnEdit = alignOnEdit
         # Call the base constructors
         Multilingual.__init__(self, languages, languagesLayouts, viewSingle)
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
@@ -268,6 +269,11 @@ class String(Multilingual, Field):
                                        language)
 
     def validateUniValue(self, o, value): return
+
+    def getWidgetStyle(self):
+        '''Get the styles to apply to the input widget on the edit layout'''
+        return 'text-transform:%s;%s;text-align:%s' % \
+               (self.transform, self.getInputSize(False), self.alignOnEdit)
 
     @classmethod
     def getRange(class_, value):

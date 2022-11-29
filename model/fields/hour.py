@@ -17,13 +17,13 @@ class Hour(Field):
      <x var="hPart=hPart | '%s_hour' % name;
              mPart=mPart | '%s_minute' % name;
              hours=range(0,field.maxHour+1)">
-      <select name=":hPart" id=":hPart">
+      <select name=":hPart" id=":hPart" class="hourSel">
        <option value="">-</option>
        <option for="hour in hours"
          var2="zHour=str(hour).zfill(2)" value=":zHour"
          selected=":field.isSelected(o, hPart, 'hour', \
                                      hour, rawValue)">:zHour</option>
-      </select> : 
+      </select> <x>:field.editSep</x> 
       <select var="minutes=range(0, 60, field.minutesPrecision)"
               name=":mPart" id=":mPart">
        <option value="">-</option>
@@ -36,6 +36,9 @@ class Hour(Field):
 
     hourParts = ('hour', 'minute')
 
+    # Default separator between "hour" and "minute" parts
+    defaultSep = ':'
+
     def __init__(self, validator=None, multiplicity=(0,1), default=None,
       defaultOnEdit=None, hourFormat=None, maxHour=23, minutesPrecision=5,
       show=True, renderable=None, page='main', group=None, layouts=None, move=0,
@@ -44,7 +47,7 @@ class Hour(Field):
       historized=False, mapping=None, generateLabel=None, label=None,
       sdefault=None, scolspan=1, swidth=None, sheight=None, persist=True,
       view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None):
+      translations=None, editSep=defaultSep):
         # If no p_hourFormat is specified, the application-wide tool.hourFormat
         # is used instead.
         self.hourFormat = hourFormat
@@ -56,6 +59,10 @@ class Hour(Field):
         # If "minutesPrecision" is 5, only a multiple of 5 can be encoded. If
         # you want to let users choose any number from 0 to 59, set it to 1.
         self.minutesPrecision = minutesPrecision
+        # The separator rendered between the "hour" and "minutes" parts, on the
+        # "edit" layout.
+        self.editSep = editSep
+        # Call the base constructor
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, False, True, None, None,
           False, None, readPermission, writePermission, width, height, None,

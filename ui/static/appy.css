@@ -81,6 +81,7 @@ form[name=search] input[type=button] { margin:0 }
 .breadTitle { padding:0 0 30px 0; align-items:flex-start; gap:0.4em }
 .pageIcons { text-transform:uppercase; font-weight:bold; font-size:96% }
 .required { color:|warnColor|; font-weight:bold }
+.hourSel::before { content:':'; margin-right:1px; }
 
 /* Buttons */
 input.button {

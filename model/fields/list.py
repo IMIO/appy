@@ -9,7 +9,7 @@ from appy.px import Px
 from appy.model.fields import Field
 from appy.model.totals import Totals
 from appy.model.utils import Object as O
-from appy.ui.layout import Layout, Layouts
+from appy.ui.layout import Layout, LayoutF, Layouts
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 RC_NO_OS  = 'Class "%s", mentioned in attribute "rowClass", must be a sub-' \
@@ -30,7 +30,7 @@ class List(Field):
         # No label on "edit" (*e*dit *m*inimalist)
         em = Layouts(edit=Layout('f;rv=', width=None))
         g = Layouts(edit=em['edit'], view='fl')
-        gd = Layouts(edit=Layout('d;v=f;', width=None), view='fl')
+        gd = Layouts(edit=LayoutF('d50;frv=', wrap=True))
         # Default layouts for sub-fields
         sub = Layouts(Layout('frv', width=None))
 

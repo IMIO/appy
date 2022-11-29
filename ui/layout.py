@@ -4,6 +4,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import string
+
 from appy.px import Px
 from appy.utils import asDict
 
@@ -20,28 +22,34 @@ class Cell:
         self.align = align
         self.width = None
         self.content = None
-        self.colspan = 1
+        # In the context of a table layout, the "basis" represents p_self's
+        # colspan. In the context of a flex layout, it represents p_self's
+        # flex-basis, expressed as a percentage. More precisely, a basis of 50
+        # will not produce CSS property "flex-basis:50%", but the combined
+        # property "flex:1 0 50%": property "flex-grow" will be set to 1.
+        self.basis = 1
         if isHeader:
             self.width = content
         else:
             self.content = [] # The list of widgets to render in the cell
-            self.decodeContent(content)
+            self.decode(content)
 
     def __repr__(self):
         return '<Cell %s>' % self.content
 
-    def decodeContent(self, content):
-        digits = '' # We collect the digits that will give the colspan
+    def decode(self, content):
+        '''Decode this p_content, extracting digits to get p_self's basis'''
+        digits = ''
         for char in content:
             if char.isdigit():
                 digits += char
             else: # It is a letter corresponding to a macro
                 self.content.append(Layout.pxs.get(char, char))
-        # Manage the colspan
+        # Manage the basis
         if digits:
-            self.colspan = int(digits)
+            self.basis = int(digits)
 
-    def renderContent(self, value, layout, layoutTarget):
+    def render(self, value, layout, layoutTarget):
         '''Renders p_value (one element among self.content) for a given
            p_layoutTarget (a field or object) on some p_layout.'''
         # Do not render "r" if we must render a not-required object
@@ -67,7 +75,7 @@ class Row:
         # Compute the row length
         length = 0
         for cell in self.cells:
-            length += cell.colspan
+            length += cell.basis
         self.length = length
 
     def __repr__(self):
@@ -141,7 +149,7 @@ class Layout:
     rowDelms = ''.join(rowDelimiters.keys())
 
     # A cell delimiter is to be used at the end of a cell. The symbol used
-    # defines alignment for the previouly defined cell.
+    # defines alignment for the previously defined cell.
     cellDelimiters = {'|': 'center', ';': 'left', '!': 'right'}
     cellDelms = ''.join(cellDelimiters.keys())
 
@@ -180,11 +188,11 @@ class Layout:
       </tr>
       <!-- The table content -->
       <tr for="row in table.rows" valign=":row.valign">
-       <td for="cell in row.cells" colspan=":cell.colspan"
+       <td for="cell in row.cells" colspan=":cell.basis"
            align=":ui.Language.flip(cell.align, dir)"
            class=":'' if loop.cell.last else 'cellGap'">
         <x for="c in cell.content">
-         <x>::cell.renderContent(c, layout, layoutTarget)</x>
+         <x>::cell.render(c, layout, layoutTarget)</x>
         </x>
        </td>
       </tr>
@@ -228,6 +236,9 @@ class Layout:
             r = r.replace(letter, '')
         # Strip the derived layout
         r = r.lstrip(Layout.rowDelms); r = r.lstrip(Layout.cellDelms)
+        # Remove any digit, that could stay ther as an orphan, without its
+        # disappeared letter.
+        r = r.strip(string.digits)
         return r
 
     def addCssClasses(self, css):
@@ -316,16 +327,31 @@ class LayoutF(Layout):
      <div style=":table.getStyle()" class=":table.getCss(_ctx_)"
           id=":tagId" name=":tagName">
       <x for="cell in table.row.cells">
-       <x for="c in cell.content">::cell.renderContent(c, layout, layoutTarget)
+       <x for="c in cell.content">
+        <span if="cell.basis &gt; 1"
+              style=":'flex:1 0 %s%%' % cell.basis">:cell.render(c, layout,
+                                                                 layoutTarget)
+        </span>
+        <x if="cell.basis == 1">:cell.render(c, layout, layoutTarget)</x>
        </x>
       </x>
      </div>''')
 
     def __init__(self, layoutString=None, style=None, css=None, other=None,
-                 derivedType=None):
+                 derivedType=None, direction='row', wrap=False):
         # Call the base constructor
         super().__init__(layoutString, style=style, css=css, other=other,
                          derivedType=derivedType)
+        # Define flex direction
+        if direction == 'row':
+            self.direction = None # This is the default value
+        else:
+            self.direction = 'flex-direction:%s' % direction
+        # Define flef-wrap
+        if wrap:
+            self.wrap = 'flex-wrap:wrap'
+        else:
+            self.wrap = '' # No-wrap is the default value
         # Unwrap the first row, that is the unique row that will be taken into
         # account.
         self.row = self.rows[0]
@@ -333,8 +359,9 @@ class LayoutF(Layout):
     def getStyle(self):
         '''Get content of the main tag's "style" attribute'''
         r = 'display:flex;align-items:%s' % self.row.valign
-        if self.style:
-            r = '%s;%s' % (r, self.style)
+        if self.direction: r = '%s;%s' % (r, self.direction)
+        if self.style:     r = '%s;%s' % (r, self.style)
+        if self.wrap:      r = '%s;%s' % (r, self.wrap)
         return r
 
     def getCss(self, c):
