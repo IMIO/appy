@@ -486,7 +486,12 @@ class History(PersistentList):
         if 'login' in params:
             login = params.pop('login')
         else:
-            login = self.o.user.login
+            # If we are called during the authentication process, the guard and
+            # current user may not exist yet.
+            try:
+                login = self.o.guard.userLogin
+            except AttributeError as err:
+                login = 'system'
         # Get the date and time of the action
         if 'date' in params:
             date = params.pop('date')
