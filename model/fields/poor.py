@@ -182,7 +182,7 @@ class Poor(Rich):
       <!-- Configure auto-correct -->
       <script if="field.autoCorrect">::field.autoCorrect.inJs(tbId)</script>
       <script>var nonCharCodes=[0,8,9,13,16,18,20,33,34,35,36,37,38,39,40,46,
-                                160,219,224,225,229,255];</script>
+                                224,225,229,255];</script>
      </x> ''',
 
      css = '''
@@ -424,7 +424,7 @@ class Poor(Rich):
           }
         }
         else {
-          if (!nonCharCodes.includes(event.keyCode)) {
+          if (!nonCharCodes.includes(event.keyCode) && (event.key !== 'Dead')) {
             // Ensure the caret is at a correct place for inserting text
             setCaret(div);
             // Perform auto-correction when relevant
