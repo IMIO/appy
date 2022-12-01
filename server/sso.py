@@ -393,6 +393,7 @@ class Config:
         if self.userOnEdit: self.userOnEdit(user, created=True)
         if fromHeaders:
             tool.log(SSO_CREA % (login, user.title), noUser=True)
+        tool.H().commit = True
         return user
 
     def getUser(self, tool, login, createIfNotFound=True):
