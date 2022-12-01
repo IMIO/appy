@@ -617,5 +617,12 @@ class Server:
       <x if="server.pool">
        <h2>Threads status (initial number of threads=<x>:cfg.threads</x>).</h2>
        <x>::server.pool.getTracked()</x>
-      </x></x>''')
+      </x>
+      <h2>HTTP headers for the current request</h2>
+      <table class="small">
+       <tr for="name,value in handler.headers.items()">
+        <th>:name</th><td>:value</td>
+       </tr>
+      </table>
+     </x>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
