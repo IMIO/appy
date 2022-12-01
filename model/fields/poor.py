@@ -365,10 +365,13 @@ class Poor(Rich):
             child = div.childNodes[i];
             if (child.tagName === 'BR') div.removeChild(child);
           }
+          // Get existing content if any
+          let existing = div.innerText || '';
+          if (existing) div.innerText = '';
           let para = document.createElement('div'),
-              text = para.appendChild(document.createTextNode(''));
+              text = para.appendChild(document.createTextNode(existing));
           div.appendChild(para);
-          range.setStart(text, 0);
+          range.setStart(text, text.length);
           range.collapse(true);
           sel.removeAllRanges();
           sel.addRange(range);
@@ -408,7 +411,6 @@ class Poor(Rich):
 
       // Triggered when the user hits a key in a poor
       onPoorKeyDown = function(event) {
-        // Block change observation and manage this change ourselves
         let div = event.target;
         if (event.ctrlKey || event.metaKey ||
             (event.altKey && event.keyCode == 32)) {
@@ -424,7 +426,12 @@ class Poor(Rich):
           }
         }
         else {
-          if (!nonCharCodes.includes(event.keyCode) && (event.key !== 'Dead')) {
+          const isDead = event.key === 'Dead' || event.key === 'Unidentified';
+          if (isDead) {
+            // Prevent the browser to remove the previous space
+            // Surgeon.inject('text', '​ ');
+          }
+          else if (!nonCharCodes.includes(event.keyCode)) {
             // Ensure the caret is at a correct place for inserting text
             setCaret(div);
             // Perform auto-correction when relevant
