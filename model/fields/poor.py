@@ -25,7 +25,7 @@ class AutoCorrect:
 
     # Replace double quotes by "guillemets" (angle quotes)
     quotes = {'"': {'if':'blankBefore',
-                    1: [('text', '« ')],
+                    1: [('text', '« ​')],
                     0: [('text', ' »')]}}
 
     def __init__(self, standard=True, quotes=True):
@@ -147,8 +147,10 @@ Icon.all = [
   Icon('italic',    'wrapper', data='italic', shortcut=73),
   Icon('highlight', 'wrapper', data='hiliteColor', args='yellow', shortcut=72),
   Icon('unformat',  'wrapper', data='removeFormat', shortcut=77),
-  # Insert a non-breaking space
-  Icon('blank',     'char',    data=' ', shortcut=32),
+  # Insert a non-breaking space (+ a zero-width space). If a zero-width space is
+  # not inserted after the non-breaking one, Firefox converts them into standard
+  # spaces everytime a char is encoded after a non-breaking space.
+  Icon('blank',     'char',    data=' ​', shortcut=32),
   # Insert a non breaking dash
   Icon('dash',      'char',    data='‑', shortcut=54),
   Icon('bulleted',  'wrapper', data='insertUnorderedList'),
@@ -181,8 +183,7 @@ class Poor(Rich):
       </div>
       <!-- Configure auto-correct -->
       <script if="field.autoCorrect">::field.autoCorrect.inJs(tbId)</script>
-      <script>var nonCharCodes=[0,8,9,13,16,18,20,33,34,35,36,37,38,39,40,46,
-                                224,225,229,255];</script>
+      <script>const delCodes=[8,46]</script>
      </x> ''',
 
      css = '''
@@ -425,26 +426,14 @@ class Poor(Rich):
             event.preventDefault();
           }
         }
-        else {
-          const isDead = event.key === 'Dead' || event.key === 'Unidentified';
-          if (isDead) {
-            // Prevent the browser to remove the previous space
-            // Surgeon.inject('text', '​ ');
-          }
-          else if (!nonCharCodes.includes(event.keyCode)) {
-            // Ensure the caret is at a correct place for inserting text
-            setCaret(div);
-            // Perform auto-correction when relevant
-            let autoCorrect = div['toolbar'].autoCorrect;
-            if (autoCorrect && event.key in autoCorrect) {
-              // Insert the replacement nodes instead of this char
-              applyAutoCorrect(div, autoCorrect[event.key]);
-              event.preventDefault();
-            }
-            else if (!event.isComposing) {
-              Surgeon.inject('text', event.key);
-              event.preventDefault();
-            }
+        else if (!delCodes.includes(event.keyCode)) {
+          setCaret(div);
+          // Perform auto-correction when relevant
+          let autoCorrect = div['toolbar'].autoCorrect;
+          if (autoCorrect && event.key in autoCorrect) {
+            // Insert the replacement nodes instead of this char
+            applyAutoCorrect(div, autoCorrect[event.key]);
+            event.preventDefault();
           }
         }
       }

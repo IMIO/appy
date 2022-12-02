@@ -1356,8 +1356,10 @@ class XhtmlPreprocessor:
 
         # Surround p_s with a tag in order to get a XML-compliant file (we need
         # a root tag). We also remove special blank chars that produce SAX
-        # parsing errors.
-        s = '<%s>%s</%s>' % (root, s.replace('\f', '').replace('\v', ''), root)
+        # parsing errors + the zero-width space.
+        for char in '\f\v​':
+            s = s.replace(char, '')
+        s = '<%s>%s</%s>' % (root, s, root)
         # Convert, when required, HTML void tags to XHTML self-closing tags
         if html: s = class_.voidTag.sub(class_.patchTag, s)
         # Integrate, when required, chunks of code files
