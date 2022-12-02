@@ -218,7 +218,7 @@ class Config:
             value = value.strip()
             if not value: continue
             # Get a standardized utf-8-encoded string
-            value = value.decode(encoding).encode('utf-8')
+            value = value.decode(encoding).encode()
             # Apply a regular expression if specified
             rex = getattr(self, '%sRex' % type)
             if rex:
@@ -248,18 +248,18 @@ class Config:
             res.add(value)
         return res, secondary
         
-    def extractUserPrerogatives(self, type, req):
-        '''Extracts, from p_req, user groups or roles, depending on p_type'''
+    def extractUserPrerogatives(self, type, headers):
+        '''Extracts, from p_headers, user groups or roles, depending on
+           p_type.'''
         # Do we care about getting this type or prerogative ?
         key = getattr(self, '%sKey' % type)
         if not key: return None, None
         # Get HTTP headers
-        headers = getattr(req, '_orig_env', None)
         if not headers: return None, None
         # Get the HTTP request encoding
         encoding = self.extractEncoding(headers)
         # Extract the value for the "key" header
-        headerValue = headers.get('HTTP_%s' % key, None)
+        headerValue = headers.get(key)
         if not headerValue: return None, None
         # We have prerogatives. Convert them to Appy roles and groups.
         return self.convertUserPrerogatives(type, headerValue.split(','),
@@ -267,7 +267,7 @@ class Config:
 
     def setRoles(self, tool, user, roles):
         '''Grants p_roles to p_user. Ensure those role are grantable.'''
-        grantable = tool.o.getProductConfig().grantableRoles
+        grantable = tool.model.getGrantableRoles(tool, namesOnly=True)
         for role in roles:
             if role in grantable:
                 user.addRole(role)
@@ -338,12 +338,12 @@ class Config:
                 groups = groups2
         return params, roles, groups
 
-    def updateUser(self, tool, req, user):
-        '''Updates the local p_user with data from request headers'''
+    def updateUser(self, tool, headers, user):
+        '''Updates the local p_user with data from request p_headers'''
         # The last sync date for this user is now
         user.syncDate = DateTime()
         # Update basic user attributes and recompute the user title
-        params, roles, groups = self.extractUserInfo(req)
+        params, roles, groups = self.extractUserInfo(headers)
         for name, value in params.items(): setattr(user, name, value)
         user.updateTitle()
         # Update global roles (when roles are provided by the SSO server)
@@ -370,6 +370,8 @@ class Config:
             msg = SSO_REACT % user.login
             user.log(msg, noUser=True)
             user.do('reactivate', doHistory=False, comment=msg)
+        # A database commit is required
+        tool.H().commit = True
 
     def createUser(self, tool, login, source, fromHeaders=True,
                    userParams=None):
@@ -393,6 +395,7 @@ class Config:
         if self.userOnEdit: self.userOnEdit(user, created=True)
         if fromHeaders:
             tool.log(SSO_CREA % (login, user.title), noUser=True)
+        # A database commit is required
         tool.H().commit = True
         return user
 
@@ -401,7 +404,7 @@ class Config:
         # Check if SSO is enabled
         if not self.enabled: return
         # Do we already have a local User instance for this user ?
-        req = tool.req
+        headers = tool.H().headers
         user = tool.search1('User', login=login)
         if user:
             # Update the user only if we have not done it since "syncInterval"
@@ -414,12 +417,13 @@ class Config:
                 interval = (DateTime() - syncDate) * 1440
                 mustUpdate = interval > self.syncInterval
             if mustUpdate:
-                self.updateUser(tool, req, user) # Update it from HTTP headers
+                # Update it from HTTP headers
+                self.updateUser(tool, headers, user)
                 # Custom User update
                 if self.userOnEdit: self.userOnEdit(user, created=False)
         elif createIfNotFound:
             # Create a local User instance representing the SSO-authenticated
             # user. Collect roles and groups this user has.
-            user = self.createUser(tool, login, req)
+            user = self.createUser(tool, login, headers)
         return user
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

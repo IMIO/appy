@@ -153,10 +153,14 @@ class Model:
             r.sort(key= lambda r:r.name.lower())
         return r
 
-    def getGrantableRoles(self, o):
+    def getGrantableRoles(self, o, namesOnly=False):
         '''Returns the list of global roles that can be granted to a user'''
-        return [(role.name, o.translate('role_%s' % role.name)) \
-                for role in self.grantableRoles]
+        r = []
+        for role in self.grantableRoles:
+            name = role.name
+            info = name if namesOnly else (name, o.translate('role_%s' % name))
+            r.append(info)
+        return r
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                  PX
