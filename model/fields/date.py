@@ -28,6 +28,7 @@ class Date(Field):
     WITHOUT_HOUR = 1
     dateParts = ('year', 'month', 'day')
     hourParts = ('hour', 'minute')
+    editSep = ':' # Separator between hours and minutes
 
     # Types of the native HTML inputs, for every format
     nativeWidgets = {WITH_HOUR: 'datetime-local', WITHOUT_HOUR: 'date'}
