@@ -1149,12 +1149,7 @@ class Base:
         # field, so we must merge this mapping into p_mapping.
         handler = self.H()
         # In what language must we get the translation ?
-        try:
-            language = language or handler.guard.userLanguage
-        except AttributeError:
-            # There is no guard: get the user and its language from the
-            # traversal object instead.
-            language = handler.traversal.user.getLanguage()
+        language = language or handler.guard.userLanguage
         # Get the label name, and the field-specific mapping if any
         if field:
             if field.type != 'group':

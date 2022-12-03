@@ -309,6 +309,15 @@ class HttpHandler(Handler):
             r = None
         return r
 
+    def complete(self):
+        '''Completes p_self's data structures, that were not initialised due to
+           an error in one of the base Appy systems, like authentication.'''
+        # having a complete handler allows, a.o., to nicely handle errors
+        if not self.guard:
+            self.guard = Guard(self, user=self.getSpecial('anon'))
+        if not self.traversal:
+            self.traversal = Traversal(handler=self)
+
     def manageGuardError(self, resp, traversal, error=None):
         '''A security-related error has occurred: the logged user is not allowed
            to access the desired URL. If the user is anon, redirect him to the

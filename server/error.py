@@ -87,9 +87,9 @@ class Error:
         # When managing an error, ensure no database commit will occur
         handler = resp.handler
         handler.commit = False
-        # Create a Traversal object if no such object has been passed
-        if not traversal:
-            traversal = handler.traversal = handler.Traversal(handler=handler)
+        # Complete the handler when appropriate
+        if not traversal: handler.complete()
+        traversal = handler.traversal
         # Did the error occurred in the context of an Ajax request ?
         context = traversal.context
         ajax = (context and context.ajax) or handler.req.ajax == 'True'

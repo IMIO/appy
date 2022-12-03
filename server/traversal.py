@@ -75,12 +75,7 @@ class Traversal:
         # The path that will be traversed, splitted into parts
         self.parts = handler.parts
         # The currently logged user
-        try:
-            self.user = handler.guard.user
-        except AttributeError:
-            # At early stages, the guard and current user may not have been
-            # created yet.
-            self.user = handler.getSpecial('anon')
+        self.user = handler.guard.user
         # Set additional attributes via m_reset
         self.reset(None)
         # The PX context

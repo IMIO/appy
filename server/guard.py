@@ -111,7 +111,7 @@ class Guard:
     Cookie = Cookie
     traverse = {}
 
-    def __init__(self, handler):
+    def __init__(self, handler, user=None):
         # The handler that has instantiated this guard
         self.handler = handler
         # Info about the currently selected authentication context
@@ -126,12 +126,17 @@ class Guard:
         self.model = handler.server.model
         self.config = handler.server.config
         # Get the current user and store user-related attributes on p_self
-        self.initUser()
+        self.initUser(user=user)
 
-    def initUser(self):
+    def initUser(self, user=None):
         '''Initialise guard attributes related to the current user'''
         # Authenticate the currently logged user and get its User instance
-        self.user = User.authenticate(self)
+        if user is None:
+            self.user = User.authenticate(self)
+        else:
+            # If p_user is passed, it is probably the anon user and we are
+            # creating some fake guard in order to get a handler being complete.
+            self.user = user
         # Remember that this user hits the server now
         handler = self.handler
         if not handler.fake:
