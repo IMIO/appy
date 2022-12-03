@@ -362,9 +362,11 @@ class Base:
         '''Raise a security-related error'''
         raise self.guard.Error(msg)
 
-    def raiseMessage(self, message):
+    def raiseMessage(self, message, isLabel=False):
         '''Raise a nicely-rendered error, without technical details'''
-        raise MessageException(message)
+        # If p_isLabel is True, p_message is not a translated message, but a
+        # to-be-translated i18n label.
+        raise MessageException(message, isLabel=isLabel)
 
     def allows(self, permission='read', raiseError=False):
         '''Check the guard's homonym method'''
