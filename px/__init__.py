@@ -317,9 +317,13 @@ class Px:
         req = handler.req
         o = traversal.o or tool
         # The logged user and the home object
-        user = guard.user
-        # The user language (2-letters ISO code)
-        lang = guard.userLanguage
+        try:
+            user = guard.user
+            lang = guard.userLanguage # The user language (2-letters ISO code)
+        except AttributeError:
+            # The guard does not exist
+            user = traversal.user
+            lang = user.getLanguage()
         # Is this language LTR or RTL ?
         dir, dleft, dright = handler.Languages.getDirection(lang)
         # The main app config
