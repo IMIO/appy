@@ -399,6 +399,10 @@ class HttpHandler(Handler):
                 else:
                     self.log('app', 'warning',
                              TRANS_RETRY % (str(err), attempts))
+            except MessageException as msg:
+                self.resp.code = HTTPStatus.OK
+                r = Error.get(self.resp, self.traversal, error=msg)
+                break
             except Exception as err:
                 self.resp.code = HTTPStatus.INTERNAL_SERVER_ERROR # 500
                 r = Error.get(self.resp, self.traversal, error=err)
