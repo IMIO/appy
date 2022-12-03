@@ -25,6 +25,9 @@ class Config:
                      'firstNameKey': 'firstName', 'fullNameKey': 'title'}
     otherPrerogative = {'role': 'group', 'group': 'role'}
 
+    # Default encodings
+    defaultEncodings = ('utf-8', 'utf8')
+
     # The connection to a SSO server can't really be tested
     testable = False
 
@@ -161,20 +164,22 @@ class Config:
            Appy user.'''
         r = {}
         encoding = self.extractEncoding(headers)
+        mustEncode = encoding not in self.defaultEncodings
         decodeFunction = self.decodeFunction
         for keyAttr, appyName in self.ssoAttributes.items():
             if not appyName: continue
-            # Get the name of the HTTP header corresponding to "keyAttr"
+            # Get the name of the HTTP header corresponding to v_keyAttr
             keyName = getattr(self, keyAttr)
             if not keyName: continue
-            # Get the value for this header if found in the request
+            # Get the value for this header, if found
             value = headers.get(keyName)
             if value:
                 # Apply standard character decoding
-                value = value.decode(encoding)
+                if mustEncode:
+                    value = value.encode().decode(encoding)
                 # Apply specific decoding if any
                 if decodeFunction: value = decodeFunction(value)
-                r[appyName] = value.encode()
+                r[appyName] = value
         return r
 
     def extractUserLogin(self, handler):
