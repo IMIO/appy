@@ -619,9 +619,10 @@ class Server:
        <x>::server.pool.getTracked()</x>
       </x>
       <h2>HTTP headers for the current request</h2>
-      <table class="small">
-       <tr for="name,value in handler.headers.items()">
-        <th>:name</th><td>:value</td>
+      <table class="grid">
+       <tr for="name,value in handler.headers.items()" valign="top">
+        <th>:name.replace('-','‑')</th>
+        <td>::' ↲&lt;br/&gt;'.join(value.split(','))</td>
        </tr>
       </table>
      </x>''')
