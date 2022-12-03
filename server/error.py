@@ -88,7 +88,8 @@ class Error:
         handler = resp.handler
         handler.commit = False
         # Create a Traversal object if no such object has been passed
-        traversal = traversal or handler.Traversal(handler=handler)
+        if not traversal:
+            traversal = handler.traversal = handler.Traversal(handler=handler)
         # Did the error occurred in the context of an Ajax request ?
         context = traversal.context
         ajax = (context and context.ajax) or handler.req.ajax == 'True'
