@@ -111,7 +111,9 @@ class Handler:
     registry = {}
 
     # Make some names available here
+    Guard = Guard
     Static = Static
+    Traversal = Traversal
 
     # Every handler can use a special char allowing to easily identify entries
     # produced from it in log files.
@@ -201,6 +203,10 @@ class Handler:
         '''Was the currently handled HTTP request initiated from a mobile
            device ?'''
 
+    def getSpecial(self, login):
+        '''Returns the special User instance having this p_login'''
+        # No all handlers are able to deliver this info
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Inject class Handler on class Base to avoid circular package dependencies
 Base.Handler = Handler
@@ -254,6 +260,8 @@ class HttpHandler(Handler):
         self.criteria = None
         # Must we commit data into the database ?
         self.commit = False
+        # The object representing the current traversal
+        self.traversal = None
         # Set here a link to the tool. The handler object will be heavily
         # consulted by a plethora of objects during request handling. This is
         # why it is convenient to define such attributes on it.
@@ -291,6 +299,15 @@ class HttpHandler(Handler):
         if not headers: return
         agent = headers.get('User-Agent')
         return False if not agent else bool(HttpHandler.mobileRex.search(agent))
+
+    def getSpecial(self, login):
+        '''Returns the special user having this p_login'''
+        try:
+            r = self.dbConnection.root.objects.get(login)
+        except AttributeError:
+            # The DB connection may not have been defined yet
+            r = None
+        return r
 
     def manageGuardError(self, resp, traversal, error=None):
         '''A security-related error has occurred: the logged user is not allowed

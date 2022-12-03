@@ -593,12 +593,7 @@ class User(Base):
             # instance normally exists, may be requested before it is created
             # (on database initialization). This is why we may create here a
             # fake one.
-            if hasattr(handler, 'dbConnection'):
-                user = handler.dbConnection.root.objects.get('system') or \
-                       User.System()
-            else:
-                user = User.System()
-            return user
+            return handler.getSpecial('system') or User.System()
         # Identify the user
         login, password, ctx, place = User.identify(guard)
         config = guard.config.security
@@ -611,7 +606,7 @@ class User(Base):
             user = config.sso.getUser(tool, login, createIfNotFound=True)
             if not user:
                 # For some reason, SSO user credentials could not be accepted
-                user = handler.dbConnection.root.objects.get('anon')
+                user = handler.getSpecial('anon')
             # If authentication contexts are in use, retrieve the potentially
             # defined default context when relevant.
             if ctx is None and authContext:
@@ -638,7 +633,7 @@ class User(Base):
                 and place != 'basic'):
                 # Disable the authentication cookie
                 guard.Cookie.disable(handler)
-                user = handler.dbConnection.root.objects.get('anon')
+                user = handler.getSpecial('anon')
             else:
                 # The user is authenticated. Create an authentication cookie for
                 # him. Set a default context when appropriate (v_ctx being None

@@ -67,7 +67,7 @@ class Error:
         else:
             if isinstance(error, MessageException):
                 r = text
-            elif isinstance(error, traversal.handler.guard.Error) and text:
+            elif isinstance(error, traversal.handler.Guard.Error) and text:
                 # Unauthorized. Do not display the standard message if a
                 # specific message has been produced.
                 r = Escape.xhtml(text)
@@ -85,8 +85,10 @@ class Error:
            fails (ie, the error is produced in the main PX template), dump a
            simple traceback.'''
         # When managing an error, ensure no database commit will occur
-        handler = traversal.handler
+        handler = resp.handler
         handler.commit = False
+        # Create a Traversal object if no such object has been passed
+        traversal = traversal or handler.Traversal(handler=handler)
         # Did the error occurred in the context of an Ajax request ?
         context = traversal.context
         ajax = (context and context.ajax) or handler.req.ajax == 'True'
