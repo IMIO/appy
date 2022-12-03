@@ -215,15 +215,17 @@ class Config:
         '''Converts SSO p_prerogatives to Appy roles and groups'''
         # p_prerogatives may contain "main" and "secondary" prerogatives.
         # Indeed, when extracting roles we may find groups, and vice versa.
-        res = set()
+        r = set()
         secondary = set()
+        mustEncode = encoding not in self.defaultEncodings
         # A comma-separated list of prerogatives may be present
         for value in prerogatives:
             # Ignore empty values
             value = value.strip()
             if not value: continue
-            # Get a standardized utf-8-encoded string
-            value = value.decode(encoding).encode()
+            # Encode v_value when appropriate
+            if mustEncode:
+                value = value.encode().decode(encoding)
             # Apply a regular expression if specified
             rex = getattr(self, '%sRex' % type)
             if rex:
@@ -250,9 +252,9 @@ class Config:
             if value in mapping:
                 value = mapping[value]
             # Add the prerogative to the result
-            res.add(value)
-        return res, secondary
-        
+            r.add(value)
+        return r, secondary
+
     def extractUserPrerogatives(self, type, headers):
         '''Extracts, from p_headers, user groups or roles, depending on
            p_type.'''
@@ -266,7 +268,7 @@ class Config:
         # Extract the value for the "key" header
         headerValue = headers.get(key)
         if not headerValue: return None, None
-        # We have prerogatives. Convert them to Appy roles and groups.
+        # We have prerogatives: convert them to Appy roles and groups
         return self.convertUserPrerogatives(type, headerValue.split(','),
                                             encoding=encoding)
 
