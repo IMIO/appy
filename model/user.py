@@ -337,6 +337,7 @@ class User(Base):
         # are retrieved from the guard, that caches it. Else, they are really
         # computed.
         guard = guard or self.guard
+        if guard is None: return ()
         # Return the cached value on the guard when appropriate
         if not compute and self.login == guard.userLogin:
             return guard.userRoles

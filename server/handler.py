@@ -260,8 +260,8 @@ class HttpHandler(Handler):
         self.criteria = None
         # Must we commit data into the database ?
         self.commit = False
-        # The object representing the current traversal
-        self.traversal = None
+        # Late-initialised objects: the traversal and the guard
+        self.traversal = self.guard = None
         # Set here a link to the tool. The handler object will be heavily
         # consulted by a plethora of objects during request handling. This is
         # why it is convenient to define such attributes on it.
