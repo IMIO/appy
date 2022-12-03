@@ -59,14 +59,16 @@ class Template:
     def includeLoginBox(class_, c):
         '''Must the login box be included in the current page ?'''
         # The login box has no sense if the user is already authenticated or in
-        # the process of self-registering, or if browser incompatibility has be
-        # detected.
+        # the process of self-registering, or if browser incompatibility has
+        # been detected.
         if not c.isAnon or c.o.isTemp() or c.bi: return
         # Moreover, if we are on the public page and the authentication will be
         # done by redirecting the user to tool/home, it is useless to include
         # the login box in this case, too.
         if c._px_.name == 'public' and c.cfg.discreetLogin == 'home':
             return
+        # If we are on an error page, no login box
+        if c._px_.name == 'error': return
         # Include it in any other case
         return True
 

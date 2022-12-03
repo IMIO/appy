@@ -23,29 +23,32 @@ class Error:
        Px('''<div>::msg</div>
              <div if="not isAnon and not popup">
               <a href=":tool.computeHomePage()">:_('app_home')</a>
-             </div>''', template=Template.px, hook='content')},
+             </div>''', template=Template.px, hook='content', name='error')},
 
      # Error 403: unauthorized
      403: {'label': 'unauthorized', 'px':
        Px('''<div><img src=":svg('password')" class="iconERR"/>
-                  <x>::msg</x></div>''', template=Template.px, hook='content')},
+                  <x>::msg</x></div>''',
+          template=Template.px, hook='content', name='error')},
 
      # Error 500: server error
      500: {'label': 'server_error', 'px':
        Px('''<div><img src=":svg('warning')" class="iconERR"/>
-                  <x>::msg</x></div>''', template=Template.px, hook='content')},
+                  <x>::msg</x></div>''',
+          template=Template.px, hook='content', name='error')},
 
      # Error 503: service unavailable. This error code is used by Appy when, due
      # to too many conflict errors (heavy load), the server cannot serve the
      # request.
      503: {'label': 'conflict_error',
            'px': Px('''<div>::msg</div>''',
-                    template=Template.px, hook='content')},
+                    template=Template.px, hook='content', name='error')},
 
      # Return code 200: a logical error rendering a nice translated message to
      # the user, but not considered being an error at the HTTP level.
      200: {'px': Px('''<img src=":svg('warning')" class="iconERR"/>
-                       <x>::msg</x>''', template=Template.px, hook='content')}
+                       <x>::msg</x>''',
+                    template=Template.px, hook='content', name='error')}
     }
 
     @classmethod
