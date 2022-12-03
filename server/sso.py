@@ -136,6 +136,15 @@ class Config:
         # authenticating its users can be placed here, as a instance of
         # appy.server.ldap.Config.
         self.ldap = None
+        # You may have a specific condition for accepting or blocking a user
+        # whose credentials are transmitted by a SSO reverse proxy. If it is the
+        # case, place, in the following attribute, a function. This function
+        # will be called with the following args:
+        # - the tool,
+        # - HTTP headers,
+        # - the login as transmitted by the SSO reverse proxy.
+        # If the function returns True, the user will not be authenticated.
+        self.blockFun = None
 
     def init(self, tool):
         '''Lazy initialisation'''
@@ -406,12 +415,21 @@ class Config:
         tool.H().commit = True
         return user
 
+    def mustBlockUser(self, tool, headers, login):
+        '''If the SSO Config defines a condition for blocking this user,
+           execute it.'''
+        fun = self.blockFun
+        if fun is None: return
+        return fun(tool, headers, login)
+
     def getUser(self, tool, login, createIfNotFound=True):
         '''Returns a local User instance corresponding to a SSO user'''
         # Check if SSO is enabled
         if not self.enabled: return
-        # Do we already have a local User instance for this user ?
+        # Must the user having this p_login be accepted on our site ?
         headers = tool.H().headers
+        if self.mustBlockUser(tool, headers, login): return
+        # Do we already have a local User instance for this user ?
         user = tool.search1('User', login=login)
         if user:
             # Update the user only if we have not done it since "syncInterval"

@@ -609,6 +609,9 @@ class User(Base):
             # Sign-On) reverse proxy: its credentials were carried in HTTP
             # headers. Simply return its local copy, or create it if not found.
             user = config.sso.getUser(tool, login, createIfNotFound=True)
+            if not user:
+                # For some reason, SSO user credentials could not be accepted
+                user = handler.dbConnection.root.objects.get('anon')
             # If authentication contexts are in use, retrieve the potentially
             # defined default context when relevant.
             if ctx is None and authContext:
