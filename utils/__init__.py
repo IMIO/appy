@@ -74,18 +74,28 @@ def getMimeType(fileName, default='application/octet-stream'):
 class CommercialError(Exception):
     '''Raised when some functionality is called from the commercial version but
        is available only in the free, open source version.'''
+
     MSG = 'This feature is not available in the commercial version. It is ' \
           'only available in the free, open source (GPL) version of Appy.'
+
     def __init__(self): Exception.__init__(self, self.MSG)
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class MessageException(Exception):
     '''User-friendly exception'''
+
     # Message exceptions are raised when, due to some problem while handling a
     # browser request, the current traversal must be interrupted, but we don't
     # want a "technical" error to be raised (500). We don't want technical
     # details to be logged nor rendered to the UI, such as a Python traceback:
     # we simply want to display nice, translated info about the problem in a 200
     # response.
+
+    def __init__(self, message, isLabel=False):
+        # p_message is a translated text if p_isLabel is False or a
+        # to-be-translated label, if p_isLabel is True.
+        super().__init__(message)
+        self.isLabel = isLabel
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class No:

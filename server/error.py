@@ -66,7 +66,7 @@ class Error:
             r = Traceback.get(html=True)
         else:
             if isinstance(error, MessageException):
-                r = text
+                r = _(text) if error.isLabel else text
             elif isinstance(error, traversal.handler.Guard.Error) and text:
                 # Unauthorized. Do not display the standard message if a
                 # specific message has been produced.

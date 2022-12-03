@@ -1088,6 +1088,10 @@ msgstr "Nous sommes désolés, mais une erreur est survenue durant le processus 
 msgid "standard_view"
 msgstr "Vue standard"
 
+#. Default: "It seems that you are not allowed to access this site, we are sorry."
+msgid "sso_user_blocked"
+msgstr "Il semble que vous ne soyez pas autorisé·e à consulter ce site, nous sommes désolés."
+
 # ~~~~ Base-related labels ~~~~
 #. Default: "By"
 msgid "Base_creator"

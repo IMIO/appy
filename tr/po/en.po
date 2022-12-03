@@ -1088,6 +1088,10 @@ msgstr "We are sorry, but something went wrong with your payment. Please try aga
 msgid "standard_view"
 msgstr "Standard view"
 
+#. Default: "It seems that you are not allowed to access this site, we are sorry."
+msgid "sso_user_blocked"
+msgstr "It seems that you are not allowed to access this site, we are sorry."
+
 # ~~~~ Base-related labels ~~~~
 #. Default: "By"
 msgid "Base_creator"

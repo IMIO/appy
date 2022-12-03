@@ -401,7 +401,7 @@ class HttpHandler(Handler):
                              TRANS_RETRY % (str(err), attempts))
             except Exception as err:
                 self.resp.code = HTTPStatus.INTERNAL_SERVER_ERROR # 500
-                r = Error.get(self.resp, self.traversal)
+                r = Error.get(self.resp, self.traversal, error=err)
                 break
             else:
                 break

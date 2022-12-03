@@ -1087,6 +1087,10 @@ msgstr ""
 msgid "standard_view"
 msgstr ""
 
+#. Default: "It seems that you are not allowed to access this site, we are sorry."
+msgid "sso_user_blocked"
+msgstr ""
+
 # ~~~~ Base-related labels ~~~~
 #. Default: "By"
 msgid "Base_creator"

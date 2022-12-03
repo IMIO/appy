@@ -607,7 +607,7 @@ class User(Base):
             user = config.sso.getUser(tool, login, createIfNotFound=True)
             if not user:
                 # For some reason, SSO user credentials could not be accepted
-                user = handler.getSpecial('anon')
+                tool.raiseMessage('sso_user_blocked', isLabel=True)
             # If authentication contexts are in use, retrieve the potentially
             # defined default context when relevant.
             if ctx is None and authContext:
