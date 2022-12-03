@@ -66,11 +66,12 @@ class Config:
         # header value. Else, the role name will be the first matching group.
         self.roleRex = None
         # For more complex cases, you can define a "roleFunction": a custom
-        # fonction that will receive the match object produced by "roleRex" and
-        # must return the role name. Funny additional subtlety: if this
-        # function returns a tuple (name, None) instead, "name" will be
-        # considered a group login, not a role name. This is useful for reverse
-        # proxies that send us similar keys for groups and roles.
+        # function that will receive the SSO config + the match object produced
+        # by "roleRex", and must return the role name. Funny additional
+        # subtlety: if this function returns a tuple (name, None) instead,
+        # "name" will be considered a group login, not a role name. This is
+        # useful for reverse proxies that send us similar keys for groups and
+        # roles.
         self.roleFunction = None
         # Once a role has been identified among HTTP headers via "roleKey" and
         # "roleRex", and has possibly been treated by "roleFunction", its name
@@ -83,10 +84,10 @@ class Config:
         self.groupKey = ''
         # Regular expression applied to the group value (similar to "roleRex")
         self.groupRex = None
-        # If a "group function" is specified, it will receive the match object
-        # produced by "groupRex" and must return the group name, or
-        # (name, None), similarly to "roleFunction" (in this case, it means
-        # that a role name is returned instead of a group login).
+        # If a "group function" is specified, it will receive the SSO config +
+        # the match object produced by "groupRex" and must return the group
+        # name, or (name, None), similarly to "roleFunction" (in this case, it
+        # means that a role name is returned instead of a group login).
         self.groupFunction = None
         # Group mapping (similar to role mapping). Here, we map group logins.
         self.groupMapping = {}
