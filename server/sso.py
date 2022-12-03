@@ -141,7 +141,7 @@ class Config:
         # whose credentials are transmitted by a SSO reverse proxy. If it is the
         # case, place, in the following attribute, a function. This function
         # will be called with the following args:
-        # - the tool,
+        # - the SSO config,
         # - HTTP headers,
         # - the login as transmitted by the SSO reverse proxy.
         # If the function returns True, the user will not be authenticated.
@@ -421,7 +421,7 @@ class Config:
            execute it.'''
         fun = self.blockFun
         if fun is None: return
-        return fun(tool, headers, login)
+        return fun(self, headers, login)
 
     def getUser(self, tool, login, createIfNotFound=True):
         '''Returns a local User instance corresponding to a SSO user'''
