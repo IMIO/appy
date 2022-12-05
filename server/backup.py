@@ -316,7 +316,7 @@ class Backup:
         # Pack the database file if requested
         if full: database.pack(logger=logger)
         # Execute the "before command" if defined
-        config.beforeCommand: self.runCommand(config.beforeCommand)
+        if config.beforeCommand: self.runCommand(config.beforeCommand)
         # Copy the database itself (.fs file)
         self.copyDatabase()
         # Copy the files from the DB-controlled file system
