@@ -470,6 +470,11 @@ class Rich(Multilingual, Field):
                "doInlineSave('%d','%s','%s','view',true,content,'%s')}}})" % \
                (id, name, self.getCkParams(o,language), id, fieldName, o.url,lg)
 
+    def isInnerable(self):
+        '''Rich fields cannot be used as inner fields'''
+        # Try using the Poor field instead: it is innerable
+        return
+
     traverse['upload'] = 'perm:write'
     def upload(self, o):
         '''Uploads a document to the Ref mentioned in attribute "documents"'''

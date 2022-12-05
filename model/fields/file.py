@@ -471,7 +471,7 @@ class File(Field):
         name = requestName or self.name
         return o.req['%s_file' % name]
 
-    def getRequestSuffix(self): return '_file'
+    def getRequestSuffix(self, o): return '_file'
 
     def getCopyValue(self, o):
         '''Create a copy of the FileInfo instance stored for p_o for this field.

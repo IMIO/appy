@@ -94,6 +94,12 @@ class Multilingual:
             else: return len(self.languages) > 1
         return len(self.getAttribute(o, 'languages')) > 1
 
+    def getRequestSuffix(self, o):
+        '''For a multilingual field, the "request suffix" is the 2-letter code
+           from any of the supported languages.'''
+        r = self.getAttribute(o, 'languages')
+        return ('_%s' % r[0]) if r and len(r) > 1 else ''
+
     def renderMultilingual(self, o, languages, value, layout):
         '''Must p_value, expressed in these p_languages, be rendered as a
            multilingual value on this p_layout ?'''

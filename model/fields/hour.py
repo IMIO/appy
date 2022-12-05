@@ -88,7 +88,7 @@ class Hour(Field):
             r.append(part)
         return None if empty else ':'.join(r)
 
-    def getRequestSuffix(self): return '_hour'
+    def getRequestSuffix(self, o): return '_hour'
 
     def getStorableValue(self, o, value, single=False):
         '''Convert the string p_value to a tuple'''

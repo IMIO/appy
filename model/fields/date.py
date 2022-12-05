@@ -304,7 +304,7 @@ class Date(Field):
         return isEmpty(self, req) and \
                isEmpty(self, req, widgetName='%s_to_year' % self.name)
 
-    def getRequestSuffix(self):
+    def getRequestSuffix(self, o):
         return '' if self.native else '_year'
 
     def getStorableValue(self, o, value, single=False):

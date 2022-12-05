@@ -14,6 +14,8 @@ from appy.ui.layout import Layout, LayoutF, Layouts
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 RC_NO_OS  = 'Class "%s", mentioned in attribute "rowClass", must be a sub-' \
             'class of class appy.model.utils.Object.'
+INNER_KO  = 'Field "%s" cannot currently be used as inner field. This is the ' \
+            'case for rich fields.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class List(Field):
@@ -328,7 +330,10 @@ class List(Field):
         # everytime a List field is solicited, if sub-fields are dynamically
         # computed.
         for sub, field in subFields:
+            # Some fields cannot be defined as inner-fields for the moment
             fullName = '%s_%s' % (self.name, sub)
+            if not field.isInnerable():
+                raise Exception(INNER_KO % fullName)
             field.init(class_, fullName)
             field.name = '%s*%s' % (self.name, sub)
 
@@ -340,7 +345,8 @@ class List(Field):
             self.lazyInitSubFields(subs, class_)
 
     def checkParameters(self):
-        '''Ensures this List is correctly defined'''
+        '''Ensure this List is correctly defined'''
+        # Check the "row class"
         if not issubclass(self.rowClass, O):
             raise Exception(RC_NO_OS % self.rowClass)
 
@@ -399,7 +405,7 @@ class List(Field):
             if rowId == '-1': continue # Ignore the template row
             for subName, subField in self.getSubFields(o):
                 keyName = '%s*%s*%s' % (name, subName, rowId)
-                if keyName + subField.getRequestSuffix() in req:
+                if keyName + subField.getRequestSuffix(o) in req:
                     v = subField.getRequestValue(o, requestName=keyName)
                     setattr(row, subName, v)
             if rowId.isdigit():

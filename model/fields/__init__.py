@@ -790,6 +790,11 @@ class Field:
         # This method may be overridden, but not p_isRenderable itself
         return layout not in Layouts.restrictedTypes
 
+    def isInnerable(self):
+        '''May p_self be used as inner field within an outer field ?'''
+        # Most of the time, yes. Child classes may override this.
+        return True
+
     def isClientVisible(self, o):
         '''Returns True if p_self is visible according to master/slave
            relationships.'''
@@ -980,13 +985,13 @@ class Field:
         if value is not None:
             o.req[self.name] = value
 
-    def getRequestSuffix(self):
+    def getRequestSuffix(self, o):
         '''In most cases, in the user interface, there is one homonym HTML
            element for representing this field. Sometimes, several HTML elements
-           are used to represent one field (ie, for dates: one field for the
-           year, one for the month, etc). In this case, every HTML element's
-           name has the form <field name><suffix>. This method returns the
-           suffix of the "main" HTML element.'''
+           are used to represent one field (ie, for non-native dates: one field
+           for the year, one for the month, etc). In this case, every HTML
+           element's name has the form <field name><suffix>. This method returns
+           the suffix of the "main" HTML element.'''
         return ''
 
     def getValue(self, o, name=None, layout=None, single=None):

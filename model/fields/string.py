@@ -272,8 +272,12 @@ class String(Multilingual, Field):
 
     def getWidgetStyle(self):
         '''Get the styles to apply to the input widget on the edit layout'''
-        return 'text-transform:%s;%s;text-align:%s' % \
-               (self.transform, self.getInputSize(False), self.alignOnEdit)
+        r = 'text-transform:%s;text-align:%s' % \
+            (self.transform, self.alignOnEdit)
+        size = self.getInputSize(False)
+        if size:
+            r = '%s;%s' % (r, size)
+        return r
 
     @classmethod
     def getRange(class_, value):

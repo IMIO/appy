@@ -642,4 +642,8 @@ class Poor(Rich):
         value = XhtmlPreprocessor.preprocess(value, html=True, pre=False,
                                              root='x', paraTag='div')
         return super().getUniStorableValue(o, value, wrap=False)
+
+    def isInnerable(self):
+        '''Poor fields are innerable (but richs are not)'''
+        return True
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
