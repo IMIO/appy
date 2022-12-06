@@ -183,7 +183,6 @@ class Poor(Rich):
       </div>
       <!-- Configure auto-correct -->
       <script if="field.autoCorrect">::field.autoCorrect.inJs(tbId)</script>
-      <script>const delCodes=[8,46]</script>
      </x> ''',
 
      css = '''
@@ -195,6 +194,7 @@ class Poor(Rich):
      ''',
 
      js='''
+      const delCodes=[8,46];
       class Surgeon {
         // Performs various DOM triturations
 
@@ -205,13 +205,18 @@ class Poor(Rich):
           return r;
         }
 
+        static isRoot(div) {
+          // Return True if p_div is the root poor div
+          return div.getAttribute('contenteditable') === 'true';
+        }
+
         static cutAt(range) {
           // Cut and return the tail of the current selection
           let current = range.startContainer, r=[];
           if (current.nodeType == Node.TEXT_NODE) {
             // Cut a TextNode in 2 pieces
             let i = range.startOffset,
-                tail = current.substring(i);
+                tail = current.data.substring(i);
             if (tail) {
               r.push(document.createTextNode(tail));
               current.data = current.data.substring(0, i);
@@ -225,7 +230,7 @@ class Poor(Rich):
                 j = range.startOffset, child;
             while (i >= j) {
               child = current.removeChild(children[i]);
-              r.unshift(child);
+              if (child.data) r.unshift(child);
               i = i-1;
             }
           }
@@ -235,16 +240,21 @@ class Poor(Rich):
           return r;
         }
 
-        static insertAt(selection, range, node, moveAfter) {
-          /* Inserts p_node at the position indicated by p_selection and
-             p_range. If p_moveAfter is true, the cursor is moved to the end of
-             the inserted node. */
+        static insertAt(sel, range, node, moveAfter) {
+          /* Inserts p_node at the position indicated by p_range. If p_moveAfter
+             is true, the cursor is moved to the end of the inserted node. */
           range.insertNode(node);
           if (moveAfter) range.setStartAfter(node);
           // Reinitialise the range
           range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+
+        static cleanSel() {
+          // Clean the text being currently selected within a poor
+          let range = window.getSelection().getRangeAt(0);
+          if (!range.collapsed) range.deleteContents();
         }
 
         static inject(type, content, outer) {
@@ -287,7 +297,7 @@ class Poor(Rich):
             Surgeon.insertAt(sel, range, nod, true);
           }
           // Reinsert v_paraTail if present
-          if (paraTail) {
+          if (paraTail && paraTail.length > 0) {
             Surgeon.insertAt(sel, range, Surgeon.wrapNodes(paraTail), false);
           }
         }
@@ -356,8 +366,10 @@ class Poor(Rich):
         // Ensure the caret is correctly positioned before encoding text
         let sel = window.getSelection(),
             range = sel.getRangeAt(0),
-            current = range.startContainer;
-        if (current == div) {
+            curr = range.startContainer;
+        // If the current node is a text node, get the parent div
+        curr = (curr.nodeType == Node.TEXT_NODE)? curr.parentNode: curr;
+        if (sel.isCollapsed && curr == div) {
           /* Structural problem: an empty para must be created and the caret
              must be positioned inside it. As a preamble, remove any silly br
              that would be present. */
@@ -461,26 +473,32 @@ class Poor(Rich):
         let clipboardData = event.clipboardData || window.clipboardData,
             pastedData = clipboardData.getData('text');
         if (!pastedData) return;
+        // As a preamble, clean selected data
+        Surgeon.cleanSel();
         // Split v_pastedData into paragraphs
         let paras = pastedData.split('\\n'),
             para = paras.shift();
         /* For the first paragraph, if we are at the root of the (empty)
            contenteditable zone, wrap it in a paragraph. Else, inject text in
            the current paragraph. */
-        if (event.target.getAttribute('contenteditable') === 'true') {
-            setCaret(event.target);
-        }
+        if (Surgeon.isRoot(event.target)) setCaret(event.target);
         Surgeon.inject('text', para);
         // Insert the next lines as "div" tags
         if (paras.length > 0) {
+          let divs = [];
           // Replace every paragraph with a "div" tag
           for (let i=0; i < paras.length; i++) {
+            if (!paras[i]) continue; // Ignore any empty content
             para = document.createElement('div');
             para.appendChild(document.createTextNode(paras[i]));
-            paras[i] = para;
+            divs.push(para);
           }
-          Surgeon.inject('array', paras, true);
+          Surgeon.inject('array', divs, true);
         }
+        // Hack: prevent browsers from collapsing all paras to a single one
+        const sel = window.getSelection();
+        sel.modify('move', 'backward', 'character');
+        sel.modify('move', 'forward', 'character');
       }
 
       // Mamipulates data copied withi a poor field

@@ -139,6 +139,16 @@ class Viewer:
      <!-- Controls -->
      <form class="logControls" id="logForm">
 
+      <!-- App or site log ? -->
+      <div var="logType=req.logType or 'app'">
+       <input type="radio" value="app"  name="logType" id="app"
+               checked=":logType == 'app'"/>
+       <label lfor="app">app</label>
+       <input type="radio" value="site" name="logType" id="site"
+              checked=":logType == 'site'"/>
+       <label lfor="site">site</label>
+      </div>
+
       <!-- Refresh every x seconds -->
       <div class="textual">
        <input name="refreshAuto" type="checkbox" style="with:2sm"

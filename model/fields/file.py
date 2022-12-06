@@ -365,34 +365,32 @@ class File(Field):
       <x>::field.getDownloadLink(name, o, layout)</x>''')
 
     edit = Px('''
-     <x var="fName='%s_file' % name">
+     <x var="fname='%s_file' % name; rname='%s_action' % name">
       <x if="value">
        <x>:field.view</x><br/>
        <!-- Keep the file unchanged -->
-       <input type="radio" value="keep" checked=":bool(value)"
-              name=":'%s_action' % name" id=":'%s_keep' % name"
-              onclick=":'document.getElementById(%s).disabled=true'% q(fName)"/>
+       <input type="radio" value="keep" checked=":bool(value)" name=":rname"
+              id=":'%s_keep' % name"
+              onclick=":'document.getElementById(%s).disabled=true'% q(fname)"/>
        <label lfor=":'%s_keep' % name">:_('keep_file')</label><br/>
        <!-- Delete the file -->
        <x if="not field.required">
-        <input type="radio" value="delete"
-               name=":'%s_action' % name" id=":'%s_delete' % name"
-               onclick=":'document.getElementById(%s).disabled=true'%q(fName)"/>
+        <input type="radio" value="delete" name=":rname" id=":'%s_delete'% name"
+               onclick=":'document.getElementById(%s).disabled=true'%q(fname)"/>
         <label lfor=":'%s_delete' % name">:_('delete_file')</label><br/>
        </x>
        <!-- Replace with a new file -->
-       <input type="radio" value="replace"
-              checked=":not value and 'checked' or None"
-              name=":'%s_action' % name" id=":'%s_upload' % name"
-              onclick=":'document.getElementById(%s).disabled=false'%q(fName)"/>
+       <input type="radio" value="replace" id=":'%s_upload' % name"
+              checked=":None if value else 'checked'" name=":rname"
+              onclick=":'document.getElementById(%s).disabled=false'%q(fname)"/>
        <label lfor=":'%s_upload' % name">:_('replace_file')</label><br/>
       </x>
       <!-- The upload field -->
-      <input type="file" name=":fName" id=":fName" style=":field.getStyle()"
+      <input type="file" name=":fname" id=":fname" style=":field.getStyle()"
              onChange=":field.getJsOnChange()"/>
       <script var="isDisabled=not value \
              and 'false' or 'true'">:'document.getElementById(%s).disabled=%s'%\
-                                     (q(fName), isDisabled)</script></x>''')
+                                     (q(fname), isDisabled)</script></x>''')
 
     search = ''
 

@@ -41,14 +41,17 @@ function post(action, params, target) {
 function form2dict(f, d) {
   // Get the other params
   let name, value, elem, elems = f.elements;
-  for (let i=0; i < elems.length; i++) {
-    elem = elems[i];
+  for (const elem of elems) {
     // Ignore unnamed form elements
     name = elem.name;
     if (!name) continue;
     // Get the field value
     if (elem.type == 'checkbox') {
       value = (elem.checked)? '1':'0';
+    }
+    else if (elem.type == 'radio') {
+      if (elem.checked) value = elem.value;
+      else continue;
     }
     else {
       value = elem.value;
