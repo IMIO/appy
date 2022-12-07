@@ -34,7 +34,7 @@ class List(Field):
         g = Layouts(edit=em['edit'], view='fl')
         gd = Layouts(edit=LayoutF('d50;frv=', wrap=True))
         # Default layouts for sub-fields
-        sub = Layouts(Layout('frv', width=None))
+        sub = Layouts(edit=Layout('frv', width=None))
 
         @classmethod
         def getDefault(class_, field):

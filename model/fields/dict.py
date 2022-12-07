@@ -153,7 +153,7 @@ class Dict(List):
             for name, subField in self.getSubFields(o):
                 message = subField.validate(o, getattr(row, name, None))
                 if message:
-                    setattr(errors, '%s*%s' % (subField.name, key), message)
+                    setattr(errors, '%s*-d-%s' % (subField.name, key), message)
 
     def getDiffSubValue(self, old, new, texts):
         '''Produce a diff between this p_old sub-value and its p_new version.
