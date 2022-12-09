@@ -318,7 +318,7 @@ msgstr "Insérer la sélection"
 
 #. Default: "Un·check everything"
 msgid "check_uncheck"
-msgstr "Tout dé·sélectionner"
+msgstr "Tout dé·cocher"
 
 #. Default: "Click the icon to unlock."
 msgid "page_unlock"

@@ -305,7 +305,7 @@ class UiGroup:
       <x if="field.showHeader()">:field.pxHeader</x>
       <tr><th for="col in field.columns" width=":col.width"></th></tr>
       <tr for="row in field.elements">
-       <x for="sub in row">
+       <x for="sub in row" if="sub">
         <td>
          <label if="sub.hasLabel and \
                     (sub.type != 'Action')">::_('label', field=sub)</label></td>

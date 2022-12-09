@@ -205,7 +205,12 @@ class Handler:
 
     def getSpecial(self, login):
         '''Returns the special User instance having this p_login'''
-        # No all handlers are able to deliver this info
+        try:
+            r = self.dbConnection.root.objects.get(login)
+        except AttributeError:
+            # The DB connection may not have been defined yet
+            r = None
+        return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Inject class Handler on class Base to avoid circular package dependencies
@@ -299,15 +304,6 @@ class HttpHandler(Handler):
         if not headers: return
         agent = headers.get('User-Agent')
         return False if not agent else bool(HttpHandler.mobileRex.search(agent))
-
-    def getSpecial(self, login):
-        '''Returns the special user having this p_login'''
-        try:
-            r = self.dbConnection.root.objects.get(login)
-        except AttributeError:
-            # The DB connection may not have been defined yet
-            r = None
-        return r
 
     def complete(self):
         '''Completes p_self's data structures, that were not initialised due to
