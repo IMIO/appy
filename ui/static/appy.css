@@ -400,7 +400,8 @@ th input { margin:0 !important}
 .thumbtable td { padding:0 5px 3px 5px }
 
 /* Zones for toggling checkboxes */
-.divAll { margin:3px 0 7px 0; border-bottom:1px dashed |itextBottomColor| }
+.divAll { margin:3px 0 7px 0; border-bottom:1px dashed |itextBottomColor|;
+          text-align:left }
 .divAll label { text-transform:none; font-style:italic; font-size:85% }
 .checkAll { vertical-align:middle; margin-right:8px }
 .total td { text-align:center; border-top:2px solid |darkColor|;

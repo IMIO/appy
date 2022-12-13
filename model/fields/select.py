@@ -118,6 +118,7 @@ class Select(Field):
         # Within grid groups
         g  = Layouts(edit=Layout('f;rv=', width=None),
                      view=Layout('fl', width=None))
+        # Variants
         gd = Layouts(edit=Layout('d;rv=-f2=', width=None),
                      view=Layout('fl', width=None))
         gh = Layouts(edit=Layout('f;hrv=', width=None), view=gd['view'])
