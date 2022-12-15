@@ -32,7 +32,7 @@ class List(Field):
         # No label on "edit" (*e*dit *m*inimalist)
         em = Layouts(edit=Layout('f;rv=', width=None))
         g = Layouts(edit=em['edit'], view='fl')
-        gd = Layouts(edit=LayoutF('d65;frv=', wrap=True))
+        gd = Layouts(edit=LayoutF('d100;frv=', wrap=True))
         # Default layouts for sub-fields
         sub = Layouts(edit=Layout('frv', width=None))
 

@@ -5,7 +5,7 @@
 import time
 
 from DateTime import DateTime
-from DateTime.interfaces import DateError
+from DateTime.interfaces import DateError, SyntaxError
 
 from appy.px import Px
 from appy.utils import dates
@@ -245,7 +245,7 @@ class Date(Field):
     def validateValue(self, o, value):
         try:
             value = DateTime(value)
-        except (DateError, ValueError):
+        except (DateError, ValueError, SyntaxError):
             return o.translate('bad_date')
 
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
