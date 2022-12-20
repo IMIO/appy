@@ -2364,7 +2364,8 @@ class Calendar(Field):
             if show: r.append(action)
         return r
 
-    def onExecuteAction(self, o):
+    traverse['executeAction'] = 'perm:read'
+    def executeAction(self, o):
         '''An action has been triggered from the ui'''
         # Find the action to execute
         req = o.req

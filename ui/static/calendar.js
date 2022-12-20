@@ -230,14 +230,14 @@ function onCell(td, date) {
 }
 
 // Executes a calendar action
-function calendarAction(hookId, actionName, comment) {
+function calendarAction(hook, actionName, comment) {
   // Get the calendar table: we have stored select cells on it
-  var table = document.getElementById(hookId + '_cal');
-  var selectDict = table['selected'];
-  var selected = (selectDict)? stringFromDict(selectDict, true):'';
-  var params = {'action': 'onExecuteAction', 'actionName': actionName,
-                'selected': selected, 'comment': encodeURIComponent(comment)};
-  askAjax(hookId, null, params);
+  const table = document.getElementById(hook + '_cal'),
+        selectDict = table['selected'],
+        selected = (selectDict)? stringFromDict(selectDict, true): '',
+        params = {'action': 'executeAction', 'actionName': actionName,
+                  'selected': selected, 'comment': encodeURIComponent(comment)};
+  askAjax(hook, null, params);
 }
 
 // Unselect all cells in a calendar
