@@ -218,26 +218,26 @@ class Search:
         # results. Else, it is a list of objects (or object ids if p_ids is
         # True) representing the complete result set. If p_ids is True, p_batch
         # is ignored and implicitly considered being False.
-        # ~
+        #
         # p_secure is transmitted and documented in called method
         # appy.database.catalog.Catalog.search (called via method
         # appy.database.Database.search).
-        # ~
+        #
         # The result is sorted according to the potential sort key and order
         # ('asc'ending or 'desc'ending) as defined in p_self.sortBy and
         # p_self.sortOrder. If p_sortBy is not None, p_sortBy and p_sortOrder
         # override p_self's homonym attributes.
-        # ~
+        #
         # p_filters alter search parameters according to selected filters in the
         # ui.
-        # ~
+        #
         # If p_refObject and p_refField are given, the search is limited to the
         # objects being referenced from p_refObject through p_refField.
-        # ~
+        #
         # If p_other is not None, it is another Search instance whose parameters
         # will be merged with p_self's parameters (including sortBy and
         # sortOrder).
-        # ~
+        #
         # Prepare search parameters
         className = self.container.name
         params = self.fields.copy()

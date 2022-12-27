@@ -815,7 +815,7 @@ class Ref(Field):
               title=":title">:Px.truncateValue(title, charsWidth)</option>
      </select>''')
 
-    # Widget for filtering object values on query results
+    # Widget for filtering object values on search results
 
     pxFilterSelect = Px('''
      <div class="dropdownMenu fdrop"
@@ -842,7 +842,7 @@ class Ref(Field):
         <x if="mode.inFilter(name, emptyVal)">→ </x> 
         <a onclick=":js % q(emptyVal)">:_('no_object')</a></div>
 
-       <!-- Filter objects having a particular vlalue -->
+       <!-- Filter objects having a particular value -->
        <div for="tied in objects"
             var2="idVal=str(getattr(tied, field.indexAttribute));
                   title=field.getReferenceLabel(o, tied, unlimited=True,
