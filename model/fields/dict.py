@@ -45,12 +45,12 @@ class Dict(List):
     # PX for rendering a single row
     pxRow = Px('''
      <!-- Render a separation row -->
-     <x if="not rId">::text.get(field)</x>
-     <tr if="rId" valign="top" class=":'even' if loop.rId.odd else 'odd'">
+     <x if="not rowId">::text.get(field)</x>
+     <tr if="rowId" valign="top" class=":'even' if loop.rowId.odd else 'odd'">
       <x>:field.pxFirstCell</x>
       <td><b>::text</b></td>
       <td for="subName, field in subFields" if="field" align="center"
-          var2="fieldName='%s*%s' % (field.name, rowId)">:field.pxRender</td>
+          var2="fieldName=outer.getEntryName(field, rowId)">:field.pxRender</td>
      </tr>''')
 
     # PX for rendering the dict (shared between pxView and pxEdit)
@@ -61,6 +61,7 @@ class Dict(List):
             var2="keys=field.keys(o);
                   subFields=field.getSubFields(o, layout);
                   swidths=field.getWidths(subFields);
+                  outer=field;
                   o=alto|o">
       <!-- Header -->
       <tr valign=":field.headerAlign">
@@ -69,7 +70,7 @@ class Dict(List):
            width=":swidths[loop.subName.nb + 1]">::sub.getListHeader(_ctx_)</th>
       </tr>
       <!-- Rows of data -->
-      <x for="rId, text in keys" var2="rowId='-d-%s' % rId">:field.pxRow</x>
+      <x for="rowId, text in keys">:field.pxRow</x>
      </table>''')
 
     def __init__(self, keys, fields, validator=None, multiplicity=(0,1),
@@ -120,6 +121,10 @@ class Dict(List):
         r = getattr(o, self.name, None)
         if r: return copy.deepcopy(r)
 
+    def getEntryName(self, sub, row, name=None):
+        '''Add suffix "-d-" to the entry name'''
+        return super().getEntryName(sub, row, name, '-d-')
+
     def remove(self, o, key):
         '''Remove entry corresponding to p_key on the value stored on p_o'''
         if self.name not in o.values: return
@@ -153,7 +158,7 @@ class Dict(List):
             for name, subField in self.getSubFields(o):
                 message = subField.validate(o, getattr(row, name, None))
                 if message:
-                    setattr(errors, '%s*-d-%s' % (subField.name, key), message)
+                    setattr(errors, self.getEntryName(subField, key), message)
 
     def getDiffSubValue(self, old, new, texts):
         '''Produce a diff between this p_old sub-value and its p_new version.

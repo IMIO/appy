@@ -44,7 +44,7 @@ class List(Field):
     # A 1st invisible cell containing a virtual field allowing to detect this
     # row at server level.
     pxFirstCell = Px('''<td style="display: none">
-     <table var="rid='%s*-row-*%s' % (field.name, rowId)"
+     <table var="rid=field.getEntryName('-row-', rowId, field.name)"
             id=":'%d_%s' % (o.iid, rid)">
       <tr><td><input type="hidden" id=":rid" name=":rid"/></td></tr>
      </table></td>''')
@@ -56,7 +56,7 @@ class List(Field):
       <x if="not isCell">:field.pxFirstCell</x>
       <td for="name, field in subFields" if="field"
           var2="minimal=isCell;
-                fieldName='%s*%d' % (field.name, rowId)">:field.pxRender</td>
+                fieldName=outer.getEntryName(field, rowId)">:field.pxRender</td>
       <!-- Icons -->
       <td if="isEdit" align=":dright">
        <img class="clickable iconS" src=":svg('deleteL')"
@@ -84,7 +84,8 @@ class List(Field):
             if="isEdit or value"
             id=":tableId" width=":field.width"
             class=":field.getTableCss(_ctx_)"
-            var2="Totals=field.Totals;
+            var2="outer=field;
+                  Totals=field.Totals;
                   subFields=field.getSubFields(o, layout);
                   swidths=field.getWidths(subFields);
                   totals=Totals.initialise(field, 'row', subFields, isEdit)">
@@ -390,30 +391,40 @@ class List(Field):
             r.append((n, f))
         return r
 
+    def getEntryName(self, sub, row, name=None, suffix=''):
+        '''Gets the name of the request entry corresponding to the value of
+           this p_sub-field at this p_row.'''
+        name = name or self.name
+        # p_sub can be a (sub)Field instance or a string. If it is a string, it
+        # must correspond to the unprefixed sub-field name.
+        prefix = '%s*%s' % (name, sub) if isinstance(sub, str) else sub.name
+        return '%s*%s%s' % (prefix, suffix, row)
+
     def getRequestValue(self, o, requestName=None):
         '''Concatenates the list from distinct form elements in the request'''
         req = o.req
         name = requestName or self.name # A List may be into another List (?)
         prefix = name + '*-row-*' # Allows to detect a row of data for this List
         r = {}
-        isDict = True # We manage both List and Dict
+        isDict = False # We manage both List and Dict
         for key in req.keys():
             if not key.startswith(prefix): continue
-            # I have found a row: get its index
+            # I have found a row
             row = self.rowClass()
+            # Get its index or key
             rowId = key.split('*')[-1]
-            if rowId == '-1': continue # Ignore the template row
+            if rowId == '-1':
+                continue # Ignore the template row
+            elif not rowId.isdigit():
+                rowId = rowId[3:] # Remove the -d- prefix
+                isDict = True
+            else:
+                rowId = int(rowId)
             for subName, subField in self.getSubFields(o):
-                keyName = '%s*%s*%s' % (name, subName, rowId)
+                keyName = self.getEntryName(subName, rowId, name)
                 if keyName + subField.getRequestSuffix(o) in req:
                     v = subField.getRequestValue(o, requestName=keyName)
                     setattr(row, subName, v)
-            if rowId.isdigit():
-                rowId = int(rowId)
-                isDict = False
-            else:
-                # Remove the -d- prefix
-                rowId = rowId[3:]
             r[rowId] = row
         # Produce a sorted list (List only)
         if not isDict:
@@ -437,9 +448,9 @@ class List(Field):
             name = self.name
             i = 0
             for row in value:
-                req['%s*-row-*%d' % (name, i)] = ''
+                req[self.getEntryName('-row-', i, name)] = ''
                 for n, v in row.d().items():
-                    key = '%s*%s*%d' % (name, n, i)
+                    key = self.getEntryName(n, i, name)
                     req[key] = v
                 i += 1
 

@@ -642,7 +642,7 @@ class Base:
         #   the "key" param of the standard list.sort method;
         # - None. If None, default sorting will occur, using the method stored
         #   in field.insert.
-        # ~
+        #
         # Get the objects tied to p_self via field p_name
         objects = getattr(self, name, None)
         if not objects: return
@@ -801,19 +801,20 @@ class Base:
         # evaluated with 2 variables in its context: "o" which is the currently
         # walked object, instance of p_className, and "ctx", which is the
         # context as initialized (or not) by p_context. p_context may be used as
+        #
         # (1) a variable or instance that is updated on every call to produce a
-        #     result;
-        # (2) an input variable or instance;
+        #     result ;
+        # (2) an input variable or instance ;
         # (3) both.
-
+        #
         # The method returns p_context, modified or not by evaluation of
         # p_expression on every matching object.
-
+        #
         # When you need to perform an action or computation on a lot of objects,
         # use this method instead of doing things like
-           
+        #
         #              "for o in self.search(MyClass,...)"
-        
+        #
         # Initialize the context variable "ctx"
         ctx = context
         i = 0
