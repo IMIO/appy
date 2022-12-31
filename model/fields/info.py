@@ -12,11 +12,12 @@ class Info(Field):
 
     class Layouts(Layouts):
         '''Info-specific layouts'''
-        b = Layouts(edit='l')
-        d = Layouts(edit=Layout('l-d', width=None))
-        c = Layouts(edit='l|')
-        dc = Layouts(edit='l|-d|')
-        do = Layouts(edit='f', view='d') # Description only
+        b   = Layouts(edit='l')
+        d   = Layouts(edit=Layout('l-d', width=None))
+        ds  = Layouts(edit=Layout('ld', width=None)) # *S*ingle line
+        c   = Layouts(edit='l|')
+        dc  = Layouts(edit='l|-d|')
+        do  = Layouts(edit='f', view='d') # Description only
         vdc = Layouts(edit='l', view='l|-d|')
 
         @classmethod
