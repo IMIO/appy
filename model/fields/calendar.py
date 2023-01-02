@@ -693,6 +693,22 @@ class Event(Persistent):
         '''What is the day part taken by this event ?'''
         return field.getTimeslot(self.timeslot).dayPart
 
+    def matchesType(self, type):
+        '''Is p_self an event of this p_type ?'''
+        # p_type can be:
+        # - a single event type (as a string),
+        # - a prefix denoting several event types (as a string ending with a *),
+        # - a list of (unstarred) event types.
+        etype = self.eventType
+        if isinstance(type, str):
+            if type.endswith('*'):
+                r = etype.startswith(type[:-1])
+            else:
+                r = etype == type
+        else:
+            r = etype in type
+        return r
+
     def __repr__(self):
         return '<Event %s @slot %s>' % (self.eventType, self.timeslot)
 
@@ -1857,21 +1873,21 @@ class Calendar(Field):
 
     def getEventsByType(self, o, eventType, minDate=None, maxDate=None,
                         sorted=True, groupSpanned=False):
-        '''Returns all the events of a given p_eventType. If p_eventType is
-           None, it returns events of all types. p_eventType can also be a
-           list or tuple. The return value is a list of 2-tuples whose 1st elem
-           is a DateTime instance and whose 2nd elem is the event.
+        '''Returns all the events of a given p_eventType'''
+        # If p_eventType is None, it returns events of all types. p_eventType
+        # can also be a list or tuple. The return value is a list of 2-tuples
+        # whose 1st elem is a DateTime instance and whose 2nd elem is the event.
 
-           If p_sorted is True, the list is sorted in chronological order. Else,
-           the order is random, but the result is computed faster.
+        # If p_sorted is True, the list is sorted in chronological order. Else,
+        # the order is random, but the result is computed faster.
 
-           If p_minDate and/or p_maxDate is/are specified, it restricts the
-           search interval accordingly.
+        # If p_minDate and/or p_maxDate is/are specified, it restricts the
+        # search interval accordingly.
 
-           If p_groupSpanned is True, events spanned on several days are
-           grouped into a single event. In this case, tuples in the result
-           are 3-tuples: (DateTime_startDate, DateTime_endDate, event).
-        '''
+        # If p_groupSpanned is True, events spanned on several days are grouped
+        # into a single event. In this case, tuples in the result are 3-tuples:
+        # (DateTime_startDate, DateTime_endDate, event).
+
         # Prevent wrong combinations of parameters
         if groupSpanned and not sorted:
             raise Exception(UNSORT_EVTS)
@@ -1890,32 +1906,28 @@ class Calendar(Field):
         years = getattr(o, self.name)
         for year in years.keys():
             # Don't take this year into account if outside interval
-            if minDate and (year < minYear): continue
-            if maxDate and (year > maxYear): continue
+            if minDate and year < minYear: continue
+            if maxDate and year > maxYear: continue
             months = years[year]
             # Browse this year's months
             for month in months.keys():
                 # Don't take this month into account if outside interval
                 thisMonth = (year, month)
-                if minDate and (thisMonth < minMonth): continue
-                if maxDate and (thisMonth > maxMonth): continue
+                if minDate and thisMonth < minMonth: continue
+                if maxDate and thisMonth > maxMonth: continue
                 days = months[month]
                 # Browse this month's days
                 for day in days.keys():
                     # Don't take this day into account if outside interval
                     thisDay = (year, month, day)
-                    if minDate and (thisDay < minDay): continue
-                    if maxDate and (thisDay > maxDay): continue
+                    if minDate and thisDay < minDay: continue
+                    if maxDate and thisDay > maxDay: continue
                     events = days[day]
                     # Browse this day's events
                     for event in events:
                         # Filter unwanted events
-                        if eventType:
-                            if isinstance(eventType, str):
-                                keepIt = (event.eventType == eventType)
-                            else:
-                                keepIt = (event.eventType in eventType)
-                            if not keepIt: continue
+                        if eventType and not event.matchesType(eventType):
+                            continue
                         # We have found a event
                         date = DateTime('%d/%d/%d UTC' % (year, month, day))
                         if groupSpanned:

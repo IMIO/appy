@@ -874,7 +874,7 @@ msgstr "Aujourd'hui"
 
 #. Default: "Which event type would you like to create?"
 msgid "which_event"
-msgstr "Quel type d'événement voulez-vous créer?"
+msgstr "Que voulez-vous ajouter ?"
 
 #. Default: "Extend the event on the following number of days (leave blank to create an event on the current day only):"
 msgid "event_span"
