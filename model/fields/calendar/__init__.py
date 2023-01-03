@@ -17,6 +17,7 @@ from appy.model.utils import Object as O
 from appy.model.fields import Field, Show
 from appy.ui.layout import Layout, Layouts
 from appy.utils.dates import getLastDayOfMonth
+from appy.model.fields.calendar.timeslot import Timeslot
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TL_W_EVTS   = 'A timeline calendar has the objective to display a series of ' \
@@ -32,38 +33,6 @@ S_MONTHS_KO = 'Strict months can only be used with timeline calendars.'
 ACT_MISS    = 'Action "%s" does not exist or is not visible.'
 UNSORT_EVTS = 'Events must be sorted if you want to get spanned events to be ' \
               'grouped.'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Timeslot:
-    '''A timeslot defines a time range within a single day'''
-
-    def __init__(self, id, start=None, end=None, name=None, eventTypes=None,
-                 default=False):
-        # A short, human-readable string identifier, unique among all timeslots
-        # for a given Calendar. Id "main" is reserved for the main timeslot that
-        # represents the whole day.
-        self.id = id
-        # The time range can be defined by p_start ~(i_hour, i_minute)~ and
-        # p_end (idem), or by a simple name, like "AM" or "PM".
-        self.start = start
-        self.end = end
-        self.name = name or id
-        # The event types (among all event types defined at the Calendar level)
-        # that can be assigned to this slot.
-        self.eventTypes = eventTypes # "None" means "all"
-        # "day part" is the part of the day (from 0 to 1.0) that is taken by
-        # the timeslot.
-        self.dayPart = 1.0
-        # A timeslot being set as the default one will appear preselected in the
-        # popup for adding a new event. Among all timeslots defined for a given
-        # field, a single one must be set as being the default one.
-        self.default = default
-
-    def allows(self, eventType):
-        '''It is allowed to have an event of p_eventType in this timeslot?'''
-        # self.eventTypes being None means that no restriction applies
-        if not self.eventTypes: return True
-        return eventType in self.eventTypes
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ValidationMailing:
@@ -289,12 +258,14 @@ class Gradient:
 class Other:
     '''Identifies a Calendar field that must be shown within another Calendar
        (see parameter "others" in class Calendar).'''
+
     def __init__(self, o, name, color='grey', excludedEvents=(),
                  highlight=False):
         # The object on which this calendar is defined
         self.o = o
         # The other calendar instance
         self.field = o.getField(name)
+        self.timeslots = Timeslot.getAll(o, self.field)
         # The color into which events from this calendar must be shown (in the
         # month rendering) in the calendar integrating this one.
         self.color = color
@@ -327,9 +298,11 @@ class Other:
                     # If the event does not span the whole day, a gradient can
                     # be used to color the cell instead of just a plain
                     # background.
-                    if (event.getDayPart(self.field) < 1.0) and \
-                       (event.timeslot in gradients):
-                        info.gradient = gradients[event.timeslot]
+                    if event.timeslot in gradients:
+                        dayPart = event.getDayPart(self.o, self.field,
+                                                   self.timeslots)
+                        info.gradient = gradients[event.timeslot] \
+                                        if dayPart < 1.0 else None
                     else:
                         info.gradient = None
                 else:
@@ -689,9 +662,12 @@ class Event(Persistent):
         return self.eventType == other.eventType and \
                self.timeslot == other.timeslot
 
-    def getDayPart(self, field):
+    def getDayPart(self, o, field, timeslots=None):
         '''What is the day part taken by this event ?'''
-        return field.getTimeslot(self.timeslot).dayPart
+        id = self.timeslot
+        if id == 'main': return 1.0
+        # Get the dayPart attribute as defined on the Timeslot object
+        return Timeslot.get(self.timeslot, o, field, timeslots).dayPart
 
     def matchesType(self, type):
         '''Is p_self an event of this p_type ?'''
@@ -724,19 +700,19 @@ class Calendar(Field):
     jsFiles = {'view': ('calendar.js',)}
 
     # Make some classes available here
+    Other = Other
+    Layer = Layer
+    Event = Event
+    Action = Action
+    Totals = Totals
+    Legend = Legend
     DateTime = DateTime
     Timeslot = Timeslot
-    Validation = Validation
-    Other = Other
-    Totals = Totals
-    Layer = Layer
-    Legend = Legend
-    Action = Action
-    Event = Event
     IterSub = utils.IterSub
+    Validation = Validation
 
-    timelineBgColors = {'Fri': '#dedede', 'Sat': '#c0c0c0', 'Sun': '#c0c0c0'}
     validCbStatuses = {'validated': True, 'discarded': False}
+    timelineBgColors = {'Fri': '#dedede', 'Sat': '#c0c0c0', 'Sun': '#c0c0c0'}
 
     class Layouts(Layouts):
         '''Calendar-specific layouts'''
@@ -902,7 +878,7 @@ class Calendar(Field):
        <div if="showTimeslots">
         <span class="discreet">:_('timeslot')</span> 
         <select if="showTimeslots" name="timeslot" class="calSelect">
-         <option for="sname, slot in field.getAllSlots(o)"
+         <option for="sname, slot in field.Timeslot.getAllNamed(o, timeslots)"
                  value=":slot.id">:sname</option>
         </select>
        </div>
@@ -973,7 +949,8 @@ class Calendar(Field):
              var2="events=field.getEventsAt(o, date);
                    single=events and len(events) == 1;
                    spansDays=field.hasEventsAt(o, date+1, events);
-                   mayCreate=mayEdit and not field.dayIsFull(date, events);
+                   mayCreate=mayEdit and not field.dayIsFull(date, events,
+                                                             timeslots);
                    mayDelete=mayEdit and events and field.mayDelete(o, events);
                    day=date.day();
                    dayString=date.strftime('%Y/%m/%d');
@@ -989,8 +966,8 @@ class Calendar(Field):
                 var="info=field.getApplicableEventTypesAt(o, date, \
                            eventTypes, preComputed, True)"
                 if="info and info.eventTypes" src=":url('plus')"
-                var2="freeSlots=field.getFreeSlotsAt(date, events, slotIds,\
-                                                     slotIdsStr, True)"
+                var2="freeSlots=field.Timeslot.getFreeAt(date, events, slotIds,
+                                                         slotIdsStr, True)"
                 onclick=":'openEventPopup(%s,%s,%s,null,null,%s,%s,%s)' % \
                  (q(hook), q('new'), q(dayString), q(info.eventTypes), \
                   q(info.message), q(freeSlots))"/>
@@ -1019,8 +996,8 @@ class Calendar(Field):
           </x>
           <!-- Events from other calendars -->
           <x if="others"
-             var2="otherEvents=field.getOtherEventsAt(date, others, \
-                                           allEventNames, render, preComputed)">
+             var2="otherEvents=field.getOtherEventsAt(date, others,
+                     allEventNames, render, preComputed)">
            <div style=":'color: %s; font-style: italic' % event.color"
                 for="event in otherEvents">:event.name</div>
           </x>
@@ -1076,6 +1053,7 @@ class Calendar(Field):
                monthDayOne=field.DateTime('%s/01' % month);
                render=req.render or field.render;
                today=field.DateTime('00:00');
+               timeslots=field.Timeslot.getAll(o, field);
                grid=field.getGrid(month, render);
                eventTypes=field.getEventTypes(o);
                allowedEventTypes=field.getAllowedEventTypes(o, eventTypes);
@@ -1090,8 +1068,8 @@ class Calendar(Field):
                events=field.getAllEvents(o, eventTypes, others);
                allEventTypes,allEventNames=events;
                namesOfDays=field.getNamesOfDays(_);
-               showTimeslots=len(field.timeslots) &gt; 1;
-               slotIds=[slot.id for slot in field.timeslots];
+               showTimeslots=len(timeslots) &gt; 1;
+               slotIds=[slot.id for slot in timeslots];
                slotIdsStr=','.join(slotIds);
                mayValidate=field.mayValidate(o);
                activeLayers=field.getActiveLayers(req);
@@ -1255,13 +1233,10 @@ class Calendar(Field):
         # shown.
         self.defaultDate = defaultDate
         # "timeslots" are a way to define, within a single day, time ranges. It
-        # must be a list of Timeslot instances (see above). If you define
-        # timeslots, the first one must be the one representing the whole day
-        # and must have id "main".
-        if not timeslots: self.timeslots = [Timeslot('main')]
-        else:
-            self.timeslots = timeslots
-            self.checkTimeslots()
+        # must be a list of Timeslot instances or a method producing such a
+        # list. If you define timeslots, the first one must be the one
+        # representing the whole day and must have id "main".
+        Timeslot.init(self, timeslots)
         # "colors" must either be a dict {s_eventType:s_color} or a method
         # receiving 2 args: an event type and the pre-computed object, and
         # returning an HTML-compliant color for this type (or None if the type
@@ -1367,16 +1342,17 @@ class Calendar(Field):
         if strictMonths and self.render != 'timeline':
             raise Exception(S_MONTHS_KO)
         self.strictMonths = strictMonths
-        # ~~~ Call the base constructor ~~~
+
+        # Call the base constructor
+
         # The "validator" attribute, allowing field-specific validation, behaves
         # differently for the Calendar field. If specified, it must hold a
         # method that will be executed every time a user wants to create an
         # event (or series of events) in the calendar. This method must accept
         # those args:
-        #  - date       the date of the event (as a DateTime instance);
-        #  - eventType  the event type (one among p_eventTypes);
-        #  - timeslot   the timeslot for the event (see param "timeslots"
-        #               below);
+        #  - date       the date of the event (as a DateTime instance) ;
+        #  - eventType  the event type (one among p_eventTypes) ;
+        #  - timeslot   the timeslot for the event (see param p_timeslots) ;
         #  - span       the number of additional days on which the event will
         #               span (will be 0 if the user wants to create an event
         #               for a single day).
@@ -1391,18 +1367,6 @@ class Calendar(Field):
           colspan, master, masterValue, focus, False, mapping, generateLabel,
           label, None, None, None, None, True, False, view, cell, buttons, edit,
           xml, translations)
-
-    def checkTimeslots(self):
-        '''Checks whether self.timeslots defines correct timeslots'''
-        # The first timeslot must be the global one, named 'main'
-        if self.timeslots[0].id != 'main':
-            raise Exception('The first timeslot must have id "main" and is ' \
-                            'the one representing the whole day.')
-        # Set the day parts for every timeslot
-        count = len(self.timeslots) - 1 # Count the timeslots, main excepted
-        for timeslot in self.timeslots:
-            if timeslot.id == 'main': continue
-            timeslot.dayPart = 1.0 / count
 
     def formatLayers(self, layers):
         '''Chain layers via attribute "previous"'''
@@ -1470,6 +1434,7 @@ class Calendar(Field):
         return res
 
     weekDays = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
+
     def getNamesOfDays(self, _):
         '''Returns the translated names of all week days, short and long
            versions.'''
@@ -1696,14 +1661,14 @@ class Calendar(Field):
         gradients = self.gradients
         return gradients(o) if callable(gradients) else gradients
 
-    def dayIsFull(self, date, events):
-        '''In the calendar full at p_date? Defined events at this p_date are in
+    def dayIsFull(self, date, events, timeslots):
+        '''In the calendar full at p_date ? Defined events at this p_date are in
            p_events. We check here if the main timeslot is used or if all
            others are used.'''
         if not events: return
         for e in events:
             if e.timeslot == 'main': return True
-        return len(events) == len(self.timeslots) - 1
+        return len(events) == len(timeslots) - 1
 
     def dateInRange(self, date, startDate, endDate):
         '''Is p_date within the range (possibly) defined for this calendar by
@@ -1732,38 +1697,6 @@ class Calendar(Field):
             r.eventTypes = ','.join(r.eventTypes)
             if not r.message: r.message = ''
         return r
-
-    def getAllSlots(self, o):
-        '''Returns tuple (name, slot) for all defined timeslots. Position the
-           default one as the first one in the list.'''
-        r = []
-        for slot in self.timeslots:
-            name = o.translate('timeslot_main') if slot.id == 'main' \
-                                                else slot.name
-            if slot.default:
-                r.insert(0, (name, slot))
-            else:
-                r.append((name, slot))
-        return r
-
-    def getFreeSlotsAt(self, date, events, slotIds, slotIdsStr,
-                       forBrowser=False):
-        '''Gets the free timeslots in this calendar for some p_date. As a
-           precondition, we know that the day is not full (so timeslot "main"
-           cannot be taken). p_events are those already defined at p_date.
-           p_slotIds is the precomputed list of timeslot ids.'''
-        if not events: return slotIdsStr if forBrowser else slotIds
-        # Remove any taken slot
-        r = slotIds[:]
-        r.remove('main') # "main" cannot be chosen: p_events is not empty
-        for event in events: r.remove(event.timeslot)
-        # Return the result
-        return ','.join(r) if forBrowser else r
-
-    def getTimeslot(self, id):
-        '''Get the timeslot corresponding to p_id'''
-        for slot in self.timeslots:
-            if slot.id == id: return slot
 
     def getEventsAt(self, o, date):
         '''Returns the list of events that exist at some p_date (=day). p_date
@@ -2032,7 +1965,7 @@ class Calendar(Field):
         default = self.defaultDate
         return default(o) if default else DateTime() # Now
 
-    def checkCreateEvent(self, o, eventType, timeslot, events):
+    def checkCreateEvent(self, o, eventType, timeslot, events, timeslots):
         '''Checks if one may create an event of p_eventType in p_timeslot.
            Events already defined at p_date are in p_events. If the creation is
            not possible, an error message is returned.'''
@@ -2044,28 +1977,35 @@ class Calendar(Field):
         if events and timeslot == 'main': return DAY_FULL
         # Get the Timeslot and check if, at this timeslot, it is allowed to
         # create an event of p_eventType.
-        for slot in self.timeslots:
+        for slot in timeslots:
             if slot.id == timeslot:
                 # I have the timeslot
                 if not slot.allows(eventType):
                     _ = o.translate
                     return _('timeslot_misfit', mapping={'slot': timeslot})
 
-    def mergeEvent(self, eventType, timeslot, events):
+    def mergeEvent(self, o, eventType, timeslot, events, timeslots):
         '''If, after adding an event of p_eventType, all timeslots are used with
            events of the same type, we can merge them and create a single event
            of this type in the main timeslot.'''
         # When defining an event in the main timeslot, no merge is needed
-        if timeslot == 'main': return
-        # Merge is required when all non-main timeslots are used by events of
-        # the same type.
-        if len(events) != (len(self.timeslots)-2): return
+        if timeslot == 'main' or not events: return
+        # Merge is required if all events of this p_eventType reach together a
+        # part of 1.0.
+        count = 0.0
         for event in events:
-            if event.eventType != eventType: return
-        # If we are here, we must merge all events
-        del events[:]
-        events.append(Event(eventType))
-        return True
+            if event.eventType == eventType:
+                count += event.getDayPart(o, self, timeslots)
+        if (count + Timeslot.get(timeslot, o, self, timeslots).dayPart) == 1.0:
+            # Delete all events of this type and create a single event of this
+            # type, with timeslot "main".
+            i = len(events) - 1
+            while i >= 0:
+                if events[i].eventType == eventType:
+                    del events[i]
+                i -= 1
+            events.insert(0, Event(eventType))
+            return True
 
     def createEvent(self, o, date, eventType, timeslot='main', eventSpan=None,
                     handleEventSpan=True, log=True, deleteFirst=False):
@@ -2104,16 +2044,17 @@ class Calendar(Field):
         if events and deleteFirst:
             del events[:]
         # Return an error if the creation cannot occur
-        error = self.checkCreateEvent(o, eventType, timeslot, events)
+        timeslots = Timeslot.getAll(o, self)
+        error = self.checkCreateEvent(o, eventType, timeslot, events, timeslots)
         if error: return error
         # Merge this event with others when relevant
-        merged = self.mergeEvent(eventType, timeslot, events)
+        merged = self.mergeEvent(o, eventType, timeslot, events, timeslots)
         if not merged:
             # Create and store the event
             events.append(Event(eventType, timeslot))
             # Sort events in the order of timeslots
             if len(events) > 1:
-                timeslots = [slot.id for slot in self.timeslots]
+                timeslots = [slot.id for slot in timeslots]
                 events.data.sort(key=lambda e: timeslots.index(e.timeslot))
                 events._p_changed = 1
         # Span the event on the successive days if required
@@ -2129,7 +2070,7 @@ class Calendar(Field):
             self.log(o, msg, date)
 
     def mayDelete(self, o, events):
-        '''May the user delete p_events?'''
+        '''May the user delete p_events ?'''
         delete = self.delete
         if not delete: return
         return delete(o, events[0].eventType) if callable(delete) else True
