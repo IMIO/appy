@@ -330,7 +330,10 @@ class Base:
 
     def __repr__(self):
         '''Returns the class name and Appy object ID'''
-        return '<%s id=%s>' % (self.getClass().name, self.id)
+        id = self.id
+        iid = self.iid
+        sid = 'id=%s' % id if id == iid else ('id=%s,iid=%d' % (id, iid))
+        return '<%s %s>' % (self.getClass().name, sid)
 
     def isTemp(self):
         '''Is this object temporary ?'''

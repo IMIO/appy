@@ -906,7 +906,7 @@ class Calendar(Field):
           id=":popupId" class="popup" align="center">
       <form id=":popupId + 'Form'" method="post" data-sub="process">
        <input type="hidden" name="actionType" value="deleteEvent"/>
-       <input type="hidden" name="timeslot" value="main"/>
+       <input type="hidden" name="timeslot" value="*"/>
        <input type="hidden" name="day"/>
        <div align="center"
             style="margin-bottom: 5px">:_('action_confirm')</div>
@@ -976,7 +976,7 @@ class Calendar(Field):
           <img if="mayDelete" class="clickable iconS" style="visibility:hidden"
                src=":svg('deleteS' if single else 'deleteMany')"
                onclick=":'openEventPopup(%s,%s,%s,%s,%s)' %  (q(hook), \
-                          q('del'), q(dayString), q('main'), q(spansDays))"/>
+                          q('del'), q(dayString), q('*'), q(spansDays))"/>
           <!-- Events -->
           <x if="events">
           <div for="event in events" style="color: grey">
@@ -1728,6 +1728,15 @@ class Calendar(Field):
         if day not in days: return
         return days[day]
 
+    def getEventAt(self, o, date, timeslot='main'):
+        '''Get the event defined, for this calendar on this p_o(bject), at this
+           p_date and p_timeslot.'''
+        events = self.getEventsAt(o, date)
+        if not events: return
+        for event in events:
+            if event.timeslot == timeslot:
+                return event
+
     def getEventTypeAt(self, o, date):
         '''Returns the event type of the first event defined at p_day, or None
            if unspecified.'''
@@ -2015,10 +2024,10 @@ class Calendar(Field):
     def createEvent(self, o, date, eventType, timeslot='main', eventSpan=None,
                     handleEventSpan=True, log=True, deleteFirst=False):
         '''Create a new event of some p_eventType in the calendar on p_o, at
-           some p_date (day) in a given p_timeslot. If p_handleEventSpan is
-           True, we will use p_eventSpan to create the same event for successive
-           days. If p_deleteFirst is True, any existing event found at p_date
-           will be deleted before creating the new event.'''
+           some p_date (day) in a given p_timeslot.'''
+        # If p_handleEventSpan is True, p_eventSpan is used to create the same
+        # event for successive days. If p_deleteFirst is True, any existing
+        # event found at p_date will be deleted before creating the new event.
         req = o.req
         # Get values from parameters
         eventType = eventType or req.eventType
@@ -2105,13 +2114,13 @@ class Calendar(Field):
         daysDict = getattr(o, self.name)[date.year()][date.month()]
         count = len(events)
         eNames = ', '.join([e.getName(o, self, xhtml=False) for e in events])
-        if timeslot == 'main':
+        if timeslot == '*':
             # Delete all events; delete them also in the following days when
             # relevant.
             del daysDict[date.day()]
             req = o.req
             suffix = ''
-            if handleEventSpan and (req.deleteNext == 'True'):
+            if handleEventSpan and req.deleteNext == 'True':
                 nbOfDays = 0
                 while True:
                     date = date + 1
@@ -2162,16 +2171,16 @@ class Calendar(Field):
         # Get the date and timeslot for this action
         date = DateTime(req.day)
         eventType = req.eventType
-        timeslot = req.timeslot or 'main'
         eventSpan = req.eventSpan or 0
         eventSpan = min(int(eventSpan), self.maxEventLength)
         if action == 'createEvent':
             # Trigger validation
+            timeslot = req.timeslot or 'main'
             valid = self.validate(o, date, eventType, timeslot, eventSpan)
             if isinstance(valid, str): return valid
             return self.createEvent(o, date, eventType, timeslot, eventSpan)
         elif action == 'deleteEvent':
-            return self.deleteEvent(o, date, timeslot)
+            return self.deleteEvent(o, date, req.timeslot or '*')
 
     def getColumnStyle(self, o, date, render, today):
         '''What style(s) must apply to the table column representing p_date
