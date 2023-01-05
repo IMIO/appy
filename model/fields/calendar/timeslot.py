@@ -1,7 +1,6 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TS_NO       = 'At least one timeslot must be defined.'
-TS_FIRST    = 'The first timeslot must have id "main", day part of 1.0: it ' \
-              'is the one representing the whole day.'
+TS_MAIN     = 'The "main" timeslot must have a day part of 1.0.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Timeslot:
@@ -30,6 +29,10 @@ class Timeslot:
         # field, a single one must be set as being the default one.
         self.default = default
 
+    def __repr__(self):
+        '''p_self's string representation'''
+        return '<Slot %s:%d>' % (self.id, self.dayPart)
+
     def allows(self, eventType):
         '''It is allowed to have an event of p_eventType in this timeslot ?'''
         # self.eventTypes being None means that no restriction applies
@@ -42,16 +45,15 @@ class Timeslot:
            None) are correctly defined.'''
         if timeslots is None:
             timeslots = cal.timeslots
-        # The first timeslot must be the global one, named 'main'
         if not timeslots:
             raise Exception(TS_NO)
-            first = timeslots[0].id
-            if first.id != 'main' or first.dayPart != 1.0:
-                # When getting the dayPart for an event, for performance
-                # reasons, when the timeslot is "main", the timeslot object is
-                # not retrieved and 1.0 is returned. this is why, here, a value
-                # being different from 1.0 is not allowed.
-                raise Exception(TS_FIRST)
+        for slot in timeslots:
+            if slot.id == 'main' and slot.dayPart != 1.0:
+                # The "main" timeslot must take the whole day. When getting the
+                # "dayPart" for an event, for performance reasons, when the
+                # timeslot is "main", the timeslot object is not retrieved and
+                # 1.0 is returned.
+                raise Exception(TS_MAIN)
 
     @classmethod
     def init(class_, cal, timeslots):
@@ -69,6 +71,10 @@ class Timeslot:
         r = cal.timeslots
         if callable(r):
             r = r(o)
+            if not r:
+                # No timeslot at all is returned by the app method. Return a
+                # default timeslot.
+                r = [Timeslot('main')]
             class_.check(cal, r)
         return r
 
@@ -106,7 +112,10 @@ class Timeslot:
             return slotIdsStr if forBrowser else slotIds
         # Remove any taken slot
         r = slotIds[:]
-        r.remove('main') # "main" cannot be chosen: p_events is not empty
+        try:
+            r.remove('main') # "main" cannot be chosen: p_events is not empty
+        except ValueError:
+            pass # The "main" slot may be absent
         for event in events: r.remove(event.timeslot)
         # Return the result
         return ','.join(r) if forBrowser else r

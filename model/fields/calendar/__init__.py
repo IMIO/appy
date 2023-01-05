@@ -1235,7 +1235,12 @@ class Calendar(Field):
         # "timeslots" are a way to define, within a single day, time ranges. It
         # must be a list of Timeslot instances or a method producing such a
         # list. If you define timeslots, the first one must be the one
-        # representing the whole day and must have id "main".
+        # representing the whole day and must have id "main". Tip: for
+        # performance, when defining a method in attribute "timeslots", it is
+        # best if you have the possibility, in your app, to pre-compute lists of
+        # static timeslots, and if the method you place in attribute "timeslots"
+        # simply returns the correct precomputed list (according to some custom
+        # condition), instead of creating a dynamic list within this method.
         Timeslot.init(self, timeslots)
         # "colors" must either be a dict {s_eventType:s_color} or a method
         # receiving 2 args: an event type and the pre-computed object, and
