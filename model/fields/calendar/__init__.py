@@ -1743,6 +1743,11 @@ class Calendar(Field):
         events = self.getEventsAt(o, date)
         return events[0].eventType if events else None
 
+    def getEventsBySlot(self, o, date, addEmpty=False, ifEmpty='-', expr=None):
+        '''Returns a list of (s_timeslot, event) tuples for every event defined
+           in this calendar on p_o at this p_date.'''
+        return Timeslot.getEventsAt(o, self, date, addEmpty, ifEmpty, expr)
+
     def standardizeDateRange(self, range):
         '''p_range can have various formats (see m_walkEvents below). This
            method standardizes the date range as a 6-tuple

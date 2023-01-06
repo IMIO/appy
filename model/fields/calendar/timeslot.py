@@ -119,4 +119,42 @@ class Timeslot:
         for event in events: r.remove(event.timeslot)
         # Return the result
         return ','.join(r) if forBrowser else r
+
+    # A static empty dict is required by the following method
+    emptyD = {}
+
+    @classmethod
+    def getEventsAt(class_, o, cal, date, addEmpty, ifEmpty, expr):
+        '''Returns a list of the form [(s_timeslot, event)] containing all
+           events defined on p_o for this p_cal(endar) at this p_date.'''
+        # If p_addEmpty is True, the list contains one entry for every timeslot
+        # defined on p_cal but for which there is no event at p_date. In such
+        # entries, the "event" part will contain the value as defined by
+        # p_ifEmpty. If p_expr is None, the "event" part of a return entry
+        # contains the Event object. Else, the "event" part will be the result
+        # of evaluating a Python expression in p_expr. This expression will
+        # receive, in its context:
+        # - the event object as name "event":
+        # - the current object as name "o".
+        r = []
+        # Get the events defined at this p_date
+        events = cal.getEventsAt(o, date) or ()
+        if not addEmpty:
+            # Siimply return one entry per event defined at p_date
+            for event in events:
+                e = eval(expr) if expr else event
+                r.append((event.timeslot, e))
+        else:
+            # Turn v_events as a dict, keyed by timeslot
+            events = {e.timeslot:e for e in events} if events else class_.emptyD
+            # Add one entry per timeslot
+            for slot in class_.getAll(o, cal):
+                id = slot.id
+                if id in events:
+                    event = events[id]
+                    e = eval(expr) if expr else event
+                    r.append((id, e))
+                else:
+                    r.append((id, ifEmpty))
+        return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
