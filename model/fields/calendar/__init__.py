@@ -1743,10 +1743,12 @@ class Calendar(Field):
         events = self.getEventsAt(o, date)
         return events[0].eventType if events else None
 
-    def getEventsBySlot(self, o, date, addEmpty=False, ifEmpty='-', expr=None):
+    def getEventsBySlot(self, o, date, addEmpty=False, ifEmpty='-', expr=None,
+                        persist=False):
         '''Returns a list of (s_timeslot, event) tuples for every event defined
            in this calendar on p_o at this p_date.'''
-        return Timeslot.getEventsAt(o, self, date, addEmpty, ifEmpty, expr)
+        return Timeslot.getEventsAt(o, self, date, addEmpty, ifEmpty, expr,
+                                    persist)
 
     def standardizeDateRange(self, range):
         '''p_range can have various formats (see m_walkEvents below). This
@@ -2104,11 +2106,11 @@ class Calendar(Field):
 
     def deleteEvent(self, o, date, timeslot, handleEventSpan=True, log=True,
                     executeMethods=True):
-        '''Deletes an event. If t_timeslot is "main", it deletes all events at
+        '''Deletes an event. If t_timeslot is "*", it deletes all events at
            p_date, be there a single event on the main timeslot or several
            events on other timeslots. Else, it only deletes the event at
-           p_timeslot. If p_handleEventSpan is True, we will use
-           req.deleteNext to delete successive events, too.'''
+           p_timeslot. If p_handleEventSpan is True, req.deleteNext will be used
+           to delete successive events, too.'''
         events = self.getEventsAt(o, date)
         if not events: return
         # Execute "beforeDelete"

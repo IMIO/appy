@@ -1,4 +1,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from persistent.list import PersistentList
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TS_NO       = 'At least one timeslot must be defined.'
 TS_MAIN     = 'The "main" timeslot must have a day part of 1.0.'
 
@@ -124,7 +127,7 @@ class Timeslot:
     emptyD = {}
 
     @classmethod
-    def getEventsAt(class_, o, cal, date, addEmpty, ifEmpty, expr):
+    def getEventsAt(class_, o, cal, date, addEmpty, ifEmpty, expr, persist):
         '''Returns a list of the form [(s_timeslot, event)] containing all
            events defined on p_o for this p_cal(endar) at this p_date.'''
         # If p_addEmpty is True, the list contains one entry for every timeslot
@@ -136,7 +139,7 @@ class Timeslot:
         # receive, in its context:
         # - the event object as name "event":
         # - the current object as name "o".
-        r = []
+        r = PersistentList() if persist else []
         # Get the events defined at this p_date
         events = cal.getEventsAt(o, date) or ()
         if not addEmpty:

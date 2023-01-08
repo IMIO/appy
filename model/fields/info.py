@@ -15,6 +15,7 @@ class Info(Field):
         b   = Layouts(edit='l')
         d   = Layouts(edit=Layout('l-d', width=None))
         ds  = Layouts(edit=Layout('ld', width=None)) # *S*ingle line
+        dsv = Layouts(view=Layout('ld', width=None)) # *S*ingle line on view
         c   = Layouts(edit='l|')
         dc  = Layouts(edit='l|-d|')
         do  = Layouts(edit='f', view='d') # Description only
