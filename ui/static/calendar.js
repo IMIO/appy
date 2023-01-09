@@ -236,7 +236,8 @@ function calendarAction(hook, actionName, comment) {
         selectDict = table['selected'],
         selected = (selectDict)? stringFromDict(selectDict, true): '',
         params = {'action': 'executeAction', 'actionName': actionName,
-                  'selected': selected, 'comment': encodeURIComponent(comment)};
+                  'selected': selected,
+                  'comment': encodeURIComponent(comment || '')};
   askAjax(hook, null, params);
 }
 

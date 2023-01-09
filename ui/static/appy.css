@@ -363,7 +363,8 @@ th input { margin:0 !important}
 .fmt { font-size:62%; position:absolute; right:0; top:-5px }
 
 /* Animations */
-@keyframes blinkingBg {50% { background-color:|darkColor|; color:|brightColor|}}
+@keyframes blinkingBg {50% { background-color:|darkColor|; color:|brightColor|;
+                             opacity:0.2}}
 .blinkBg { animation:blinkingBg 1s infinite }
 @keyframes blinkingT {50% { color:|lightColor| }}
 .blinkT { animation:blinkingT 2s infinite }

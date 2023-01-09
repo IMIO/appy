@@ -1366,15 +1366,14 @@ function askConfirm(actionType, action, msg, showComment, popupWidth,
 function getConfirmComment(f) {
   let cfield = f.popupComment, r=null, field=null;
   if (cfield.value) {
-    r = cfield.value;
+    r = cfield.value || '';
   }
   else { // Collect the content of possible additional fields in p_f
     r = {};
     let empty = true;
-    for (let i=0; i<f.elements.length; i++) {
-      field = f.elements[i];
+    for (const field of f.elements) {
       if (field.type == 'text') {
-        r[field.name] = field.value;
+        r[field.name] = field.value || '';
         empty = false;
       }
     }
