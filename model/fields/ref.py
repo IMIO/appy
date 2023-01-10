@@ -2663,7 +2663,7 @@ class Ref(Field):
                 values = self.getPossibleValues(o, removeLinked=True)
             else:
                 # Get current values
-                values = getattr(o, self.name, ())
+                values = o.values.get(self.name) or ()
             # Collect the objects onto which the action must be performed
             targets = []
             for value in values:
