@@ -12,6 +12,7 @@ NON_SSO_U = 'Non-SSO user "%s" prevents access to the SSO user having the ' \
 INVALID_R = 'Role "%s" mentioned in a HTTP header is not among grantable roles.'
 INVALID_G = 'Group "%s" mentioned in a HTTP header was not found.'
 SSO_REACT = '%s reactivated after a new visit via the SSO reverse proxy.'
+NO_STORE  = 'SSO user "%s" (%s) not created: no place to store it.'
 SSO_CREA  = 'SSO user "%s" (%s) created (1st visit here).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -66,12 +67,13 @@ class Config:
         # header value. Else, the role name will be the first matching group.
         self.roleRex = None
         # For more complex cases, you can define a "roleFunction": a custom
-        # function that will receive the SSO config + the match object produced
-        # by "roleRex", and must return the role name. Funny additional
-        # subtlety: if this function returns a tuple (name, None) instead,
-        # "name" will be considered a group login, not a role name. This is
-        # useful for reverse proxies that send us similar keys for groups and
-        # roles.
+        # function that will receive 3 args: the SSO config, the match object
+        # produced by "roleRex" and the handler-wide cache object (where info
+        # can be stored for later retrieval). It must return the role name.
+        # Funny additional subtlety: if this function returns a tuple
+        # (name, None) instead, "name" will be considered a group login, not a
+        # role name. This is useful for reverse proxies that send us similar
+        # keys for groups and roles.
         self.roleFunction = None
         # Once a role has been identified among HTTP headers via "roleKey" and
         # "roleRex", and has possibly been treated by "roleFunction", its name
@@ -84,10 +86,12 @@ class Config:
         self.groupKey = ''
         # Regular expression applied to the group value (similar to "roleRex")
         self.groupRex = None
-        # If a "group function" is specified, it will receive the SSO config +
-        # the match object produced by "groupRex" and must return the group
-        # name, or (name, None), similarly to "roleFunction" (in this case, it
-        # means that a role name is returned instead of a group login).
+        # If a "group function" is specified, it will receive 3 args: the SSO
+        # config, the match object produced by "groupRex" and the handler-wide
+        # cache object object (where info can be stored for later retrieval).
+        # It must return the group name, or (name, None), similarly to
+        # "roleFunction" (in this case, it means that a role name is returned
+        # instead of a group login).
         self.groupFunction = None
         # Group mapping (similar to role mapping). Here, we map group logins.
         self.groupMapping = {}
@@ -146,6 +150,21 @@ class Config:
         # - the login as transmitted by the SSO reverse proxy.
         # If the function returns True, the user will not be authenticated.
         self.blockFun = None
+        # By default, local copies from SSO users are created in the standard
+        # Ref tool::users. In some Appy apps, it has sense to store users in
+        # other "locations". Specify such alternate location(s) by placing a
+        # function in the following attribute. This function must accept these
+        # args:
+        #  1. the tool (attribute tool.cache is the cache as passed to functions
+        #               p_self.roleFunction and p_self.groupFunction) ;
+        #  2. user parameters, in a dict built from HTTP headers ;
+        #  3. user roles, as collected from the same headers and potentially
+        #     transformed via p_self.roleFunction and p_self.roleMapping ;
+        #  4. user groups, as collected from the same headers and potentially
+        #     transformed via p_self.groupFunction and p_self.groupMapping.
+        # This function must return a 2-tuple containing the object and the name
+        # of the Ref from which to create the user.
+        self.userStorage = None
 
     def init(self, tool):
         '''Lazy initialisation'''
@@ -221,12 +240,14 @@ class Config:
                     return
         return login
 
-    def convertUserPrerogatives(self, type, prerogatives, encoding='utf-8'):
+    def convertUserPrerogatives(self, tool, type, prerogatives,
+                                encoding='utf-8'):
         '''Converts SSO p_prerogatives to Appy roles and groups'''
         # p_prerogatives may contain "main" and "secondary" prerogatives.
         # Indeed, when extracting roles we may find groups, and vice versa.
         r = set()
         secondary = set()
+        cache = tool.cache
         mustEncode = encoding not in self.defaultEncodings
         # A comma-separated list of prerogatives may be present
         for value in prerogatives:
@@ -244,7 +265,7 @@ class Config:
                 # Apply a function if specified
                 fun = getattr(self, '%sFunction' % type)
                 if fun:
-                    value = fun(self, match)
+                    value = fun(self, match, cache)
                     if isinstance(value, tuple):
                         # "value" is from the secondary prerogative type
                         value = value[0]
@@ -265,7 +286,7 @@ class Config:
             r.add(value)
         return r, secondary
 
-    def extractUserPrerogatives(self, type, headers):
+    def extractUserPrerogatives(self, tool, type, headers):
         '''Extracts, from p_headers, user groups or roles, depending on
            p_type.'''
         # Do we care about getting this type or prerogative ?
@@ -279,7 +300,7 @@ class Config:
         headerValue = headers.get(key)
         if not headerValue: return None, None
         # We have prerogatives: convert them to Appy roles and groups
-        return self.convertUserPrerogatives(type, headerValue.split(','),
+        return self.convertUserPrerogatives(tool, type, headerValue.split(','),
                                             encoding=encoding)
 
     def setRoles(self, tool, user, roles):
@@ -325,7 +346,7 @@ class Config:
                         if self.afterLinkGroup:
                             self.afterLinkGroup(user, group)
 
-    def extractUserInfo(self, source, fromHeaders=True):
+    def extractUserInfo(self, tool, source, fromHeaders=True):
         '''This method extracts, from HTTP headers present in p_source, user
            data (name, login...), roles and groups.'''
         # But if p_fromHeaders is False, p_source is an already extracted list
@@ -335,12 +356,12 @@ class Config:
             # Extract simple user attributes
             params = self.getUserParams(headers)
             # Extract user global roles and groups
-            roles, groups2 = self.extractUserPrerogatives('role', headers)
-            groups, roles2 = self.extractUserPrerogatives('group', headers)
+            roles,groups2 = self.extractUserPrerogatives(tool, 'role', headers)
+            groups,roles2 = self.extractUserPrerogatives(tool, 'group', headers)
         else:
             params = None
-            roles, groups2 = self.convertUserPrerogatives('role', source)
-            groups, roles2 = self.convertUserPrerogatives('group', source)
+            roles,groups2 = self.convertUserPrerogatives(tool, 'role', source)
+            groups,roles2 = self.convertUserPrerogatives(tool, 'group', source)
         # Merge found roles
         if roles or roles2:
             if roles and roles2:
@@ -355,12 +376,25 @@ class Config:
                 groups = groups2
         return params, roles, groups
 
+    def getUserStorage(self, tool, params, roles, groups):
+        '''Where must we store the local copy of the user whose p_params,
+           p_roles and p_groups were freshly parsed from SSO source ?'''
+        # The cache passed as parameter to functions p_self.roleFunction and
+        # p_self.groupFunction is available at p_tool.cache.
+        fun = self.userStorage
+        if not fun:
+            # Store users in the standard place: ref "users", on the tool
+            r = tool, 'users'
+        else:
+            r = fun(tool, params, roles, groups)
+        return r
+
     def updateUser(self, tool, headers, user):
         '''Updates the local p_user with data from request p_headers'''
         # The last sync date for this user is now
         user.syncDate = DateTime()
         # Update basic user attributes and recompute the user title
-        params, roles, groups = self.extractUserInfo(headers)
+        params, roles, groups = self.extractUserInfo(tool, headers)
         for name, value in params.items(): setattr(user, name, value)
         user.updateTitle()
         # Update global roles (when roles are provided by the SSO server)
@@ -398,11 +432,16 @@ class Config:
            is False. In this latter case, p_userParams is a dict containing user
            parameters (login, name, first name, etc).'''
         # Extract info about the user to create
-        params, roles, groups = self.extractUserInfo(source, fromHeaders)
+        params, roles, groups = self.extractUserInfo(tool, source, fromHeaders)
         if userParams:
             if params: userParams.update(params)
             params = userParams
-        user = tool.create('users', login=login, source='sso', **params)
+        # Get the place where to store this local user copy
+        store, ref = self.getUserStorage(tool, params, roles, groups)
+        if not store or not ref:
+            tool.log(NO_STORE % (login, user.title), noUser=True)
+            return
+        user = store.create(ref, login=login, source='sso', **params)
         # The last sync date for this user is now
         user.syncDate = DateTime()
         # Set user global roles and groups (if in use)

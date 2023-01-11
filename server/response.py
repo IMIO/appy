@@ -277,8 +277,9 @@ class Response:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # (a) | p_content is not None:
         #     |
-        #     | p_content will be used as response body: it is supposed to be a
-        #     | UTF-8 string and will be converted to bytes.
+        #     | p_content will be used as response body. It is supposed to be a
+        #     | UTF-8 string: if it is the case, it will be converted to bytes.
+        #     | But it could also already be bytes.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # (b) | p_path is not None:
         #     |

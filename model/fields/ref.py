@@ -1417,7 +1417,7 @@ class Ref(Field):
         # action, attribute "show" must hold or return value "field" as unique
         # possible layout. This virtual layout means that the Ref field will
         # choose where to render this action within itself (ie, at the bottom of
-        # tied objects, together with glopbal actions).
+        # tied objects, together with global actions).
         self.actions = actions
 
         # By default, for an indexed Ref field, the corresponding index stores

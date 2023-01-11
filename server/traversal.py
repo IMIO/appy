@@ -441,9 +441,9 @@ class Traversal:
             self.managePart(self.r, 'default', self.r.default)
         # Potentially marshall the result
         r = self.marshall(self.r)
-        # If the result of the traversal is not a string, it is invalid. Produce
-        # a 404 error in that case.
-        if r is not None and not isinstance(r, str):
+        # If the result of the traversal is not a string nor bytes, it is
+        # invalid. Produce a 404 error in that case.
+        if r is not None and not isinstance(r, (str, bytes)):
             raise NotFound(self.getPath())
         return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
