@@ -327,6 +327,13 @@ class User(Base):
         r.append(role)
         self.values['roles'] = r
 
+    def delRole(self, role):
+        '''Deletes p_role from p_self.roles'''
+        roles = self.values.get('roles')
+        if roles and role in roles:
+            roles.remove(role)
+            self.values['roles'] = roles
+
     def getRoles(self, compute=False, guard=None):
         '''Returns all the global roles granted to this user'''
         # The method returns not simply self.roles, but also "ungrantable roles"
