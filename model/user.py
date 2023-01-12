@@ -344,9 +344,8 @@ class User(Base):
         # are retrieved from the guard, that caches it. Else, they are really
         # computed.
         guard = guard or self.guard
-        if guard is None: return ()
         # Return the cached value on the guard when appropriate
-        if not compute and self.login == guard.userLogin:
+        if not compute and guard is not None and self.login == guard.userLogin:
             return guard.userRoles
         # Compute it
         r = list(self.roles or ())
@@ -571,8 +570,9 @@ class User(Base):
                 creds = base64.decodebytes(creds[6:].encode()).decode()
                 login, password = creds.split(':', 1)
                 if login: place = 'basic'
-        # c. Identify the user from the authentication form
-        if not login:
+        # c. Identify the user from the authentication form. This form is
+        #    identified via the presence of key "authInfo".
+        if not login and 'authInfo' in req:
             login = req.login
             if login:
                 login = handler.config.security.transformLogin(login.strip())

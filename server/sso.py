@@ -12,7 +12,7 @@ NON_SSO_U = 'Non-SSO user "%s" prevents access to the SSO user having the ' \
 INVALID_R = 'Role "%s" mentioned in a HTTP header is not among grantable roles.'
 INVALID_G = 'Group "%s" mentioned in a HTTP header was not found.'
 SSO_REACT = '%s reactivated after a new visit via the SSO reverse proxy.'
-NO_STORE  = 'SSO user "%s" (%s) not created: no place to store it.'
+NO_STORE  = 'SSO user "%s" not created: no place to store it.'
 SSO_CREA  = 'SSO user "%s" (%s) created (1st visit here).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -266,9 +266,11 @@ class Config:
                 fun = getattr(self, '%sFunction' % type)
                 if fun:
                     value = fun(self, match, cache)
-                    if isinstance(value, tuple):
+                    if value is None: continue
+                    elif isinstance(value, tuple):
                         # "value" is from the secondary prerogative type
                         value = value[0]
+                        if value is None: continue
                         # Apply the secondary prerogative mapping if any
                         other = self.otherPrerogative[type]
                         mapping = getattr(self, '%sMapping' % other)
@@ -439,7 +441,7 @@ class Config:
         # Get the place where to store this local user copy
         store, ref = self.getUserStorage(tool, params, roles, groups)
         if not store or not ref:
-            tool.log(NO_STORE % (login, user.title), noUser=True)
+            tool.log(NO_STORE % login, noUser=True)
             return
         user = store.create(ref, login=login, source='sso', **params)
         # The last sync date for this user is now

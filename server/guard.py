@@ -505,12 +505,12 @@ class Guard:
        <x var="ctx=cfg.authContext"
           if="ctx and ctx.chooseOnLogin">:ctx.pxOnLogin</x>
 
-       <!-- Additional authentification data to carry -->
+       <!-- Additional authentication data to carry -->
        <input type="hidden" name="authInfo" id="authInfo"
               value=":req.authInfo or ''"/>
 
        <!-- Must we go to some page after login ? -->
-       <input type="hidden" name="goto" value=":req.get('goto', '')"/>
+       <input type="hidden" name="goto" value=":req.goto or ''"/>
 
        <!-- The "submit" button -->
        <div class="submitLogin">
