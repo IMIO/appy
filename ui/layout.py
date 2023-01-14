@@ -628,7 +628,8 @@ Layouts.fvd = Layouts(edit=Layout(d), view=Layout('f'))
 Layouts.g   = Layouts('frvl')
 # The *d*escription is visible, even on the *v*iew layout
 Layouts.dv  = Layouts(edit=d, view='l-d-f')
-Layouts.dvt = Layouts(edit=d, view=Layout('l-d-f', css='topSpace'))
+Layouts.dvt = Layouts(edit=Layout(d, css='topSpace'),
+                      view=Layout('l-d-f', css='topSpace'))
 # The *d*escription is shown on the *v*iew layout but not on *e*dit (=*s*imple)
 Layouts.dvs = Layouts(edit=b, view='l-d-f')
 # "Grid" group-related layouts
