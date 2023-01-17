@@ -263,6 +263,14 @@ class Class(Meta):
         # Late-initialise it
         field.init(self, name)
 
+    def openHistories(self):
+        '''Make histories on p_self's objects viewable by anyone having the
+           "read" permission on these objects.'''
+        # Indeed, by default, object histories are not "open" to object viewers
+        # (from the UI): they are viewable by Managers only.
+        record = self.fields['record']
+        record.show = record.page.show = 'view'
+
     def readSearches(self):
         '''Create attribute "searches" as an ordered dict storing all static
            searches defined on this class.'''
