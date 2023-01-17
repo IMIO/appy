@@ -2714,7 +2714,7 @@ class Ref(Field):
             title = self.getReferenceLabel(o, tied, True)
             if links and tied.allows('read'):
                 # Wrap the title in a link
-                target = popup and '_parent' or '_self'
+                target = '_parent' if popup else '_self'
                 title = '<a href="%s" target="%s" style="padding:0">%s</a>' % \
                         (tied.url, target, title)
             r.append(title)

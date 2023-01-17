@@ -175,7 +175,7 @@ class Pod(Field):
         # Right-aligned layout, with *t*op space
         rt = Layouts(view=Layout('f!', css='topSpace')) # "r"ight
         # "l"eft-align layout
-        l = Layouts(view= Layout('f;')) 
+        l = Layouts(view= Layout('f;'))
         # Inline layout
         inline = Layouts(view=Layout('f', width=None, css='inline', align=''))
 
