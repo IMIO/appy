@@ -988,8 +988,8 @@ class Ref(Field):
         #   "list"   | the user will, on "view", choose objects from a list of
         #            | objects which is similar to those rendered in pxViewList;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #  "popup"   | the user will, on "edit", choose objects from a popup
-        #            | window. In this case, parameter "select" can hold a
+        #  "popup"   | the user will, on "view" or "edit", choose objects from a
+        #            | popup window. In this case, parameter "select" can hold a
         #            | Search instance or a method ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "dropdown" | the user will, on "edit", choose objects by typing some

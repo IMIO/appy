@@ -3,6 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import time, base64
+from DateTime import DateTime
 
 from appy.px import Px
 from appy.model.base import Base
@@ -30,6 +31,7 @@ LOGIN_RN   = 'User "%s" has new login "%s".'
 LOGIN_OP   = "Login change: local roles and/or history updated in %d/%d " \
              "object(s). Done in %.2f''."
 O_WALKED   = '%d objects walked so far...'
+USR_CONV   = 'User "%s" converted from "%s" to "%s".'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class User(Base):
@@ -409,6 +411,21 @@ class User(Base):
     # stored in an external LDAP (source='ldap').
     source = String(show='xml', default='zodb', layouts='f', label='User')
 
+    def convertTo(self, source):
+        '''Convert p_self as if, now, he would be of p_source, that is different
+           from is currently defined p_self.source.'''
+        # p_self.source and p_source must be different
+        origSource = self.source
+        if origSource == source: return
+        # Update p_self's parameters
+        self.source = source
+        self.syncDate = DateTime()
+        # This flag is not relevant for external users
+        if self.source != 'zodb':
+            self.changePasswordAtNextLogin = False
+        # Log the operation
+        self.log(USR_CONV % (self.login, origSource, source))
+
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #  Editable pages
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -457,11 +474,14 @@ class User(Base):
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     hidden = {'show': False, 'layouts': 'f', 'label': 'User'}
+
     # For external users (source != "zodb"), we store the date of the last time
     # the external user and the local copy were synchronized.
     syncDate = Date(format=Date.WITH_HOUR, **hidden)
+
     # The date of the last login for this user
     lastLoginDate = Date(format=Date.WITH_HOUR, **hidden)
+
     # We may force a local user (source=zodb) to change its password at next
     # login (ie, for users created by an admin).
     changePasswordAtNextLogin = Boolean(**hidden)

@@ -233,6 +233,7 @@ class Config:
                 # Convert it when relevant
                 if self.convertLocalUsers:
                     user.convertTo('sso')
+                    handler.commit = True
                 else:
                     # Force an identification failure
                     if warn:
