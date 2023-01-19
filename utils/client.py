@@ -298,19 +298,25 @@ class Resource:
     # Standard ports, by protocol
     standardPorts = {'http': 80, 'https': 443}
 
-    def __init__(self, url, username=None, password=None, measure=False,
-                 utf8=True, authMethod='Basic', timeout=10):
+    def __init__(self, url, username=None, password=None, token=None,
+                 measure=False, utf8=True, authMethod='Basic', timeout=10):
+        # The base URL corresponding to the distant resource
+        self.url = url
+        # A p_username and p_password must be passed when using Basic auth.
         self.username = username
         self.password = password
+        # A p_token must be passed when using Bearer auth.
+        self.token = token
+        # Authentication method can be: "Basic", "Digest" or "Bearer"
         self.authMethod = authMethod
-        self.url = url
+        # If p_measure is True, we will measure, for every request sent, the
+        # time we wait until we receive the response.
+        self.measure = measure
+        # Default encoding is UTF-8
         self.utf8 = utf8
         # A timeout (in seconds) used when sending blocking requests to the
         # resource.
         self.timeout = timeout
-        # If p_measure is True, we will measure, for every request sent, the
-        # time we wait until we receive the response.
-        self.measure = measure
         # If measure is True, we will store hereafter, the total time (in
         # seconds) spent waiting for the server for all requests sent through
         # this resource object.
@@ -355,8 +361,9 @@ class Resource:
         return RESS_R % self.url
 
     def completeHeaders(self, headers):
+        '''Complete the specified p_headers with mandatory headers'''
         # Get standard header values from self.headers if not defined in
-        # p_headers
+        # p_headers.
         if self.headers:
             for k, v in self.headers.items():
                 if k not in headers:
@@ -366,13 +373,17 @@ class Resource:
             headers['Cookie'] = '; '.join(['%s=%s' % (k, v) \
                                           for k, v in self.cookies.items()])
         # Add credentials-related headers when relevant
-        if not (self.username and self.password): return
         if 'Authorization' in headers: return
-        if self.authMethod == 'Basic':
-            creds = ('%s:%s' % (self.username, self.password)).encode()
-            authorization = '%s %s' % (self.authMethod,
-                                       encodebytes(creds).strip().decode())
-            headers['Authorization'] = authorization
+        method = self.authMethod
+        if method == 'Basic':
+            if self.username and self.password:
+                creds = ('%s:%s' % (self.username, self.password)).encode()
+                authorization = '%s %s' % (method,
+                                           encodebytes(creds).strip().decode())
+                headers['Authorization'] = authorization
+        elif method == 'Bearer':
+            if self.token:
+                headers['Authorization'] = '%s %s' % (method, self.token)
 
     def readResponse(self, response):
         '''Reads the response content. Unzip the result when appropriate'''

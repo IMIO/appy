@@ -198,7 +198,7 @@ class Cleaner(Parser):
         #    return); else, appy.utils.diff will not be able to compute XHTML
         #    diffs;
         # b. Optimize size: HTML comments are removed
-        # ~
+        #
         # The stack of currently parsed elements (will contain only ignored
         # ones).
         self.env.currentTags = []
