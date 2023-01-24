@@ -640,7 +640,7 @@ class User(Base):
             if ctx is None and authContext:
                 ctx = authContext.getDefaultContext(tool, user)
                 # Update the cookie with this default context
-                if ctx: Cookie.update(handler, ctx)
+                if ctx: guard.Cookie.update(handler, ctx)
         else:
             # In any other case, authentication must be performed
             user = None
