@@ -171,6 +171,51 @@ class Date(Field):
        </tr>
       </table>''')
 
+    # Widget for filtering dates on search results
+    pxFilter = Px('''
+     <div class="dropdownMenu fdrop"
+          var="name=field.name; inFilter=name in mode.filters"
+          onmouseover="showDropdown(this)"
+          onmouseout="closeDropdown(this)">
+        <img src=":svg('fdrop')"/>
+        <span if="inFilter">›</span>
+
+       <!-- The date chooser -->
+       <div class="dropdown fdown ddown"
+            var="js='onFilterDate(%%s,%s,%s,%%s)' % (q(mode.hook), q(name))">
+        <input type="date" onClick="dateChooserIf(event)"
+          onblur=":js % ('true', 'this.value')"
+          value=":mode.filters[name].strftime('%Y-%m-%d') if inFilter else ''"
+          onkeyup="if (event.keyCode==13) event.target.blur()"/>
+        <span class="clickable dateICO"
+              onclick=":js % ('true', 'this.previousSibling.value')">☑</span>
+        <span class="clickable dateICO"
+              onclick=":js % ('false', q(''))">✖</span>
+       </div>
+     </div>''',
+
+     js='''
+      function onFilterDate(entered, hook, name, value) {
+        // Do nothing if the entered p_value is empty
+        if (entered && (!value || value === 'undefined')) return;
+        value = (entered)? value: '';
+        askBunchFiltered(hook, name, value);
+      }
+
+      function dateChooserIf(event) {
+        // With Firefox, things go wrong when the calendar is shown
+        if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+          event.preventDefault();
+          return;
+        }
+      }''',
+
+     css='''
+      .dropdown input[type=date] { border:1px solid lightgrey;
+        font-size:100% }
+      .ddown { width:13.3em; overflow-x:auto }
+      .dateICO { color:grey; font-size:1.3em; padding-left:0.3em }''')
+
     def __init__(self, validator=None, multiplicity=(0,1), default=None,
       defaultOnEdit=None, format=WITH_HOUR, dateFormat=None, hourFormat=None,
       calendar=True, startYear=time.localtime()[0]-10,
@@ -226,6 +271,9 @@ class Date(Field):
           focus, historized, mapping, generateLabel, label, sdefault, scolspan,
           swidth, sheight, persist, False, view, cell, buttons, edit, xml,
           translations)
+        # Define the filter PX when appropriate
+        if self.indexed:
+            self.filterPx = 'pxFilter'
 
     def getCss(self, o, layout, r):
         '''CSS files are only required if the calendar must be shown'''
@@ -346,16 +394,22 @@ class Date(Field):
            part (depending on boolean p_to).'''
         name = self.name
         part = 'to' if to else 'from'
-        # Get the year. For the "from" part, it corresponds to the name of
-        # field. For the "to" part, there is a specific key in the request.
-        year = req['%s_to_year' % name] \
-               if to else Field.getSearchValue(self, req, value=value)
-        month = req['%s_%s_month' % (name, part)]
-        day = req['%s_%s_day' % (name, part)]
         hour = None
-        if self.searchHour:
-            hour = '%s:%s' % (req['%s_%s_hour' % (name, part)] or '00',
-                              req['%s_%s_minute' % (name, part)] or '00')
+        if value is None:
+            # Get the year. For the "from" part, it corresponds to the name of
+            # field. For the "to" part, there is a specific key in the request.
+            year = req['%s_to_year' % name] \
+                   if to else Field.getSearchValue(self, req, value=value)
+            month = req['%s_%s_month' % (name, part)]
+            day = req['%s_%s_day' % (name, part)]
+            if self.searchHour:
+                hour = '%s:%s' % (req['%s_%s_hour' % (name, part)] or '00',
+                                  req['%s_%s_minute' % (name, part)] or '00')
+        else:
+            # p_value is there, as a DateTime object
+            year, month, day = value.year(), value.month(), value.day()
+            if self.searchHour:
+                hour = '00:00'
         return self.getDateFromSearchValue(year, month, day, hour, not to)
 
     def getSearchValue(self, req, value=None):

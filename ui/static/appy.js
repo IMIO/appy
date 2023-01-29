@@ -775,12 +775,23 @@ function toggleCheckboxes(cb) {
 function toggleDropdown(container, forcedValue){
   let dropdown = container.getElementsByClassName('dropdown')[0];
   // Force to p_forcedValue if specified
-  if (forcedValue) {dropdown.style.display = forcedValue}
+  if (forcedValue) {
+    console.log('I am out:' + forcedValue);
+    dropdown.style.display = forcedValue;
+  }
   else {
     let displayValue = dropdown.style.display;
     if (displayValue == 'block') dropdown.style.display = 'none';
     else dropdown.style.display = 'block';
   }
+}
+
+function showDropdown(container) {
+  container.getElementsByClassName('dropdown')[0].style.display = 'block';
+}
+
+function closeDropdown(container) {
+  container.getElementsByClassName('dropdown')[0].style.display = 'none';
 }
 
 // Functions used for master/slave relationships between widgets
