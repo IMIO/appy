@@ -353,7 +353,7 @@ class List(Mode):
         return r if r else self.class_.getListColumns(tool)
 
     def getFiltersString(self):
-        '''Converts dict self.filters into its string representation'''
+        '''Converts dict p_self.filters into its string representation'''
         filters = self.filters
         if not filters: return ''
         r = []

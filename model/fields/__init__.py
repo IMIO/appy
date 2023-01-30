@@ -420,7 +420,7 @@ class Field:
                                                   q('view'), q(bp))"/>
      </div>''')
 
-    # Widget for filtering object values on query results
+    # Widgets for filtering objects (based on text) on search results
     pxFilterText = Px('''
      <div var="name=field.name;
           filterId='%s_%s' % (mode.hook, name);

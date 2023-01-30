@@ -47,6 +47,7 @@ S_F_HOM     = '%s: "%s" is both used as search and field name, this is not ' \
               'allowed.'
 CUS_ID_KO   = 'The custom ID produced by method "generaeId" must be a string.'
 S_FIELD_KO  = 'Field "%s", mentioned as search field on class "%s", not found.'
+FILT_ERR    = '%s::%s - Filter error. %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Class(Meta):
@@ -740,8 +741,10 @@ class Class(Meta):
                 try:
                     value = field.getStorableValue(None, r[name])
                     r[name] = field.getFilterValue(value)
-                except Exception:
+                except Exception as err:
                     # The encoded value is invalid. Ignore it.
+                    tool.log(FILT_ERR % (self.name, name, str(err)),
+                             type='warning')
                     del(r[name])
         return r
 

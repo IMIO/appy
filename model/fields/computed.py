@@ -2,9 +2,12 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from DateTime import DateTime
+
 from appy.px import Px
 from appy.model.searches import Search
 from appy.model.fields.text import Text
+from appy.model.fields.date import Date
 from appy.model.fields import Field, Show
 from appy.ui.layout import Layouts, Layout
 from appy.model.fields.string import String
@@ -33,12 +36,18 @@ class Computed(Field):
     # explicitly declared as unfreezable, via instance attribute "unfreezable".
     freezable = True
 
+    # Precision, in minutes, of the indexed value, if of type "DateIndex"
+    indexPrecision = 1
+
     view = cell = buttons = edit = Px('''<x if="field.plainText">:value</x><x
       if="not field.plainText">::value</x>''')
 
     search = Px('''
      <input type="text" name=":widgetName" maxlength=":field.maxChars"
             size=":field.width" value=":field.sdefault"/>''')
+
+    # If dates are stored in a Computed field, the date filter may be required
+    pxFilterDate = Date.pxFilter
 
     def __init__(self, multiplicity=(0,1), default=None, defaultOnEdit=None,
       show=None, renderable=None, page='main', group=None, layouts=None, move=0,
@@ -133,10 +142,13 @@ class Computed(Field):
         self.unfreezable = unfreezable
         # The base Python type corresponding to values computed by this field
         self.pythonType = pythonType
-        # Set a filter PX if this field is indexed with a TextIndex
-        if self.indexed and (self.indexType in ('TextIndex', 'RichIndex') or \
-                             self.pythonType == str):
-            self.filterPx = 'pxFilterText'
+        # Set a filter PX if this field is indexed
+        if self.indexed:
+            itype = self.indexType
+            if itype in ('TextIndex', 'RichIndex') or self.pythonType == str:
+                self.filterPx = 'pxFilterText'
+            elif itype == 'DateIndex':
+                self.filterPx = 'pxFilterDate'
         # The *f*ilter width
         self.fwidth = fwidth
         self.checkParameters()
@@ -209,11 +221,18 @@ class Computed(Field):
            appropriate method.'''
         if self.indexType in ('TextIndex', 'RichIndex'):
             fun = Text.computeSearchValue
+        elif self.indexType == 'DateIndex':
+            fun = Date.computeSearchValue
         elif self.pythonType == str:
             fun = String.computeSearchValue
         else:
             fun = Field.getSearchValue
         return fun(self, req, value=value)
+
+    def getFilterValue(self, value):
+        '''The filter value must be transformed in various ways, depending on
+           index type.'''
+        return DateTime(value) if self.indexType == 'DateIndex' else value
 
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
                           language=None):

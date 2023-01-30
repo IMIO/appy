@@ -171,22 +171,20 @@ class Date(Field):
        </tr>
       </table>''')
 
-    # Widget for filtering dates on search results
+    # Widget for filtering objects (based on a date) on search results
     pxFilter = Px('''
      <div class="dropdownMenu fdrop"
           var="name=field.name; inFilter=name in mode.filters"
-          onmouseover="showDropdown(this)"
-          onmouseout="closeDropdown(this)">
+          onmouseover="showDropdown(this)">
         <img src=":svg('fdrop')"/>
         <span if="inFilter">›</span>
 
        <!-- The date chooser -->
        <div class="dropdown fdown ddown"
             var="js='onFilterDate(%%s,%s,%s,%%s)' % (q(mode.hook), q(name))">
-        <input type="date" onClick="dateChooserIf(event)"
-          onblur=":js % ('true', 'this.value')"
+        <input type="date"
           value=":mode.filters[name].strftime('%Y-%m-%d') if inFilter else ''"
-          onkeyup="if (event.keyCode==13) event.target.blur()"/>
+          onkeyup=":'if (event.keyCode==13) %s' % js % ('true', 'this.value')"/>
         <span class="clickable dateICO"
               onclick=":js % ('true', 'this.previousSibling.value')">☑</span>
         <span class="clickable dateICO"
@@ -195,26 +193,19 @@ class Date(Field):
      </div>''',
 
      js='''
-      function onFilterDate(entered, hook, name, value) {
+      onFilterDate = function(entered, hook, name, value) {
         // Do nothing if the entered p_value is empty
         if (entered && (!value || value === 'undefined')) return;
         value = (entered)? value: '';
         askBunchFiltered(hook, name, value);
-      }
-
-      function dateChooserIf(event) {
-        // With Firefox, things go wrong when the calendar is shown
-        if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
-          event.preventDefault();
-          return;
-        }
       }''',
 
      css='''
       .dropdown input[type=date] { border:1px solid lightgrey;
         font-size:100% }
-      .ddown { width:13.3em; overflow-x:auto }
-      .dateICO { color:grey; font-size:1.3em; padding-left:0.3em }''')
+      .ddown { width:9.4em; overflow-x:auto }
+      .dateICO { color:grey; font-size:1.3em; padding-left:0.3em;
+                 background-color:transparent !important }''')
 
     def __init__(self, validator=None, multiplicity=(0,1), default=None,
       defaultOnEdit=None, format=WITH_HOUR, dateFormat=None, hourFormat=None,
@@ -363,9 +354,10 @@ class Date(Field):
                 value = value.replace('-', '/').replace('T', ' ')
             return DateTime(value)
 
-    def getDateFromSearchValue(self, year, month, day, hour, setMin):
-        '''Gets the index representation of a valid DateTime instance, built
-           from date information coming from the request.'''
+    @classmethod
+    def getDateFromSearchValue(class_, year, month, day, hour, setMin):
+        '''Gets the index representation of a valid DateTime object, built from
+           date information coming from the request.'''
         # This info comes as strings in p_year, p_month, p_day and p_hour.
         # The method returns None if p_year is empty. If p_setMin is True, when
         # some information is missing (month or day), it is replaced with the
@@ -389,33 +381,40 @@ class Date(Field):
             r = dates.getLastDayOfMonth(base, hour=hour)
         return r
 
-    def getSearchPart(self, req, to=False, value=None):
+    @classmethod
+    def getSearchPart(class_, field, req, to=False, value=None,searchHour=None):
         '''Gets the search value from p_req corresponding to the "from" or "to"
            part (depending on boolean p_to).'''
-        name = self.name
+        name = field.name
         part = 'to' if to else 'from'
         hour = None
         if value is None:
             # Get the year. For the "from" part, it corresponds to the name of
             # field. For the "to" part, there is a specific key in the request.
             year = req['%s_to_year' % name] \
-                   if to else Field.getSearchValue(self, req, value=value)
+                   if to else Field.getSearchValue(field, req, value=value)
             month = req['%s_%s_month' % (name, part)]
             day = req['%s_%s_day' % (name, part)]
-            if self.searchHour:
-                hour = '%s:%s' % (req['%s_%s_hour' % (name, part)] or '00',
+            if searchHour:
+                hour = '%s:%s' % (req['%s_%s_hour'   % (name, part)] or '00',
                                   req['%s_%s_minute' % (name, part)] or '00')
         else:
             # p_value is there, as a DateTime object
             year, month, day = value.year(), value.month(), value.day()
-            if self.searchHour:
+            if searchHour:
                 hour = '00:00'
-        return self.getDateFromSearchValue(year, month, day, hour, not to)
+        return Date.getDateFromSearchValue(year, month, day, hour, not to)
+
+    @classmethod
+    def computeSearchValue(class_, field, req, value=None, searchHour=False):
+        '''Converts raw search values from p_req into an interval of dates'''
+        return in_(Date.getSearchPart(field, req, False, value, searchHour),
+                   Date.getSearchPart(field, req, True , value, searchHour))
 
     def getSearchValue(self, req, value=None):
-        '''Converts raw search values from p_req into an interval of dates'''
-        return in_(self.getSearchPart(req, False, value),
-                   self.getSearchPart(req, True, value))
+        '''See called method's docstring'''
+        return Date.computeSearchValue(self, req, value=value,
+                                       searchHour=self.searchHour)
 
     def getDefaultSearchValues(self, o):
         '''Gets the default value for this field when shown on a search
