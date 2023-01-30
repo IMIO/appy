@@ -202,8 +202,8 @@ class Date(Field):
 
      css='''
       .dropdown input[type=date] { border:1px solid lightgrey;
-        font-size:100% }
-      .ddown { width:9.4em; overflow-x:auto }
+        font-size:100%; width:7.5em }
+      .ddown { width:7.9em; overflow-x:auto; z-index:5 }
       .dateICO { color:grey; font-size:1.3em; padding-left:0.3em;
                  background-color:transparent !important }''')
 
