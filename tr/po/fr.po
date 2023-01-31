@@ -518,7 +518,7 @@ msgstr "Veuillez vous connecter."
 
 #. Default: "Log in"
 msgid "app_connect"
-msgstr "Me connecter"
+msgstr "Me connecter"
 
 #. Default: "Not registered yet ?"
 msgid "want_register"

@@ -131,7 +131,7 @@ class Portlet:
 
        <!-- Root pages -->
        <x if="cfg.tget('showRootPages', tool)"
-          var2="pagesL, pagesO=tool.OPage.getRoot(tool)">
+          var2="pagesL, pagesO=tool.OPage.getRoot(tool, mobile)">
         <x if="pagesL or pagesO">:tool.OPage.pxSelector</x></x>
 
        <!-- Custom links (III) -->

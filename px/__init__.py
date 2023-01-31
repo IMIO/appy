@@ -335,7 +335,8 @@ class Px:
           isAnon=user.isAnon(), Px=Px, config=config, field=traversal.field,
           appName=config.model.appName, q=Quote.js, url=tool.buildUrl,
           svg=tool.buildSvg, lang=lang, dir=dir, dleft=dleft, dright=dright,
-          siteUrl=config.server.getUrl(handler), _css_=config.ui.patchCss)
+          mobile=handler.isMobile(), siteUrl=config.server.getUrl(handler),
+          _css_=config.ui.patchCss)
         # Ensure keys "ajax" and "popup" are present
         for name in ('ajax', 'popup'):
             setattr(r, name, getattr(r, name) or False)
@@ -349,7 +350,8 @@ class Px:
     # standard Appy PX.
     contextKeys = ('traversal', 'handler', 'guard', 'tool', 'req', 'o', 'home',
       'layout', 'popup', 'ajax', 'ui', '_', 'user', 'isAnon', 'Px', 'config',
-      'appName', 'q', 'url', 'svg', 'lang', 'dir', 'dleft', 'dright', '_css_')
+      'appName', 'q', 'url', 'svg', 'lang', 'dir', 'dleft', 'dright',
+      'mobile', '_css_')
 
     @classmethod
     def copyContext(class_, context, other, overwrite=False):

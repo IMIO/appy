@@ -204,6 +204,7 @@ class Template:
 
     # Global links, that can be shown within the template header but also from
     # other pages, like "home[s]", without the base header container.
+
     pxTemplateLinks = Px('''
      <!-- The burger button for collapsing the portlet -->
      <x if="showPortlet"
@@ -232,7 +233,7 @@ class Template:
 
       <!-- Root pages -->
       <x if="cfg.tget('showRootPages', tool)"
-         var2="pagesL, pagesO=tool.OPage.getRoot(tool)">
+         var2="pagesL, pagesO=tool.OPage.getRoot(tool, mobile)">
        <x if="pagesL or pagesO">:tool.OPage.pxSelector</x></x>
 
       <!-- Language selector -->

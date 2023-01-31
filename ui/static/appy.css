@@ -371,6 +371,12 @@ th input { margin:0 !important}
 @keyframes blinkingP {50% { opacity:0.1 }}
 .blinkP { animation:blinkingP 2s infinite }
 
+@keyframes fadeIN {
+ 0% { opacity: 0 }
+ 100% { opacity: 1.0 }
+}
+.fadedIn { animation: fadeIN 0.4s 1; animation-fill-mode: forwards }
+
 /* Bugfix for the calendar class from jscalendar */
 .calendar { z-index: 10 }
 

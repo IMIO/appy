@@ -772,22 +772,19 @@ function toggleCheckboxes(cb) {
 }
 
 // Shows/hides a dropdown menu
-function toggleDropdown(container, forcedValue){
-  let dropdown = container.getElementsByClassName('dropdown')[0];
-  // Force to p_forcedValue if specified
-  if (forcedValue) {
-    console.log('I am out:' + forcedValue);
-    dropdown.style.display = forcedValue;
-  }
-  else {
-    let displayValue = dropdown.style.display;
-    if (displayValue == 'block') dropdown.style.display = 'none';
-    else dropdown.style.display = 'block';
-  }
+function toggleDropdown(container, forced, type){
+  const dropdown = container.getElementsByClassName('dropdown')[0];
+  let val = null, display = type || 'block';
+  if (forced) val = forced;
+  else val = (dropdown.style.display != display)? display: 'none';
+  dropdown.style.display = val;
+  if (val != 'none') dropdown.classList.add('fadedIn');
 }
 
 function showDropdown(container) {
-  container.getElementsByClassName('dropdown')[0].style.display = 'block';
+  const dropdown = container.getElementsByClassName('dropdown')[0];
+  dropdown.style.display = 'block';
+  dropdown.classList.add('fadedIn');
 }
 
 function closeDropdown(container) {

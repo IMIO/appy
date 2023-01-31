@@ -82,11 +82,13 @@ class Page(Base):
                          % (esc(label), o.url, esc(o.getShownValue())))
         return '\n'.join(r)
 
-    def getTitle(self, maxChars=None):
+    def getTitle(self, maxChars=None, nbsp=False):
         '''Returns p_self's title, shortened'''
         r = self.getShownValue()
         maxChars = maxChars or self.config.ui.pageChars
-        return Px.truncateValue(r, width=maxChars)
+        r = Px.truncateValue(r, width=maxChars)
+        if nbsp: r = r.replace(' ', ' ')
+        return r
 
     # A warning: image upload is impossible while the page is temp
     warning = Info(show=lambda o: 'edit' if o.isTemp() else None,
@@ -427,7 +429,7 @@ class Page(Base):
       <a for="page in pagesL" title=":page.getShownValue()"
          href=":page.url if inlaidHeader else page.getPublicUrl()">
        <span class=":'upage' if page.inPublic() else
-                      ('current' if o==page else '')">:page.getTitle()</span>
+         ('current' if o==page else '')">:page.getTitle(nbsp=True)</span>
       </a>
       <select onchange="gotoURL(this)" if="pagesO">
        <option value="">:_('goto_link')</option>
@@ -449,7 +451,7 @@ class Page(Base):
     # PX showing all root pages in the portlet, when shown for pages
     portletBottom = Px('''
      <div class="topSpaceS"
-          var="pages=tool.OPage.getRoot(tool, splitted=False)">
+          var="pages=tool.OPage.getRoot(tool, mobile, splitted=False)">
       <x if="pages"
          var2="selected=o.getParents() if o.class_.name == 'Page' else {}">
        <x for="page in pages">::page.inPortlet(selected)</x>
@@ -462,7 +464,7 @@ class Page(Base):
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     @classmethod
-    def getRoot(class_, tool, splitted=True):
+    def getRoot(class_, tool, mobile, splitted=True):
         '''Return the root, selectable pages being visible by the logged user,
            among the site's root pages from p_tool.pages.'''
         # If p_splitted is True, pages will be returned in 2 distinct lists:
@@ -476,15 +478,14 @@ class Page(Base):
         # Return the cached version (for the p_splitted variant only), if
         # available.
         key = 'appyRootPagesS' if splitted else 'appyRootPages'
-        cache = tool.H().cache
+        cache = tool.cache
         if key in cache: return cache[key]
         if splitted:
             # Compute 2 sub-lists
             links = []
             options = []
             # Determine the maximum number of pages to render as links
-            linksCount = 0 if tool.H().isMobile() \
-                              else tool.config.ui.expandedRootPages
+            linksCount = 0 if mobile else tool.config.ui.expandedRootPages
         else:
             # Return a single list
             r = []
