@@ -84,7 +84,7 @@ class Template:
         if c.showFooter and not c.showFooterP:
             height = 'calc(100%% - %s)' % c.cfg.footerHeight
         else:
-            height = '100%'
+            height = '99%' if c.popup else '100%'
         height = 'height:%s' % height
         return '%s;%s' % (r, height) if r else height
 

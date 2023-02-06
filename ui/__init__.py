@@ -574,17 +574,18 @@ class Config:
         # parameter can also hold a function that will accept the tool as single
         # argument and returns the message.
         self.test = None
-        # CK editor configuration. Appy integrates CK editor via CDN (see
+        # ckeditor configuration. Appy integrates ckeditor via CDN (see
         # http://cdn.ckeditor.com). Do not change "ckVersion" hereafter,
         # excepted if you are sure that the customized configuration files
         # config.js, contents.css and styles.js stored in
         # appy/ui/static/ckeditor will be compatible with the version you want
         # to use.
-        self.ckVersion = '4.17.2'
+        self.ckVersion = '4.20.1'
         # ckDistribution can be "basic", "standard", "standard-all", "full" or
         # "full-all" (see doc in http://cdn.ckeditor.com).
-        # CK toolbars are not configurable yet. So toolbar "Appy", defined in
-        # appy/ui/static/ckeditor/config.js, will always be used.
+        # Beyond choosing a CK distribution, you must also choose, on every Rich
+        # field, a toolbar being compatible with it. See documentation in
+        # appy/model/fields/rich.py.
         self.ckDistribution = 'standard'
         # The tool may be configured in write-access only for a technical
         # reason, ie, for allowing user self-registration. Indeed, in that case,

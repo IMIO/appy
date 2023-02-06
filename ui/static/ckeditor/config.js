@@ -4,30 +4,46 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 */
 CKEDITOR.editorConfig = function(config) {
   config.toolbar = 'Standard';
-  config.toolbar_Standard = [
-    { name: 'basicstyles',
-      items: ["Format", "Bold", "Italic", "Underline", "Subscript",
-              "Superscript", "RemoveFormat"]},
-    { name: 'paragraph',
-      items: ["NumberedList", "BulletedList", "Outdent", "Indent"]},
-    { name: 'clipboard',
-      items: ["Cut", "Copy", "Paste", "PasteText", "Undo", "Redo"]},
-    { name: 'editing', items: ["Scayt"]},
-    { name: 'insert',
-      items: ["Table", "Image", "SpecialChar", "Link", "Unlink",
-              "Source", "Maximize"]}
-  ];
+  const charIcons    = ['Format', 'Bold', 'Italic', 'Underline', 'Subscript',
+                        'Superscript', 'RemoveFormat'],
+        paraIcons    = ['NumberedList', 'BulletedList', 'Outdent', 'Indent'],
+        clipIcons    = ['Cut', 'Copy', 'Paste', 'PasteText', 'Undo', 'Redo'],
+        colorIcons   = ['TextColor', 'BGColor'],
+        miscBase     = ['Source', 'Maximize'],
+        miscStandard = ['Table', 'Image', 'SpecialChar', 'Link', 'Unlink',
+                        'Source', 'Maximize'],
+        miscFullAll  = miscStandard.concat(['EmojiPanel']);
+
   config.toolbar_Simple = [
-    { name: 'basicstyles',
-      items: ["Format", "Bold", "Italic", "Underline", "Subscript",
-              "Superscript", "RemoveFormat"]},
-    { name: 'paragraph',
-      items: ["NumberedList", "BulletedList", "Outdent", "Indent"]},
-    { name: 'clipboard',
-      items: ["Cut", "Copy", "Paste", "PasteText", "Undo", "Redo"]},
-    { name: 'insert',
-      items: ["Source", "Maximize"]}
+    { name: 'basicstyles', items: charIcons},
+    { name: 'paragraph'  , items: paraIcons},
+    { name: 'clipboard'  , items: clipIcons},
+    { name: 'misc'       , items: miscBase}
   ];
+  config.toolbar_Standard = [
+    { name: 'basicstyles', items: charIcons},
+    { name: 'paragraph'  , items: paraIcons},
+    { name: 'clipboard'  , items: clipIcons},
+    { name: 'editing'    , items: ['Scayt']},
+    { name: 'misc'       , items: miscStandard}
+  ];
+  config.toolbar_Full = [
+    { name: 'basicstyles', items: charIcons},
+    { name: 'morestyles' , items: colorIcons},
+    { name: 'paragraph'  , items: paraIcons},
+    { name: 'clipboard'  , items: clipIcons},
+    { name: 'editing'    , items: ['Scayt']},
+    { name: 'misc'       , items: miscStandard}
+  ];
+  config.toolbar_FullAll = [
+    { name: 'basicstyles', items: charIcons},
+    { name: 'morestyles' , items: colorIcons},
+    { name: 'paragraph'  , items: paraIcons},
+    { name: 'clipboard'  , items: clipIcons},
+    { name: 'editing'    , items: ['Scayt']},
+    { name: 'misc'       , items: miscFullAll}
+  ];
+  // CK options
   config.entities = false;
   config.entities_greek = false;
   config.entities_latin = false;

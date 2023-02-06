@@ -164,9 +164,14 @@ class Rich(Multilingual, Field):
         # standard rich field appy/model/page.py::content, that uses, on the
         # same class, the Ref field named "documents".
         self.documents = documents
-        # Do we run the CK spellchecker ?
+        # Automatically enable the CK spellchecker ?
         self.spellcheck = spellcheck
-        # What toolbar is used ? Possible values are "Standard" or "Simple".
+        # What toolbar is used ? Possible values are "Standard", "Simple",
+        # "Full" or "FullAll".
+        # * The "Full" toolbar requires config.ui.ckDistribution being "full" or
+        #   "full-all".
+        # * The "FullAll" toolbar requires config.ui.ckDistribution being
+        #   "full-all".
         self.toolbar = toolbar
         # If p_inject is True, the XHTML chunk contained in a rich field is
         # allowed to contain "a" tags of the form:
@@ -402,7 +407,7 @@ class Rich(Multilingual, Field):
     def getCkParams(self, o, language):
         '''Gets the base params to set on a rich text field'''
         base = '%s/ckeditor' % o.buildUrl()
-        ckAttrs = {'customConfig': '%s/config.js' % base,
+        ckAttrs = {'customConfig': '%s/config.js?8' % base,
                    'contentsCss': '%s/contents.css' % base,
                    'stylesSet': '%s/styles.js' % base,
                    'toolbar': self.toolbar, 'format_tags':';'.join(self.styles),
@@ -410,6 +415,7 @@ class Rich(Multilingual, Field):
         if self.width: ckAttrs['width'] = self.width
         if self.height: ckAttrs['height'] = self.height
         if self.spellcheck: ckAttrs['scayt_autoStartup'] = True
+        if self.toolbar == 'FullAll': ckAttrs['extraPlugins'] = 'emoji'
         # Add custom styles
         if self.customStyles:
             for style in self.customStyles:
