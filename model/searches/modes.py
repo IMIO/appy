@@ -762,7 +762,8 @@ class Calendar(Mode):
             future = ' ⇢' if eType.future else ''
             # The event title
             title = Title.get(o, target=self.target, popup=True,
-                              backHook='configcalendar', maxChars=24)
+                              backHook='%dcalendar' % self.tool.iid,
+                              maxChars=24)
             # Display a "repetition" icon if the object is part of a series
             hasSuccessor = o.successor
             hasPredecessor = o.predecessor
