@@ -150,9 +150,9 @@ class Response:
         if fleeting is not None:
             self.fleetingMessage = fleeting
 
-    def goto(self, url=None, message=None, fromPopup=False):
+    def goto(self, url=None, message=None, fromPopup=False, fleeting=None):
         '''Redirect the user to p_url'''
-        if message: self.addMessage(message)
+        if message: self.addMessage(message, fleeting=fleeting)
         req = self.handler.req
         if fromPopup:
             # Redirecting back to some URL from a popup requires an alternative

@@ -206,13 +206,13 @@ class Action(Field):
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "computation"  | (the default case) the action will simply compute
         #                | things and redirect the user to the same page, with
-        #                | some status message about execution of the action;
+        #                | some status message about execution of the action ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #    "file"      | the result is the binary content of a file that the
         #                | user will download. In that case, the "message" part
-        #                | of the method result must be an open file handler;
+        #                | of the method result must be an open file handler ;
         #                | after the action has been executed, Appy will close
-        #                | it;
+        #                | it ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #   "redirect"   | the action will lead to the user being redirected to
         #                | some other page. The URL of this page must be given
@@ -220,6 +220,9 @@ class Action(Field):
         #                | "message" is None, we can't determine where to
         #                | redirect and we will fallback to case "computation".
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # Note that, if result is "computation" and the action method has
+        # defined a redirect URL by calling method "o.goto", this latter
+        # redirection will occur.
         self.result = result
 
         # If self.result is "file", the "disposition" for downloading the file
@@ -608,10 +611,14 @@ class Action(Field):
             if handler.isAjax():
                 r = msg
             else:
-                # The object may have been deleted by the action
-                exists = o.getObject(o.id)
-                url = o.tool.computeHomePage() if not exists else None
-                r = o.goto(url=url, message=msg)
+                # Respect the wish to return to a specific page if the action
+                # has specified it: redirect only if no redirect has already
+                # been defined.
+                if not o.gotoSet():
+                    # The object may have been deleted by the action
+                    exists = o.getObject(o.iid)
+                    url = o.tool.computeHomePage() if not exists else None
+                    r = o.goto(url=url, message=msg)
             return r
         elif result == 'redirect':
             # msg does not contain a message, but the URL where to redirect
