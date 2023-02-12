@@ -19,6 +19,7 @@ class Info(Field):
         c   = Layouts(edit='l|')
         dc  = Layouts(edit='l|-d|')
         do  = Layouts(edit='f', view='d') # Description only
+        doe = Layouts(edit='d', view='d') # Description only, also on edit
         vdc = Layouts(edit='l', view='l|-d|')
 
         @classmethod
