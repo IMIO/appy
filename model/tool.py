@@ -432,10 +432,12 @@ class Tool(Base):
             # no default home object.
             if user.hasRole('Manager'): return self
 
-    def formatDate(self, date, format=None, withHour=True, language=None):
+    def formatDate(self, date, format=None, withHour=True, language=None,
+                   hourSep=' (', hourEnd=')'):
         '''Check doc in called method'''
         if not date: return
-        return dutils.Date.format(self, date, format, withHour, language)
+        return dutils.Date.format(self, date, format, withHour, language,
+                                  hourSep=hourSep, hourEnd=hourEnd)
 
     def restart(self, wait=5):
         '''Restarts the currently running Appy server (S), by forking another

@@ -50,6 +50,12 @@ class Config:
         self.port = 8000
         # The protocol in use. Valid values are "http" or "https"
         self.protocol = 'http'
+        # The public domain name under which this server is known. Can be
+        # useful, in combination with p_self.protocol, to generate site URLs
+        # when the server is not solicited by a browser. Indeed, in that case,
+        # request info (containing host and port) is absent. This can happen,
+        # ie, when a job or a night method is ran.
+        self.domain = None
         # The version of HTTP in use, as a float value. Currently, 1.0 and 1.1
         # are supported.
         self.httpVersion = 1.1
@@ -172,6 +178,9 @@ class Config:
             # p_withPort is False.
             if not withPort and ':' in r:
                 r = r.split(':', 1)[0]
+        elif self.domain:
+            # Use p_self.domain and ignore p_withPort
+            r = self.domain
         else:
             # Use p_self.address as base
             r = self.address

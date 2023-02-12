@@ -57,10 +57,26 @@ class Date:
         return DateTime('%d/%d/%d UTC' % (d.year(), d.month(), d.day()))
 
     @classmethod
-    def format(class_, tool, date, format=None, withHour=True, language=None):
-        '''Returns p_d(ate) formatted as specified by p_format, or
+    def format(class_, tool, date, format=None, withHour=True, language=None,
+               hourSep=' (', hourEnd=')'):
+        '''Returns p_date, formatted as specified by p_format, or
            config.ui.dateFormat if not specified. If p_withHour is True, hour is
            appended, with a format specified in config.ui.hourFormat.'''
+        # The separator between the date and hour parts, when both present, is
+        # determined by p_hourSep. If p_hourEnd is passed, it will be appended
+        # after the hour. For example, with the default values of p_hourSep
+        # being " (" and hourEnd being ")", the result will be of the form:
+        #
+        #                            date (hour)
+        #
+        # Other example: with p_hourSep being " @" and p_hourEnd being the empty
+        # string, the result will be of the form:
+        #
+        #                            date @hour
+        #
+        # It is common to specify p_hourSep as a translated term, like " at " in
+        # english or " à " in french. Do not forget to integrate the appropriate
+        # spaces within p_hourSep.
         fmt = format or tool.config.ui.dateFormat
         # Resolve Appy-specific formatting symbols used for getting translated
         # names of days or months:
@@ -87,7 +103,8 @@ class Date:
         r = date.strftime(fmt)
         # Append hour from tool.hourFormat
         if withHour and (date._hour or date._minute):
-            r += ' (%s)' % date.strftime(tool.config.ui.hourFormat)
+            hourS = date.strftime(tool.config.ui.hourFormat)
+            r += '%s%s%s' % (hourSep, hourS, hourEnd)
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
