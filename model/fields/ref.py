@@ -225,7 +225,7 @@ class Ref(Field):
      <div class="globalActions">
 
       <!-- Insert several objects (if in pick list) -->
-      <input if="inPickList"
+      <input if="mayEdit and inPickList"
              var2="action='link'; label=_('object_link_many');
                    css=ui.Button.getCss(label)"
              type="button" class=":css" value=":label"
@@ -234,7 +234,7 @@ class Ref(Field):
              style=":svg('linkMany', bg='18px 18px')"/>
 
       <!-- Unlink several objects -->
-      <input if="mayUnlink and not selector"
+      <input if="mayEdit and mayUnlink and not selector"
              var2="iname='unlinkManyUp' if linkList else 'unlinkMany.svg';
                    action='unlink'; label=_('object_unlink_many');
                    css=ui.Button.getCss(label)"
@@ -253,7 +253,7 @@ class Ref(Field):
              style=":svg('deleteMany', bg='18px 18px')"/>
 
       <!-- Select objects and close the popup -->
-      <input if="selector and selector.cbShown" type="button"
+      <input if="mayEdit and selector and selector.cbShown" type="button"
              var="label=_('object_link_many'); css=ui.Button.getCss(label)"
              value=":label" class=":css"
              style=":svg('linkMany', bg='18px 18px')"
@@ -529,7 +529,7 @@ class Ref(Field):
      </x>
 
      <!-- Global actions -->
-     <x if="mayEdit and checkboxes and field.getAttribute(o,
+     <x if="checkboxes and field.getAttribute(o,
              'showGlobalActions')">:field.pxGlobalActions</x>
 
      <!-- (Bottom) navigation -->
