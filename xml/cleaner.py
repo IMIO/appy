@@ -48,11 +48,14 @@ class Cleaner(Parser):
     removeIfEmptyTags = asDict(('p', 'div', 'ul', 'li',
                                 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'))
 
+    # List tags
+    listTags = asDict(('ol', 'ul'))
+
     def __init__(self, env=None, caller=None, raiseOnError=True,
                  tagsToIgnoreWithContent=tagsToIgnoreWithContent,
                  tagsToIgnoreKeepContent=tagsToIgnoreKeepContent,
                  attrsToIgnore=attrsToIgnore, propertiesToKeep=None,
-                 attrsToAdd=attrsToAdd):
+                 attrsToAdd=attrsToAdd, repair=False):
         # Call the base constructor
         Parser.__init__(self, env, caller, raiseOnError)
         self.tagsToIgnoreWithContent = tagsToIgnoreWithContent
@@ -64,6 +67,8 @@ class Cleaner(Parser):
         # If None is set, it means: any property is kept.
         self.propertiesToKeep = propertiesToKeep
         self.attrsToAdd = attrsToAdd
+        # Potentially p_repair illegal tag configurations
+        self.repair = repair
 
     def startDocument(self):
         # The result will be cleaned XHTML, joined from self.r
@@ -72,6 +77,70 @@ class Cleaner(Parser):
 
     def endDocument(self):
         self.r = ''.join(self.r)
+
+    def dump(self, something):
+        '''Adds p_something to p_self.r'''
+        e = self.env
+        if not self.repair or e.insertIndex == -1:
+            # Simply push p_something at the end of p_self.r
+            self.r.append(something)
+        else:
+            # In the context of a repair, we are currently inserting content at
+            # a specific place within p_self.r.
+            i = e.insertIndex
+            self.r.insert(i, something)
+            # Update indexes
+            e.insertIndex += 1
+            indexes = e.listIndexes
+            j = len(indexes) - 1
+            while j >= 0:
+                current = indexes[j]
+                if current < i: break
+                indexes[j] += 1
+                j -= 1
+
+    def getPrevious(self, withIndex=False):
+        '''Returns the previous element within p_self.r'''
+        # If p_withIndex is True, it returns a tuple (elem, index) instead
+        r = self.r
+        if not r: return (None, None) if withIndex else None
+        # Compute the index of the previous element. If we are not performing a
+        # repair, this index corresponds to the last element (-1).
+        if not self.repair or self.env.insertIndex == -1:
+            i = -1
+        else:
+            i = self.env.insertIndex -1
+            if i == -1: return (None, None) if withIndex else None
+        # Return the result
+        r = r[i]
+        return (r, i) if withIndex else r
+
+    def manageConflicts(self, tag):
+        '''This start p_tag has just been encountered. Is that a problem ?'''
+        # Conflict management is disabled when p_self.repair is False
+        if not self.repair: return
+        e = self.env
+        if tag == 'div' and e.listIndexes:
+            # A div in a list: yes it is. Set the insert index to the last list
+            # index. That way, the div will be inserted before the current list.
+            e.insertIndex = e.listIndexes[-1]
+
+    def updateIndexes(self, tag, start):
+        '''If p_self.repair is True, this method updates the indexes stored on
+           p_self.env after p_tag (start or end, depending on p_start) have been
+           encountered.'''
+        if not self.repair: return
+        e = self.env
+        isList = tag in Cleaner.listTags
+        if start:
+            if isList:
+                e.listIndexes.append(len(self.r))
+        else:
+            if isList:
+                e.listIndexes.pop()
+            # Reinitialise self.env.insertIndex: once a tag is closed, the
+            # conflict is considered being solved.
+            e.insertIndex = -1
 
     def dumpCurrentContent(self, beforeEnd=None):
         '''Dumps (if any) the current content as stored on p_self.env'''
@@ -84,7 +153,7 @@ class Cleaner(Parser):
         if beforeEnd and beforeEnd in Cleaner.lineBreakTags:
             content = content.rstrip()
         # Add the current content to the result
-        self.r.append(content)
+        self.dump(content)
         # Reinitialise the current content to the empty string
         e.currentContent = ''
 
@@ -97,10 +166,30 @@ class Cleaner(Parser):
         styles = Styles(**Styles.parse(value, asDict=True))
         return styles.asString(keep=Cleaner.propertiesToKeepStrict)
 
+    def removeIfEmpty(self, tag):
+        '''This ending p_tag has just been encountered: remove the entire tag if
+           we are about dumping an empty tag.'''
+        # Remove it only if appropriate
+        if tag not in Cleaner.removeIfEmptyTags: return
+        # Get the last dumped element
+        prev, i = self.getPrevious(withIndex=True)
+        if not prev: return
+        prev = prev.strip()
+        if (prev == '<%s>' % tag) or prev.startswith('<%s ' % tag):
+            del self.r[i]
+            r = True
+        else:
+            r = False
+        return r
+
     def startElement(self, tag, attrs):
         e = self.env
         # Dump any previously gathered content if any
         self.dumpCurrentContent()
+        # Remember list tags
+        self.updateIndexes(tag, True)
+        # Manage tag conflicts, leading to repairs
+        self.manageConflicts(tag)
         # Ignore this tag when appropriate
         if e.ignoreTag and e.ignoreContent: return
         if tag in self.tagsToIgnore:
@@ -113,10 +202,11 @@ class Cleaner(Parser):
             return
         # Add a line break before the start tag if required (ie: xhtml differ
         # needs to get paragraphs and other elements on separate lines).
-        if tag in Cleaner.lineBreakTags and self.r and self.r[-1][-1] != '\n':
-            prefix = '\n'
-        else:
-            prefix = ''
+        prefix = ''
+        if tag in Cleaner.lineBreakTags:
+            prev = self.getPrevious()
+            if prev and prev[-1] != '\n':
+                prefix = '\n'
         r = '%s<%s' % (prefix, tag)
         # Include the found attributes, excepted those that must be ignored
         for name, value in attrs.items():
@@ -132,14 +222,7 @@ class Cleaner(Parser):
                 r += ' %s="%s"' % (name, value)
         # Close the tag if it is a no-end tag
         suffix = '/>' if tag in XHTML_SC else '>'
-        self.r.append('%s%s' % (r, suffix))
-
-    def tagIsEmpty(self, tag):
-        '''This ending p_tag has just been encountered. The method returns True
-           if we are about dumping an empty tag, which is the case if we find
-           its start tag as the last element in p_self.r.'''
-        last = self.r[-1].strip()
-        return (last == '<%s>' % tag) or last.startswith('<%s ' % tag)
+        self.dump('%s%s' % (r, suffix))
 
     def endElement(self, tag):
         e = self.env
@@ -165,19 +248,19 @@ class Cleaner(Parser):
             if tag not in XHTML_SC:
                 # ... but do not close it, and even remove it entirely, if being
                 #     empty and listed among "removeIfEmptyTags" tags.
-                if tag in Cleaner.removeIfEmptyTags and self.r and \
-                   self.tagIsEmpty(tag):
-                    del self.r[-1]
-                else:
+                removed = self.removeIfEmpty(tag)
+                if not removed:
                     # Add a line break after the end tag if required (ie: xhtml
                     # differ needs to get paragraphs and other elements on
                     # separate lines).
-                    if tag in Cleaner.lineBreakTags and self.r and \
-                       not self.r[-1].endswith('\n'):
-                        suffix = '\n'
-                    else:
-                        suffix = ''
-                    self.r.append('</%s>%s' % (tag, suffix))
+                    suffix = ''
+                    if tag in Cleaner.lineBreakTags:
+                        prev = self.getPrevious()
+                        if prev and not prev.endswith('\n'):
+                            suffix = '\n'
+                    self.dump('</%s>%s' % (tag, suffix))
+        # Pop list tags
+        self.updateIndexes(tag, False)
 
     def characters(self, content):
         e = self.env
@@ -201,12 +284,22 @@ class Cleaner(Parser):
         #
         # The stack of currently parsed elements (will contain only ignored
         # ones).
-        self.env.currentTags = []
+        e = self.env
+        e.currentTags = []
         # 'ignoreTag' is True if we must ignore the currently walked tag.
-        self.env.ignoreTag = False
+        e.ignoreTag = False
         # 'ignoreContent' is True if, within the currently ignored tag, we must
         # also ignore its content.
-        self.env.ignoreContent = False
+        e.ignoreContent = False
+        # Repair-related data sructures
+        if self.repair:
+            # Remember the indexes, within p_self.r, where starting list tags
+            # (ol, ul) are inserted.
+            e.listIndexes = []
+            # If the following index is not -1, it means that we are currently
+            # dumping elements at this specific index in p_self.r and not at the
+            # end of it.
+            e.insertIndex = -1
         # If p_wrap is False, p_s is expected to already have a root tag. Else,
         # it may contain a sequence of tags that must be surrounded by a root
         # tag.

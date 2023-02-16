@@ -645,7 +645,7 @@ class Poor(Rich):
         tagsToIgnore = Cleaner.tagsToIgnoreWithContentStrict
         return Cleaner(attrsToAdd=Cleaner.attrsToAddStrict,
                        propertiesToKeep=Cleaner.propertiesToKeepStrict,
-                       tagsToIgnoreWithContent=tagsToIgnore)
+                       tagsToIgnoreWithContent=tagsToIgnore, repair=True)
 
     def validateUniValue(self, o, value):
         '''As a preamble, ensure p_value is XHTML'''
