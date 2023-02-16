@@ -62,7 +62,7 @@ def findPackages(base):
 # Python 2 or 3 ?
 base = 'py%d' % sys.version_info[0]
 if base == 'py3':
-    dependencies = ['zodb', 'DateTime', 'python-ldap']
+    dependencies = ['zodb', 'DateTime']
     python = '>=3.6'
     scripts = ['py3/appy/bin/appy']
 else:
@@ -96,8 +96,8 @@ Appy requires :
 To install pip (Debian/Ubuntu):
 sudo apt install python3-pip
 
-To install Python dependencies:
-pip3 install zodb DateTime python-ldap
+To install optional Python dependencies:
+pip3 install python-ldap
 '''
 
 manifestIn = '''
