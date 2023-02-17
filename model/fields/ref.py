@@ -347,8 +347,8 @@ class Ref(Field):
                 text=_('object_delete')"
            if="not locked and mayEdit and delViaField and guard.mayDelete(o)">
        <a title=":text" class="clickable"
-          var2="back=q(backHook or ohook) if inMenu else q(hook)"
-          onclick=":'onDeleteObject(%s,%s)' % (q(o.iid), back)">
+          var2="back=(backHook or ohook) if inMenu else hook"
+          onclick=":o.class_.getDeleteConfirm(o, q, back)">
         <img class="iconS" src=":svg('deleteS')"/>
        </a>
        <div if="not iconsOnly" class="ibutton"
@@ -2168,7 +2168,7 @@ class Ref(Field):
            Ref field and return the number of objects truly unlinked.'''
         # For an explanation about parameters p_back, p_secure and
         # p_executeMethods, check m_linkObject above.
-        # ~~
+        #
         # Security check
         if secure:
             o.guard.mayEdit(o, self.writePermission, raiseError=True)

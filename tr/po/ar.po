@@ -343,8 +343,12 @@ msgstr ""
 msgid "replace_file"
 msgstr ""
 
-#. Default: "Are you sure?"
+#. Default: "Are you sure ?"
 msgid "action_confirm"
+msgstr ""
+
+#. Default: "⚠️ Are you sure you want to delete this ?"
+msgid "delete_confirm"
 msgstr ""
 
 #. Default: "The action has been performed."

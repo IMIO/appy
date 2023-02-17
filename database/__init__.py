@@ -718,19 +718,19 @@ class Database:
         '''Delete object p_o from the database. When unlinking it from other
            objects, if the concerned Ref fields are historized and p_historize
            is True, this deletion is noted in tied object's histories.'''
-        # ~
+        #
         # If p_executeMethods is False, the custom "onDelete" method, even if
         # present on p_o, will not be executed.
-        # ~
+        #
         # If this object is cascade-deleted from another one, p_ignore contains
         # the back ref pointing to the deleting object, that must not be walked
         # again.
-        # ~
+        #
         # For performance, when available, the p_root database object is passed
-        # ~
+        #
         # If the deletion is aborted by custom method "onDelete", a translated
         # error message is returned.
-        # ~
+        #
         isTemp = o.isTemp()
         # Call a custom "onDelete" if it exists
         if not isTemp and executeMethods and hasattr(o, 'onDelete'):
@@ -760,7 +760,7 @@ class Database:
                 field.back.unlinkObject(tied, o, back=True)
                 # Historize this unlinking when relevant
                 if historize and field.back.getAttribute(tied, 'historized'):
-                    className = o.translate(tied.class_.name)
+                    className = o.translate(o.class_.name)
                     tied.history.add('Unlink', deletion=True,
                                      field=field.back.name,
                                      comment='%s: %s' % (className, title))

@@ -1077,7 +1077,7 @@ function submitForm(formId, msg, showComment, back, checkHook, visible) {
   }
 }
 
-function onDeleteObject(iid, back) {
+function onDeleteObject(iid, back, text) {
   let actionType, action;
   if (back) {
     actionType = 'script';
@@ -1087,7 +1087,7 @@ function onDeleteObject(iid, back) {
     actionType = 'url';
     action = siteUrl + '/' + iid + '/remove';
   }
-  askConfirm(actionType, action, action_confirm);
+  askConfirm(actionType, action, text);
 }
 
 function onLink(action, url, fieldName, targetId, hook, start, semantics) {

@@ -460,6 +460,26 @@ class Class(Meta):
         # Complete this standard CSS class with a custom one, if any
         return self.getCssFor(o, 'sub', add='%sActions' % r)
 
+    # Default i18n labels, per zone
+    defaultLabels = {
+      'deleteConfirm': 'delete_confirm', # Confirmation message when the user
+                                         # clicks a "delete" button.
+      'save'         : 'object_save'     # Label for the button allowing to
+                                         # create or update objects.
+    }
+
+    def getTextFor(self, o, zone):
+        '''Gets the translated text corresponding to this p_zone'''
+        texts = getattr(self.python, 'texts', None)
+        r = texts(o, zone) if texts else None
+        return r or o.translate(Class.defaultLabels[zone])
+
+    def getDeleteConfirm(self, o, q, back=None):
+        '''Return the JS code that executes when someone wants to delete p_o'''
+        back = q(back) if back else 'null'
+        return 'onDeleteObject(%s,%s,%s)' % \
+               (q(o.iid), back, q(self.getTextFor(o, 'deleteConfirm')))
+
     def getIconsOnly(self):
         '''For base actions (edit, delete, etc), must icons only appear, or
            complete buttons containing an icon + a label ?'''
@@ -494,15 +514,6 @@ class Class(Meta):
            object, what fields must not be copied from the template ?'''
         r = getattr(self.python, 'createExclude', ())
         return r(o) if callable(r) else r
-
-    def getSaveText(self, o):
-        '''Returns the translated text for button "save" when creating or
-           editing this p_o(bject).'''
-        if o.isTemp():
-            label = getattr(self.python, 'createLabel', 'object_save')
-        else:
-            label = 'object_save'
-        return o.translate(label)
 
     def getConfirmPopupWidth(self, popup):
         '''Gets the width (in pixels, as an integer value), of the confirmation

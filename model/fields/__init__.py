@@ -362,7 +362,7 @@ class Field:
         <div if="not locked and guard.mayDelete(o)" class="ibutton"
              var2="text=_('object_delete')">
          <img class="clickable iconS" src=":svg('deleteS')" title=":text"
-              onClick=":'onDeleteObject(%s,%s)' % (q(o.iid), q(mode.hook))"/>
+              onclick=":o.class_.getDeleteConfirm(o, q, mode.hook)"/>
          <div if="not iconsOnly" class="ibutton"
               onclick="this.previousSibling.click()">:text</div>
         </div>

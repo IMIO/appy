@@ -265,7 +265,7 @@ class Base:
            secure=False, doSay=False, data=None):
         '''Programmatically triggers on p_self a transition named p_name'''
         # p_data can be a dict that will be included into the history event.
-        # ~~~
+        #
         # If p_doSay is True, it will not lead to the UI message being
         # automatically included in the response cookie, but will allow the
         # caller to retrieve it (via the return value) and do what he wants with
@@ -944,7 +944,7 @@ class Base:
 
       <!-- Save -->
       <div if="isEdit and current.showSave"
-           var2="label=o.class_.getSaveText(o)">
+           var2="label=o.class_.getTextFor(o, 'save')">
        <div>
         <a class="clickable"
            onclick=":'submitAppyForm(%s,%s,%s)' % \
@@ -971,7 +971,7 @@ class Base:
       <div if="not isEdit and not popup and guard.mayDelete(o) and \
                not o.Lock.isSet(o, user, page)" var2="label=_('object_delete')">
        <div>
-        <a class="clickable" onclick=":'onDeleteObject(%s)' % q(o.iid)">
+        <a class="clickable" onclick=":o.class_.getDeleteConfirm(o, q)">
          <img src=":svg('delete')" class=":picto"/>
          <div style=":'display:%s' % config.ui.pageDisplay">::label</div>
         </a>
