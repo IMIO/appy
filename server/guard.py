@@ -366,6 +366,8 @@ class Guard:
            containing a link that will trigger password re-initialisation.'''
         login = tool.req.rlogin
         _ = tool.translate
+        # All return messages must not be fleeting
+        tool.resp.fleetingMessage = False
         if not login:
             return tool.goto(message=_('action_ko'))
         login = login.strip()
@@ -404,6 +406,8 @@ class Guard:
         token = req.token
         _ = tool.translate
         siteUrl = tool.computeHomePage()
+        # All return messages must not be fleeting
+        tool.resp.fleetingMessage = False
         # Stop if the URL was called with missing parameters
         if not login or not token:
             return tool.goto(siteUrl, _('wrong_password_reinit'))
