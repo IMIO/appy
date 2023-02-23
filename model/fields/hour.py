@@ -167,9 +167,17 @@ class Hour(Field):
     def fromString(class_, s, sep=':'):
         '''Converts the string representation p_s of an hour (ie, "1:15",
            "-0:30", "165:34", "00:00"...) into a integer number of minutes.'''
+        # Return 0 if p_s is empty
+        s = s.strip()
+        if not s: return 0
         negate = s.startswith('-')
-        h, m = s.split(sep)
-        r = class_.getMinutes((abs(int(h)), int(m)))
+        try:
+            h, m = s.split(sep)
+        except ValueError:
+            # We suppose the "hour" part could be missing
+            h = 0
+            m = s
+        r = class_.getMinutes((abs(int(h)), abs(int(m))))
         return -r if negate else r
 
     @classmethod
