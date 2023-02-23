@@ -46,27 +46,30 @@ def getFolderSize(folder, nice=False, withCounts=False):
     return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def getOsTempFolder(sub=False):
+def getOsTempFolder(sub=False, asPath=False):
     '''Gets the absolute path to the temp folder on this machine. If p_sub is
        True, it creates a sub-folder within this temp folder and returns its
        absolute path instead of the "root" temp folder path.'''
-    return tempfile.mkdtemp(prefix='Appy') if sub else tempfile.gettempdir()
+    r = tempfile.mkdtemp(prefix='Appy') if sub else tempfile.gettempdir()
+    # Return, if p_asPath is True, the result as a pathlib.Path object
+    return Path(r) if asPath else r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def getTempFileName(prefix='', extension='', timestamp=True):
+def getTempFileName(prefix='', extension='', timestamp=True, asPath=False):
     '''Returns the absolute path to a unique file name in the OS temp folder.
-       The caller will then be able to create a file with this name.
-
-       A p_prefix to this file can be provided. If an p_extension is provided,
-       it will be appended to the name. Both dotted and not dotted versions
-       of p_extension are allowed (ie, ".pdf" or "pdf").'''
+       The caller will then be able to create a file with this name.'''
+    # A p_prefix to this file can be provided. If an p_extension is provided, it
+    # will be appended to the name. Both dotted and not dotted versions of
+    # p_extension are allowed (ie, ".pdf" or "pdf").'''
+    #
     # Suffix the file name with a timestamp when relevant
     suffix = timestamp and ('_%f' % time.time()) or ''
-    res = os.path.join(getOsTempFolder(), '%s%s' % (prefix, suffix))
+    r = os.path.join(getOsTempFolder(), '%s%s' % (prefix, suffix))
     if extension:
-        if extension.startswith('.'): res += extension
-        else: res += '.' + extension
-    return res
+        if extension.startswith('.'): r += extension
+        else: r += '.' + extension
+    # Return, if p_asPath is True, the result as a pathlib.Path object
+    return Path(r) if asPath else r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class FolderDeleter:
