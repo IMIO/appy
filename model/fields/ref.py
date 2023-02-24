@@ -195,6 +195,17 @@ class Ref(Field):
     # The name of the index class storing values of this field in the catalog
     indexType = 'RefIndex'
 
+    # "Getting *P*ossible *V*alues" may have the following meanings :
+    PV_EDIT = 0    # get objects to possibly select them as tied objects for
+                   # some base object / ref ;
+    PV_SEARCH = 1  # get objects to select them as values for searching base
+                   # objects having these values as tied objects ;
+    PV_FILTER = 2  # get objects to select them as values for filtering base
+                   # objects having these values as tied objects.
+
+    # Every type of "PV" corresponds to an attribute used to retrieve objects
+    pvMap = {PV_EDIT: 'select', PV_SEARCH: 'sselect', PV_FILTER: 'fselect'}
+
     # This PX displays the title of a referenced object, with a link on it to
     # reach the consult view for this object. If we are on a back reference, the
     # link allows to reach the correct page where the forward reference is
@@ -802,7 +813,7 @@ class Ref(Field):
       <label lfor=":andName">:_('search_and')</label><br/>
      </x>
      <!-- The list of values -->
-     <select var="objects=field.getPossibleValues(tool, usage='search');
+     <select var="objects=field.getPossibleValues(tool, usage=field.PV_SEARCH);
                   charsWidth=field.getWidthInChars(True)"
              name=":widgetName" multiple="multiple"
              size=":field.getSelectSize(True, True)"
@@ -822,7 +833,7 @@ class Ref(Field):
           var="name=field.name;
                charsWidth=field.getWidthInChars(True);
                emptyVal=field.emptyIndexValue;
-               objects=field.getPossibleValues(tool, usage='filter')"
+               objects=field.getPossibleValues(tool, usage=field.PV_FILTER)"
           if="objects"
           onmouseover="toggleDropdown(this)"
           onmouseout="toggleDropdown(this,'none')">
@@ -870,18 +881,18 @@ class Ref(Field):
       queryable=False, queryFields=None, queryNbCols=1, searches=None,
       navigable=False, changeOrder=True, numbered=False, checkboxes=True,
       checkboxesDefault=False, sdefault='', scolspan=1, swidth=None,
-      sheight=None, fwidth='7em', fheight='14em', sselect=None, persist=True,
-      render='list', renderMinimalSep=', ', listCss=None, menuIdMethod=None,
-      menuInfoMethod=None, menuUrlMethod=None, menuCss=None, dropdownCss=None,
-      menuItemWrap=False, view=None, cell=None, buttons=None, edit=None,
-      xml=None, translations=None, showActions='all', actionsDisplay='block',
-      showGlobalActions=True, collapsible=False, titleMode='link',
-      viewAdded=True, noValueLabel='choose_a_value', noObjectLabel='no_ref',
-      noSelectableLabel='no_selectable', addLabel='object_add',
-      addFromLabel='object_add_from', addIcon='add.svg', iconOut=False,
-      iconCss='iconS', filterable=True, supTitle=None, subTitle=None,
-      toggleSubTitles=None, separator=None, rowAlign='top', showControls=True,
-      actions=None, checkAll=True):
+      sheight=None, fwidth='7em', fheight='14em', sselect=None, fselect=None,
+      persist=True, render='list', renderMinimalSep=', ', listCss=None,
+      menuIdMethod=None, menuInfoMethod=None, menuUrlMethod=None, menuCss=None,
+      dropdownCss=None, menuItemWrap=False, view=None, cell=None, buttons=None,
+      edit=None, xml=None, translations=None, showActions='all',
+      actionsDisplay='block', showGlobalActions=True, collapsible=False,
+      titleMode='link', viewAdded=True, noValueLabel='choose_a_value',
+      noObjectLabel='no_ref', noSelectableLabel='no_selectable',
+      addLabel='object_add', addFromLabel='object_add_from', addIcon='add.svg',
+      iconOut=False, iconCss='iconS', filterable=True, supTitle=None,
+      subTitle=None, toggleSubTitles=None, separator=None, rowAlign='top',
+      showControls=True, actions=None, checkAll=True):
         # The class whose tied objects will be instances of
         self.class_ = class_
         # Specify "attribute" only for a back reference: it will be the name
@@ -1142,16 +1153,21 @@ class Ref(Field):
         #    disposal, ie, when we need to compute a list of objects on a
         #    search screen.
         # "select" can also hold a Search instance.
-        # NOTE that when a method is defined in field "masterValue" (see parent
+        #
+        # Note that when a method is defined in field "masterValue" (see parent
         # class "Field"), it will be used instead of select (or sselect below).
         self.select = select
         if not select and self.link == 'popup':
             # Create a query for getting all objects
             self.select = Search(sortBy='title', maxPerPage=20)
-        # If you want to specify, for the search screen, a list of objects that
-        # is different from the one produced by self.select, define an
-        # alternative method in field "sselect" below.
+        # If you want to specify, on the search form, a list of objects being
+        # different from the one produced by self.select, define an alternative
+        # (method or Search instance) in attribute "sselect" below.
         self.sselect = sselect or self.select
+        # If you want to define, in a search filter, a list of objects being
+        # different than p_self.sselect, define an alternative in attribute
+        # "fselect" below.
+        self.fselect = fselect or self.sselect
         # Maximum number of referenced objects shown at once
         self.maxPerPage = maxPerPage
         # If param p_queryable is True, the user will be able to perform
@@ -1768,44 +1784,41 @@ class Ref(Field):
         objects = values[self.name]
         values[self.name] = [tied.getShownValue() for tied in objects]
 
-    def getSelect(self, o, forSearch=False):
+    def getSelect(self, o, usage=PV_EDIT):
         '''p_self.select can hold a Search instance or a method. In this latter
            case, call the method and return its result, that can be a Search
            instance or a list of objects.'''
-        method = self.sselect if forSearch else self.select
         # If no search is defined, get a custom search
-        if method is None: method = Search('customSearch')
-        r = method if isinstance(method, Search) else self.callMethod(o, method)
+        select = getattr(self, Ref.pvMap[usage]) or Search('customSearch')
+        r = select if isinstance(select, Search) else self.callMethod(o, select)
         if isinstance(r, Search) and not r.container:
             # Ensure the class is set for this search
             r.init(self.class_.meta)
         return r
 
     def getPossibleValues(self, o, start=None, batch=False, removeLinked=False,
-                          maxPerPage=None, usage='edit'):
+                          maxPerPage=None, usage=PV_EDIT):
         '''This method returns the list of all objects that can be selected
-           to be linked as references to p_o via p_self. It is applicable only
-           for Ref fields with link!=False. If master values are present in the
-           request, we use field.masterValues method instead of self.[s]select.
+           to be linked as references to p_o via p_self.'''
 
-           If p_start is a number, it returns p_maxPerPage objects (or
-           self.maxPerPage if p_maxPerPage is None), starting at p_start.
-           If p_batch is True, it returns an instance of appy.model.utils.Batch
-           instead of returning a list of objects.
+        # It is applicable only for Ref fields with link!=False. If master
+        # values are present in the request, we use field.masterValues method
+        # instead of self.[s|f]select.
 
-           If p_removeLinked is True, we remove, from the result, objects which
-           are already linked. For example, for Ref fields rendered as a
-           dropdown menu or a multi-selection box (with link=True), on the edit
-           page, we need to display all possible values: those that are already
-           linked appear to be selected in the widget. But for Ref fields
-           rendered as pick lists (link="list"), once an object is linked, it
-           must disappear from the "pick list".
+        # If p_start is a number, it returns p_maxPerPage objects (or
+        # self.maxPerPage if p_maxPerPage is None), starting at p_start. If
+        # p_batch is True, it returns an instance of appy.model.utils.Batch
+        # instead of returning a list of objects.
 
-           p_usage can be:
-           - "edit": we need possible values for selecting it on an edit form;
-           - "search": we need it for selecting it on a search screen;
-           - "filter": wee need it for getting it in a filter widget.
-        '''
+        # If p_removeLinked is True, we remove, from the result, objects which
+        # are already linked. For example, for Ref fields rendered as a dropdown
+        # menu or a multi-selection box (with link=True), on the edit page, we
+        # need to display all possible values: those that are already linked
+        # appear to be selected in the widget. But for Ref fields rendered as
+        # pick lists (link="list"), once an object is linked, it must disappear
+        # from the "pick list".
+
+        # p_usage can be one of the PV_* constants as defined above.
         req = o.req
         paginated = start is not None
         maxPerPage = maxPerPage or self.maxPerPage
@@ -1813,7 +1826,7 @@ class Ref(Field):
         master = self.master
         if master and callable(self.masterValue):
             # This field is an ajax-updatable slave
-            if usage == 'filter':
+            if usage == Ref.PV_FILTER:
                 # A filter will not get any master. We need to display all the
                 # slave values from all the master values the user may see.
                 objects = None
@@ -1827,16 +1840,16 @@ class Ref(Field):
                                 objects.append(mo)
                 objects = objects or []
             else:
-                # Usage is "edit" or "search". Get the master value...
+                # Usage is PV_EDIT or PV_SEARCH. Get the master value...
                 if master.valueIsInRequest(o, req):
                     # ... from the request if available
                     requestValue = master.getRequestValue(o)
                     masterValues = master.getStorableValue(o, requestValue,
                                                            single=True)
-                elif usage == 'edit':
+                elif usage == Ref.PV_EDIT:
                     # ... or from the database if we are editing an object
-                    masterValues = master.getValue(o, layout=usage)
-                else: # usage is "search" and we don't have any master value
+                    masterValues = master.getValue(o, layout='edit')
+                else: # usage is PV_SEARCH and we don't have any master value
                     masterValues = None
                 # Get the possible values by calling self.masterValue
                 if masterValues:
@@ -1844,30 +1857,29 @@ class Ref(Field):
                 else:
                     objects = []
         else:
-            # Get the possible values from attributes "select" or "sselect"
-            forSearch = usage != 'edit'
-            selectMethod = forSearch and self.sselect or self.select
-            if not selectMethod:
+            # Get the possible values from the appropriate attribute
+            select = getattr(self, Ref.pvMap[usage])
+            if not select:
                 # No select method or search has been defined: we must retrieve
                 # all objects of the referred type that the user is allowed to
                 # access.
                 objects = o.search(self.class_.__name__, secure=True)
             else:
-                # "[s]select" can be/return a Search instance or return objects
-                search = self.getSelect(o, forSearch)
+                # "[s|f]select" can be/return a Search object or return objects
+                search = self.getSelect(o, usage)
                 if isinstance(search, Search):
                     isSearch = True
                     start = start or 0
                     objects = search.run(o.H(), start=start, batch=paginated)
                 else:
-                    # "[s]select" has returned objects
+                    # "[s|f]select" has returned objects
                     objects = search
         # Remove already linked objects if required
         if removeLinked:
             linked = o.values.get(self.name)
             if linked:
                 # Browse objects in reverse order and remove linked objects
-                objs = objects.objects if isSearch else objects
+                objs = objects if usage == Ref.PV_EDIT else objects.objects
                 i = len(objs) - 1
                 while i >= 0:
                     if objs[i] in linked: del objs[i]
