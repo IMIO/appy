@@ -50,6 +50,13 @@ class Date(Field):
     # PX for selecting hour and minutes, kindly provided by field Hour
     pxHour = Hour.edit
 
+    # When searching / filtering dates, the encoded date may have several
+    # meanings. Must the search match anything:
+    # (a) with this precise date, or
+    # (b) until this date, or
+    # (c) from this date ?
+    match = ('precise', 'until', 'from')
+
     edit = Px('''
      <!-- Native variant -->
      <input if="field.native" name=":name" id=":name"
@@ -173,39 +180,77 @@ class Date(Field):
 
     # Widget for filtering objects (based on a date) on search results
     pxFilter = Px('''
-     <div class="dropdownMenu fdrop"
-          var="name=field.name; inFilter=name in mode.filters"
-          onmouseover="showDropdown(this)">
+     <div class="dropdownMenu fdrop" onmouseover="showDropdown(this)"
+          onmouseout="closeDropdown(this)"
+          var="inFilter,dateF,matchF=field.getFilterInfo(mode)">
         <img src=":svg('fdrop')"/>
         <span if="inFilter">›</span>
 
-       <!-- The date chooser -->
+       <!-- Dropdown -->
        <div class="dropdown fdown ddown"
-            var="js='onFilterDate(%%s,%s,%s,%%s)' % (q(mode.hook), q(name))">
-        <input type="date"
-          value=":mode.filters[name].strftime('%Y-%m-%d') if inFilter else ''"
-          onkeyup=":'if (event.keyCode==13) %s' % js % ('true', 'this.value')"/>
-        <span class="clickable dateICO"
-              onclick=":js % ('true', 'this.previousSibling.value')">☑</span>
-        <span class="clickable dateICO"
-              onclick=":js % ('false', q(''))">✖</span>
+            var="js='on%%sDate(this,%%s,%s,%s)' % (q(mode.hook),q(field.name))">
+        <!-- Precise / until / from -->
+        <div for="match in field.match" class="matchD">
+         <label lfor=":match">:_('date_match_%s' % match)</label>
+         <input type="radio" id=":match" name="match" value=":match"
+                checked=":match == matchF"/>
+        </div>
+
+        <div class="dateROW">
+         <!-- Date chooser -->
+         <input type="date" value=":dateF if inFilter else ''"
+                onkeydown=":js % ('Key', 'true')"
+                onclick=":js % ('Click', 'true')"
+                onchange=":js % ('Change', 'true')"/>
+
+         <!-- Ok / cancel -->
+         <span class="clickable dateICO"
+               onclick=":js % ('Filter', 'true')">☑</span>
+         <span class="clickable dateICO"
+               onclick=":js % ('Filter', 'false')">✖</span>
+        </div>
        </div>
      </div>''',
 
      js='''
-      onFilterDate = function(entered, hook, name, value) {
-        // Do nothing if the entered p_value is empty
-        if (entered && (!value || value === 'undefined')) return;
-        value = (entered)? value: '';
-        askBunchFiltered(hook, name, value);
+      onFilterDate = function(button, entered, hook, name) {
+        // Get the value and match
+        let div = button.parentNode,
+            filter = div.parentNode,
+            date = div.querySelector('input[type="date"]').value;
+        // Must the filter be applied or reinitialized ?
+        if (entered) {
+          // Do nothing if no v_date has been entered
+          if (!date || date === 'undefined') return;
+          let match = filter.querySelector('input[name="match"]:checked').value;
+          date = date + '*' + match;
+        }
+        else date = '';  // Reinitialize the filter: empty the date
+        askBunchFiltered(hook, name, date);
+      }
+
+      onKeyDate = function(date, entered, hook, name) {
+        date.fromPicker = false;
+        if (event.keyCode==13) onFilterDate(date, entered, hook, name);
+      }
+
+      onClickDate = function(date, entered, hook, name) {
+        date.fromPicker = true;
+      }
+
+      onChangeDate = function(date, entered, hook, name) {
+        if (date.fromPicker) onFilterDate(date, entered, hook, name);
       }''',
 
      css='''
       .dropdown input[type=date] { border:1px solid lightgrey;
-        font-size:100%; width:7.5em }
-      .ddown { width:7.9em; overflow-x:auto; z-index:5 }
+        font-size:100%; width:8.2em }
+      .ddown { width:11em; overflow-x:auto; z-index:5 }
       .dateICO { color:grey; font-size:1.3em; padding-left:0.3em;
-                 background-color:transparent !important }''')
+                 background-color:transparent !important }
+      .dateROW { display:flex; justify-content:right; margin-top:0.4em }
+      .matchD label { text-transform:none; text-align:left; padding:0.2em 0 }
+     ''')
 
     def __init__(self, validator=None, multiplicity=(0,1), default=None,
       defaultOnEdit=None, format=WITH_HOUR, dateFormat=None, hourFormat=None,
@@ -219,7 +264,7 @@ class Date(Field):
       mapping=None, generateLabel=None, label=None, sdefault=None, scolspan=1,
       swidth=None, sheight=None, persist=True, view=None, cell=None,
       buttons=None, edit=None, xml=None, translations=None, showDay=True,
-      searchHour=False, native=False, empty='-'):
+      searchHour=False, native=False, empty='-', matchDefault='precise'):
         self.format = format
         self.calendar = calendar
         self.startYear = startYear
@@ -247,13 +292,17 @@ class Date(Field):
         # ("start" or "end"), if not None, must be a tuple (year, month, day).
         # Each of these sub-values can be None or an integer value. p_sdefault
         # can also be a method that produces the values in the specified format.
-        # ~
+        #
         # [Experimental] the "native" mode makes use of HTML native input fields
         # "date" (if p_format is WITHOUT_HOUR) or "datetime-local" (if p_format
         # is WITH_HOUR).
         self.native = native
         # What to show on cell or view when there is no date ?
         self.empty = empty
+        # When filtering p_self's values, the default match strategy is the one
+        # stored in the following attribute. For more info about match
+        # strategies, check static attribute Date.match defined hereabove.
+        self.matchDefault = matchDefault
         # Call the base constructor
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
@@ -347,12 +396,44 @@ class Date(Field):
         return '' if self.native else '_year'
 
     def getStorableValue(self, o, value, single=False):
-        '''Converts this string p_value too a DateTime instance'''
+        '''Converts this string p_value to a DateTime instance'''
         if not self.isEmptyValue(o, value):
             if self.native:
                 # Standardise this value: else, timezone may be wrong
                 value = value.replace('-', '/').replace('T', ' ')
             return DateTime(value)
+
+    def getFilterValue(self, value):
+        '''Take care of match precision'''
+        # Extract, from p_value, the match type
+        value, match = value.split('*')
+        r = super().getFilterValue(value)
+        if match == 'from':
+            r = in_(r, None)
+        elif match == 'until':
+            r = in_(None, r)
+        return r
+
+    def getFilterInfo(self, mode):
+        '''Returns, as a tuple (b_inFilter, s_date, s_match) info about a
+           potential filter value from a search having this p_mode. The filter
+           value, within p_mode.filters, can be a DateTime object or a in_
+           operator.'''
+        filters = mode.filters
+        # There may be no value at all
+        inFilter = self.name in filters
+        if not inFilter: return False, None, self.matchDefault
+        # Extract the encoded date and match
+        value = filters[self.name]
+        if isinstance(value, DateTime):
+            date = value
+            match = 'precise'
+        else:
+            # a in_ operator
+            a, b = value.values
+            match = 'from' if b is None else 'until'
+            date = a or b
+        return inFilter, date.strftime('%Y-%m-%d'), match
 
     @classmethod
     def getDateFromSearchValue(class_, year, month, day, hour, setMin):
@@ -408,6 +489,8 @@ class Date(Field):
     @classmethod
     def computeSearchValue(class_, field, req, value=None, searchHour=False):
         '''Converts raw search values from p_req into an interval of dates'''
+        # p_value may already be a ready-to-use interval
+        if isinstance(value, in_): return value
         return in_(Date.getSearchPart(field, req, False, value, searchHour),
                    Date.getSearchPart(field, req, True , value, searchHour))
 

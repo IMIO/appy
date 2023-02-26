@@ -36,9 +36,6 @@ class Computed(Field):
     # explicitly declared as unfreezable, via instance attribute "unfreezable".
     freezable = True
 
-    # Precision, in minutes, of the indexed value, if of type "DateIndex"
-    indexPrecision = 1
-
     view = cell = buttons = edit = Px('''<x if="field.plainText">:value</x><x
       if="not field.plainText">::value</x>''')
 
@@ -59,7 +56,7 @@ class Computed(Field):
       mapping=None, generateLabel=None, label=None, sdefault='', scolspan=1,
       swidth=None, sheight=None, fwidth=4, context=None, view=None, cell=None,
       buttons=None, edit=None, xml=None, translations=None, unfreezable=False,
-      validable=False, pythonType=None):
+      validable=False, pythonType=None, matchDefault='precise'):
         # The Python method used for computing the field value, or a PX
         self.method = method
         # A specific method for producing the formatted value of this field.
@@ -143,12 +140,19 @@ class Computed(Field):
         # The base Python type corresponding to values computed by this field
         self.pythonType = pythonType
         # Set a filter PX if this field is indexed
+        self.dateProto = None # This attribute is explained below
         if self.indexed:
             itype = self.indexType
             if itype in ('TextIndex', 'RichIndex') or self.pythonType == str:
                 self.filterPx = 'pxFilterText'
             elif itype == 'DateIndex':
                 self.filterPx = 'pxFilterDate'
+                # We will need a fake, prototypical Date object: this Computed
+                # object must be able to behave a bit like a Date object.
+                self.dateProto = Date()
+        # The following field is applicable only if p_self stores indexed dates.
+        # Check the Date field for more info.
+        self.matchDefault = matchDefault
         # The *f*ilter width
         self.fwidth = fwidth
         self.checkParameters()
@@ -160,6 +164,15 @@ class Computed(Field):
         if not method: raise Exception(METHOD_NO)
         # It cannot be a string, but a true method
         if isinstance(method, str): raise Exception(METHOD_KO % method)
+
+    def init(self, class_, name):
+        '''Lazy initialisation'''
+        super().init(class_, name)
+        # Late-init p_self.dateProto if present
+        proto = self.dateProto
+        if proto:
+            proto.init(class_, name)
+            proto.matchDefault = self.matchDefault
 
     def renderPx(self, o, px):
         '''Renders the p_px and returns the result'''
@@ -221,7 +234,7 @@ class Computed(Field):
            appropriate method.'''
         if self.indexType in ('TextIndex', 'RichIndex'):
             fun = Text.computeSearchValue
-        elif self.indexType == 'DateIndex':
+        elif self.dateProto:
             fun = Date.computeSearchValue
         elif self.pythonType == str:
             fun = String.computeSearchValue
@@ -230,9 +243,17 @@ class Computed(Field):
         return fun(self, req, value=value)
 
     def getFilterValue(self, value):
-        '''The filter value must be transformed in various ways, depending on
-           index type.'''
-        return DateTime(value) if self.indexType == 'DateIndex' else value
+        '''The transform to apply to the filter p_value depends on the index
+           type.'''
+        # In the context of a DateIndex, get the Date prototypical object in
+        # order to use its method m_getFilterValue.
+        base = self.dateProto or super()
+        return base.getFilterValue(value)
+
+    def getFilterInfo(self, mode):
+        '''Transfer this to the prototypical Date object when relevant'''
+        if self.dateProto:
+            return self.dateProto.getFilterInfo(mode)
 
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
                           language=None):
@@ -267,4 +288,11 @@ class Computed(Field):
         '''Removes the database value that was frozen for this field on p_o'''
         if self.unfreezable: raise Exception(UNFREEZ)
         if self.name in o.values: del(o.values[self.name])
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Some static attributes must be copied from field Date to field Computed:
+# indeed, they are required when the indexed value of a Computed field is of
+# type "DateIndex".
+for name in ('indexPrecision', 'match'):
+    setattr(Computed, name, getattr(Date, name))
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

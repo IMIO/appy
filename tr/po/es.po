@@ -205,7 +205,19 @@ msgstr "a"
 
 #. Default: "on"
 msgid "date_on"
-msgstr "
+msgstr "on"
+
+#. Default: "A precise date"
+msgid "date_match_precise"
+msgstr ""
+
+#. Default: "Until this date"
+msgid "date_match_until"
+msgstr ""
+
+#. Default: "From this date"
+msgid "date_match_from"
+msgstr ""
 
 #. Default: "or"
 msgid "search_or"

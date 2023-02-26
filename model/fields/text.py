@@ -780,6 +780,7 @@ class Text(Multilingual, Field):
     def getFilterValue(self, value):
         '''Manipulates p_value such that it can become pertinent search
            keyword(s).'''
+        value = super().getFilterValue(value)
         r = sutils.Normalize.text(value).strip()
         # Suffix it with a star only if there is a single keyword
         if ' ' not in r:

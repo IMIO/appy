@@ -1274,10 +1274,11 @@ class Field:
         return value
 
     def getFilterValue(self, value):
-        '''p_value is a valid value for p_self, as produced by
-           m_getStorableValue. This method applies a potential transform on it
-           in order to be used as filter value for a search.'''
-        return value
+        '''Convert this p_value, being a raw value from the UI filter, into a
+           value that can be used as parameter to perform a search.'''
+        # In general, this can be achieved by converting p_value to a storable
+        # value.
+        return self.getStorableValue(None, value)
 
     def getInputValue(self, inRequest, requestValue, value):
         '''Gets the value that must be filled in the "input" widget

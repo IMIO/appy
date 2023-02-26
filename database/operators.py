@@ -40,7 +40,7 @@ from BTrees.IIBTree import multiunion, intersection
 # someUsers = o.search('User', state=or_('active', 'inactive'),
 #                              attributes=and_('married', 'employed'))
 #
-# The "in" operator allow to defined ranges. Getting all users having an IQ
+# The "in" operator allows to define ranges. Getting all users having an IQ
 # between 130 and 155 is expressed like this:
 #
 #                 smartUsers = o.search('User', iq=in_(130, 155))
@@ -161,10 +161,10 @@ class and_(Operator):
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class in_(Operator):
     '''Defines a range of values by specifying lower and upper bounds'''
-    #
+
     # If you want to specify a range whose upper bound is defined, but with no
     # lower bound, use value None as lower bound, as in: qi=in_(None, 155).
-    #
+
     # If you want to specify a range whose lower bound is defined, but with no
     # upper bound, use value None as upper bound, as in: qi=in_(100, None).
 

@@ -208,6 +208,18 @@ msgstr "au"
 msgid "date_on"
 msgstr "le"
 
+#. Default: "A precise date"
+msgid "date_match_precise"
+msgstr "Date précise"
+
+#. Default: "Until this date"
+msgid "date_match_until"
+msgstr "Jusqu'au"
+
+#. Default: "From this date"
+msgid "date_match_from"
+msgstr "À partir du"
+
 #. Default: "or"
 msgid "search_or"
 msgstr "ou"

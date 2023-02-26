@@ -750,8 +750,7 @@ class Class(Meta):
             field = self.fields.get(name)
             if field:
                 try:
-                    value = field.getStorableValue(None, r[name])
-                    r[name] = field.getFilterValue(value)
+                    r[name] = field.getFilterValue(r[name])
                 except Exception as err:
                     # The encoded value is invalid. Ignore it.
                     tool.log(FILT_ERR % (self.name, name, str(err)),
