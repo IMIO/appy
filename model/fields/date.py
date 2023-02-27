@@ -249,7 +249,7 @@ class Date(Field):
       .dateICO { color:grey; font-size:1.3em; padding-left:0.3em;
                  background-color:transparent !important }
       .dateROW { display:flex; justify-content:right; margin-top:0.4em }
-      .matchD { display:inline-flex; align-items:center }
+      .matchD { display:flex; align-items:center; justify-content:right }
       .matchD label { text-transform:none; text-align:left; padding:0.2em 0 }
      ''')
 
