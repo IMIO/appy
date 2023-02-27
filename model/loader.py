@@ -7,7 +7,7 @@
 import sys, inspect, pathlib, importlib
 
 from appy.tr import po
-from appy.model import Model
+from appy.model.root import Model
 from appy.ui.layout import Layouts
 from appy.model.fields import Field
 from appy.model.fields.ref import Ref

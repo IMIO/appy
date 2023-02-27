@@ -7,8 +7,8 @@
 import os, sys, time, socket, logging, pathlib, selectors, threading
 
 from appy.px import Px
-from appy.model import Model
 from appy import utils, version
+from appy.model.root import Model
 from appy.database import Database
 from appy.utils import url as uutils
 from appy.server.pool import ThreadPool

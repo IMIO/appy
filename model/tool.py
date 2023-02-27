@@ -9,11 +9,11 @@ import appy.ui
 from appy.tr import po
 from appy.px import Px
 from appy import Config
-from appy.model import Model
 from appy.server import Server
 from appy.utils import Function
 from appy.model.base import Base
 from appy.model.user import User
+from appy.model.root import Model
 from appy.data import nativeNames
 from appy.model.group import Group
 from appy.model.fields import Show

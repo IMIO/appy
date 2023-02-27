@@ -8,8 +8,8 @@ import collections
 
 from appy.px import Px
 from appy.utils import No
-from appy.model import Model
 from appy.model.meta import Meta
+from appy.model.root import Model
 from appy.model.workflow.state import State
 from appy.model.workflow.transition import Transition
 from appy.model.fields.phase import Page as FieldPage

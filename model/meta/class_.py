@@ -9,14 +9,13 @@ import persistent
 from persistent.mapping import PersistentMapping
 
 from appy.px import Px
-from appy.model import Model
-
 import appy.model.meta.class_
 from appy.model.meta import Meta
 from appy.model.base import Base
 from appy.model.page import Page
 from appy.model.user import User
 from appy.model.tool import Tool
+from appy.model.root import Model
 from appy.model.group import Group
 from appy.ui.layout import Layouts
 from appy.model.fields import Field

@@ -5,8 +5,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy.model import Model
 from appy.model.base import Base
+from appy.model.root import Model
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ATTR       = 'Attribute "%s" in %s "%s"'
