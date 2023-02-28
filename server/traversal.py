@@ -380,13 +380,8 @@ class Traversal:
         if r is None: return r
         if self.resp.contentType == 'xml':
             # Currently, only XML marshalling is there
-            if isinstance(r, Base):
-                tag = r.class_.name
-                appy = True
-            else:
-                tag = self.parts[-1]
-                appy = False
-            r = Marshaller(rootTag=rootTag or tag).marshall(r, appy=appy)
+            tag = r.class_.name if isinstance(r, Base) else self.parts[-1]
+            r = Marshaller(rootTag=rootTag or tag).marshall(r)
         return r
 
     def run(self):

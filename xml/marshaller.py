@@ -277,14 +277,15 @@ class Marshaller:
                     if self.mustDump(name, className):
                         self.dumpField(r, name, value)
 
-    def marshall(self, o, appy=False, conversionFunctions=None,
-                 fieldNames=None):
-        '''Returns, as a string, the XML version of this p_o(bject)'''
+    def marshall(self, o, conversionFunctions=None, fieldNames=None, to=None):
+        '''If p_to is None, this method returns, as a string, the XML version of
+           this p_o(bject). If the absolute path to a file is passed in p_to,
+           the XML content is dumped into it and the method returns None.'''
         self.o = o
         if conversionFunctions:
             self.conversionFunctions.update(conversionFunctions)
         # Create the buffer where the XML result will be dumped
-        r = io.StringIO()
+        r = io.StringIO() if to is None else open(to, 'w')
         # Dump the XML prologue if required
         if self.dumpXmlPrologue:
             r.write(xmlPrologue)
@@ -297,8 +298,8 @@ class Marshaller:
             r.write('</%s>' % rootTagName)
         else:
             self.dumpField(r, self.rootTagName, o)
-        # Return the result
-        return r.getvalue()
+        # Return the result when relevant
+        if to is None: return r.getvalue()
 
     def marshallSpecificElements(self, o, r):
         '''You can use this marshaller as a base class for creating your own.

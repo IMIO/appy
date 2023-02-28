@@ -239,13 +239,14 @@ class Static:
             class_.writeUnchanged(handler)
 
     @classmethod
-    def writeFromDisk(class_, handler, path,
-                      disposition='attachment', downloadName=None):
+    def writeFromDisk(class_, handler, path, disposition='attachment',
+                      downloadName=None, enableCache=True):
         '''Serve a static file from disk, whose path is p_path'''
         # The string version of p_path
         spath = str(path)
         class_.write(handler, spath, os.path.getmtime(spath),
-                     disposition=disposition, downloadName=downloadName)
+                     disposition=disposition, downloadName=downloadName,
+                     enableCache=enableCache)
 
     @classmethod
     def writeFromRam(class_, handler, config):

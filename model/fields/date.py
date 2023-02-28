@@ -205,7 +205,7 @@ class Date(Field):
 
          <!-- Ok / cancel -->
          <span class="clickable dateICO"
-               onclick=":js % ('Filter', 'true')">☑</span>
+               onclick=":js % ('Filter', 'true')">✓</span>
          <span class="clickable dateICO"
                onclick=":js % ('Filter', 'false')">✖</span>
         </div>
