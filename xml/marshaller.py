@@ -27,7 +27,8 @@ class Marshaller:
                 'bytes': 'bytes', 'tuple': 'tuple', 'DateTime': 'DateTime'}
 
     def __init__(self, cdata=False, conversionFunctions={}, rootTag='appyData',
-                 dumpXmlPrologue=True, namespaces={}, namespacedTags={}):
+                 dumpXmlPrologue=True, namespaces={}, namespacedTags={},
+                 untyped=False):
         # If p_cdata is True, all string values will be dumped as XML CDATA
         self.cdata = cdata
         # The following dict stores specific conversion (=Python to XML)
@@ -63,6 +64,9 @@ class Marshaller:
         # paths to marshalled files, the base database folder, where those files
         # reside, will be set here.
         self.databaseFolder = None
+        # When p_untyped is True, the marshaller will not add type information
+        # in ad hoc attributes "type" or "className".
+        self.untyped = untyped
 
     def getTagName(self, name):
         '''Returns the name of tag p_name as will be dumped. It can be p_name,
@@ -86,8 +90,10 @@ class Marshaller:
     def dumpRootTag(self, r, o):
         '''Dumps the root tag'''
         # Dumps the name of the tag
+        typed = not self.untyped
         tagName = self.getTagName(self.rootTagName)
-        r.write('<%s type="object"' % tagName)
+        typeAttr = ' type="object"' if typed else ''
+        r.write('<%s%s' % (tagName, typeAttr))
         # Dumps namespace definitions if any
         for prefix, url in self.namespaces.items():
             if not prefix:
@@ -96,7 +102,7 @@ class Marshaller:
                 pre = 'xmlns:%s' % prefix
             r.write(' %s="%s"' % (pre, url))
         # Dumps Appy-specific attributes
-        if self.isAppy(o):
+        if typed and self.isAppy(o):
             r.write(' id="%s" iid="%d" className="%s"' % \
                     (o.id, o.iid, o.class_.name))
         r.write('>')
@@ -143,8 +149,9 @@ class Marshaller:
 
     def dumpDict(self, r, value):
         '''Dumps in p_r the XML version of dict p_value'''
+        typeAttr = '' if self.untyped else ' type="object"'
         for k, v in value.items():
-            r.write('<entry type="object">')
+            r.write('<entry%s>' % typeAttr)
             self.dumpField(r, 'k', k)
             self.dumpField(r, 'v', v)
             r.write('</entry>')
@@ -172,7 +179,7 @@ class Marshaller:
         else:
             method = 'dump%s' % type.capitalize()
             if hasattr(self, method):
-                exec('self.%s(r, value)' % method)
+                eval('self.%s' % method)(r, value)
             else:
                 r.write(str(value))
 
@@ -184,26 +191,35 @@ class Marshaller:
         if name == '_any':
             r.write(value)
             return
-        # Dump the start tag
-        tagName = self.getTagName(name)
-        r.write('<%s' % tagName)
-        # Dump value's type as an XML attribute
-        className = value.__class__.__name__
+        # Determine p_value's type
         cname = None
+        className = value.__class__.__name__
         if className in self.typesMap:
             type = self.typesMap[className]
         elif self.isObject(value):
             type = 'object'
             cname = value.__class__.__name__
-        else:
-            # For any other type, attribute "type" will not be dumped
+        else: # For any other type, attribute "type" will not be dumped
             type = None
-        if type:  r.write(' type="%s"' % type)
-        if cname: r.write(' className="%s"' % cname)
-        # Dump the value's length if multi-valued
-        if type in ('list', 'tuple'):
-            length = len(value) if value else 0
-            r.write(' count="%d"' % length)
+        isList = type in ('list', 'tuple')
+        # In "untyped" mode, dump a list as a series of homonym tags named
+        # p_name, each one containing one list item.
+        typed = not self.untyped
+        if isList and not typed:
+            for v in value:
+                self.dumpField(r, name, v)
+            return
+        # Dump the start tag
+        tagName = self.getTagName(name)
+        r.write('<%s' % tagName)
+        # Dump value's type as an XML attribute (when applicable)
+        if typed:
+            if type:  r.write(' type="%s"' % type)
+            if cname: r.write(' className="%s"' % cname)
+            # Dump the value's length if multi-valued
+            if isList:
+                length = len(value) if value else 0
+                r.write(' count="%d"' % length)
         # Dump file-related attributes
         if value and type == 'file':
             # Dump the MIME type
