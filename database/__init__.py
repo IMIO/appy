@@ -766,7 +766,7 @@ class Database:
                                      comment='%s: %s' % (className, title))
         if not isTemp:
             # Unindex p_o if it was indexed
-            if o.class_.isIndexable(): o.reindex(unindex=True)  
+            if o.class_.isIndexable(): o.reindex(unindex=True)
             # Delete the filesystem folder corresponding to this object
             folder = self.getFolder(o, create=False)
             if folder.exists():
