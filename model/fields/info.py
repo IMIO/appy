@@ -3,7 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.model.fields import Field
-from appy.ui.layout import Layout, Layouts
+from appy.ui.layout import Layout, LayoutF, Layouts
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Info(Field):
@@ -14,8 +14,8 @@ class Info(Field):
         '''Info-specific layouts'''
         b   = Layouts(edit='l')
         d   = Layouts(edit=Layout('l-d', width=None))
-        ds  = Layouts(edit=Layout('ld', width=None)) # *S*ingle line
-        dsv = Layouts(view=Layout('ld', width=None)) # *S*ingle line on view
+        ds  = Layouts(edit=LayoutF('ld')) # *S*ingle line
+        dsv = Layouts(view=LayoutF('ld')) # *S*ingle line on view
         c   = Layouts(edit='l|')
         dc  = Layouts(edit='l|-d|')
         do  = Layouts(edit='f', view='d') # Description only

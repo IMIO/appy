@@ -73,6 +73,7 @@ class BufferIterator:
         self.remainingElemIndexes.sort()
 
     def __iter__(self): return self
+
     def __next__(self):
         # Stop if there is no more elem nor sub-buffer
         if not self.remainingSubBufferIndexes and not self.remainingElemIndexes:
@@ -84,21 +85,20 @@ class BufferIterator:
         if self.remainingElemIndexes:
             nextExprIndex = self.remainingElemIndexes[0]
         # Compute min between nextSubBufferIndex and nextExprIndex
-        if (nextSubBufferIndex is not None) and (nextExprIndex is not None):
-            res = min(nextSubBufferIndex, nextExprIndex)
-        elif (nextSubBufferIndex is None) and (nextExprIndex is not None):
-            res = nextExprIndex
-        elif (nextSubBufferIndex is not None) and (nextExprIndex is None):
-            res = nextSubBufferIndex
+        if nextSubBufferIndex is not None and nextExprIndex is not None:
+            r = min(nextSubBufferIndex, nextExprIndex)
+        elif nextSubBufferIndex is None and nextExprIndex is not None:
+            r = nextExprIndex
+        elif nextSubBufferIndex is not None and nextExprIndex is None:
+            r = nextSubBufferIndex
         # Update "remaining" lists
-        if res == nextSubBufferIndex:
+        if r == nextSubBufferIndex:
             self.remainingSubBufferIndexes = self.remainingSubBufferIndexes[1:]
             resDict = self.buffer.subBuffers
-        elif res == nextExprIndex:
+        elif r == nextExprIndex:
             self.remainingElemIndexes = self.remainingElemIndexes[1:]
             resDict = self.buffer.elements
-        return res, resDict[res]
-    next = __next__ # Python2-3 compliance
+        return r, resDict[r]
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Buffer:
@@ -144,10 +144,10 @@ class Buffer:
            section), by evaluating variable "cellProtected" or
            "sectionProtected".'''
         type = elem[:elem.index(':')]
-        name = '%s:protected' % type
+        name = f'{type}:protected'
         var = 'cell' if type == 'table' else 'section'
         value = attrs.get(name, "false").strip() or "false"
-        attrs[name] = ':str(%sProtected).lower()|"%s"' % (var, value)
+        attrs[name] = f':str({var}Protected).lower()|"{value}"'
 
     def patchElement(self, elem, attrs):
         '''Modifies p_elem's attributes when relevant and make them dependent of
@@ -159,15 +159,15 @@ class Buffer:
             # ie, for naming calc sheets (which are implemented as tables).
             name = 'table:name'
             currentName = attrs.get(name) or getUuid(removeDots=True,prefix='T')
-            attrs[name] = ':tableName|"%s"' % currentName
+            attrs[name] = f':tableName|"{currentName}"'
         elif elem == 'table:table-column':
             # Convert attribute "number-columns-repeated" of every table column
             # (or add it if it does not exist) to let the user define how he
             # will repeat table columns via variable "columnsRepeated".
             key = 'table:number-columns-repeated'
             columnNumber = self.env.getTable().nbOfColumns -1
-            nb = (key in attrs) and attrs[key] or '1'
-            attrs[key] = ':columnsRepeated[%d]|%s' % (columnNumber, nb)
+            nb = attrs[key] if key in attrs else '1'
+            attrs[key] = f':columnsRepeated[{columnNumber}]|{nb}'
         elif elem == 'table:table-cell':
             key = 'table:style-name'
             style = attrs.get(key)
@@ -180,14 +180,14 @@ class Buffer:
                 # must return the name of the style to apply. This mechanism is
                 # restricted to styles starting with "S" for performance
                 # reasons.
-                attrs[key] = ':styleFor("%s",_ctx_)|"%s"' % (style, style)
+                attrs[key] = f':styleFor("{style}",_ctx_)|"{style}"'
             elif self.env.parser.caller.protection:
                 self.patchProtected(elem, attrs)
         elif elem == 'text:section' and self.env.parser.caller.protection:
             self.patchProtected(elem, attrs)
         elif elem == 'text:list-item' and 'text:start-value' in attrs:
             val = int(attrs['text:start-value'])
-            attrs['text:start-value'] = ':loop._all_[-1].nb+%d|%d' % (val, val)
+            attrs['text:start-value'] = f':loop._all_[-1].nb+{val}|{val}'
 
     def dumpStartElement(self, elem, attrs={}, ignoreAttrs=(), hook=False,
                          noEndTag=False, renamedAttrs=None):
@@ -210,7 +210,7 @@ class Buffer:
             self.tagExpr = tagExpr = attrs.get('z', "'div'") or "'div'"
             self.addExpression(tagExpr)
         else:
-            self.write('<%s' % elem)
+            self.write(f'<{elem}')
         # Some table elements must be patched (pod only)
         if self.pod: self.patchElement(elem, attrs)
         for name, value in attrs.items():
@@ -219,21 +219,21 @@ class Buffer:
             # If the value begins with ':', it is a Python expression. Else,
             # it is a static value.
             if not value.startswith(':'):
-                self.write(' %s=%s' % (name, quoteattr(value)))
+                self.write(f' {name}={quoteattr(value)}')
             else:
-                self.write(' %s="' % name)
+                self.write(f' {name}="')
                 content = value[1:] if self.pod else self.crunchExpr(value[1:])
                 self.addExpression(content)
                 self.write('"')
-        res = None
+        r = None
         if hook:
             if self.pod:
-                res = self.addAttributes()
+                r = self.addAttributes()
             else:
                 self.addAttribute(*hook)
         # Close the tag
-        self.write(noEndTag and '/>' or '>')
-        return res
+        self.write('/>' if noEndTag else '>')
+        return r
 
     def dumpEndElement(self, elem):
         '''Dump this end p_elem into p_self'''
@@ -244,7 +244,7 @@ class Buffer:
             self.tagExpr = None # Remove it: it has been "consumed"
             self.write(' >')
         else:
-            self.write('</%s>' % elem)
+            self.write(f'</{elem}>')
 
     def dumpElement(self, elem, content=None, attrs={}):
         '''For dumping a whole element at once'''
@@ -286,9 +286,9 @@ class FileBuffer(Buffer):
         try:
             expr = Expression(expression, self.pod)
             if tiedHook: tiedHook.tiedExpression = expr
-            res, escape = expr.evaluate(self.env.context)
-            if escape: self.dumpContent(res)
-            else: self.write(res)
+            r, escape = expr.evaluate(self.env.context)
+            if escape: self.dumpContent(r)
+            else: self.write(r)
         except Exception as e:
             if not self.env.raiseOnError:
                 PodError.dump(self, EVAL_KO % (expression, e), dumpTb=False)
@@ -414,18 +414,15 @@ class MemoryBuffer(Buffer):
     def write(self, thing): self.content += thing or ''
 
     def getIndex(self, podElemName):
-        res = -1
+        r = -1
         for index, podElem in self.elements.items():
             if podElem.__class__.__name__.lower() == podElemName:
-                if index > res:
-                    res = index
-        return res
+                if index > r:
+                    r = index
+        return r
 
     def getMainElement(self):
-        res = None
-        if 0 in self.elements:
-            res = self.elements[0]
-        return res
+        return self.elements[0] if 0 in self.elements else None
 
     def isMainElement(self, elem):
         '''Is p_elem the main element within this buffer?'''
@@ -699,7 +696,7 @@ class MemoryBuffer(Buffer):
         '''Creates a PX action and link it to this buffer. If an action is
            already linked to this buffer (in self.action), this action is
            chained behind the last action via self.action.subAction.'''
-        res = 0
+        r = 0
         statement = statement.strip()
         if actionType == 'for':
             forRes = self.Rex.for_.match(statement)
@@ -718,14 +715,14 @@ class MemoryBuffer(Buffer):
             self.action = action
         else:
             self.action.addSubAction(action)
-        return res
+        return r
 
     def cut(self, index, keepFirstPart):
         '''Cuts this buffer into 2 parts. Depending on p_keepFirstPart, the 1st
-        (from 0 to index-1) or the second (from index to the end) part of the
-        buffer is returned as a MemoryBuffer instance without parent; the other
-        part is self.'''
-        res = MemoryBuffer(self.env, None)
+           (from 0 to index-1) or the second (from index to the end) part of the
+           buffer is returned as a MemoryBuffer instance without parent; the
+           other part is self.'''
+        r = MemoryBuffer(self.env, None)
         # Manage buffer meta-info (elements, expressions, subbuffers)
         subBuffersToDelete = []
         elementsToDelete = []
@@ -735,18 +732,18 @@ class MemoryBuffer(Buffer):
                 if itemIndex >= index:
                     newIndex = itemIndex-index
                     if isinstance(item, MemoryBuffer):
-                        res.subBuffers[newIndex] = item
+                        r.subBuffers[newIndex] = item
                         subBuffersToDelete.append(itemIndex)
                     else:
-                        res.elements[newIndex] = item
+                        r.elements[newIndex] = item
                         elementsToDelete.append(itemIndex)
             else:
                 if itemIndex < index:
                     if isinstance(item, MemoryBuffer):
-                        res.subBuffers[itemIndex] = item
+                        r.subBuffers[itemIndex] = item
                         subBuffersToDelete.append(itemIndex)
                     else:
-                        res.elements[itemIndex] = item
+                        r.elements[itemIndex] = item
                         elementsToDelete.append(itemIndex)
                 else:
                     mustShift = True
@@ -767,23 +764,22 @@ class MemoryBuffer(Buffer):
             self.subBuffers = subBuffers
         # Manage content
         if keepFirstPart:
-            res.write(self.content[index:])
+            r.write(self.content[index:])
             self.content = self.content[:index]
         else:
-            res.write(self.content[:index])
+            r.write(self.content[:index])
             self.content = self.content[index:]
-        return res
+        return r
 
     def getElementIndexes(self, expressions=True):
-        res = []
+        r = []
         for index, elem in self.elements.items():
-            condition = isinstance(elem, Expression) or \
-                        isinstance(elem, Attributes)
+            condition = isinstance(elem, (Expression, Attributes))
             if not expressions:
                 condition = not condition
             if condition:
-                res.append(index)
-        return res
+                r.append(index)
+        return r
 
     def transferActionIndependentContent(self, actionElemIndex):
         # Manage content to transfer to parent buffer
@@ -805,10 +801,10 @@ class MemoryBuffer(Buffer):
             childBuffer = self.cut(elemIndexes[elemIndexes.index(
                 actionElemIndex)+1], keepFirstPart=True)
             self.addSubBuffer(childBuffer)
-            res = childBuffer
+            r = childBuffer
         else:
-            res = self
-        return res
+            r = self
+        return r
 
     def getStartIndex(self, removeMainElems):
         '''When I must dump the buffer, sometimes (if p_removeMainElems is
@@ -817,8 +813,8 @@ class MemoryBuffer(Buffer):
         if not removeMainElems: return 0
         # Find the start position of the deepest element to remove
         deepestElem = self.action.elem.DEEPEST_TO_REMOVE
-        pos = self.content.find('<%s' % deepestElem.nsName)
-        pos = pos + len(deepestElem.nsName)
+        pos = self.content.find(f'<{deepestElem.nsName}')
+        pos += len(deepestElem.nsName)
         # Now we must find the position of the end of this start tag,
         # skipping potential attributes.
         inAttrValue = False # Are we parsing an attribute value ?
@@ -826,7 +822,7 @@ class MemoryBuffer(Buffer):
         while not endTagFound:
             pos += 1
             nextChar = self.content[pos]
-            if (nextChar == '>') and not inAttrValue:
+            if nextChar == '>' and not inAttrValue:
                 # Yes we have it
                 endTagFound = True
             elif nextChar == '"':
@@ -838,11 +834,11 @@ class MemoryBuffer(Buffer):
         if removeMainElems:
             ns = self.env.namespaces
             deepestElem = self.action.elem.DEEPEST_TO_REMOVE
-            pos = self.content.rfind('</%s>' % deepestElem.getFullName(ns))
-            res = pos
+            pos = self.content.rfind(f'</{deepestElem.getFullName(ns)}>')
+            r = pos
         else:
-            res = self.getLength()
-        return res
+            r = self.getLength()
+        return r
 
     def removeAutomaticExpressions(self):
         '''When a buffer has an action with minus=True, we must remove the
@@ -852,7 +848,7 @@ class MemoryBuffer(Buffer):
         # Find the position of the end of the starting element of the deepest
         # element to remove.
         deepestElem = self.action.elem.DEEPEST_TO_REMOVE
-        pos = self.content.find('<%s' % deepestElem.nsName)
+        pos = self.content.find(f'<{deepestElem.nsName}')
         pos = self.content.find('>', pos)
         for index in list(self.elements.keys()):
             if index < pos: del(self.elements[index])
@@ -867,15 +863,15 @@ class MemoryBuffer(Buffer):
            it is a memory buffer.'''
         if not subElements:
             # Dump the root tag in this buffer, but not its content
-            res = self.reTagContent.match(self.content.strip())
-            if not res: result.write(self.content)
+            r = self.reTagContent.match(self.content.strip())
+            if not r: result.write(self.content)
             else:
-                g = res.group
+                g = r.group
                 g1, g2, g3 = g(1), g(2), g(3)
                 if self.env.parser.caller.protection and g2 == 'table-cell':
                     # Attribute "protected" must be removed
                     g3 = g3.replace('table:protected=" "', '')
-                r = '<%s:%s%s></%s:%s>' % (g1, g2, g3, g1, g2)
+                r = f'<{g1}:{g2}{g3}></{g1}:{g2}>'
                 result.write(r)
         else:
             if removeMainElems: self.removeAutomaticExpressions()
@@ -886,9 +882,9 @@ class MemoryBuffer(Buffer):
                 currentIndex = index + 1
                 if isinstance(evalEntry, Expression):
                     try:
-                        res, escape = evalEntry.evaluate(context)
-                        if escape: result.dumpContent(res)
-                        else: result.write(res)
+                        r, escape = evalEntry.evaluate(context)
+                        if escape: result.dumpContent(r)
+                        else: result.write(r)
                     except actions.EvaluationError as e:
                         # This exception has already been treated (see the 
                         # "except" block below). Simply re-raise it when needed.

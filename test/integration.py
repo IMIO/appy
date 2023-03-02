@@ -23,32 +23,31 @@ class TesterError(Exception): pass
 class InternalError(Exception): pass
 
 # TesterError-related constants
-WRONG_TEST_PLAN = 'The test plan you specified does not correspond to an ' \
-  'existing ODT file.'
-_FLAVOUR = 'A flavour represents a test configuration.'
-FLAVOURS_NOT_LIST = 'The flavours specified must be a list or tuple of ' \
-  'string. ' + _FLAVOUR
-FLAVOUR_NOT_STRING = 'Each specified flavour must be a string. ' + _FLAVOUR
-WRONG_TEST_FACTORY = 'You must give a test factory that inherits from the ' \
-  'abstract "appy.shared.test.TestFactory" class.'
-CREATE_TEST_NOT_OVERRIDDEN = 'The appy.shared.test.TestFactory.createTest ' \
-  'method must be overridden in your concrete TestFactory.'
-MAIN_TABLE_NOT_FOUND = 'No table "TestSuites" found in test plan "%s".'
-MAIN_TABLE_MALFORMED = 'The "TestSuites" table must have at least two ' \
-  'columns, named "Name" and "Description".'
-TEST_SUITE_NOT_FOUND = 'Table "%s.descriptions" and/or "%s.data" were not ' \
-  'found.'
-TEST_SUITE_MALFORMED = 'Tables "%s.descriptions" and "%s.data" do not have ' \
-  'the same length. For each test in "%s.data", You should have one line in ' \
-  '"%s.descriptions" describing the test.'
-FILE_NOT_FOUND = 'File to compare "%s" was not found.'
-WRONG_FLAVOUR = 'Wrong flavour "%s". Flavour must be one of %s.'
-TEST_AND_SUITE = 'Specify a single test or test suite but not both.'
+TEST_PLAN_KO = 'The test plan you specified does not correspond to an ' \
+               'existing ODT file.'
+_FLAVOUR     = 'A flavour represents a test configuration.'
+FLV_NOT_LIST = 'The flavours specified must be a list or tuple of ' \
+               'string. ' + _FLAVOUR
+FLV_NOT_STR  = 'Each specified flavour must be a string. ' + _FLAVOUR
+TEST_FCT_KO  = 'You must give a test factory that inherits from the abstract ' \
+               '"appy.test.integration.TestFactory" class.'
+CREAT_T_N_O  = 'The appy.test.integration.TestFactory.createTest method must ' \
+               'be overridden in your concrete TestFactory.'
+M_TABLE_KO   = 'No table "TestSuites" found in test plan "%s".'
+M_TABLE_MF   = 'The "TestSuites" table must have at least two columns, named ' \
+               '"Name" and "Description".'
+T_SUITE_KO   = 'Table "%s.descriptions" and/or "%s.data" were not found.'
+T_SUITE_MF   = 'Tables "%s.descriptions" and "%s.data" do not have the same ' \
+               'length. For each test in "%s.data", You should have one line ' \
+               'in "%s.descriptions" describing the test.'
+FILE_KO      = 'File to compare "%s" was not found.'
+WRONG_FLV    = 'Wrong flavour "%s". Flavour must be one of %s.'
+TEST_A_SUITE = 'Specify a single test or test suite but not both.'
 
 # InternalError-related constants
-TEST_REPORT_SINGLETON_ERROR = 'You can only use the TestReport constructor ' \
-  'once. After that you can access the single TestReport instance via the ' \
-  'TestReport.instance static member.'
+TR_SING_ERR  = 'You can only use the TestReport constructor once. After that ' \
+               'you can access the single TestReport instance via the ' \
+               'TestReport.instance static member.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TestReport:
@@ -63,7 +62,7 @@ class TestReport:
             self.verbose = verbose
             TestReport.instance = self
         else:
-            raise InternalError(TEST_REPORT_SINGLETON_ERROR)
+            raise InternalError(TR_SING_ERR)
 
     def say(self, msg, force=False):
         if self.verbose or force:
@@ -93,22 +92,24 @@ class Test:
         '''Compares 2 files. r_ is True if files are different. The differences
         are written in the test report.'''
         for f in expected, actual:
-            assert os.path.exists(f), TesterError(FILE_NOT_FOUND % f)
+            assert f.is_file(), TesterError(FILE_KO % f)
         # Expected result (may be different according to flavour)
+        expected = str(expected)
+        actual = str(actual)
         if self.flavour:
-            expectedFlavourSpecific = '%s.%s' % (expected, self.flavour)
-            if os.path.exists(expectedFlavourSpecific):
-                expected = expectedFlavourSpecific
+            specific = f'{expected}.{self.flavour}'
+            if os.path.exists(specific):
+                expected = specific
         # Perform the comparison
-        differ = Diff(actual, expected, areXml, xmlTagsToIgnore,
-                          xmlAttrsToIgnore)
+        differ = Diff(actual,expected,areXml,xmlTagsToIgnore,xmlAttrsToIgnore)
         return not differ.filesAreIdentical(report=self.report)
 
     def run(self):
         say = self.report.say
         say('-' * 79)
-        say('- Test %s.' % self.data['Name'])
-        say('- %s\n' % self.description)
+        say(f'- Test {self.data["Name"]}.')
+        bn = '\n'
+        say(f'- {self.description}{bn}')
         # Prepare test data
         self.tempFolder = self.testFolder / 'temp'
         if self.tempFolder.exists():
@@ -145,13 +146,13 @@ class Test:
     def isExpectedError(self, expectedMessage):
         '''An exception was thrown. So check if the actual error message
            (stored in self.errorDump) corresponds to the p_expectedMessage.'''
-        res = True
+        r = True
         for line in expectedMessage:
-            if (self.errorDump.find(line) == -1):
-                res = False
-                self.report.say('"%s" not found among error dump.' % line)
+            if self.errorDump.find(line) == -1:
+                r = False
+                self.report.say(f'"{line}" not found among error dump.')
                 break
-        return res
+        return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TestFactory:
@@ -163,17 +164,16 @@ class TestFactory:
            appy.shared.test.Test. m_createTest must return a Test instance and
            is called every time a test definition is encountered in the test
            plan.'''
-        raise TesterError(CREATE_TEST_NOT_OVERRIDDEN)
+        raise TesterError(CREAT_T_N_O)
 
 # Program help - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-HELP_VERBOSE = 'Dumps the whole test report on stdout'
-HELP_KEEP_TEMP = 'Keep the temp folder, in order to be able to copy some ' \
-  'results and make them expected results when needed.'
-HELP_TEST = 'Run only a specified test.'
-HELP_TEST_SUITE = 'Run only a specified test suite.'
-HELP_RENDERER_PARAMS = 'Specific renderer parameters, of the form ' \
-  'name1=val1,name2=v2'
-HELP_FLAVOUR = 'Specify the configuration flavour, which may be one of %s.'
+HELP_V   = 'Dumps the whole test report on stdout'
+HELP_KT  = 'Keep the temp folder, in order to be able to copy some results ' \
+           'and make them expected results when needed.'
+HELP_TST = 'Run only a specified test.'
+HELP_TSU = 'Run only a specified test suite.'
+HELP_RP  = 'Specific renderer parameters, of the form name1=val1,name2=v2'
+HELP_FLV = 'Specify the configuration flavour, which may be one of %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Tester(Program):
@@ -181,20 +181,20 @@ class Tester(Program):
         # Check test plan
         plan = Path(testPlan)
         if not plan.is_file() or not plan.name.endswith('.odt'):
-            raise TesterError(WRONG_TEST_PLAN)
+            raise TesterError(TEST_PLAN_KO)
         self.testPlan = plan
         self.testFolder = plan.absolute().parent
         # Check flavours
-        if (not isinstance(flavours,list)) and (not isinstance(flavours,tuple)):
-            raise TesterError(FLAVOURS_NOT_LIST)
+        if not isinstance(flavours, (list, tuple)):
+            raise TesterError(FLV_NOT_LIST)
         for flavour in flavours:
             if not isinstance(flavour, str):
-                raise TesterError(FLAVOUR_NOT_STRING)
+                raise TesterError(FLV_NOT_STR)
         self.flavours = flavours
         self.flavour = None
         # Check test factory
         if not issubclass(testFactory, TestFactory):
-            raise TesterError(WRONG_TEST_FACTORY)
+            raise TesterError(TEST_FCT_KO)
         self.testFactory = testFactory
         # Call the base constructor: it will read and check args
         Program.__init__(self)
@@ -216,19 +216,19 @@ class Tester(Program):
         parser = self.parser
         add = parser.add_argument
         if self.flavours:
-            add('flavour', help=Make.HELP_FLAVOUR % self.flavours)
-        add('-v', '--verbose', action='store_true', help=HELP_VERBOSE)
-        add('-k', '--keepTemp', action='store_true', help=HELP_KEEP_TEMP)
-        add('-t', '--test', help=HELP_TEST)
-        add('-s', '--testSuite', help=HELP_TEST_SUITE)
-        add('-r', '--rendererParams', help=HELP_RENDERER_PARAMS)
+            add('flavour', help=Make.HELP_FLV % self.flavours)
+        add('-v', '--verbose', action='store_true', help=HELP_V)
+        add('-k', '--keepTemp', action='store_true', help=HELP_KT)
+        add('-t', '--test', help=HELP_TST)
+        add('-s', '--testSuite', help=HELP_TSU)
+        add('-r', '--rendererParams', help=HELP_RP)
 
     def analyseArguments(self):
         '''Check arguments'''
         if self.flavours:
             sflavours = ', '.join(self.flavours)
             if self.flavour not in self.flavours:
-                raise TesterError(WRONG_FLAVOUR % (self.flavour, sflavours))
+                raise TesterError(WRONG_FLV % (self.flavour, sflavours))
         args = self.args
         self.verbose = args.verbose
         self.keepTemp = args.keepTemp
@@ -238,14 +238,15 @@ class Tester(Program):
         # If the user wants to run a single test suite
         self.singleSuite = args.testSuite
         if self.singleTest and self.singleSuite:
-            raise TesterError(TEST_AND_SUITE)
+            raise TesterError(TEST_A_SUITE)
 
     def runSuite(self, suite):
         self.report.say('*' * 79)
-        self.report.say('* Suite %s.' % suite['Name'])
-        self.report.say('* %s\n' % suite['Description'])
+        self.report.say(f'* Suite {suite["Name"]}.')
+        bn = '\n'
+        self.report.say(f'* {suite["Description"]}{bn}')
         i = -1
-        for testData in self.tables['%s.data' % suite['Name']]:
+        for testData in self.tables[f'{suite["Name"]}.data']:
             self.nbOfTests += 1
             i += 1
             testName = testData['Name']
@@ -254,8 +255,8 @@ class Tester(Program):
             elif self.singleTest and (testName != self.singleTest):
                 self.nbOfIgnoredTests += 1
             else:
-                description = self.tables['%s.descriptions' % \
-                                          suite['Name']][i]['Description']
+                t = suite['Name']
+                description = self.tables[f'{t}.descriptions'][i]['Description']
                 test = self.testFactory.createTest(
                     testData, description, self.testFolder, self.config,
                     self.flavour, self.rendererParams)
@@ -274,8 +275,8 @@ class Tester(Program):
         self.report.say('Parsing ODT file... ')
         self.tables = tables = TablesParser(self.testPlan).run()
         self.config = None
-        ext = '.%s' % self.flavour if self.flavour else ''
-        configTableName = 'Configuration%s' % ext
+        ext = f'.{self.flavour}' if self.flavour else ''
+        configTableName = f'Configuration{ext}'
         if configTableName in tables:
             self.config = tables[configTableName].asDict()
         self.tempFolder = os.path.join(self.testFolder, 'temp')
@@ -285,26 +286,26 @@ class Tester(Program):
         self.nbOfSuccesses = 0
         self.nbOfIgnoredTests = 0
         if 'TestSuites' not in tables:
-            raise TesterError(MAIN_TABLE_NOT_FOUND % str(self.testPlan))
+            raise TesterError(M_TABLE_KO % str(self.testPlan))
         # Browse test suites
         for suite in tables['TestSuites']:
-            if ('Name' not in suite) or ('Description' not in suite):
-                raise TesterError(MAIN_TABLE_MALFORMED)
+            if 'Name' not in suite or 'Description' not in suite:
+                raise TesterError(M_TABLE_MF)
             # Must we ignore this test suite ?
             if suite['Name'].startswith('_'):
                 name = suite['Name'][1:]
                 tsIgnored = True
             else:
                 name = suite['Name']
-                tsIgnored = self.singleSuite and (name != self.singleSuite)
+                tsIgnored = self.singleSuite and name != self.singleSuite
             # For every suite, 2 tables must exist: one with test descriptions
             # and the other with test data.
-            descrTable = tables.get('%s.descriptions' % name)
-            dataTable = tables.get('%s.data' % name)
+            descrTable = tables.get(f'{name}.descriptions')
+            dataTable = tables.get(f'{name}.data')
             if not descrTable or not dataTable:
-                raise TesterError(TEST_SUITE_NOT_FOUND % (name, name))
+                raise TesterError(T_SUITE_KO % (name, name))
             if len(descrTable) != len(dataTable):
-                raise TesterError(TEST_SUITE_MALFORMED % ((name,)*4))
+                raise TesterError(T_SUITE_MF % ((name,)*4))
             # The suite can still be ignored if self.singleTest is not among it
             if self.singleTest:
                 inSuite = False
@@ -325,12 +326,11 @@ class Tester(Program):
 
     def finalize(self):
         duration = time.time() - self.startTime
-        msg = '%d/%d successful test(s) performed in %.2f seconds' % \
-              (self.nbOfSuccesses, (self.nbOfTests-self.nbOfIgnoredTests),
-               duration)
-        if self.nbOfIgnoredTests >0:
-            msg += ', but %d ignored test(s) not counted' % \
-                   self.nbOfIgnoredTests
+        total = self.nbOfTests-self.nbOfIgnoredTests
+        msg = f'{self.nbOfSuccesses}/{total} successful test(s) performed ' \
+              f'in {duration:.2f} seconds'
+        if self.nbOfIgnoredTests > 0:
+            msg += f', but {self.nbOfIgnoredTests} ignored test(s) not counted'
         msg += '.'
         self.report.say(msg, force=True)
         self.report.close()

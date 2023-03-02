@@ -170,8 +170,7 @@ class HtmlElement(Element):
     def getOdfTags(self):
         '''Gets the start and end tags corresponding to p_self'''
         tag = self.getOdfTag()
-        if not tag: return (None, None)
-        return ('<%s>' % tag, '</%s>' % tag)
+        return (f'<{tag}>', f'</{tag}>') if tag else (None, None)
 
     def setConflictual(self):
         '''Note p_self as conflictual'''
@@ -180,10 +179,10 @@ class HtmlElement(Element):
 
     def getPath(self):
         '''Return this element's "absolute path" within the XHTML tree'''
-        res = self.elem
+        r = self.elem
         if self.parent:
-            res = '%s>%s' % (self.parent.getPath(), res)
-        return res
+            r = f'{self.parent.getPath()}>{r}'
+        return r
 
     def getConflictualElements(self, env):
         '''p_self was just parsed. In some cases, this element can't be dumped
@@ -259,7 +258,7 @@ class HtmlElement(Element):
                         else:
                             styleName = css
                 styleName = styleName or env.itemStyles[itemStyle]
-                dump(' text:style-name="%s"' % styleName)
+                dump(f' text:style-name="{styleName}"')
             else:
                 # Check if a style must be applied on 'p' tags
                 innerStyles = self.innerCssStyles
@@ -311,7 +310,7 @@ class HtmlElement(Element):
         if start:
             if self.elemType == 'list':
                 # I must specify the list style
-                attrs += ' text:style-name="%s"' % self.odStyle
+                attrs += f' text:style-name="{self.odStyle}"'
                 if self.elem == 'ol':
                     # I have interrupted a numbered list. I need to continue
                     # the numbering.
@@ -336,11 +335,11 @@ class HtmlElement(Element):
     def getName(self):
         '''Get the name of this tag, potentially augmented wit sub-tags from
            self.tagsToClose.'''
-        res = self.elem
+        r = self.elem
         if self.tagsToClose:
             for tag in self.tagsToClose:
-                res += '+' + tag.getName()
-        return res
+                r += f'+{tag.getName()}'
+        return r
 
     def inInnerTag(self):
         '''Is this tag in an inner tag ?'''
@@ -349,27 +348,24 @@ class HtmlElement(Element):
         return (parent.elem in INNER_TAGS) or parent.inInnerTag()
 
     def __repr__(self, prefix='<'):
-        res = self.getName()
+        r = self.getName()
         if self.removeTag:
             # We do not dump the prefix, used for indicating the fact that the
             # tag is opened or closed.
-            res += '-'
+            r += '-'
             prefix = ''
-        if self.isConflictual: res += '*'
-        return '%s%s' % (prefix, res)
+        if self.isConflictual: r += '*'
+        return f'{prefix}{r}'
 
     def show(self, env, indented=True, prefix='<', content=None):
         '''Returns a (possibly) p_indented representation of this HTML element
            (or of some other p_content at this indentation level), for debugging
            purposes.'''
         if not env.verbose: return
-        if content:
-            res = '%s%s' % (prefix, content)
-        else:
-            res = self.__repr__(prefix=prefix)
+        r = f'{prefix}{content}' if content else self.__repr__(prefix=prefix)
         if indented:
-            res = (' ' * 2 * self.getLevel()) + res
-        print(res)
+            r = (' ' * 2 * self.getLevel()) + r
+        print(r)
 
 # Create prototypical instances
 for tag in ('p', 'ul', 'ol'): HtmlElement.protos[tag] = HtmlElement(tag)
@@ -401,10 +397,10 @@ class HtmlTable(Element):
         self.contentDumped = False
         self.name = env.getUniqueStyleName('table')
         # Suffix the table name with a post-processor command when needed
-        if attrs and ('keeprows' in attrs):
+        if attrs and 'keeprows' in attrs:
             # This command tells the post-processor to remove some rows from
             # the table.
-            self.name += '(%s)' % attrs['keeprows']
+            self.name += f'({attrs["keeprows"]})'
             # So ensure the post-processor is enabled
             env.enablePpp()
         self.styleNs = env.ns[OdfEnvironment.NS_STYLE]
@@ -421,7 +417,7 @@ class HtmlTable(Element):
         modifier = props.columnModifier
         if modifier:
             prefix = props.columnModifiersPrefixes[modifier]
-            self.name = '%s_%s' % (prefix, self.name)
+            self.name = f'{prefix}_{self.name}'
         self.res = '' # The sub-buffer
         # The temporary sub-buffer, into which we will dump all table
         # sub-elements, until we encounter the end of the first row. Then, we
@@ -460,7 +456,7 @@ class HtmlTable(Element):
         prop = getattr(self.cssStyles, 'border', None)
         if prop is None: return True # By default we set a border
         val = prop.value
-        if (val == '0') or ('none' in val) or ('undefined' in val): return
+        if val == '0' or 'none' in val or 'undefined' in val: return
         return True
 
     def setTableStyle(self):
@@ -492,7 +488,7 @@ class HtmlTable(Element):
             tableWidth = pageWidth * (width.value / 100.0)
             percentage = str(width.value)
         else: # cm or px
-            ratio = (width.unit == 'cm') and 1.0 or px2cmRatio
+            ratio = 1.0 if width.unit == 'cm' else px2cmRatio
             tableWidth = min(width.value / ratio, pageWidth)
             percentage = formatNumber(float(tableWidth/pageWidth)*100, sep='.')
         # Compute the table size in PX: it will be needed to convert column
@@ -507,23 +503,22 @@ class HtmlTable(Element):
         # Get margins if defined
         margins = tableProps.getMargins(cssStyles)
         # Apply attribute "keep-with-next" ?
-        kwn = cssStyles.hasClass('TableKWN') and \
-              ' fo:keep-with-next="always"' or ''
+        kwn = ' fo:keep-with-next="always"' \
+              if cssStyles.hasClass('TableKWN') else ''
         # Is the table "unbreakable" ?
-        unbreak = tableProps.unbreakable and \
-                  ' style:may-break-between-rows="false"' or ''
+        unbreak = ' style:may-break-between-rows="false"' \
+                  if tableProps.unbreakable else ''
         # Do not define a specific table style if not necessary
         if not hasWidth and not margins and not kwn and not unbreak and \
-           (align == 'left'):
+           align == 'left':
             return 'podTable', tableWidthPx, originalTableWidthPx
         # Define a specific style for this table and return its name
-        decl = '<%s:style %s:name="%s" %s:family="table" ' \
-               '%s:parent-style-name="podTable"><%s:table-properties ' \
-               '%s:width="%scm" %s:rel-width="%s%%" %s:table-align="%s" ' \
-               '%s:align="%s"%s%s%s/></%s:style>' % \
-               (s, s, self.name, s, s, s, s, formatNumber(tableWidth, sep='.'),
-                s, percentage, self.tableNs, align, self.tableNs, align,
-                margins, kwn, unbreak, s)
+        decl = f'<{s}:style {s}:name="{self.name}" {s}:family="table" ' \
+               f'{s}:parent-style-name="podTable"><{s}:table-properties ' \
+               f'{s}:width="{formatNumber(tableWidth, sep=".")}cm" ' \
+               f'{s}:rel-width="{percentage}%" {self.tableNs}:table-align="' \
+               f'{align}" {self.tableNs}:align="{align}"{margins}{kwn}' \
+               f'{unbreak}/></{s}:style>'
         self.env.stylesManager.dynamicStyles.add('content', decl)
         return self.name, tableWidthPx, originalTableWidthPx
 
@@ -680,24 +675,30 @@ class HtmlTable(Element):
         dynamic = self.env.stylesManager.dynamicStyles
         for width in widths:
             i += 1
-            decl = '<%s:style %s:name="%s.%d" %s:family="table-column">' \
-                   '<%s:table-column-properties %s:rel-column-width="%d*"' \
-                   '/></%s:style>' % (s, s, self.name, i, s, s, s, width, s)
+            decl = f'<{s}:style {s}:name="{self.name}.{i}" {s}:family=' \
+                   f'"table-column"><{s}:table-column-properties ' \
+                   f'{s}:rel-column-width="{width}*"/></{s}:style>'
             dynamic.add('content', decl)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class XhtmlEnvironment(Environment):
+    '''Environment for the Xhtml2Odt parser'''
+
     itemStyles = {'ul': 'podBulletItem', 'ol': 'podNumberItem',
                   'ul_kwn': 'podBulletItemKeepWithNext',
                   'ol_kwn': 'podNumberItemKeepWithNext'}
+
     defaultListStyles = {'ul': 'podBulletedList', 'ol': 'podNumberedList'}
+
     # For list styles, this dict maps values of HTML attrbute "type" to CSS
     # property values for attribute "list-style-type".
     typeToListStyleType = {'1': 'decimal', 'a': 'lower-alpha',
       'A': 'upper-alpha', 'i': 'lower-roman', 'I': 'upper-roman',
       'disc': 'disc', 'circle': 'circle', 'square': 'square'}
+
     # Mapping between HTML list styles and ODT list styles
     listClasses = {'ol': NumberedProperties, 'ul': BulletedProperties}
+
     # "list-style-type" values supported by OpenDocument
     listFormats = {
       # Number formats
@@ -1038,8 +1039,8 @@ class XhtmlEnvironment(Environment):
                 # First row is parsed. The number of columns in the table is
                 # known: columns declarations can be dumped.
                 for i in range(1, table.nbOfColumns + 1):
-                    table.res+= '<%s:table-column %s:style-name="%s.%d"/>' % \
-                                (self.tableNs, self.tableNs, table.name, i)
+                    table.res += f'<{self.tableNs}:table-column {self.tableNs}'\
+                                 f':style-name="{table.name}.{i}"/>'
                 table.res += table.tempRes
                 table.tempRes = ''
         elif elem in TABLE_COL_TAGS:
@@ -1137,26 +1138,26 @@ class XhtmlParser(Parser):
         elif elem in STYLE_ONLY_TAGS:
             # Dump an end tag if we are already dumping styled content
             if e.mergedCount and (parent.dumpStatus == 'dumped'):
-                dump('</%s>' % odfTag)
+                dump(f'</{odfTag}>')
             e.updateMergedStyles('add', current)
             # We will dump this tag only if subsequent content is found
             current.dumpStatus = 'waiting'
         elif elem == 'a':
-            dump('<%s %s:type="simple"' % (odfTag, e.linkNs))
+            dump(f'<{odfTag} {e.linkNs}:type="simple"')
             if 'href' in attrs:
-                dump(' %s:href="%s"' % (e.linkNs, Escape.xml(attrs['href'])))
+                dump(f' {e.linkNs}:href="{Escape.xml(attrs["href"])}"')
             dump('>')
         elif elem in XHTML_LISTS:
             prologue = ''
-            if parent and (parent.elem in XHTML_LISTS):
+            if parent and parent.elem in XHTML_LISTS:
                 # It is a list into another list. In this case the inner list
                 # must be surrounded by a list-item element.
                 prologue = '<text:list-item>'
             # By default, LO seems to continue numbering or previous lists
             numbering = ' text:continue-numbering="false"' if elem=='ol' else ''
             current.odStyle = e.getListStyle(current, attrs)
-            dump('%s<%s text:style-name="%s"%s>' % (
-                 prologue, odfTag, current.odStyle, numbering))
+            dump(f'{prologue}<{odfTag} text:style-name="{current.odStyle}"' \
+                 f'{numbering}>')
         elif elem == 'li':
             # Must numbering restart at this "li" ?
             current = e.currentLists[-1]
@@ -1166,24 +1167,24 @@ class XhtmlParser(Parser):
             if numbered:
                 attrs = current.attrs
                 start = None
-                if attrs and ('start' in attrs):
+                if attrs and 'start' in attrs:
                     start = attrs['start']
                     del attrs['start']
                 elif current.subNumber == 1:
                     start = 1
-            restart = '' if start is None else ' text:start-value="%d"' % start
-            dump('<%s%s>' % (odfTag, restart))
+            restart = '' if start is None else f' text:start-value="{start}"'
+            dump(f'<{odfTag}{restart}>')
         elif elem == 'thead':
-            dump('<%s>' % odfTag)
+            dump(f'<{odfTag}>')
         elif elem == 'tr':
             attr = ' table:style-name="podUnbreakableRow"' \
                    if e.currentTables[-1].props.unbreakableRows else ''
-            dump('<%s%s>' % (odfTag, attr))
+            dump(f'<{odfTag}{attr}>')
         elif elem == 'table':
             # Here we must call "dumpString" only once
             table = e.currentTables[-1]
-            dump('<%s %s:name="%s" %s:style-name="%s">' % \
-                 (odfTag, e.tableNs, table.name, e.tableNs, table.style))
+            dump(f'<{odfTag} {e.tableNs}:name="{table.name}" ' \
+                 f'{e.tableNs}:style-name="{table.style}">')
         elif elem == 'img':
             conv = self.caller
             src = attrs.get('src', '').strip()
@@ -1196,15 +1197,15 @@ class XhtmlParser(Parser):
             # An inexistent tag in HTML, nervertheless usable to produce ODF
             # footnotes.
             nb = attrs['nb']
-            dump('<text:note text:id="ftn%s" text:note-class="footnote">' \
-                 '<text:note-citation>%s</text:note-citation><text:note-body>'%\
-                 (nb, nb))
+            dump(f'<text:note text:id="ftn{nb}" text:note-class="footnote">' \
+                 f'<text:note-citation>{nb}</text:note-citation>' \
+                 f'<text:note-body>')
         elif elem == 'tab':
             # Another inexistent tag in HTML, for managing tabs
             dump('<text:tab/>')
         elif elem == 'cs':
             # Yet another one, for managing consecutive spaces
-            dump('<text:s text:c="%s"/>' % attrs['n'])
+            dump(f'<text:s text:c="{attrs["n"]}"/>')
         elif elem in IGNORABLE_TAGS:
             e.ignore = True
 
@@ -1231,9 +1232,9 @@ class XhtmlParser(Parser):
                 if current.parent and (current.parent.elem in XHTML_LISTS):
                     # We were in an inner list. So we must close the list-item
                     # tag that surrounds it.
-                    endTag = '%s</text:list-item>' % endTag
+                    endTag = f'{endTag}</text:list-item>'
             if endTag and not current.removeTag and \
-               (current.dumpStatus != 'waiting'):
+               current.dumpStatus != 'waiting':
                 dump(endTag)
                 current.show(e, prefix='>')
             # Manage the end of a styled inner tag
@@ -1245,7 +1246,7 @@ class XhtmlParser(Parser):
                     # Possibly reopen a tag. The parent is already loaded with
                     # merged styles.
                     parent.dumpStatus = 'waiting'
-            elif (elem not in INNER_TAGS) and not current.inInnerTag():
+            elif elem not in INNER_TAGS and not current.inInnerTag():
                 # We are not in an "inner" zone anymore
                 e.mergedCount = 0
         if elem in IGNORABLE_TAGS:
@@ -1260,7 +1261,7 @@ class XhtmlParser(Parser):
         current = e.getCurrentTag()
         if current.dumpStatus == 'waiting':
             dump = e.dumpString
-            dump('<' + current.getOdfTag())
+            dump(f'<{current.getOdfTag()}')
             dump(e.getOdfAttributes(current))
             dump('>')
             current.dumpStatus = 'dumped'
@@ -1293,20 +1294,20 @@ class XhtmlPreprocessor:
 
     # A "pre" para will get CSS class "pre", in order to be style-mapped
     prePara = '<p class="pre">'
-    preParaN = '</p>%s' % prePara
+    preParaN = f'</p>{prePara}'
 
     @classmethod
     def patchTag(class_, match):
         '''Add the trailing slash if absent'''
         # If char "/" is already here, do not change anything
         if match.group(3): return match.group(0)
-        return '<%s%s/>' % (match.group(1), match.group(2))
+        return f'<{match.group(1)}{match.group(2)}/>'
 
     @classmethod
     def replacePreSpaces(class_, match):
         '''Replace every p_match(ed) sequence of consecutive spaces with a "cs"
            tag.'''
-        return '<cs n="%d"/>' % len(match.group(0))
+        return f'<cs n="{len(match.group(0))}"/>'
 
     @classmethod
     def replacePreTag(class_, match):
@@ -1316,8 +1317,8 @@ class XhtmlPreprocessor:
         # exist in XHTML: it has been invented in Appy for converting it to ODF
         # "text:s" tags.
         content = class_.preSpaces.sub(class_.replacePreSpaces, match.group(1))
-        return '<table><tr><td>%s%s</p></td></tr></table>' % \
-               (class_.prePara, content.replace('\n', class_.preParaN))
+        content = content.replace('\n', class_.preParaN)
+        return f'<table><tr><td>{class_.prePara}{content}</p></td></tr></table>'
 
     @classmethod
     def taggify(class_, s, tag='p'):
@@ -1335,7 +1336,7 @@ class XhtmlPreprocessor:
         r = []
         for line in s.split('\n'):
             if not line.startswith('<'):
-                line = '<%s>%s</%s>' % (tag, line.strip(), tag)
+                line = f'<{tag}>{line.strip()}</{tag}>'
             r.append(line)
         return '\n'.join(r)
 
@@ -1359,7 +1360,7 @@ class XhtmlPreprocessor:
         # parsing errors + the zero-width space.
         for char in '\f\v​':
             s = s.replace(char, '')
-        s = '<%s>%s</%s>' % (root, s, root)
+        s = f'<{root}>{s}</{root}>'
         # Convert, when required, HTML void tags to XHTML self-closing tags
         if html: s = class_.voidTag.sub(class_.patchTag, s)
         # Integrate, when required, chunks of code files
@@ -1412,19 +1413,20 @@ class Xhtml2OdtConverter:
     def applyKeepWithNext(self):
         '''This method is called prior to parsing self.xhtmlString in order to
            add specific CSS classes to some XHTML tags, implementing the
-           "keep-with-next" functionality. If the last tag is:
-           * a paragraph (tag "p"), class "ParaKWN" will be set;
-           * a bullet (tag "li"), class "podItemKeepWithNext" will be set.
+           "keep-with-next" functionality.'''
+        # If the last tag is:
+        # * a paragraph (tag "p"), class "ParaKWN" will be set;
+        # * a bullet (tag "li"), class "podItemKeepWithNext" will be set.
 
-           Note that this latter class will then be converted by the XHTML
-           parser into "real" style "podBulletItemKeepWithNext" or
-           "podNumberItemKeepWithNext", if the "li" is, respectively, in a "ul"
-           or "ol" tag.
-        '''
-        res = self.xhtmlString
-        lastParaIndex = res.rfind('<p')
-        lastItemIndex = res.rfind('<li')
-        if (lastParaIndex != -1) or (lastItemIndex != -1):
+        # Note that this latter class will then be converted by the XHTML parser
+        # into "real" style "podBulletItemKeepWithNext" or
+        # "podNumberItemKeepWithNext", if the "li" is, respectively, in a "ul"
+        # or "ol" tag.
+
+        r = self.xhtmlString
+        lastParaIndex = r.rfind('<p')
+        lastItemIndex = r.rfind('<li')
+        if lastParaIndex != -1 or lastItemIndex != -1:
             # Is the last one a paragraph or an item ?
             if lastParaIndex > lastItemIndex:
                 # A paragraph
@@ -1436,9 +1438,9 @@ class Xhtml2OdtConverter:
                 elemLenght = 3
             maxIndex = max(lastParaIndex, lastItemIndex)
             # Does this element already have a "class" attribute ?
-            if res.find('class="', maxIndex) == -1:
+            if r.find('class="', maxIndex) == -1:
                 # No: I add the style
-                res = res[:maxIndex+elemLenght] + (' class="%s" ' % styleName) \
-                      + res[maxIndex+elemLenght:]
-        return res
+                r = r[:maxIndex+elemLenght] + f' class="{styleName}" ' + \
+                    r[maxIndex+elemLenght:]
+        return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

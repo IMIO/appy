@@ -2851,7 +2851,7 @@ def autoref(class_, field):
     # "attr1 = Ref(A)", class A is not completely defined yet.
 
     # This method allows to overcome this problem. You can write such auto-
-    #reference like this:
+    # reference like this:
 
     # class A:
     #     attr1 = Ref(None)

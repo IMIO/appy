@@ -4,18 +4,17 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.pod import PodError
 from appy.pod.elements import *
-from appy.model.utils import Object
+from appy.model.utils import Object as O
 from appy.utils import Traceback, commercial, CommercialError
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-EVAL_ERROR = 'Error while evaluating expression "%s". %s'
-FROM_EVAL_ERROR = 'Error while evaluating the expression "%s" defined in the ' \
-                  '"from" part of a statement. %s'
-WRONG_SEQ_TYPE = 'Expression "%s" is not iterable.'
-WRONG_ITERATOR = 'Name "%s" cannot be used for an iterator variable.'
-TABLE_NOT_ONE_CELL = "The table you wanted to populate with '%s' " \
-                     "can\'t be dumped with the '-' option because it has " \
-                     "more than one cell in it."
+EVAL_ERROR  = 'Error while evaluating expression "%s". %s'
+FROM_EV_ERR = 'Error while evaluating the expression "%s" defined in the ' \
+              '"from" part of a statement. %s'
+SEQ_TYP_KO  = 'Expression "%s" is not iterable.'
+WRONG_ITER  = 'Name "%s" cannot be used for an iterator variable.'
+TBL_X_CELL  = "The table you wanted to populate with '%s' can\'t be dumped " \
+              "with the '-' option because it has more than one cell in it."
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EvaluationError(Exception):
@@ -60,7 +59,7 @@ class Action:
     def getExceptionLine(self, e):
         '''Gets the line describing exception p_e, containing the exception
            class, message and line number.'''
-        return '%s: %s' % (e.__class__.__name__, str(e))
+        return f'{e.__class__.__name__}: {str(e)}'
 
     def manageError(self, result, context, errorMessage, originalError=None):
         '''Manage the encountered error: dump it into the buffer or raise an
@@ -72,9 +71,8 @@ class Action:
                 locator = self.buffer.env.parser.locator
                 # The column number may not be given
                 col = locator.getColumnNumber()
-                if col is None: col = ''
-                else: col = ', column %d' % col
-                errorMessage += ' (line %s%s)' % (locator.getLineNumber(), col)
+                col = '' if col is None else f', column {col}'
+                errorMessage += f' (line {locator.getLineNumber()}{col})'
                 # Integrate the traceback (at least, its last lines)
                 errorMessage += '\n' + Traceback.get(6)
             if originalError:
@@ -125,8 +123,8 @@ class Action:
            p_result.'''
         # Check that if minus is set, we have an element which can accept it
         if self.minus and isinstance(self.elem, Table) and \
-           (not self.elem.tableInfo.isOneCell()):
-            self.manageError(result, context, TABLE_NOT_ONE_CELL % self.expr)
+           not self.elem.tableInfo.isOneCell():
+            self.manageError(result, context, TBL_X_CELL % self.expr)
         else:
             error = False
             # Evaluate self.expr in eRes
@@ -165,7 +163,7 @@ class Action:
             try:
                 fromRes = context['_eval_'].run(self.fromExpr, context)
             except Exception as e:
-                msg = FROM_EVAL_ERROR % (self.fromExpr,self.getExceptionLine(e))
+                msg = FROM_EV_ERR % (self.fromExpr,self.getExceptionLine(e))
                 self.manageError(result, context, msg, e)
                 error = True
             if not error:
@@ -258,21 +256,21 @@ class For(Action):
         # about all currently walked loops. For every walked loop, a specific
         # object, accessible at getattr(loop, p_self.iters[0]), stores info
         # about its status:
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  length   | the total number of walked elements within the loop
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  nb       | the index (starting at 0) of the currently walked element
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  first    | True if the currently walked element is the first one
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  last     | True if the currently walked element is the last one
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  odd      | True if the currently walked element is odd
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  even     | True if the currently walked element is even
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  previous | Points to the previous element, if any
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # For example, if you have a "for" statement like this:
         #
         #                 for elem in myListOfElements
@@ -283,14 +281,14 @@ class For(Action):
         # elem within myListOfElements.
         if 'loop' not in context:
             # Attribute "_all_" stores the list of all currently running loops
-            loops = context['loop'] = Object(_all_=[])
+            loops = context['loop'] = O(_all_=[])
         else:
             loops = context['loop']
         try:
             total = len(elems)
         except Exception:
             total = 0
-        curLoop = Object(length=total, previous=None, buffer=self.buffer)
+        curLoop = O(length=total, previous=None, buffer=self.buffer)
         loops._all_.append(curLoop)
         # Does this loop override an outer loop with homonym iterator ?
         outerLoop = None
@@ -332,14 +330,14 @@ class For(Action):
             # All "iterable" objects are OK
             iter(elems)
         except TypeError as te:
-            self.manageError(result, context, WRONG_SEQ_TYPE % self.expr, te)
+            self.manageError(result, context, SEQ_TYP_KO % self.expr, te)
             return
         # Remember variables hidden by iterators if any
         hiddenVars = {}
         for name in self.iters:
             # Prevent reserved names to be used
             if name == '_all_':
-                self.manageError(result, context, WRONG_ITERATOR % name)
+                self.manageError(result, context, WRONG_ITER % name)
                 return
             if name in context:
                 hiddenVars[name] = context[name]
@@ -370,7 +368,7 @@ class For(Action):
             loop.nb = i
             loop.first = i == 0
             loop.last = i == (loop.length-1)
-            loop.even = (i%2)==0
+            loop.even = (i%2) == 0
             loop.odd = not loop.even
             self.updateContext(context, item)
             # Cell: add a new row if we are at the end of a row
@@ -537,19 +535,19 @@ class Variables(Action):
         # corresponding value at that key.
         self.variables = variables
         # If p_lasting is:
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # False | (the default) every variable's scope will be the target
         #       | element (as determined by the corresponding buffer), not more.
         #       | Any homonym variable being defined in the outer scope will be
         #       | hidden in the context of the target element, and will be
         #       | visible again as soon as the walk leaves this sub-scope.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # True  | From the moment such a "lasting" variable is defined, its
         #       | scope will be the remaining of the document. So, its scope
         #       | encompasses the target element + the remaining of the
         #       | document. Any homonym variable being previously defined will
         #       | be hidden forever, as soon as the lasting variable is defined.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.lasting = lasting
 
     def storeVariable(self, name, value, context, hidden):

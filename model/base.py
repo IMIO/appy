@@ -1085,7 +1085,8 @@ class Base:
         return r
 
     def createFrom(self, _name, other, secure=False, executeMethods=True,
-                   exclude=(), keepBase=False, keepHistory=False, fields={}):
+                   exclude=(), keepBase=False, keepHistory=False, indexIt=True,
+                   fields={}):
         '''Similar to m_create above, excepted that another object (p_other) is
            used as base for filling in data for the object to create.'''
         # p_exclude lists fields (by their names) that will not be copied from
@@ -1102,7 +1103,8 @@ class Base:
         params = other.getCopyValues(exclude, fields)
         # Create the new instance
         r = self.create(_name, secure=secure, raiseOnWrongAttribute=False,
-                        executeMethods=executeMethods, **params)
+                        executeMethods=executeMethods, indexIt=indexIt,
+                        **params)
         # Copy p_other's history events as-is if requested
         if keepHistory: r.history.setEvents(other.history)
         # Propagate base attributes if required (which is useless if history has

@@ -22,6 +22,9 @@ SPEC_NAME_KO = 'name "%s" does not correspond to any object in the context.'
 PX_NAME_KO   = 'attribute "%s.%s" does not exist or is not a Px instance.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Px:
     '''Represents a (chunk of) PX code'''
 
@@ -116,7 +119,7 @@ class Px:
            PX.'''
         if self.partial:
             # Surround the partial chunk with a root tag: it must be valid XML
-            self.content = '<x>%s</x>' % self.content
+            self.content = f'<x>{self.content}</x>'
         # Create a PX parser
         self.parser = PxParser(PxEnvironment(), self)
         # Parses self.content (a PX code in a string) with self.parser, to
@@ -137,7 +140,7 @@ class Px:
         code = self.compact(code)
         existing = getattr(self, type)
         if existing:
-            code = '%s\n%s' % (existing, code)
+            code = f'{existing}{bn}{code}'
         setattr(self, type, code)
 
     def addCss(self, css): self.addCssJs(css, 'css')
@@ -156,7 +159,7 @@ class Px:
         # Get the previous and next lines when present
         if i > 0: lines.insert(0, splitted[i-1])
         if i < len(splitted)-1: lines.append(splitted[i+1])
-        parsingError._msg += '\n%s' % '\n'.join(lines)
+        parsingError._msg += f'{bn}{bn.join(lines)}'
 
     def __call__(self, context, applyTemplate=True, isTemplate=False):
         '''Renders the PX'''
@@ -223,13 +226,13 @@ class Px:
                 if px is None and context.get('ajax'):
                     pass
                 else:
-                    if self.js: r = ('<script>%s</script>\n' % self.js) + r
+                    if self.js: r = f'<script>{self.js}</script>{bn}{r}'
                     css = self.css
                     if css:
                         # Patch CSS if a CSS patcher is found
                         css = context['_css_'](css, context.get('o')) \
                               if '_css_' in context else css
-                        r = ('<style>%s</style>\n' % css) + r
+                        r = f'<style>{css}</style>{bn}{r}'
             # Include the prologue
             if self.prologue:
                 r = self.prologue + r
@@ -392,10 +395,9 @@ class Px:
            p_width, the truncated part is put in a xhtml p_tag.'''
         # Optional p_css class(es) are applied to the p_tag
         width = width or 20 # p_width could be None
-        css = ' class="%s"' % css if css else ''
+        css = f' class="{css}"' if css else ''
         if len(text) > width:
-            text = '<%s title="%s"%s>%s%s</%s>' % \
-                   (tag, text, css, text[:width], suffix, tag)
+            text = f'<{tag} title="{text}"{css}>{text[:width]}{suffix}</{tag}>'
         return text
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

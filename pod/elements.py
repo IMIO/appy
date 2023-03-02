@@ -145,11 +145,11 @@ class Expression(PodElement):
         '''Gets the expression in its unevaluated form'''
         if not self.pod: return '' # Works just for pod
         wrap = self.metaWraps[self.metaWrap]
-        res = '<text:conditional-text text:condition="ooow:%s%s%s" ' \
-               'text:string-value-if-true="%s" ' \
-               'text:string-value-if-false="">%s</text:conditional-text>' % \
-               (wrap, self.metaCondition, wrap, self.expr, self.expr)
-        return res
+        cond = self.metaCondition
+        return f'<text:conditional-text text:condition="ooow:' \
+               f'{wrap}{cond}{wrap}" text:string-value-if-true="{self.expr}" ' \
+               f'text:string-value-if-false="">{self.expr}</text:conditional-' \
+               f'text>'
 
     def _eval(self, context):
         '''Evaluates self.expr with p_context. If self.errorExpr is defined,
@@ -213,12 +213,12 @@ class Expression(PodElement):
 
     def __repr__(self):
         '''String representation for an expression'''
-        res = self.expr
-        if self.errorExpr: res += '|%s' % self.errorExpr
-        if self.escapeXml: res = ':' + res
-        if self.metaCondition: res += '[MC=%s]' % self.metaCondition
-        name = self.pod and 'Pod' or 'Px'
-        return '<%sExpr %s>' % (name, res)
+        r = self.expr
+        if self.errorExpr: r = f'{r}|{self.errorExpr}'
+        if self.escapeXml: r = f':{r}'
+        if self.metaCondition: r = f'{r}[MC={self.metaCondition}]'
+        name = 'Pod' if self.pod else 'Px'
+        return f'<{name}Expr {r}>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Attributes(PodElement):
@@ -269,10 +269,10 @@ class Attributes(PodElement):
         # Analyse the return type of the expression.
         self.computeAttributes(self.tiedExpression)
         # Now, self.attrs has been populated. Transform it into a string.
-        res = ''
+        r = ''
         for name, value in self.attrs.items():
-            res += ' %s=%s' % (name, quoteattr(value))
-        return res
+            r += f' {name}={quoteattr(value)}'
+        return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Attribute(PodElement):
@@ -289,6 +289,6 @@ class Attribute(PodElement):
     def evaluate(self, context):
         # If p_self.expr evaluates to False, do not dump the attribute at all
         if context['_eval_'].run(self.expr, context):
-            return ' %s="%s"' % (self.name, self.name)
+            return f' {self.name}="{self.name}"'
         return ''
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
