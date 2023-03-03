@@ -46,6 +46,7 @@ S_F_HOM     = '%s: "%s" is both used as search and field name, this is not ' \
               'allowed.'
 CUS_ID_KO   = 'The custom ID produced by method "generaeId" must be a string.'
 S_FIELD_KO  = 'Field "%s", mentioned as search field on class "%s", not found.'
+FILT_KO     = '%s :: Unparsable filter :: %s.'
 FILT_ERR    = '%s::%s - Filter error. %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -742,7 +743,12 @@ class Class(Meta):
     def getFilters(self, tool, filters=None):
         '''Extracts, from the request (or from p_filters if passed), filters
            defined on fields belonging to this class.'''
-        r = sutils.getDictFrom(filters or tool.req.filters)
+        try:
+            filters = filters or tool.req.filters
+            r = sutils.getDictFrom(filters)
+        except ValueError:
+            tool.log(FILT_KO % (self.name, str(filters)), type='error')
+            return {}
         # Apply a potential transform on every filter value
         for name in list(r.keys()):
             # Get the corresponding field
