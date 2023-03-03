@@ -5,6 +5,9 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n' # For f-strings
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
 from appy.utils import No
 from appy.ui.columns import Col
@@ -45,7 +48,4 @@ from appy.ui.layout import Layout, LayoutF, Layouts
 from appy.model.workflow.transition import Transition
 from appy.model.fields.select import Select, Selection
 from appy.database.operators import or_, and_, in_, not_
-
-# For f-strings
-bn = '\n'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
