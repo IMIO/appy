@@ -21,6 +21,7 @@ PARSING_P_LAYOUT = 3 # Parsing a page layout
 
 # Dict types
 dictTypes = (dict, UserDict)
+bn = '\n'
 
 # Error-related constants  - - - - - - - - - - - - - - - - - - - - - - - - - - -
 MAP_KO     = 'The styles mapping must be a dictionary or a UserDict instance.'
@@ -137,12 +138,12 @@ class TableProperties(Properties):
         # Widths being "0" are simply ignored
         if not hasattr(attrs, 'width') or attrs.width.value == 0:
             return css.Value('width', '100%')
-        res = attrs.width
-        if original: return res
-        if self.wideAbove is not None and res.unit == 'px' and \
-           res.value > self.wideAbove:
+        r = attrs.width
+        if original: return r
+        if self.wideAbove is not None and r.unit == 'px' and \
+           r.value > self.wideAbove:
             return css.Value('width', '100%')
-        return res
+        return r
 
     def getCellPadding(self, value):
         '''CSS "border-spacing" is defined in p_value. This method gets the
@@ -168,7 +169,7 @@ class TableProperties(Properties):
         for direction in css.Styles.directions:
             i += 1
             # Get the value from CSS attributes
-            cssValue = getattr(attrs, 'margin%s' % direction, None)
+            cssValue = getattr(attrs, f'margin{direction}', None)
             if cssValue: cssValue = cssValue.cm(formatted=False)
             # Get the value as defined on p_self
             tbValue = self.margins[i]
@@ -179,8 +180,8 @@ class TableProperties(Properties):
                 value = tbValue if tbValue is not None else cssValue
             if value is None: continue
             # Determine the name of the corresponding ODF property
-            name = 'fo:margin-%s' % direction
-            r += ' %s="%.2fcm"' % (name, value)
+            name = f'fo:margin-{direction}'
+            r += f' {name}="{value:.2f}cm"'
         return r
 
     @classmethod
@@ -234,32 +235,32 @@ class ListProperties(Properties):
     def dumpStyle(self, name):
         '''Returns the OpenDocument style definition corresponding to this
            instance.'''
-        nsText = 'text'
-        nsStyle = 'style'
-        res = []
+        nsT = 'text'
+        nsS = 'style'
+        r = []
+        fmt = utils.formatNumber
         spaceBefore = 0
-        space = utils.formatNumber(self.space, sep='.',removeTrailingZeros=True)
+        space = fmt(self.space, sep='.', removeTrailingZeros=True)
         for i in range(self.levels):
             # Determine if "delta" or "firstDelta" must be used
-            if (i == 0) and (self.firstDelta is not None):
+            if i == 0 and self.firstDelta is not None:
                 delta = self.firstDelta
             else:
                 delta = self.delta
             spaceBefore += delta
-            sb = utils.formatNumber(spaceBefore, sep='.',
-                                    removeTrailingZeros=True)
-            level = '  <%s:list-level-style-%s %s:level="%d" ' \
-              '%s:style-name="%s" %s>\n    <%s:list-level-properties ' \
-              '%s:space-before="%sin" %s:min-label-width="%sin"/>%s' \
-              '\n  </%s:list-level-style-%s>' % (nsText, self.type, nsText, i+1,
-              nsText, self.textStyle, self.getLevelAttributes(i,nsText,nsStyle),
-              nsStyle, nsText, sb, nsText, space,
-              self.getTextProperties(i, nsText, nsStyle), nsText, self.type)
-            res.append(level)
-        return '<%s:list-style %s:name="%s">\n%s\n</%s:list-style>' % \
-               (nsText, nsStyle, name, u'\n'.join(res), nsText)
+            sb = fmt(spaceBefore, sep='.', removeTrailingZeros=True)
+            attr = self.getLevelAttributes(i)
+            props = self.getTextProperties(i)
+            level = f'  <text:list-level-style-{self.type} text:level=' \
+              f'"{i+1}" text:style-name="{self.textStyle}" {attr}>{bn}    ' \
+              f'<style:list-level-properties text:space-before="{sb}in" ' \
+              f'text:min-label-width="{space}in"/>{props}{bn}  ' \
+              f'</text:list-level-style-{self.type}>'
+            r.append(level)
+        return f'<text:list-style style:name="{name}">{bn}{bn.join(r)}{bn}' \
+               f'</text:list-style>'
 
-    def getTextProperties(self, i, nsText, nsStyle):
+    def getTextProperties(self, i):
         '''Allows to define text properties at level p_i'''
         return ''
 
@@ -277,11 +278,11 @@ class BulletedProperties(ListProperties):
         ListProperties.__init__(self, levels, formats, delta, firstDelta,
                                 space, paraStyle)
 
-    def getLevelAttributes(self, i, nsText, nsStyle):
+    def getLevelAttributes(self, i):
         '''Dumps bullet-specific attributes for level p_i'''
         # Get the bullet to render at this level
-        return '%s:bullet-char="%s"' % \
-               (nsText, utils.getElementAt(self.formats, i))
+        bullet = utils.getElementAt(self.formats, i)
+        return f'text:bullet-char="{bullet}"'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NumberedProperties(ListProperties):
@@ -301,12 +302,12 @@ class NumberedProperties(ListProperties):
         # The list of suffixes
         self.suffixes = suffixes
 
-    def getLevelAttributes(self, i, nsText, nsStyle):
+    def getLevelAttributes(self, i):
         '''Dumps number-specific attributes for level p_i'''
         # Get the number type and suffix to render at this level
-        return '%s:num-suffix="%s" %s:num-format="%s"' % \
-               (nsStyle, utils.getElementAt(self.suffixes, i),
-                nsStyle, utils.getElementAt(self.formats, i))
+        suffix = utils.getElementAt(self.suffixes, i)
+        fmt =  utils.getElementAt(self.formats, i)
+        return f'style:num-suffix="{suffix}" style:num-format="{fmt}"'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Style:
@@ -333,7 +334,7 @@ class Style:
         self.outlineDelta = 0
         # Namespace for the ODF "style-name" attribute corresponding to this
         # style
-        self.styleNameNs = (family == 'table-cell') and 'table' or 'text'
+        self.styleNameNs = 'table' if family == 'table-cell' else 'text'
         # Default ODF attributes for this style
         self.defaults = defaults
         # For some unknown reason, ODF parent-child links don't work
@@ -345,38 +346,38 @@ class Style:
         self.fontSizeUnit = rexRes.group(2)
 
     def __repr__(self):
-        res = '<Style %s|family %s' % (self.name, self.family)
+        '''p_self's short string representation'''
+        r = f'<Style {self.name}|family {self.family}'
         if self.displayName is not None:
-            res += '|displayName "%s"' % self.displayName
-        if self.styleClass is not None: res += '|class %s' % self.styleClass
+            r += f'|displayName "{self.displayName}"'
+        if self.styleClass is not None:
+            r += f'|class {self.styleClass}'
         if self.fontSize is not None:
-            res += '|fontSize %d%s' % (self.fontSize, self.fontSizeUnit)
-        if self.outlineLevel is not None: res += '|level %s' % self.outlineLevel
-        return '%s>' % res
+            r += f'|fontSize {self.fontSize}{self.fontSizeUnit}'
+        if self.outlineLevel is not None: r += f'|level {self.outlineLevel}'
+        return f'{r}>'
 
     def getOdfAttributes(self, attrs=None, withName=True, withDefaults=False,
                          exclude=None):
         '''Gets the ODF attributes corresponding to this style. p_attrs, when
            given, are attributes of an XHTML tag.'''
         # Style name
-        res = ''
-        if withName:
-            res = ' %s:style-name="%s"' % (self.styleNameNs, self.name)
+        r = f' {self.styleNameNs}:style-name="{self.name}"' if withName else ''
         # Outline level when relevant
         if self.outlineLevel is not None:
             level = self.outlineLevel + self.outlineDelta
-            res += ' text:outline-level="%d"' % level
+            r = f'{r} text:outline-level="{level}"'
         # Colspan and rowspan when relevant
         if attrs and 'colspan' in attrs:
-            res += ' table:number-columns-spanned="%s"' % attrs['colspan']
+            r = f'{r} table:number-columns-spanned="{attrs["colspan"]}"'
         if attrs and 'rowspan' in attrs:
-            res += ' table:number-rows-spanned="%s"' % attrs['rowspan']
+            r = f'{r} table:number-rows-spanned="{attrs["rowspan"]}"'
         # Additional parameters as stored in self.defaults
         if withDefaults and self.defaults:
             for name, value in self.defaults.items():
-                if exclude and (name in exclude): continue
-                res += ' %s="%s"' % (name, value)
-        return res
+                if exclude and name in exclude: continue
+                r = f'{r} {name}="{value}"'
+        return r
 
     def getOdfParentAttributes(self, childAttrs=None):
         '''If style inheritance works, this method simply returns the attribute
@@ -385,10 +386,11 @@ class Style:
            styles), this method returns, in extenso, the parent ODF properties,
            so they will be entirely copied into the child style.'''
         if self.inheritWorks:
-            return ' style:parent-style-name="%s"' % self.name
+            r = f' style:parent-style-name="{self.name}"'
         else:
-            return self.getOdfAttributes(withName=False, withDefaults=True,
-                                         exclude=childAttrs)
+            r = self.getOdfAttributes(withName=False, withDefaults=True,
+                                      exclude=childAttrs)
+        return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class GraphicalStyle:
@@ -415,24 +417,27 @@ class GraphicalStyle:
 
     def getOdfAttributes(self):
         '''Returns p_self's attributes expressed as ODF'''
-        return 'draw:stroke="%s" svg:stroke-width="%s" svg:stroke-color="%s" ' \
-               'draw:fill="%s" draw:fill-color="%s" %s' % \
-               (self.stroke, self.strokeWidth, self.strokeColor,
-                self.fill, self.fillColor, self.defaultAttributes)
+        return f'draw:stroke="{self.stroke}" svg:stroke-width="' \
+               f'{self.strokeWidth}" svg:stroke-color="{self.strokeColor}" ' \
+               f'draw:fill="{self.fill}" draw:fill-color="{self.fillColor}" ' \
+               f'{self.defaultAttributes}'
 
     def asOdf(self):
         '''Returns p_self's representation as ODF code'''
-        return '<style:style style:name="%s" style:family="graphic">' \
-               '<style:graphic-properties %s/></style:style>' % \
-               (self.name, self.getOdfAttributes())
+        return f'<style:style style:name="{self.name}" style:family="graphic">'\
+               f'<style:graphic-properties {self.getOdfAttributes()}/>' \
+               f'</style:style>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PageStyle:
     '''Represents a page style'''
+
     # Attributes storing the style name
     nameAttributes = ('style:name', 'style:display-name')
+
     # Attributes storing references to other styles
     refAttributes = ('style:next-style-name',)
+
     # The attribute defining a page start number
     startAttr = 'style:page-number="%s"'
 
@@ -459,8 +464,8 @@ class PageStyle:
 
     def reifyStartTag(self):
         '''Re-creates the ODF start tag corresponding to this style'''
-        attrs = ['%s="%s"' % (n, v) for n, v in self.attrs.items()]
-        return '<style:master-page %s>' % ' '.join(attrs)
+        attrs = [f'{n}="{v}"' for n, v in self.attrs.items()]
+        return f'<style:master-page {" ".join(attrs)}>'
 
     def reifyUsingStartTag(self, match, start):
         '''Re-creates the ODF style definition using this page style'''
@@ -469,14 +474,14 @@ class PageStyle:
         if start is not None:
             params = params.replace(self.startAttr % 'auto',
                                     self.startAttr % start)
-        return '<style:style%sstyle:master-page-name="%s"%s</style:style>' % \
-               (match.group(1), self.uniqueName, params)
+        return f'<style:style{match.group(1)}style:master-page-name="' \
+               f'{self.uniqueName}"{params}</style:style>'
 
     def __repr__(self):
         '''String representation for this page style'''
-        attrs = self.attrs and (', attrs=%s' % str(self.attrs)) or ''
-        return '<PageStyle name=%s, uniqueName=%s%s>' % \
-               (self.name, self.uniqueName, attrs)
+        attrs = f', attrs={str(self.attrs)}' if self.attrs else ''
+        return f'<PageStyle name={self.name}, uniqueName={self.uniqueName}' \
+               f'{attrs}>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PageStyles:
@@ -582,21 +587,22 @@ DEFAULT_STYLES = {
   'th': Style('podHeader', 'table-cell', DEFAULT_HEADER_PARAMS),
 }
 for i in range(1,7):
-    DEFAULT_STYLES['h%d'%i] = Style('podH%d'%i, 'paragraph', outlineLevel=i)
+    DEFAULT_STYLES[f'h{i}'] = Style(f'podH{i}', 'paragraph', outlineLevel=i)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PageLayout:
     '''Represents a kind of page-level style'''
+
     def __init__(self, name):
         self.name = name
 
     def getFloat(self, value):
         '''Extract the float value from the string p_value'''
-        res = ''
+        r = ''
         for c in value:
-            if c.isdigit() or (c == '.'):
-                res += c
-        return float(res)
+            if c.isdigit() or c == '.':
+                r += c
+        return float(r)
 
     def setProperties(self, e, attrs):
         '''Sets properties of this page layout based on parsed p_attrs from tag
@@ -615,9 +621,9 @@ class PageLayout:
         else:
             defaultMargin = attrs[marginAttr]
         for margin in css.Styles.directions:
-            key = e.tags['margin-%s' % margin]
+            key = e.tags[f'margin-{margin}']
             value = (key in attrs) and attrs[key] or defaultMargin
-            marginAttr = 'margin%s' % margin.capitalize()
+            marginAttr = f'margin{margin.capitalize()}'
             setattr(self, marginAttr, self.getFloat(value))
 
     def getWidth(self, substractMargins=True):
@@ -627,37 +633,39 @@ class PageLayout:
         if substractMargins: r -= self.marginLeft + self.marginRight
         return r
 
-    def __repr__(self): return '<Page layout %s>' % self.name
+    def __repr__(self): return f'<Page layout {self.name}>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Styles(UserDict):
+    '''A dict of styles'''
+
     def getParagraphStyleAtLevel(self, level):
         '''Tries to find a style which has level p_level. Returns None if no
            such style exists.'''
         for style in self.values():
-            if (style.family == 'paragraph') and (style.outlineLevel == level):
+            if style.family == 'paragraph' and style.outlineLevel == level:
                 return style
 
     def getStyle(self, displayName):
         '''Gets the style that has this p_displayName. Returns None if not
            found.'''
-        res = None
+        r = None
         for style in self.values():
             if style.displayName == displayName:
-                res = style
+                r = style
                 break
-        return res
+        return r
 
     def getStyles(self, stylesType='all'):
         '''Returns a list of all the styles of the given p_stylesType'''
-        res = []
+        r = []
         if stylesType == 'all':
-            res = self.values()
+            r = self.values()
         else:
             for style in self.values():
-                if (style.family == stylesType) and style.displayName:
-                    res.append(style)
-        return res
+                if style.family == stylesType and style.displayName:
+                    r.append(style)
+        return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class FontsInjector:
@@ -687,10 +695,12 @@ class FontsInjector:
         r = self.fontRex.sub(lambda match: self.fontAttr % self.font, stylesXml)
         # Set the correct family name
         return self.familyRex.sub(
-                 lambda m: self.familyAttr % ("'%s'" % self.family), r)
+                 lambda m: self.familyAttr % f"'{self.family}'", r)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class StylesEnvironment(OdfEnvironment):
+    '''Environment for the styles parser'''
+
     def __init__(self):
         OdfEnvironment.__init__(self)
         # Namespace definitions are not already encountered
@@ -727,35 +737,37 @@ class StylesEnvironment(OdfEnvironment):
         ns = self.namespaces
         # Create a table of names of used tags and attributes (precomputed,
         # including namespace, for performance).
-        style = ns[self.NS_STYLE]
+        s = ns[self.NS_STYLE]
         fo = ns[self.NS_FO]
         office = ns[self.NS_OFFICE]
         tags = {
-          'style': '%s:style' % style,
-          'name': '%s:name' % style,
-          'family': '%s:family' % style,
-          'class': '%s:class' % style,
-          'display-name': '%s:display-name' % style,
-          'default-outline-level': '%s:default-outline-level' % style,
-          'text-properties': '%s:text-properties' % style,
-          'font-size': '%s:font-size' % fo,
-          'master-styles': '%s:master-styles' % office,
-          'master-page': '%s:master-page' % style,
-          'page-layout-name': '%s:page-layout-name' % style,
-          'page-layout': '%s:page-layout' % style,
-          'page-layout-properties': '%s:page-layout-properties' % style,
-          'page-width': '%s:page-width' % fo,
-          'page-height': '%s:page-height' % fo,
-          'margin': '%s:margin' % fo,
-          'margin-top': '%s:margin-top' % fo,
-          'margin-right': '%s:margin-right' % fo,
-          'margin-bottom': '%s:margin-bottom' % fo,
-          'margin-left': '%s:margin-left' % fo,
+          'style': f'{s}:style',
+          'name': f'{s}:name',
+          'family': f'{s}:family',
+          'class': f'{s}:class',
+          'display-name': f'{s}:display-name',
+          'default-outline-level': f'{s}:default-outline-level',
+          'text-properties': f'{s}:text-properties',
+          'font-size': f'{fo}:font-size',
+          'master-styles': f'{office}:master-styles',
+          'master-page': f'{s}:master-page',
+          'page-layout-name': f'{s}:page-layout-name',
+          'page-layout': f'{s}:page-layout',
+          'page-layout-properties': f'{s}:page-layout-properties',
+          'page-width': f'{fo}:page-width',
+          'page-height': f'{fo}:page-height',
+          'margin': f'{fo}:margin',
+          'margin-top': f'{fo}:margin-top',
+          'margin-right': f'{fo}:margin-right',
+          'margin-bottom': f'{fo}:margin-bottom',
+          'margin-left': f'{fo}:margin-left',
         }
         self.tags = tags
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class StylesParser(OdfParser):
+    '''The styles parser'''
+
     def __init__(self, env, caller):
         OdfParser.__init__(self, env, caller)
 
@@ -832,6 +844,7 @@ class StylesParser(OdfParser):
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Css2odf:
     '''Allows to get a OpenDocument attribute from a CSS attribute'''
+
     # Map CSS attribute names to ODF attribute names. CSS attributes names
     # have lost their inner dashes (margin-left => marginleft) because they are
     # used as Python attributes on css.Styles instances.
@@ -844,6 +857,7 @@ class Css2odf:
       'fontweight': 'fo:font-weight', 'fontstyle': 'fo:font-style',
       'border': 'fo:border', 'borderspacing': 'fo:padding',
       'lineheight': 'style:line-spacing',
+
       # Vertical-align map to different ODF attributes depending on its use:
       # aligning table cell content or text (sub or sup).
       'verticalalign': {
@@ -853,16 +867,19 @@ class Css2odf:
         'super': ('style:text-position', 'super 58%'),
         'sub': ('style:text-position', 'sub 58%'),
       },
+
       # CSS text-decoration corresponds to a different ODF attribute, depending
       # on its value.
       'textdecoration': {
         'underline': ('style:text-underline-style', 'solid'),
         'line-through': ('style:text-line-through-style', 'solid'),
         'overline': ('style:text-overline-style', 'solid')},
+
       # Idem for the following attributes
       'pagebreakafter': {'always': ('fo:break-after', 'page')},
       'pagebreakbefore': {'always': ('fo:break-before', 'page')},
     }
+
     # Map XHTML CSS values to values of their corresponding ODF attributes when
     # they are different.
     valuesMap = {
@@ -877,10 +894,13 @@ class Css2odf:
       'lineheight': {'normal': 'normal', 'initial': 'normal',
                      'inherit': 'normal'}
     }
+
     # CSS properties representing combinations of CSS properties
     combined = ('background', 'border')
+
     # For the following attributes, an alternative px2cm ratio can be defined
     px2cmRatios = {'lineheight': css.px2cm * 2 }
+
     # The following attributes will not be converted to ODF if their related
     # condition evaluates to True.
     notNegInTable = 'self.inTable() and (val < 0)'
@@ -936,12 +956,12 @@ class Css2odf:
             else:
                 # Ignore the value if not among supported values
                 return
-        attributes.append((odfName, '%s%s' % (val, unit)))
+        attributes.append((odfName, f'{val}{unit}'))
 
     def isCombined(self, name, value):
         '''Returns True if the CSS property p_name is a combined CSS property,
            ie, a property representing a set of CSS properties.'''
-        return (name in self.combined) and (' ' in value.value)
+        return name in self.combined and ' ' in value.value
 
     def inTable(self):
         '''In the XHTML > ODT conversion, are we currently parsing a table ?'''
@@ -991,7 +1011,7 @@ class DynamicStyles:
         if not styles: return content
         # Perform the injection
         hook = self.hooks[attr]
-        styles = '%s%s' % (''.join(styles), hook)
+        styles = f'{"".join(styles)}{hook}'
         return content.replace(hook, styles)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1073,12 +1093,12 @@ class StylesGenerator:
            be applied to the ODF element corresponding to p_xhtmlElem.'''
         odfAttrs.sort()
         attrs = self.flattenOdfAttributes(odfAttrs, forHash=True)
-        r = '%s%s' % (xhtmlElem.elem, ''.join(attrs))
+        r = f'{xhtmlElem.elem}{"".join(attrs)}'
         if baseStyle:
             # The base style must be part of the hash; else, the same set of
             # attributes on the same tag, but with 2 different base styles,
             # would be considered equal.
-            r += '*%s' % baseStyle.name
+            r = f'{r}*{baseStyle.name}'
         return r
 
     def getStyleFamily(self, xhtmlElem):
@@ -1088,7 +1108,7 @@ class StylesGenerator:
     def generateStyleName(self):
         '''Generates a new style name'''
         self.last += 1
-        return '%s%d%s' % (self.prefix, self.last, self.suffix)
+        return f'{self.prefix}{self.last}{self.suffix}'
 
     def getStyleName(self, xhtmlElem, odfAttrs, baseStyle):
         '''Return the ODF style name for the style that will be applied to ODF
@@ -1098,11 +1118,12 @@ class StylesGenerator:
            tag and with this combination of attributes, we simply return its
            name. Else, we note that we must generate a new style; we compute a
            new (incremental) name for it and we return this name.'''
+
         # More precisely, this method returns a tuple (createNew, styleName):
         # - "createNew" is a boolean indicating if a new style must be
         #               generated;
         # - "styleName" is the style name.
-        # ~~~
+
         # If the style hash corresponds to an existing style, simply return
         # its name.
         hash = self.getStyleHash(xhtmlElem, odfAttrs, baseStyle)
@@ -1116,7 +1137,7 @@ class StylesGenerator:
     def flattenOdfAttributes(self, odfAttrs, forHash=False):
         '''Produce a string from the list of (name, value) pairs in
            p_odfAttrs.'''
-        fmt = forHash and '%s%s' or '%s="%s"'
+        fmt = '%s%s' if forHash else '%s="%s"'
         return [fmt % (name, value) for name, value in odfAttrs]
 
     def isTextProperty(self, xhtmlElem, name):
@@ -1156,14 +1177,15 @@ class StylesGenerator:
                 paraAttrs.append((name, value))
         paraProps = textProps = ''
         if paraAttrs:
-            paraProps = '<style:paragraph-properties %s/>' % \
-                        ' '.join(self.flattenOdfAttributes(paraAttrs))
+            paraProps = f'<style:paragraph-properties ' \
+                        f'{" ".join(self.flattenOdfAttributes(paraAttrs))}/>'
         if textAttrs:
-            textProps = '<style:text-properties %s/>' % \
-                        ' '.join(self.flattenOdfAttributes(textAttrs))
+            textProps = f'<style:text-properties ' \
+                        f'{" ".join(self.flattenOdfAttributes(textAttrs))}/>'
         family = self.getStyleFamily(xhtmlElem)
-        style = '<style:style style:name="%s" style:family="%s"%s>%s%s' \
-                '</style:style>' % (styleName,family,parent,textProps,paraProps)
+        style = f'<style:style style:name="{styleName}" ' \
+                f'style:family="{family}"{parent}>{textProps}{paraProps}' \
+                f'</style:style>'
         # Within an ODT file, injecting styles in content.xml does not work
         # properly in some cases. For example, a percentage value for attribute
         # "fo-font-size" will be ignored if the style is dumped in content.xml.
@@ -1203,11 +1225,12 @@ class StylesGenerator:
             if not createNew: return styleName
             # Generate a new style. For table cells there is always a baseStyle.
             names = [name for name, value in cellAttrs]
-            style = '<style:style style:name="%s" style:family="%s">' \
-              '<style:table-cell-properties%s %s/></style:style>' % \
-              (styleName, self.getStyleFamily(xhtmlElem),
-               baseStyle.getOdfParentAttributes(names),
-               ' '.join(self.flattenOdfAttributes(cellAttrs)))
+            parentAttrs = baseStyle.getOdfParentAttributes(names)
+            flattened = " ".join(self.flattenOdfAttributes(cellAttrs))
+            style = f'<style:style style:name="{styleName}" ' \
+              f'style:family="{self.getStyleFamily(xhtmlElem)}">' \
+              f'<style:table-cell-properties{parentAttrs} {flattened}/>' \
+              f'</style:style>'
             self.addStyle(style, 'content')
             return styleName
     get_th = get_td
@@ -1301,10 +1324,9 @@ class StylesManager:
 
     def checkStylesAdequation(self, htmlStyle, odtStyle):
         '''Checks that p_odtStyle may be used for style p_htmlStyle'''
-        if (htmlStyle in XHTML_PARA_TAGS) and (odtStyle in self.textStyles):
+        if htmlStyle in XHTML_PARA_TAGS and odtStyle in self.textStyles:
             raise PodError(P_ODT_TXT % (htmlStyle, odtStyle.displayName))
-        if (htmlStyle in XHTML_INNER_TAGS) and \
-            (odtStyle in self.paragraphStyles):
+        if htmlStyle in XHTML_INNER_TAGS and odtStyle in self.paragraphStyles:
             raise PodError(TXT_ODT_P % (htmlStyle, odtStyle.displayName))
 
     def addStyleEntry(self, stylesMapping, key, value, cssAttrs):
@@ -1416,7 +1438,7 @@ class StylesManager:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # (iv)  | [x]Properties instance if cases (5) or (6).
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        res = {}
+        r = {}
         if not isinstance(stylesMapping, dictTypes):
             raise PodError(MAP_KO)
         for xhtmlStyleName, odtStyleName in stylesMapping.items():
@@ -1469,8 +1491,8 @@ class StylesManager:
                 # In this case (iii, iv), it is the outline level or a
                 # [x]Properties instance.
                 odtTarget = odtStyleName
-            self.addStyleEntry(res, xhtmlStyleName, odtTarget, cssAttrs)
-        return res
+            self.addStyleEntry(r, xhtmlStyleName, odtTarget, cssAttrs)
+        return r
 
     def styleMatch(self, xhtmlElem, matchingAttrs):
         '''p_matchingAttrs is a dict of attributes corresponding to some style
@@ -1562,51 +1584,52 @@ class StylesManager:
 
     def findStyle(self, xhtmlElem, localStylesMapping):
         '''Finds the ODT style that must be applied to XHTML p_elem (as a
-           xhtml2odt:HtmlElement instance).
+           xhtml2odt:HtmlElement instance).'''
 
-           The global styles mapping is in self.stylesMapping; the local styles
-           mapping is in p_localStylesMapping.
+        # The global styles mapping is in self.stylesMapping; the local styles
+        # mapping is in p_localStylesMapping.
 
-           Here are the places where we will search, ordered by
-           priority (highest first):
-           (1) local styles mapping (CSS style in "class" attr)
-           (2)         "            (HTML elem)
-           (3) global styles mapping (CSS style in "class" attr)
-           (4)          "            (HTML elem)
-           (5) ODT style that has the same name as CSS style in "class" attr
-           (6) Predefined pod-specific ODT style that has the same name as
-               CSS style in "class" attr
-           (7) ODT style that has the same outline level as HTML elem
-           (8) a default Appy ODT style
+        # Here are the places where we will search, ordered by priority (highest
+        # first):
+        # (1) local styles mapping (CSS style in "class" attr)
+        # (2)         "            (HTML elem)
+        # (3) global styles mapping (CSS style in "class" attr)
+        # (4)          "            (HTML elem)
+        # (5) ODT style that has the same name as CSS style in "class" attr
+        # (6) Predefined pod-specific ODT style that has the same name as
+        #     CSS style in "class" attr
+        # (7) ODT style that has the same outline level as HTML elem
+        # (8) a default Appy ODT style
 
-        After this step, we have (or not) a base ODT style. In a final step we
-        will analyse XHTML attributes (including CSS attributes within the
-        "style" attribute) to get more elements and possibly generate, via the
-        styles generator define hereabove, a custom style based on the base
-        ODT style.'''
-        res = None
+        # After this step, we have (or not) a base ODT style. In a final step we
+        # will analyse XHTML attributes (including CSS attributes within the
+        # "style" attribute) to get more elements and possibly generate, via the
+        # styles generator define hereabove, a custom style based on the base
+        # ODT style.
+
+        r = None
         elem = xhtmlElem.elem
         css = xhtmlElem.getClass(last=True)
         # (1)
         if css in localStylesMapping:
-            res = localStylesMapping[css]
+            r = localStylesMapping[css]
         # (2)
-        if not res:
-            res = self.getStyleFromMapping(localStylesMapping, xhtmlElem)
+        if not r:
+            r = self.getStyleFromMapping(localStylesMapping, xhtmlElem)
         # (3)
-        if not res and (css in self.stylesMapping):
-            res = self.stylesMapping[css]
+        if not r and css in self.stylesMapping:
+            r = self.stylesMapping[css]
         # (4)
-        if not res:
-            res = self.getStyleFromMapping(self.stylesMapping, xhtmlElem)
+        if not r:
+            r = self.getStyleFromMapping(self.stylesMapping, xhtmlElem)
         # (5)
-        if not res and css:
-            res = self.getLoStyle(css)
+        if not r and css:
+            r = self.getLoStyle(css)
         # (6)
-        if not res and (css in self.podSpecificStyles):
-            res = self.podSpecificStyles[css]
+        if not r and css in self.podSpecificStyles:
+            r = self.podSpecificStyles[css]
         # (7)
-        if not res and (elem in XHTML_HEADINGS):
+        if not r and elem in XHTML_HEADINGS:
             # Try to find a style with the correct outline level. Is there a
             # delta that must be taken into account ?
             outlineDelta = 0
@@ -1617,16 +1640,15 @@ class StylesManager:
             outlineLevel = int(elem[1]) + outlineDelta
             # Normalize the outline level
             if outlineLevel < 1: outlineLevel = 1
-            res = self.styles.getParagraphStyleAtLevel(outlineLevel)
+            r = self.styles.getParagraphStyleAtLevel(outlineLevel)
         # (8)
-        if res and (elem in Properties.elems) and \
-           not isinstance(res, Properties):
-            res = None
-        if not res and (elem in DEFAULT_STYLES): res = DEFAULT_STYLES[elem]
+        if r and elem in Properties.elems and not isinstance(r, Properties):
+            r = None
+        if not r and elem in DEFAULT_STYLES: r = DEFAULT_STYLES[elem]
         # Check styles adequation
-        if res: self.checkStylesAdequation(elem, res)
+        if r: self.checkStylesAdequation(elem, r)
         # Get or generate a custom style if there are specific CSS attributes
-        return self.stylesGenerator.get(xhtmlElem, res)
+        return self.stylesGenerator.get(xhtmlElem, r)
 
     def setXhtmlParser(self, xhtmlParser):
         '''Store the p_xhtmlParser if a XHTML > ODT conversion is ongoing'''
