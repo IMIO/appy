@@ -333,7 +333,7 @@ class MemoryBuffer(Buffer):
         sub = Buffer.addSubBuffer(self, subBuffer)
         # Dump a whitespace to avoid having several subbuffers referenced at the
         # same place within this buffer.
-        self.content += ' '
+        self.content = f'{self.content} '
         return sub
 
     def getInsertIndex(self, tag, opening):
@@ -362,7 +362,7 @@ class MemoryBuffer(Buffer):
                 buffer, k = sub.getInsertIndex(tag, opening)
                 if buffer is None: continue
                 # We have found the tag in this buffer
-                if (buf is None) or (k < i):
+                if buf is None or k < i:
                     # If the tag was also found in the main buffer, the tag
                     # from the sub-buffer must be chose because it comes first.
                     buf = buffer
@@ -381,9 +381,9 @@ class MemoryBuffer(Buffer):
         # this tag is not found, tries to insert it via p_after.
         buf = i = None
         if afterClosing:
-            buf, i = self.getInsertIndex('</%s>' % afterClosing, opening=False)
+            buf, i = self.getInsertIndex(f'</{afterClosing}>', opening=False)
         if after and buf is None:
-            buf, i = self.getInsertIndex('<%s' % after, opening=True)
+            buf, i = self.getInsertIndex(f'<{after}', opening=True)
         if buf is None:
             # Insert p_subBuffer after the main element
             buf = self
@@ -411,7 +411,10 @@ class MemoryBuffer(Buffer):
 
     def getLength(self): return len(self.content)
 
-    def write(self, thing): self.content += thing or ''
+    def write(self, thing):
+        '''Adds p_thing to p_self.content'''
+        if not thing: return
+        self.content = f'{self.content}{thing}'
 
     def getIndex(self, podElemName):
         r = -1
@@ -439,7 +442,7 @@ class MemoryBuffer(Buffer):
                     foundElem = iElem.OD.nsName
             else:
                 foundElem = iElem
-            if (foundElem == mainElem) and (index != 0):
+            if foundElem == mainElem and index != 0:
                 return
         return True
 
@@ -455,7 +458,7 @@ class MemoryBuffer(Buffer):
             else:
                 # A PX elem
                 foundElem = iElem
-            if (foundElem == elem) and (index > elemIndex):
+            if foundElem == elem and index > elemIndex:
                 elemIndex = index
         del self.elements[elemIndex]
 
@@ -471,7 +474,7 @@ class MemoryBuffer(Buffer):
             # in the parent (if it is a temp buffer generated from a cut)
             del self.subBuffers[subIndex]
             self.subBuffers[self.getLength()] = subBuffer
-            self.content += ' '
+            self.content = f'{self.content} '
 
     def transferAllContent(self):
         '''Transfer all content to parent'''
@@ -505,8 +508,8 @@ class MemoryBuffer(Buffer):
                 # Remember where this cell is in the table
                 elem.colIndex = elem.tableInfo.curColIndex
         if elem == 'x':
-            # See comment on similar statement in the method below.
-            self.content += ' '
+            # See comment on similar statement in the method below
+            self.content = f'{self.content} '
 
     def addExpression(self, expression, elem=None, tiedHook=None):
         '''Creates an Expression instance and add it in the buffer'''
@@ -527,20 +530,20 @@ class MemoryBuffer(Buffer):
         self.elements[self.getLength()] = expr
         # To be sure that an expr and an elem can't be found at the same index
         # in the buffer.
-        self.content += ' '
+        self.content = f'{self.content} '
 
     def addAttributes(self):
         '''pod-only: adds an Attributes instance into this buffer'''
         attrs = Attributes(self.env)
         self.elements[self.getLength()] = attrs
-        self.content += ' '
+        self.content = f'{self.content} '
         return attrs
 
     def addAttribute(self, name, expr):
         '''px-only: adds an Attribute instance into this buffer'''
         attr = Attribute(name, expr)
         self.elements[self.getLength()] = attr
-        self.content += ' '
+        self.content = f'{self.content} '
         return attr
 
     def _getVariables(self, expr):
