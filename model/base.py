@@ -1262,6 +1262,30 @@ class Base:
          var="x=o.callOnView()">::ui.Globals.getScripts(tool, q, layout)</x>
      </x>''', template=Template.px, hook='content')
 
+    def renderView(self, page='main'):
+        '''Gets p_self.view as a chunk of XHTML, without being wrapped in the
+           main template.'''
+        # Get the current context and request
+        req = self.req
+        ctx = self.traversal.context
+        # Remember the values that will be patched on these objects
+        pageP = req.page
+        pageLayout = req.pageLayout
+        notGlobal = req.notGlobal
+        o = ctx.o
+        # Patch the context and request
+        req.page = page
+        req.pageLayout = 'w'
+        req.notGlobal = True
+        ctx.o = self
+        r = self.view(ctx, applyTemplate=False)
+        # Restore now the context and request objects
+        ctx.o = o
+        req.notGlobal = notGlobal
+        req.pageLayout = pageLayout
+        req.page = pageP
+        return r
+
     # The default element computed and returned when an object is reached by a
     # traversal is the "view" PX.
     default = view
