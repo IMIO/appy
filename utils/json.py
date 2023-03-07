@@ -48,6 +48,9 @@ class Decoder:
     def decode(class_, jsonData):
         '''Converts JSON data received in a string (p_jsonData) to a Python data
            structure. JSON dicts are converted to Python objects.'''
+        # Return None if there is p_jsonData is empty
+        jsonData = jsonData.strip()
+        if not jsonData: return
         try:
             return class_.convertValue(eval(jsonData, class_.context))
         except SyntaxError as err:
