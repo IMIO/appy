@@ -11,6 +11,9 @@ from appy.utils import string as sutils
 from appy.database.operators import and_, or_, in_, not_
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+FILT_KO   = 'Criteria :: unparsable filters :: %s'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Criteria:
     '''Represents a set of search criteria manipulated from the UI'''
 
@@ -67,7 +70,12 @@ class Criteria:
         # Are such keywords present within search filters ?
         filters = handler.req.filters
         if filters:
-            filters = sutils.getDictFrom(filters)
+            try:
+                filters = sutils.getDictFrom(filters)
+            except ValueError:
+                # Filters are unparsable
+                handler.log('app', 'error', FILT_KO % filters)
+                filters = {}
             if 'searchable' in filters:
                 return filters['searchable'].rstrip('*')
 

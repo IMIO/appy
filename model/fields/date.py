@@ -250,7 +250,7 @@ class Date(Field):
                  background-color:transparent !important }
       .dateROW { display:flex; justify-content:right; margin-top:0.4em }
       .matchD { display:flex; align-items:center; justify-content:right }
-      .matchD label { text-transform:none; text-align:left; padding:0.2em 0 }
+      .matchD label { text-transform:none; text-align:left; padding:0.2em 0.3em}
      ''')
 
     def __init__(self, validator=None, multiplicity=(0,1), default=None,
