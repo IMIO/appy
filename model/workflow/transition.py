@@ -11,67 +11,131 @@ from appy.model.workflow.state import State
 from appy.model.workflow import emptyDict, Role
 
 # Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-UNTRIGGERABLE = 'Transition "%s" on %s can\'t be triggered.'
+UN_TRIG  = 'Transition "%s" on %s can\'t be triggered.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Transition:
     '''Represents a workflow transition'''
 
+    # A specific class for transition-related errors
     class Error(Exception): pass
+
+    # Some methods will be traversable
     traverse = {}
 
-    def __init__(self, states, condition=True, action=None, show=True,
-                 confirm=False, group=None, icon=None, sicon=None,
+    def __init__(self, states, condition=True, preAction=None, action=None,
+                 show=True, confirm=False, group=None, icon=None, sicon=None,
                  redirect=None, historizeActionMessage=False, iconOnly=False,
                  iconOut=False, iconCss='iconS', updateModified=False):
-        # In its simpler form, "states" is a list of 2 states:
+
+        '''A transition instance must be created as a static attribute for a
+           Workflow class.'''
+
+        # In its simpler form, p_states is a list of 2 states:
         # (fromState, toState). But it can also be a list of several
         # (fromState, toState) sub-lists. This way, you may define only 1
         # transition at several places in the state-transition diagram. It may
         # be useful for "undo" transitions, for example.
         self.states = self.standardiseStates(states)
+
+        # The p_condition determines if a transition can be triggered. If
+        # p_condition is a:
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # string  | it represents the name of a role. Only people having this
+        #         | role on the related object will be allowed to trigger the
+        #         | transition ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # Role    | we are in the same case as the previous one, but with a role
+        #         | being passed as a Role instance ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # method  | it represents a custom condition, as a method that must be
+        #         | defined on your workflow class. This method must accept the
+        #         | target object as unique arg and return True if the
+        #         | transition can be triggered.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # list /  | it is a sequence whose elements are any of the hereabove-
+        # tuple   | mentioned values. The transition will be triggerable if the
+        #         | currently logged user has *at least* one of the listed roles
+        #         | and if *all* listed methods return True.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.condition = condition
         if isinstance(condition, str):
             # The condition specifies the name of a role
             self.condition = Role(condition)
+
+        # The p_preAction is a method that will be executed just before a
+        # transition is fired. This method must be defined on a workflow class,
+        # must accept the target object as unique arg and must return None.
+        # p_preAction can also hold a list or tuple of methods. In that case,
+        # all these methods will be executed in their sequence order.
+        self.preAction = preAction
+
+        # The p_action is a method that will be executed just after a transition
+        # has been fired. It means, a.o., that, at this point, the history event
+        # representing the workflow action has already been inserted into the
+        # target object's history. At this point, the target object is in the
+        # transition's target state. This method must be defined on a workflow
+        # class and must accept the target object as unique arg. The return
+        # value can be a translated text, as a string, ready to be shown in the
+        # UI. p_action can also hold a list or tuple of methods. In that case,
+        # all these methods will be executed in their sequence order. Their
+        # return values, if any, will be concatenated. If there iis no returned
+        # text, a standard translated text will be returned in the UI.
         self.action = action
-        self.show = show # If False, the end user will not be able to trigger
-        # the transition. It will only be possible by code.
-        self.confirm = confirm # If True, a confirm popup will show up.
+
+        # If p_show is False, the end user will not be able to trigger the
+        # transition. It will only be possible by code.
+        self.show = show
+
+        # If True, in the UI, when clicking on the icon or button representing
+        # this transition, a confirm popup will show up.
+        self.confirm = confirm
+
+        # Transitions can be grouped, just like fields
         self.group = Group.get(group)
-        # If you want to specify a standard Appy SVG icon or one of your SVG
-        # icons being in folder <yourApp>/static, specify the name of the image,
-        # ie, "help.svg". If you want to specify one of your non-SVG icons,
-        # specify "<yourApp>/<yourImage>". Else, default Appy icon "action.svg"
-        # (from appy/ui/static) will be used.
+
+        # You can specify an icon for the button or icon representing this
+        # transition in the UI. If you want to specify a standard Appy SVG icon
+        # or one of your SVG icons being in folder <yourApp>/static, specify the
+        # name of the image, ie, "help.svg". If you want to specify one of your
+        # non-SVG icons, specify "<yourApp>/<yourImage>". Else, default Appy
+        # icon "action.svg" (from appy/ui/static) will be used.
         self.icon, self.iconBase, self.iconRam = iconParts(icon or 'action.svg')
+
         # You may specify, in attribute "sicon", an alternate icon suitable when
         # rendered as a small icon.
         sicon = sicon or icon or 'action.svg'
         self.sicon, self.siconBase, self.siconRam = iconParts(sicon)
-        # If redirect is None, once the transition will be triggered, Appy will
-        # perform an automatic redirect:
-        # (a) if you were on some "view" page, Appy will redirect you to this
-        #     page (thus refreshing it entirely);
-        # (b) if you were in a list of objects, Appy will Ajax-refresh the row
-        #     containing the object from which you triggered the transition.
+
+        # If p_redirect is None, once the transition will be triggered, Appy
+        # will perform an automatic redirect:
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # (a) | if you were on some "view" page, Appy will redirect you to this
+        #     | page (thus refreshing it entirely);
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # (b) | if you were in a list of objects, Appy will Ajax-refresh the row
+        #     | containing the object from which you triggered the transition.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Case (b) can be problematic if the transition modifies the list of
         # objects, or if it modifies other elements shown outside this list.
-        # If you specify "redirect" being
+        # If you specify "redirect" being:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "page"     | case (a) will always apply;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "referer"  | the entire page will be refreshed with the referer page.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.redirect = redirect
+
         # When a transition is triggered, the corresponding event is added in
         # the object's history. If p_historizeActionMessage is True, the message
-        # returned by self.action (if any) will be appended to this event's
+        # returned by p_self.action (if any) will be appended to this event's
         # comment.
         self.historizeActionMessage = historizeActionMessage
+
         # If p_iconOnly is True, the transition will be rendered as an icon (and
         # not a button), even on the "buttons" layout.
         self.iconOnly = iconOnly
+
         # If p_iconOut is True, when the transition is rendered as a
         # "icon + button" (p_iconOnly is False), the icon will be positioned
         # outside the button. Else, it will be integrated as a background-image
@@ -79,8 +143,10 @@ class Transition:
         # graphical possibilities (ie: the button may have a border that does
         # not include the icon).
         self.iconOut = iconOut
+
         # The CSS class to apply to the button icon, in "icon out" mode
         self.iconCss = iconCss
+
         # If p_updateModified is True, triggering this transition is considered
         # as a change on the object: his last modification date will be updated.
         self.updateModified = updateModified
@@ -89,18 +155,18 @@ class Transition:
         '''Lazy initialisation'''
         self.workflow = workflow
         self.name = name
-        self.labelId = '%s_%s' % (workflow.name, name)
+        self.labelId = f'{workflow.name}_{name}'
 
     def __repr__(self):
-        return '<transition %s::%s>' % (self.workflow.name, self.name)
+        '''String's short representation for p_self'''
+        return f'<transition {self.workflow.name}::{self.name}>'
 
     def standardiseStates(self, states):
         '''Get p_states as a list or a list of lists. Indeed, the user may also
            specify p_states as a tuple or tuple of tuples. Having lists allows
            us to easily perform changes in states if required.'''
         if isinstance(states[0], State):
-            if isinstance(states, tuple): return list(states)
-            return states
+            return list(states) if isinstance(states, tuple) else states
         return [[start, end] for start, end in states]
 
     def getEndStateName(self, wf, startStateName=None):
@@ -119,15 +185,27 @@ class Transition:
 
     def getUsedRoles(self):
         '''self.condition can specify a role'''
-        res = []
+        r = []
         if isinstance(self.condition, Role):
-            res.append(self.condition)
-        return res
+            r.append(self.condition)
+        return r
 
     def isSingle(self):
         '''If this transition is only defined between 2 states, returns True.
            Else, returns False.'''
         return isinstance(self.states[0], State)
+
+    def isShowable(self, o):
+        '''Is this transition showable ?'''
+        return self.show(self.workflow, o) if callable(self.show) else self.show
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                           Workflow modifiers
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # Appy is built with the idea that an app can be further extended or
+    # modified by an ext. Consequently, several of the following methods exist
+    # only for modifying, at the "ext" level, a wokflow being defined in an app.
 
     def addAction(self, action):
         '''Adds an p_action in self.action'''
@@ -143,14 +221,14 @@ class Transition:
             self.action = [actions, action]
 
     def _replaceStateIn(self, oldState, newState, states):
-        '''Replace p_oldState by p_newState in p_states.'''
+        '''Replace p_oldState by p_newState in p_states'''
         if oldState not in states: return
         i = states.index(oldState)
         del states[i]
         states.insert(i, newState)
 
     def replaceState(self, oldState, newState):
-        '''Replace p_oldState by p_newState in self.states.'''
+        '''Replace p_oldState by p_newState in self.states'''
         if self.isSingle():
             self._replaceStateIn(oldState, newState, self.states)
         else:
@@ -178,10 +256,6 @@ class Transition:
            disable some transitions by making them auto-transitions of this
            disabled state.'''
         self.states = [state, state]
-
-    def isShowable(self, o):
-        '''Is this transition showable ?'''
-        return self.show(self.workflow, o) if callable(self.show) else self.show
 
     def hasState(self, state, isFrom):
         '''If p_isFrom is True, this method returns True if p_state is a
@@ -223,6 +297,10 @@ class Transition:
         del condition[i]
         condition.insert(i, new)
         self.condition = tuple(condition)
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                    Check conditions and execute actions
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def isTriggerable(self, o, secure=True):
         '''Can this transition be triggered on p_o ?'''
@@ -270,19 +348,22 @@ class Transition:
         else:
             return bool(self.condition)
 
-    def executeAction(self, o):
-        '''Executes the action related to this transition'''
-        msg = ''
+    def executeAction(self, o, pre=False):
+        '''Executes the action (or pre-action if p_pre is True) related to this
+           transition.'''
+        r = ''
         proto = self.workflow.proto
-        if type(self.action) in (tuple, list):
+        attr = 'preAction' if pre else 'action'
+        action = getattr(self, attr)
+        if type(action) in (tuple, list):
             # We need to execute a list of actions
-            for act in self.action:
-                msgPart = act(proto, o)
-                if msgPart: msg += msgPart
+            for act in action:
+                text = act(proto, o)
+                if text: r += text
         else: # We execute a single action only
-            msgPart = self.action(proto, o)
-            if msgPart: msg += msgPart
-        return msg
+            text = action(proto, o)
+            if text: r += text
+        return r
 
     def getTargetState(self, o):
         '''Gets the target state for this transition'''
@@ -296,27 +377,38 @@ class Transition:
     def trigger(self, o, comment=None, doAction=True, doHistory=True,
                 doSay=True, reindex=True, secure=True, data=None,
                 forceTarget=None):
-        '''This method triggers this transition on some p_o(bject)'''
-        # If p_doAction is False, the action that must normally be executed
-        # after the transition has been triggered will not be executed. If
-        # p_doHistory is False, there will be no trace from this transition
-        # triggering in p_o's history. If p_doSay is False, we consider the
-        # transition as being triggered programmatically, and no message is
-        # returned to the user. If p_reindex is False, object reindexing will be
-        # performed by the caller method. If p_data is specified, it is a dict
-        # containing custom data that will be integrated into the history event.
-        # ~
+        '''Triggers this transition on some p_o(bject)'''
+
+        # If p_doAction is False, the action and pre-action that must normally
+        # be executed, respectively, after and before the transition has been
+        # triggered, will not be executed.
+
+        # If p_doHistory is False, there will be no trace from this transition
+        # triggering in p_o's history.
+
+        # If p_doSay is False, we consider the transition as being triggered
+        # programmatically, and no message is returned to the user.
+
+        # If p_reindex is False, object reindexing will be performed by the
+        # caller method.
+
+        # If p_data is specified, it is a dict containing custom data that will
+        # be integrated into the history event.
+
         # Is that the special _init_ transition ?
         name = self.name
         isInit = name == '_init_'
         # "Triggerability" and security checks
         if not isInit and not self.isTriggerable(o, secure=secure):
-            raise Transition.Error(UNTRIGGERABLE % (name, o.url))
+            raise Transition.Error(UN_TRIG % (name, o.url))
         # Identify the target state for this transition
         target = forceTarget or self.getTargetState(o)
         # Remember the source state, it will be necessary for executing the
         # common action.
         fromState = o.state if not isInit else None
+        # Execute the pre-action if any
+        if doAction and self.preAction:
+            self.executeAction(o, pre=True)
         # Add the event in the object history
         history = o.history
         event = history.add('Trigger', target.name, transition=name,

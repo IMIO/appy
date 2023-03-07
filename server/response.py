@@ -161,8 +161,12 @@ class Response:
         else:
             # The standard HTTP technique
             self.code = HTTPStatus.SEE_OTHER # 303
-            # Redirect to p_url or to the referer URL if no p_url has been given
-            self.headers['Location'] = url or self.handler.headers['Referer']
+            # Redirect to p_url or to the referer URL...
+            location = self.headers.get('Location')
+            if location and not url:
+                pass # ... unless a redirect has already be planned
+            else:
+                self.headers['Location']= url or self.handler.headers['Referer']
 
     def ungoto(self):
         '''Undo a previous call to m_goto'''

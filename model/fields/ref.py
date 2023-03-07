@@ -2727,8 +2727,8 @@ class Ref(Field):
             if links and tied.allows('read'):
                 # Wrap the title in a link
                 target = '_parent' if popup else '_self'
-                title = '<a href="%s" target="%s" style="padding:0">%s</a>' % \
-                        (tied.url, target, title)
+                title = f'<a href="{tied.url}/view" target="{target}" ' \
+                        f'style="padding:0">{title}</a>'
             r.append(title)
         return self.renderMinimalSep.join(r)
 
