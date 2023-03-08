@@ -250,6 +250,11 @@ class Computed(Field):
         base = self.dateProto or super()
         return base.getFilterValue(value)
 
+    def getValueFilter(self, value):
+        '''The mirror transform w.r.t m_getFilterValue follows the same logic'''
+        base = self.dateProto or super()
+        return base.getValueFilter(value)
+
     def getFilterInfo(self, mode):
         '''Transfer this to the prototypical Date object when relevant'''
         if self.dateProto:

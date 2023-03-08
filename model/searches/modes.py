@@ -182,6 +182,26 @@ class Mode:
         return "new AjaxData('%s/%s/Search/batchResults', 'POST', %s, '%s')" % \
                (self.tool.siteUrl, id, params, self.hook)
 
+    def getFiltersEncoded(self):
+        '''Gets p_self.filters, whose values are encoded in a form ready to be
+           sent back to the UI.'''
+        filters = self.filters
+        if not filters: return filters
+        r = {}
+        for name, value in filters.items():
+            field = self.class_.fields[name]
+            r[name] = field.getValueFilter(value)
+        return r
+
+    def getFiltersString(self):
+        '''Converts dict p_self.filters into its string representation'''
+        filters = self.getFiltersEncoded()
+        if not filters: return ''
+        r = []
+        for k, v in filters.items():
+            r.append('%s:%s' % (k, v))
+        return ','.join(r)
+
     def updateAjaxParameters(self, params):
         '''To be overridden by subclasses for adding Ajax parameters
            (see m_getAjaxData above)'''
@@ -308,7 +328,7 @@ class List(Mode):
     def updateAjaxParameters(self, params):
         '''List-specific ajax parameters'''
         params.update(
-          {'start': self.batch.start, 'filters': self.filters,
+          {'start': self.batch.start, 'filters': self.getFiltersEncoded(),
            'sortKey': self.sortKey or '', 'sortOrder': self.sortOrder,
            'checkboxes': self.checkboxes, 'checkboxesId': self.checkboxesId,
            'total': self.batch.total,
@@ -351,15 +371,6 @@ class List(Mode):
         # Try to retrieve this info via search.shownInfo
         r = search.getShownInfo(o or tool)
         return r if r else self.class_.getListColumns(tool)
-
-    def getFiltersString(self):
-        '''Converts dict p_self.filters into its string representation'''
-        filters = self.filters
-        if not filters: return ''
-        r = []
-        for k, v in filters.items():
-            r.append('%s:%s' % (k, v))
-        return ','.join(r)
 
     def inFilter(self, name, value):
         '''Returns True if this p_value, for field named p_name, is among the
@@ -630,7 +641,7 @@ class Calendar(Mode):
         '''Grid-specific ajax parameters'''
         # If filters are in use, carry them
         if self.filters:
-            params['filters'] = self.filters
+            params['filters'] = self.getFiltersEncoded()
 
     # For every hereabove-defined entry type, this dict stores info about how
     # to render events having this type. For every type:

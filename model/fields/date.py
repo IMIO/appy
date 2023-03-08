@@ -415,6 +415,22 @@ class Date(Field):
             r = in_(None, r)
         return r
 
+    def getValueFilter(self, value):
+        '''Converts this read-to-search p_value into a value that can be
+           understood by a filter.'''
+        if isinstance(value, in_):
+            vA, vB = value.values
+            if vA is None:
+                date = vB
+                match = 'until'
+            else:
+                date = vA
+                match = 'from'
+        else:
+            date = value
+            match = 'precise'
+        return f'{date.strftime("%Y-%m-%d")}*{match}'
+
     def getFilterInfo(self, mode):
         '''Returns, as a tuple (b_inFilter, s_date, s_match) info about a
            potential filter value from a search having this p_mode. The filter

@@ -1280,6 +1280,13 @@ class Field:
         # value.
         return self.getStorableValue(None, value)
 
+    def getValueFilter(self, value):
+        '''Convert this p_value, produced by m_getFilterValue, into its form as
+           manipulated by a UI filter.'''
+        # This method is m_getFilterValue's mirror. In most cases, no transform
+        # is required.
+        return value
+
     def getInputValue(self, inRequest, requestValue, value):
         '''Gets the value that must be filled in the "input" widget
            corresponding to this field.'''
