@@ -1206,7 +1206,8 @@ class Ref(Field):
         #   | sorting and filtering.
         #   | 
         #   | By "default search", we mean: the one whose attribute "default" is
-        #   | set to True, or, by default, the first one in the dict.
+        #   | set to True. If no search as default=True, the standard Ref view
+        #   | will be shown.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # 2 | the standard Ref view is completely abandoned, and results from
         #   | the single specified Search becomes the unique way to display tied
@@ -1544,14 +1545,12 @@ class Ref(Field):
 
     def getDefaultSearch(self, searches, nameOnly=False):
         '''Returns, among this dict of p_searches, the one being the default'''
-        r = first = None
+        r = ''
         for name, search in searches.items():
-            if first is None:
-                first = name if nameOnly else search
             if search.default:
                 r = name if nameOnly else search
                 break
-        return r or first
+        return r
 
     def getSearches(self, o, dictOnly=True):
         '''Gets the unique Search instance or the dict of Search instances
@@ -1561,7 +1560,11 @@ class Ref(Field):
         if not r: return
         # Do not return the unique instance if p_dictOnly is True
         unique = isinstance(r, Search)
-        if unique and dictOnly: return
+        if unique and dictOnly:
+            # Do not return the search, but indicate, in the request, that this
+            # will be the unique search.
+            o.req[self.getCurrentSearchKey()] = '_default_'
+            return
         # Define the Search container, being p_self.class_
         class_ = self.class_.meta
         # Lazy-initialise the search(es)
@@ -1581,8 +1584,8 @@ class Ref(Field):
         return self.getDefaultSearch(all) if name == '_default_' else all[name]
 
     def getCurrentSearchKey(self):
-        '''In the context a ref having p_self.searches, teturns the key storing,
-           in the request, the currently selected search.'''
+        '''In the context of a ref having p_self.searches, returns the key
+           storing, in the request, the currently selected search.'''
         return '%s_view' % self.name
 
     def getCurrentSearch(self, req, searches):
@@ -1600,9 +1603,9 @@ class Ref(Field):
         # If attribute "searches" is not None, we may have to show search
         # results from one of the searches defined in it, or the standard list
         # of tied objects, depending on some request key.
-        key = self.getCurrentSearchKey()
         req = o.req
-        searchName = req[key] if key in req else '_default_'
+        key = self.getCurrentSearchKey()
+        searchName = req[key] if key in req else ''
         # If no search was found, show the standard list of tied objects
         if not searchName: return self.pxSub
         # If we are here, we must render the PX for rendering the found search.
