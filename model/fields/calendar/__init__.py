@@ -18,6 +18,7 @@ from appy.model.fields import Field, Show
 from appy.ui.layout import Layout, Layouts
 from appy.utils.dates import getLastDayOfMonth
 from appy.model.fields.calendar.timeslot import Timeslot
+from appy.model.fields.calendar.validation import Validation
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TL_W_EVTS   = 'A timeline calendar has the objective to display a series of ' \
@@ -33,210 +34,6 @@ S_MONTHS_KO = 'Strict months can only be used with timeline calendars.'
 ACT_MISS    = 'Action "%s" does not exist or is not visible.'
 UNSORT_EVTS = 'Events must be sorted if you want to get spanned events to be ' \
               'grouped.'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class ValidationMailing:
-    '''When validation (see the class below) must generate emails, info about
-       those emails is collected in a ValidationMailing instance.'''
-    def __init__(self, validation, calendar, o):
-        # Get links to the Validation instance and the Calendar fiels
-        self.validation = validation
-        self.calendar = calendar
-        self.o = o
-        # "emails" is a dict containing one entry for every mail to send
-        self.emails = {} # ~{s_userLogin: (User, [s_eventInfo])}~
-        # Translated texts to use for terms "validated" and "discarded" (when
-        # talking avout events)
-        _ = o.translate
-        self.texts = {'validated': _('event_validated'),
-                      'discarded': _('event_discarded')}
-
-    def addEvent(self, o, field, date, event, action):
-        '''An event has been validated or discarded. Store this event in the
-           mailing.'''
-        validation = self.validation
-        # Get info about the user to which to send the email
-        user = validation.email(o)
-        login = user.login
-        # Add an entry if this user is encountered for the first time
-        if login not in self.emails:
-            self.emails[login] = (user, [])
-        # Add the event string: "date - [timeslot] name : status"
-        name = field.getEventName(o, event.eventType)
-        if event.timeslot != 'main':
-            name = '[%s] %s' % (event.timeslot, name)
-        eventString = '%s - %s - %s' % \
-          (date.strftime(validation.dateFormat), name, self.texts[action])
-        self.emails[login][1].append(eventString)
-
-    def send(self):
-        '''Sends the emails'''
-        # The subject is the same for every email
-        validation = self.validation
-        _ = self.o.translate
-        subject = _(validation.emailSubjectLabel)
-        tool = self.o.tool
-        # Create a unique mapping for the body of every translated message,
-        # containing what is common to all messages.
-        mapping = {'fromUser': self.o.user.getTitle(),
-                   'toUser': None, 'details': None}
-        # Send one email for every entry in self.emails
-        for login in self.emails:
-            user, details = self.emails[login]
-            mapping['toUser'] = user.getTitle()
-            mapping['details'] = '\n'.join(details)
-            body = _(validation.emailBodyLabel, mapping=mapping, asText=True)
-            tool.sendMail(user.getMailRecipient() or login, subject, body)
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Validation:
-    '''The validation process for a calendar consists in "converting" some event
-       types being "wishes" to other event types being the corresponding
-       validated events. This class holds information about this validation
-       process. For more information, see the Calendar constructor, parameter
-       "validation".'''
-    def __init__(self, method, schema, removeDiscarded=False,
-                 email=None, emailSubjectLabel=None, emailBodyLabel=None,
-                 dateFormat='%d/%m/%Y'):
-        # p_method holds a method that must return True if the currently logged
-        # user can validate whish events.
-        self.method = method
-        # p_schema must hold a dict whose keys are the event types being wishes
-        # and whose values are the event types being the corresponding validated
-        # event types.
-        self.schema = schema
-        # When discarding events, must we simply let them there or remove them?
-        # If you want to remove them, instead of giving the boolean value
-        # "True", you can specify a method. In this case, prior to removing
-        # every discarded event, the method will be called, with those args:
-        # * obj       the target object. It can be the object onto which this
-        #             calendar is defined, or another object if we are
-        #             validating an event from an "other" calendar;
-        # * calendar  the target calendar, that can be different from the one
-        #             tied to this Validation instance if we are validating an
-        #             event from an "other" calendar;
-        # * event     the event to remove (an instance of class Event below);
-        # * date      the event date, as a DateTime instance.
-        self.removeDiscarded = removeDiscarded
-        # When validation occurs, emails can be sent, explaining which events
-        # have been validated or discarded. In the following attribute "email",
-        # specify a method belonging to the object linked to this
-        # calendar. This method must accept no parameter and return a User
-        # instance, that will be used as email recipient. If we are on a month
-        # view, the method will be called once and a single email will be sent.
-        # For a timeline view, the method will be called for every "other"
-        # calendar for which events have been validated or rejected, on the
-        # object where the other calendar is defined.
-        self.email = email
-        # When email sending is enabled (see the above parameter), specify here
-        # i18n labels for the email subject and body. Within translations for
-        # the "body" label, you can use the following variables:
-        # - ${fromUser} is the name of the user that triggered validation;
-        # - ${toUser} is the name of user to which the email is sent (deduced
-        #             from calling method in parameter "email" hereabove);
-        # - ${details} is the list of relevant events. In this list, the
-        #              following information will appear, for every event:
-        #   * its date (including the timeslot if not "main");
-        #   * its type;
-        #   * its status: validated or discarded.
-        self.emailSubjectLabel = emailSubjectLabel
-        self.emailBodyLabel = emailBodyLabel
-        # Date format at will appear in the emails
-        self.dateFormat = dateFormat
-
-    def getMailingInfo(self, calendar, o):
-        '''Returns a ValidationMailing instance for collecting info about emails
-           to send when events are validated and/or discarded.'''
-        return ValidationMailing(self, calendar, o)
-
-    def do(self, o, calendar):
-        '''Validate or discard events from the request'''
-        req = o.req
-        counts = {'validated': 0, 'discarded': 0}
-        # Determine what to do with discarded events
-        removeDiscarded = self.removeDiscarded
-        removeIsCallable = callable(removeDiscarded)
-        tool = o.tool
-        # Collect info for sending emails
-        if self.email: mailing = self.getMailingInfo(calendar, o)
-        # Validate or discard events
-        for action in ('validated', 'discarded'):
-            if not req[action]: continue
-            for info in req[action].split(','):
-                if req.render == 'month':
-                    # Every checkbox corresponds to an event at a given date,
-                    # with a given event type at a given timeslot, in this
-                    # p_calendar on p_obj.
-                    date, eventType, timeslot = info.split('_')
-                    oDate = DateTime('%s/%s/%s' % (date[:4],date[4:6],date[6:]))
-                    # Get the events defined at that date
-                    events = calendar.getEventsAt(o, date)
-                    i = len(events) - 1
-                    while i >= 0:
-                        # Get the event at that timeslot
-                        event = events[i]
-                        if event.timeslot == timeslot:
-                            # We have found the event
-                            if event.eventType != eventType:
-                                raise Exception('Wrong event type')
-                            # Validate or discard it
-                            if action == 'validated':
-                                schema = self.schema
-                                event.eventType = schema[eventType]
-                            else:
-                                if removeDiscarded:
-                                    if removeIsCallable:
-                                        removeDiscarded(o, o, calendar,
-                                                        events[i], oDate)
-                                    del events[i]
-                            # Count this event and put it among email info
-                            counts[action] += 1
-                            if self.email:
-                                mailing.addEvent(o, calendar, oDate, event,
-                                                 action)
-                        i -= 1
-                elif req.render == 'timeline':
-                    # Every checkbox corresponds to a given date in some
-                    # calendar (p_calendar or one among self.others). It means
-                    # that all "impactable" events at that date will be the
-                    # target of the action.
-                    otherId, fieldName, date = info.split('_')
-                    oDate = DateTime('%s/%s/%s' % (date[:4],date[4:6],date[6:]))
-                    otherObj = tool.getObject(otherId)
-                    otherField = otherObj.getField(fieldName)
-                    # Get, on this calendar, the events defined at that date
-                    events = otherField.getEventsAt(otherObj, date)
-                    # Among them, validate or discard any impactable one
-                    schema = otherField.validation.schema
-                    i = len(events) - 1
-                    while i >= 0:
-                        event = events[i]
-                        # Take this event into account only if in the schema
-                        if event.eventType in schema:
-                            if action == 'validated':
-                                event.eventType = schema[event.eventType]
-                            else:
-                                # p_calendar imposes its own "removeDiscarded"
-                                if removeDiscarded:
-                                    if removeIsCallable:
-                                        removeDiscarded(o, otherObj, otherField,
-                                                        events[i], oDate)
-                                    del events[i]
-                            # Count this event and put it among email info
-                            counts[action] += 1
-                            if self.email:
-                                mailing.addEvent(otherObj, otherField, oDate,
-                                                 event, action)
-                        i -= 1
-        if not counts['validated'] and not counts['discarded']:
-            return o.translate('action_null')
-        part = '' if removeDiscarded else ' (but not removed)'
-        calendar.log(o, '%d event(s) validated and %d discarded%s.' % \
-                     (counts['validated'], counts['discarded'], part))
-        # Send the emails
-        if self.email: mailing.send()
-        o.resp.fleetingMessage = False
-        return o.translate('validate_events_done', mapping=counts)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Gradient:
@@ -982,7 +779,7 @@ class Calendar(Field):
           <div for="event in events" style="color: grey">
            <!-- Checkbox for validating the event -->
            <input type="checkbox" checked="checked" class="smallbox"
-               if="mayValidate and (event.eventType in field.validation.schema)"
+               if="mayValidate and field.validation.isWish(o, event.eventType)"
                id=":'%s_%s_%s' % (date.strftime('%Y%m%d'), event.eventType, \
                                   event.timeslot)"
                onclick=":'onCheckCbCell(this,%s)' % q(hook)"/>
@@ -1588,16 +1385,17 @@ class Calendar(Field):
                 # If at least one event from p_events is in the validation
                 # schema, propose a unique checkbox, that will allow to validate
                 # or not all validable events at p_date.
+                otherV = other.field.validation
                 for info in events:
-                    if info.event.eventType in other.field.validation.schema:
-                        cbId = '%d_%s_%s' % (other.o.iid, other.field.name,
-                                             date.strftime('%Y%m%d'))
+                    if otherV.isWish(other.o, info.event.eventType):
+                        dateS = date.strftime('%Y%m%d')
+                        cbId = f'{other.o.iid}_{other.field.name}_{dateS}'
                         totalRows = 'true' if self.totalRows else 'false'
                         totalCols = 'true' if self.totalCols else 'false'
-                        content = '<input type="checkbox" checked="checked" ' \
-                          'class="smallbox" id="%s" onclick="onCheckCbCell(' \
-                          'this,\'%s\',%s,%s)"/>' % \
-                          (cbId, c.hook, totalRows, totalCols)
+                        content = f'<input type="checkbox" checked="checked"' \
+                          f' class="smallbox" id="{cbId}" ' \
+                          f'onclick="onCheckCbCell(this,\'{c.hook}\',' \
+                          f'{totalRows},{totalCols})"/>'
                         # Disable selection if a validation checkbox is there
                         disableSelect = True
                         break
@@ -2235,7 +2033,7 @@ class Calendar(Field):
     def mayValidate(self, o):
         '''May the currently logged user validate wish events ?'''
         valid = self.validation
-        return valid.method(o) if valid else None
+        return valid.mayValidate(o) if valid else None
 
     def getAjaxData(self, hook, o, **params):
         '''Initializes an AjaxData object on the DOM node corresponding to
