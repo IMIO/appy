@@ -327,6 +327,10 @@ msgstr "Invoegen"
 msgid "object_link_many"
 msgstr "Selectie invoegen"
 
+#. Default: "Duplicate (below)"
+msgid "row_clone"
+msgstr ""
+
 #. Default: "Un·check everything"
 msgid "check_uncheck"
 msgstr "Alles (de)selecteren"

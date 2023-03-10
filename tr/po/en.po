@@ -328,6 +328,10 @@ msgstr "Insert"
 msgid "object_link_many"
 msgstr "Insert selection"
 
+#. Default: "Duplicate (below)"
+msgid "row_clone"
+msgstr ""
+
 #. Default: "Un·check everything"
 msgid "check_uncheck"
 msgstr "Un·check everything"

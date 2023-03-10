@@ -327,6 +327,10 @@ msgstr ""
 msgid "object_link_many"
 msgstr ""
 
+#. Default: "Duplicate (below)"
+msgid "row_clone"
+msgstr ""
+
 #. Default: "Un·check everything"
 msgid "check_uncheck"
 msgstr ""

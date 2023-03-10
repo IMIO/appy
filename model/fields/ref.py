@@ -395,7 +395,7 @@ class Ref(Field):
        <a if="createFromSearch" target="appyIFrame"
           href=":tiedClass.getCreateLink(tool, createVia, addFormName,
                   sourceField=prefixedName, insert='before.%s' % id)">
-        <img src=":url('addAboveFrom')" class="clickable"
+        <img src=":svg('addAbove')" class="clickable iconS"
              title=":_('object_add_above_from')"
              onclick="openPopup('iframePopup')"/>
        </a>

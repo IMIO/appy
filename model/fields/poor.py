@@ -482,26 +482,18 @@ class Poor(Rich):
            contenteditable zone, wrap it in a paragraph. Else, inject text in
            the current paragraph. */
         if (Surgeon.isRoot(event.target)) setCaret(event.target);
-        Surgeon.inject('text', para);
+        document.execCommand('insertText', false, para);
         // Insert the next lines as "div" tags
         if (paras.length > 0) {
-          let divs = [];
-          // Replace every paragraph with a "div" tag
           for (let i=0; i < paras.length; i++) {
             if (!paras[i]) continue; // Ignore any empty content
-            para = document.createElement('div');
-            para.appendChild(document.createTextNode(paras[i]));
-            divs.push(para);
+            document.execCommand('insertParagraph', false);
+            document.execCommand('insertText', false, paras[i]);
           }
-          Surgeon.inject('array', divs, true);
         }
-        // Hack: prevent browsers from collapsing all paras to a single one
-        const sel = window.getSelection();
-        sel.modify('move', 'backward', 'character');
-        sel.modify('move', 'forward', 'character');
       }
 
-      // Mamipulates data copied withi a poor field
+      // Manipulates data copied within a poor field
       getCopiedData = function(event) {
         const sel = document.getSelection();
         event.clipboardData.setData('text/plain', sel.toString());

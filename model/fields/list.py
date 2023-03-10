@@ -57,23 +57,35 @@ class List(Field):
       <td for="name, field in subFields" if="field"
           var2="minimal=isCell;
                 fieldName=outer.getEntryName(field, rowId)">:field.pxRender</td>
+
       <!-- Icons -->
-      <td if="isEdit" align=":dright">
+      <td if="isEdit" align="center">
+
+       <!-- Delete -->
        <img class="clickable iconS" src=":svg('deleteL')"
-            title=":_('object_delete')"
+            title=":_('object_delete')" style="margin-bottom:0.4em"
             onclick=":field.jsDeleteConfirm(_ctx_)"/>
-       <img class="clickable iconS" src=":svg('arrow')"
-            style="transform: rotate(180deg)" title=":_('move_up')"
-            onclick=":'moveRow(%s,%s,%s,this)' %
-                       (q('up'), q(tableId), q(tagId))"/>
-       <img class="clickable iconS" src=":svg('arrow')"
-            title=":_('move_down')"
-            onclick=":'moveRow(%s,%s,%s,this)' %
-                       (q('down'), q(tableId), q(tagId))"/>
-       <input class="clickable" type="image" tabindex="0"
-              src=":url('addBelow')" title=":_('object_add_below')"
-              onclick=":'insertRow(%s,%s,this);
-                         return false' % (q(tableId), q(tagId))"/>
+
+       <!-- Duplicate and add below -->
+       <div class="iflex1">
+        <input class="clickable iconS" type="image" tabindex="0"
+               src=":svg('clone')" title=":_('row_clone')"
+               onclick=":'insertRow(%s,%s,this,true);
+                          return false' % (q(tableId), q(tagId))"/>
+        <input class="clickable iconS" type="image" tabindex="0"
+               src=":svg('addBelow')" title=":_('object_add_below')"
+               onclick=":'insertRow(%s,%s,this);
+                          return false' % (q(tableId), q(tagId))"/>
+       </div>
+
+       <!-- Move up and down -->
+       <div class="iflex1">
+        <img class="clickable iconS" src=":svg('arrow')"
+             style="transform: rotate(180deg)" title=":_('move_up')"
+             onclick=":'moveRow(%s,%s,%s,this)'%(q('up'),q(tableId),q(tagId))"/>
+        <img class="clickable iconS" src=":svg('arrow')" title=":_('move_down')"
+           onclick=":'moveRow(%s,%s,%s,this)'%(q('down'),q(tableId),q(tagId))"/>
+       </div>
       </td></tr>''')
 
     # PX for rendering the list (shared between pxView, pxEdit and pxCell)
@@ -95,9 +107,11 @@ class List(Field):
         <th for="name, sub in subFields" if="sub"
             width=":swidths[loop.name.nb]">
          <x var="field=sub">::field.getListHeader(_ctx_)</x></th>
+
         <!-- Icon for adding a new row -->
-        <th if="isEdit">
-         <img class="clickable" src=":url('plus')" title=":_('object_add')"
+        <th if="isEdit" style="text-align:center">
+         <img class="clickable iconS" src=":svg('addRow')"
+              title=":_('object_add')"
               onclick=":'insertRow(%s,%s)' % (q(tableId), q(tagId))"/>
         </th>
        </tr>
@@ -183,24 +197,26 @@ class List(Field):
          }
        }
 
-       insertRow = function(tableId, tagId, previous) {
-         /* Add a new row in table with ID p_tableId, after p_previous row or at
-            the end if p_previous is null. */
-         var table = document.getElementById(tableId),
+       insertRow = function(tableId, tagId, prev, clone) {
+         /* Add a new row in table with ID p_tableId, after p_prev(ious) row or
+            at the end if p_prev is null. If p_clone is true, the added row is
+            cloned from p_prev instead of being an empty row. */
+         let table = document.getElementById(tableId),
              body = table.tBodies[0],
              rows = table.rows,
-             newRow = rows[1].cloneNode(true),
-             next = (previous)? \
-                    previous.parentNode.parentNode.nextElementSibling : null;
+             prevRow = (prev)? prev.parentNode.parentNode.parentNode: null,
+             base = (clone)? prevRow: rows[1],
+             newRow = base.cloneNode(true),
+             next = (prev)? prevRow.nextElementSibling: null;
          newRow.style.display = 'table-row';
          if (next) {
-           var newIndex = next.rowIndex;
+           let newIndex = next.rowIndex;
            // We must insert the new row before it
            body.insertBefore(newRow, next);
            // The new row takes the index of "next" (- the 2 unsignificant rows)
            updateRowNumber(tagId, newRow, newIndex-2, 'set');
            // Row numbers for "next" and the following rows must be incremented
-           for (var i=newIndex+1; i < rows.length; i++) {
+           for (let i=newIndex+1; i < rows.length; i++) {
              updateRowNumber(tagId, rows[i], 1, 'add');
            }
          }
@@ -213,9 +229,9 @@ class List(Field):
        }
 
        deleteRow = function(tableId, tagId, deleteImg, ask, rowIndex) {
-         var table = document.getElementById(tableId),
+         let table = document.getElementById(tableId),
              rows = table.rows,
-             row = (deleteImg)? deleteImg.parentNode.parentNode: rows[rowIndex];
+             row =(deleteImg)? deleteImg.parentNode.parentNode:rows[rowIndex];
              rowIndex = row.rowIndex;
          // Must we ask the user to confirm this action ?
          if (ask) {
@@ -224,14 +240,14 @@ class List(Field):
              return;
          }
          // Decrement higher row numbers by 1 because of the deletion
-         for (var i=rowIndex+1; i < rows.length; i++) {
+         for (let i=rowIndex+1; i < rows.length; i++) {
            updateRowNumber(tagId, rows[i], -1, 'add');
          }
          table.deleteRow(rowIndex);
        }
 
        moveRow = function(direction, tableId, tagId, moveImg) {
-         var row = moveImg.parentNode.parentNode,
+         let row = moveImg.parentNode.parentNode.parentNode,
              body = document.getElementById(tableId).tBodies[0], sibling;
          // Move up or down
          if (direction == 'up') {
