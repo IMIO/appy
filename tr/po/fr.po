@@ -928,9 +928,9 @@ msgstr "Valider les événements"
 msgid "validate_events_confirm"
 msgstr "Tous les événements sélectionnés seront confirmés, tandis que ceux qui sont désélectionnés seront rejetés.\n\nLe ou les utilisateurs concernés seront prévenus.\n\nÊtes-vous sûr?"
 
-#. Default: "${validated} event(s) was (were) validated and ${discarded} was (were) discarded."
+#. Default: "<table class=\"small\"><tr><th>Validated event·s</th><td align=\"center\">${validated}</td></tr><tr><th>Discarded event·s</th><td align=\"center\">${discarded}</td></tr></table>"
 msgid "validate_events_done"
-msgstr "${validated} événement(s) a (ont) été validé(s) et ${discarded} ne l'a (ont) pas été."
+msgstr "<table class=\"small\"><tr><th>Événement·s validé·s</th><td align=\"center\">${validated}</td></tr><tr><th>Événement·s non validé·s</th><td align=\"center\">${discarded}</td></tr></table>"
 
 #. Default: "validated"
 msgid "event_validated"

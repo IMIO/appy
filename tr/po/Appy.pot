@@ -927,7 +927,7 @@ msgstr ""
 msgid "validate_events_confirm"
 msgstr ""
 
-#. Default: "${validated} event(s) was (were) validated and ${discarded} was (were) discarded."
+#. Default: "<table class=\"small\"><tr><th>Validated event·s</th><td align=\"center\">${validated}</td></tr><tr><th>Discarded event·s</th><td align=\"center\">${discarded}</td></tr></table>"
 msgid "validate_events_done"
 msgstr ""
 

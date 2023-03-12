@@ -17,6 +17,8 @@ from appy.model.utils import Object as O
 from appy.model.fields import Field, Show
 from appy.ui.layout import Layout, Layouts
 from appy.utils.dates import getLastDayOfMonth
+from appy.model.fields.calendar.totals import Totals
+from appy.model.fields.calendar.legend import Legend
 from appy.model.fields.calendar.timeslot import Timeslot
 from appy.model.fields.calendar.validation import Validation
 
@@ -28,8 +30,6 @@ MISS_EN_M   = "When param 'eventTypes' is a method, you must give another " \
               "method in param 'eventNameMethod'."
 TSLOT_USED  = 'An event is already defined at this timeslot.'
 DAY_FULL    = 'No more place for adding this event.'
-TOTALS_KO   = 'Totals can only be specified for timelines (render == ' \
-              '"timeline").'
 S_MONTHS_KO = 'Strict months can only be used with timeline calendars.'
 ACT_MISS    = 'Action "%s" does not exist or is not visible.'
 UNSORT_EVTS = 'Events must be sorted if you want to get spanned events to be ' \
@@ -133,65 +133,6 @@ class Other:
         return self.field.mayValidate(self.o)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Total:
-    '''Represents a computation that will be executed on a series of cells
-       within a timeline calendar.'''
-
-    def __init__(self, initValue):
-        # If p_initValue is mutable, get a copy of it
-        if isinstance(initValue, dict):
-            initValue = initValue.copy()
-        elif isinstance(initValue, list):
-            initValue = initValue[:]
-        self.value = initValue
-
-    def __repr__(self): return '<Total=%s>' % str(self.value)
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Totals:
-    '''For a timeline calendar, if you want to add rows or columns representing
-       totals computed from other rows/columns (representing agendas), specify
-       it via Totals instances (see Agenda fields "totalRows" and "totalCols"
-       below).'''
-
-    def __init__(self, name, label, onCell, initValue=0):
-        # "name" must hold a short name or acronym and will directly appear
-        # at the beginning of the row. It must be unique within all Totals
-        # instances defined for a given Calendar field.
-        self.name = name
-        # "label" is a i18n label that will be used to produce a longer name
-        # that will be shown as an "abbr" tag around the name.
-        self.label = label
-        # A method that will be called every time a cell is walked in the
-        # agenda. It will get these args:
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    date     | The date representing the current day (a DateTime
-        #             | instance) ;
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    other    | The Other instance representing the currently walked
-        #             | calendar ;
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    events   | The list of events (as Event instances) defined at that
-        #             | day in this calendar. Be careful: this can be None ;
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    total    | The Total instance (see above) corresponding to the
-        #             | current column ;
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    last     | A boolean that is True if we are walking the last shown
-        #             | calendar ;
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #   checked   | A value "checked" indicating the status of the possible
-        #             | validation checkbox corresponding to this cell. If there
-        #             | is a checkbox in this cell, the value will be True or
-        #             | False; else, the value will be None.
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # preComputed | The result of Calendar.preCompute (see below).
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        self.onCell = onCell
-        # "initValue" is the initial value given to created Total instances
-        self.initValue = initValue
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Layer:
     '''A layer is a set of additional data that can be activated or not on top
        of calendar data. Currently available for timelines only.'''
@@ -260,131 +201,6 @@ class Layer:
     def getLegendEntries(self, o):
         '''Returns the legend entries by calling method in self.legend'''
         return self.legend(o) if self.legend else None
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Legend:
-    '''Represents a legend on a timeline calendar'''
-
-    px = Px('''
-     <table class=":field.legend.getCss()"
-            var="entries=field.legend.getEntries(field, o, allEventTypes, \
-                    allEventNames, url, _, activeLayers, preComputed)">
-      <tr for="row in field.splitList(entries, field.legend.cols)" valign="top">
-       <x for="entry in row">
-        <td align="center">
-         <table width="13px">
-          <tr><td style=":entry.style"
-                  align="center">::entry.content or '&nbsp;'</td></tr>
-         </table>
-        </td>
-        <td style=":field.legend.getCssText()">::entry.name</td>
-       </x>
-      </tr>
-     </table>''')
-
-    def __init__(self, position='bottom', cols=4, width='115px', entryName=None,
-                 concatenate=', ', update=None, showEntrySeveral=True):
-        # The legend can be positioned at the "bottom" or to the "right" of the
-        # timeline
-        self.position = position
-        # It spans a given number of columns
-        self.cols = cols
-        # A width for the column(s) displaying the text for a legend entry
-        self.width = width
-        # By default, when an entry, corresponding to an event type, must be
-        # added to the legend, the event name, as defined by the tied Calendar
-        # field, is used as name for the legend entry. If you prefer to define
-        # another name, specify a method in attribute p_entryName. This method
-        # will receive these args:
-        # 1) an event type (eventType)
-        # 2) the dict of all encountered event names (eventNames), keyed by
-        # event type.
-        # The method must return the name of the corresponding entry.
-        self.entryName = entryName
-        # If several event types share the same color, a single entry must be
-        # produced in the legend. Attribute p_concatenate defines the separator
-        # to use between all the event names related to the same legend entry.
-        # If p_concatenate is None, once a first event type has been found for a
-        # given color, any other event type corresponding to the same color will
-        # simply be ignored.
-        self.concatenate = concatenate
-        # A method that will, once the legend is build, receive it a single arg
-        # and possibly update it if necessary.
-        self.update = update
-        # When multiple events are present in a single cell, this latter is
-        # rendered in a specific way, in order to indicate that several events
-        # are "hidden" in it. By default, the legend entry for this specific
-        # case is present in the legend. If you are sure this case will never
-        # happen in your calendar, you can remove the default entry from the
-        # legend by setting attribute p_showEntrySeveral to False.
-        self.showEntrySeveral = showEntrySeveral
-
-    def getCss(self):
-        '''Gets the CSS class(es) for the legend table'''
-        r = 'legend'
-        if self.position == 'right': r += ' legendRight'
-        return r
-
-    def getCssText(self):
-        '''Gets CSS attributes for a text entry'''
-        return 'padding-left: 5px; width: %s' % self.width
-
-    def getEntryNameFor(self, o, eventType, allEventNames):
-        '''Get the name of the legend entry corresponding to this p_eventType'''
-        method = self.entryName
-        if method:
-            r = method(o, eventType, allEventNames)
-        else:
-            r = allEventNames[eventType]
-        return r
-
-    def getEntries(self, field, o, allEventTypes, allEventNames, url, _,
-                   activeLayers, preComputed):
-        '''Gets information needed to produce the legend for a timeline'''
-        # Produce one legend entry by event type, provided it is shown and
-        # colored.
-        r = []
-        byStyle = {}
-        concat = self.concatenate
-        for eventType in allEventTypes:
-            # Create a new entry for every not-yet-encountered color
-            eventColor = field.getColorFor(o, eventType, preComputed)
-            if not eventColor: continue
-            style = 'background-color:%s' % eventColor
-            if style not in byStyle:
-                entryName = self.getEntryNameFor(o, eventType, allEventNames)
-                entry = O(name=entryName, content='', style=style)
-                r.append(entry)
-                byStyle[style] = entry
-            elif concat is not None:
-                # Update the existing entry with this style
-                entry = byStyle[style]
-                entryName = self.getEntryNameFor(o, eventType, allEventNames)
-                entry.name = '%s%s%s' % (entry.name, concat, entryName)
-        # Add, if appropriate, the background indicating that several events are
-        # hidden behind a timeline cell.
-        if self.showEntrySeveral:
-            r.append(O(name=_('several_events'), content='',
-                       style=url('angled', bg=True)))
-        # Add layer-specific items
-        for layer in field.layers:
-            if layer.name not in activeLayers: continue
-            entries = layer.getLegendEntries(o)
-            if entries:
-                # Take care of entry duplicates
-                for entry in entries:
-                    style = '%s%s' % (entry.content or '', entry.style)
-                    if style not in byStyle:
-                        r.append(entry)
-                        byStyle[style] = entry
-                    elif concat is not None:
-                        # Update the existing entry with this style
-                        existingEntry = byStyle[style]
-                        existingEntry.name = '%s%s%s' % \
-                                        (existingEntry.name, concat, entry.name)
-        # Update the legend with a custom method if needed
-        if self.update: self.update(o, r)
-        return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Action:
@@ -501,14 +317,15 @@ class Calendar(Field):
     Layer = Layer
     Event = Event
     Action = Action
-    Totals = Totals
     Legend = Legend
     DateTime = DateTime
     Timeslot = Timeslot
     IterSub = utils.IterSub
     Validation = Validation
 
-    validCbStatuses = {'validated': True, 'discarded': False}
+    traverse['Totals'] = 'perm:read'
+    Totals = Totals
+
     timelineBgColors = {'Fri': '#dedede', 'Sat': '#c0c0c0', 'Sun': '#c0c0c0'}
 
     class Layouts(Layouts):
@@ -544,67 +361,6 @@ class Calendar(Field):
       <td for="date in grid"><b>:str(date.day()).zfill(2)</b></td>
       <td class="hidden"></td>
      </tr>''')
-
-    # Displays the total rows at the bottom of a timeline calendar
-    pxTotalRows = Px('''
-     <tbody id=":'%s_trs' % hook"
-            var="totals=field.computeTotals('row',o,grid,others,preComputed)">
-      <script>:field.getAjaxDataTotals(o,'rows',hook)</script>
-      <tr for="row in field.totalRows" var2="rowTitle=_(row.label)">
-       <td class="tlLeft">
-        <abbr title=":rowTitle"><b>:row.name</b></abbr></td>
-       <td for="date in grid">::totals[row.name][loop.date.nb].value</td>
-       <td class="tlRight">
-        <abbr title=":rowTitle"><b>:row.name</b></abbr></td>
-      </tr>
-     </tbody>''')
-
-    # Displays the total columns besides the calendar, as a separate table
-    pxTotalCols = Px('''
-     <table cellpadding="0" cellspacing="0" class="list timeline"
-            style="float:right" id=":'%s_tcs' % hook"
-            var="totals=field.computeTotals('col',o,grid,others,preComputed)">
-      <script>:field.getAjaxDataTotals(o,'cols',hook)</script>
-      <!-- 2 empty rows -->
-      <tr><th for="col in field.totalCols" class="hidden">-</th></tr>
-      <tr><td for="col in field.totalCols" class="hidden">-</td></tr>
-      <tr> <!-- The column headers -->
-       <td for="col in field.totalCols">
-        <abbr title=":_(col.label)">:col.name</abbr>
-       </td>
-      </tr>
-      <!-- Re-create one row for every other calendar -->
-      <x var="i=-1" for="otherGroup in others">
-       <tr for="other in otherGroup" var2="@i=i+1">
-        <td for="col in field.totalCols">::totals[col.name][i].value</td>
-       </tr>
-       <!-- The separator between groups of other calendars -->
-       <x if="not loop.otherGroup.last">::field.getOthersSep(\
-         len(field.totalCols))</x>
-      </x>
-      <!-- Add empty rows for every total row -->
-      <tr for="i in range(len(field.totalRows))">
-       <td for="col in field.totalCols">&nbsp;</td>
-      </tr>
-      <tr> <!-- Repeat the column headers -->
-       <td for="col in field.totalCols">
-        <abbr title=":_(col.label)">:col.name</abbr>
-       </td>
-      </tr>
-      <tr><td for="col in field.totalCols" class="hidden">-</td></tr>
-      <tr><th for="col in field.totalCols" class="hidden">-</th></tr>
-     </table>''')
-
-    # Ajax-call pxTotalRows or pxTotalCols
-    pxTotalsFromAjax = Px('''
-     <x var="month=req.month;
-             totalType=req.totalType.capitalize();
-             hook=str(o.iid) + field.name;
-             monthDayOne=field.DateTime('%s/01' % month);
-             grid=field.getGrid(month, 'timeline');
-             preComputed=field.getPreComputedInfo(o, monthDayOne, grid);
-             others=field.getOthers(o, \
-               preComputed)">:getattr(field, 'pxTotal%s' % totalType)</x>''')
 
     # Timeline view for a calendar
     pxViewTimeline = Px('''
@@ -642,7 +398,7 @@ class Calendar(Field):
        </x>
       </tbody>
       <!-- Total rows -->
-      <x if="field.totalRows">:field.pxTotalRows</x>
+      <x if="field.totalRows">:field.Totals.pxRows</x>
       <tbody> <!-- Footer (repetition of months and days) -->
        <x>:field.pxTimelineDayNumbers</x><x>:field.pxTimelineDayLetters</x>
        <x>:field.pxTimeLineMonths</x>
@@ -650,7 +406,7 @@ class Calendar(Field):
      </table>
      <!-- Total columns, as a separate table, and legend -->
      <x if="field.legend.position == 'right'">:field.legend.px</x>
-     <x if="field.totalCols">:field.pxTotalCols</x>
+     <x if="field.totalCols">:field.Totals.pxCols</x>
      <x if="field.legend.position == 'bottom'">:field.legend.px</x>''')
 
     # Popup for adding an event in the month view
@@ -1044,6 +800,9 @@ class Calendar(Field):
         # returning an HTML-compliant color for this type (or None if the type
         # must not be colored). Indeed, in a timeline, cells are too small to
         # display translated names for event types, so colors are used instead.
+        # Tip: the name of a color can be followed by semi-colon-separated CSS
+        # properties. For example, if you want to define the dimmed version of
+        # some color, the returned color can be: "#d08181;opacity:0.5".
         self.colors = colors
         # When the above-defined attribute "colors" is in use, instead of simply
         # coloring the background of a cell in a timeline with that color, one
@@ -1081,14 +840,15 @@ class Calendar(Field):
         # event at all).
         self.applicableEvents = applicableEvents
         # In a timeline calendar, if you want to specify additional rows
-        # representing totals, give in "totalRows" a list of Totals instances
-        # (see above).
+        # representing totals, give in "totalRows" a list of Totals objects (see
+        # class appy.model.fields.calendar.totals.Totals) or a method producing
+        # such a list.
         if totalRows and self.render != 'timeline':
-            raise Exception(TOTALS_KO)
+            raise Exception(Totals.TOT_KO)
         self.totalRows = totalRows or []
         # Similarly, you can specify additional columns in "totalCols"
         if totalCols and self.render != 'timeline':
-            raise Exception(TOTALS_KO)
+            raise Exception(Totals.TOT_KO)
         self.totalCols = totalCols or []
         # A validation process can be associated to a Calendar event. It
         # consists in identifying validators and letting them "convert" event
@@ -2050,71 +1810,10 @@ class Calendar(Field):
         return "new AjaxData('%s/%s/view','POST',%s,'%s'%s)" % \
                (o.url, self.name, params, hook, parent)
 
-    def getAjaxDataTotals(self, o, type, hook):
-        '''Initializes an AjaxData object on the DOM node corresponding to
-           the zone containing the total rows/cols (depending on p_type) in a
-           timeline calendar.'''
-        suffix = 'trs' if type == 'rows' else 'tcs'
-        return "new AjaxData('%s/%s/pxTotalsFromAjax','GET',{},'%s_%s','%s')" %\
-               (o.url, self.name, hook, suffix, hook)
-
     traverse['validateEvents'] = 'perm:write'
     def validateEvents(self, o):
         '''Validate or discard events from the request'''
         return self.validation.do(o, self)
-
-    def getValidationCheckboxesStatus(self, req):
-        '''Gets the status of the validation checkboxes from the request'''
-        r = {}
-        for status, value in Calendar.validCbStatuses.items():
-            ids = req[status]
-            if ids:
-                for id in ids.split(','): r[id] = value
-        return r
-
-    def computeTotals(self, totalType, o, grid, others, preComputed):
-        '''Compute the totals for every column (p_totalType == 'row') or row
-           (p_totalType == "col").'''
-        allTotals = getattr(self, 'total%ss' % totalType.capitalize())
-        if not allTotals: return
-        # Count other calendars and dates in the grid
-        othersCount = 0
-        for group in others: othersCount += len(group)
-        datesCount = len(grid)
-        isRow = totalType == 'row'
-        # Initialise, for every (row or col) totals, Total instances
-        totalCount = isRow and datesCount or othersCount
-        lastCount = isRow and othersCount or datesCount
-        r = {}
-        for totals in allTotals:
-            r[totals.name]= [Total(totals.initValue) for i in range(totalCount)]
-        # Get the status of validation checkboxes
-        status = self.getValidationCheckboxesStatus(o.req)
-        # Walk every date within every calendar
-        indexes = {'i': -1, 'j': -1}
-        ii = isRow and 'i' or 'j'
-        jj = isRow and 'j' or 'i'
-        for other in utils.IterSub(others):
-            indexes['i'] += 1
-            indexes['j'] = -1
-            for date in grid:
-                indexes['j'] += 1
-                # Get the events in this other calendar at this date
-                events = other.field.getEventsAt(other.o, date)
-                # From info @this date, update the total for every totals
-                last = indexes[ii] == lastCount - 1
-                # Get the status of the validation checkbox that is possibly
-                # present at this date for this calendar
-                checked = None
-                cbId = '%d_%s_%s' % (other.o.iid, other.field.name,
-                                     date.strftime('%Y%m%d'))
-                if cbId in status: checked = status[cbId]
-                # Update the Total instance for every totals at this date
-                for totals in allTotals:
-                    total = r[totals.name][indexes[jj]]
-                    totals.onCell(o, date, other, events, total, last,
-                                  checked, preComputed)
-        return r
 
     def getActiveLayers(self, req):
         '''Gets the layers that are currently active'''
