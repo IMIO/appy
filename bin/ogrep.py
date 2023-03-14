@@ -24,6 +24,9 @@ S_CLEAN  = '%d styled text part(s) %scleaned.'
 F_CORR   = 'XML corruption in %s::%s - The file was left untouched.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Note:
     '''Represents an ODF Note, be it included in an ODS or ODT template'''
 
@@ -88,7 +91,7 @@ class Note:
         for attrs, content in class_.paraRex.findall(note):
             style = attrs or style
             r.append(content)
-        return '\n'.join(r), style
+        return bn.join(r), style
 
     @classmethod
     def reify(class_, note, paraStyle):
@@ -96,8 +99,8 @@ class Note:
            carriage-return-separated lines of text.'''
         r = []
         style = paraStyle or ''
-        for line in note.split('\n'):
-            r.append('<text:p%s>%s</text:p>' % (style, line))
+        for line in note.split(bn):
+            r.append(f'<text:p{style}>{line}</text:p>')
         return ''.join(r)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -108,7 +111,7 @@ class Condition:
     trueAttr = 'text:string-value-if-true'
 
     # Regex representing the attribute storing the "true" condition
-    trueRex = re.compile('%s="(.+?)"' % trueAttr)
+    trueRex = re.compile(f'{trueAttr}="(.+?)"')
 
     # The expression may be surrounded with double quotes
     quote = '&quot;'
@@ -121,10 +124,10 @@ class Condition:
         current = match.group(1)
         # Surround the new expression with double quotes if the current one was
         if current.startswith(class_.quote):
-            r = '%s%s%s' % (class_.quote, expression, class_.quote)
+            r = f'{class_.quote}{expression}{class_.quote}'
         else:
             r = expression
-        return '%s="%s"' % (class_.trueAttr, r)
+        return f'{class_.trueAttr}="{r}"'
 
     @classmethod
     def replace(class_, attrs, expression):
@@ -142,8 +145,8 @@ class Cell:
     valueAttr = 'office:string-value'
 
     # Regex representing the attributes storing the POD expression
-    formulaRex = re.compile('%s="(.+?)"' % formulaAttr)
-    valueRex = re.compile('%s="(.+?)"' % valueAttr)
+    formulaRex = re.compile(f'{formulaAttr}="(.+?)"')
+    valueRex = re.compile(f'{valueAttr}="(.+?)"')
 
     @classmethod
     def replace(class_, attrs, content, expr):
@@ -151,13 +154,12 @@ class Cell:
            p_content, the POD expression with this new p_expr(ession).'''
         # Crazy: the POD expression is stored at 3 different places in the cell:
         # 2 within cell attributes and 1 more in the cell content.
-        # ~
         c = class_
         # Perform replacements within p_attrs
         attrs = c.formulaRex.sub(
-          lambda m: '%s="of:=&quot;%s&quot;"' % (c.formulaAttr, expr),
+          lambda m: f'{c.formulaAttr}="of:=&quot;{expr}&quot;"',
           attrs, count=1)
-        attrs = c.valueRex.sub(lambda m: '%s="%s"' % (c.valueAttr, expr),
+        attrs = c.valueRex.sub(lambda m: f'{c.valueAttr}="{expr}"',
           attrs, count=1)
         # Perform the replacement within p_content
         return attrs, content
@@ -253,9 +255,9 @@ class Match:
         if type == 'raw':
             # Get the diff as raw text
             differ = difflib.Differ()
-            r = list(differ.compare(self.content.split('\n'),
-                                    self.patched.split('\n')))
-            r = '\n'.join(r)
+            r = list(differ.compare(self.content.split(bn),
+                                    self.patched.split(bn)))
+            r = bn.join(r)
         else:
             # Get the diff as xhtml or colored text for a terminal
             r = []
@@ -275,18 +277,18 @@ class Match:
                         r.append(a[a0:a1])
                     elif opcode == 'insert':
                         start = markers.start % colors.insert
-                        r.append('%s%s%s' % (start, b[b0:b1], markers.end))
+                        r.append(f'{start}{b[b0:b1]}{markers.end}')
                     elif opcode == 'delete':
                         start = markers.start % colors.delete
-                        r.append('%s%s%s' % (start, a[a0:a1], markers.end))
+                        r.append(f'{start}{a[a0:a1]}{markers.end}')
                     elif opcode == 'replace':
                         dstart = markers.start % colors.delete
                         istart = markers.start % colors.insert
-                        r.append('%s%s%s' % (dstart, a[a0:a1], markers.end))
-                        r.append('%s%s%s' % (istart, b[b0:b1], markers.end))
+                        r.append(f'{dstart}{a[a0:a1]}{markers.end}')
+                        r.append(f'{istart}{b[b0:b1]}{markers.end}')
                 r = ''.join(r)
                 if type == 'xhtml':
-                    r = '<div>%s</div>' % r
+                    r = f'<div>{r}</div>'
         return r
 
     def __repr__(self, spaces=2, nb=None):
@@ -296,28 +298,28 @@ class Match:
         # Add, for a note, a line of text containing its creator and creation
         # date.
         if self.target == 'note' and isVerbose:
-            part = '\n%sBy %s on %s\n' % (sep, self.creator, self.date)
+            part = f'{bn}{sep}By {self.creator} on {self.date}{bn}'
         else:
             part = ''
-        prefix = '\n%s' % sep if isVerbose else ''
+        prefix = f'{bn}{sep}' if isVerbose else ''
         if self.patched is None:
             # No replacement
-            info = '%sContent:\n\n%s' % (prefix, self.content)
+            info = f'{prefix}Content:{bn}{bn}{self.content}'
         else:
             # A replacement: display a diff
             verb = 'would have been' if self.dryRun else 'were'
             diff = self.getDiff(type=self.outputType)
-            info = '%sThese changes %s done:\n\n%s' % (prefix, verb, diff)
+            info = f'{prefix}These changes {verb} done:{bn}{bn}{diff}'
         # If v_isVerbose, add the target of the match (note or field) and repeat
         # the keyword(s) entered.
         if isVerbose:
-            targetType = 'Match::on::%s (tag %s)\n' % (self.target, self.tag)
+            targetType = f'Match::on::{self.target} (tag {self.tag}){bn}'
             kwType = 'string' if self.kwString else 'regex'
-            keywords = '%sKeyword(s) (%s): %s' % (sep, kwType, self.keyword)
-            vinfo = '%s%s%s' % (sep, targetType, keywords)
+            keywords = f'{sep}Keyword(s) ({kwType}): {self.keyword}'
+            vinfo = f'{sep}{targetType}{keywords}'
         else:
             vinfo = ''
-        return '%s%s%s%s' % (vinfo, part, sep, info)
+        return f'{vinfo}{part}{sep}{info}'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Matches(list):
@@ -332,13 +334,13 @@ class Matches(list):
         if len(self) == 1:
             prefix = '1 match'
         else:
-            prefix = '%d matches' % len(self)
-        r = [':: %s for %s ::' % (prefix, self.fileName)]
+            prefix = f'{len(self)} matches'
+        r = [f':: {prefix} for {self.fileName} ::']
         i = 0
         for match in self:
             i += 1
             r.append(match.__repr__(nb=i))
-        return '%s\n' % '\n\n'.join(r)
+        return f'{(bn*2).join(r)}{bn}'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Grep(Program):
@@ -424,6 +426,17 @@ class Grep(Program):
         add('-s' , '--as-string' , dest='asString' , help=Grep.HELP_S , **p)
         add('-n' , '--nice'      , dest='nice'     , help=Grep.HELP_N , **p)
 
+    # ODF representation for possible input chars
+    odfEntities = {"'": '&apos;', '"': '&quot;'}
+
+    def odfCompliantKeyword(self, keyword):
+        '''Transform the p_keyword the way it can be found within an ODF
+           document.'''
+        r = keyword
+        for char, entity in self.odfEntities.items():
+            r = r.replace(char, entity)
+        return r
+
     def analyseArguments(self):
         '''Check and store arguments'''
         # Get args as p_self's attributes
@@ -433,8 +446,12 @@ class Grep(Program):
         # Identify incompatible args
         if (self.verbose or self.vverbose) and self.inContent:
             self.exit(OPT_C_V)
+        # Transform p_self.keyword (and p_self.repl if it exists) into its ODF-
+        # compliant form.
+        self.keyword = word = self.odfCompliantKeyword(self.keyword)
+        if self.repl:
+            self.repl = self.odfCompliantKeyword(self.repl)
         # Remember the keyword as a string
-        word = self.keyword
         self.skeyword = word
         # If p_self.asString is True, p_self.keyword is interpreted as a plain
         # string. Else, it is interpreted as a regular expression.
@@ -490,7 +507,7 @@ class Grep(Program):
         tags = '|'.join(self.podTags[fileType])
         # Negative lookahead assertion (?!-) is used to prevent matching tag
         # "office:annotation-end".
-        rex = '<(?P<tag>%s)(?!-)(.*?)>(.*?)</(?P=tag)>' % tags
+        rex = f'<(?P<tag>{tags})(?!-)(.*?)>(.*?)</(?P=tag)>'
         return re.compile(rex, re.S)
 
     def dump(self, message, raiseError=False):
@@ -618,7 +635,7 @@ class Grep(Program):
                 # Even if there was no match in some note, every note is cleaned
                 # in any case, so, must be reified.
                 content = Note.reify(r, paraStyle)
-        return '<%s%s>%s%s</%s>' % (tag, attrs, metadata, content, tag)
+        return f'<{tag}{attrs}>{metadata}{content}</{tag}>'
 
     def grepFileContent(self, path, tempFolder, contents):
         '''Finds self.keyword among p_tempFolder/content.xml and
@@ -713,7 +730,7 @@ class Grep(Program):
         elif path.is_dir():
             # Grep on all files found in this folder
             for ext in Grep.toUnzip:
-                for od in path.glob('**/*.%s' % ext):
+                for od in path.glob(f'**/*.{ext}'):
                     nb += self.grepFile(od)
         else:
             # Dump this error message, whatever verbose is

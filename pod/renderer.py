@@ -1000,16 +1000,17 @@ class Renderer:
     def getTemplateType(self, template):
         '''Identifies the type of this POD p_template (ods or odt). If
            p_template is a string, it is a file name: simply get its extension.
-           Else, it is a binary file in a StringIO instance: seek the MIME type
+           Else, it is a binary file in a BytesIO instance: seek the MIME type
            from the first bytes.'''
         if isinstance(template, str):
             r = os.path.splitext(template)[1][1:]
         else:
-            # A StringIO instance
+            # A BytesIO instance
             template.seek(0)
             sbytes = template.read(90)
-            sbytes = sbytes[sbytes.index('mimetype')+8:]
-            r = 'ods' if sbytes.startswith(utils.mimeTypes['ods']) else 'odt'
+            sbytes = sbytes[sbytes.index(b'mimetype') + 8:]
+            odsMIME = utils.mimeTypes['ods'].encode()
+            r = 'ods' if sbytes.startswith(odsMIME) else 'odt'
         return r
 
     def callLibreOffice(self, resultName, format=None, outputName=None):
