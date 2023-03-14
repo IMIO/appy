@@ -672,7 +672,7 @@ class Grep(Program):
                 counts.inXml = len(found)
                 if self.repl:
                     # Make the replacement
-                    fun = lambda match: self.getReplacement()
+                    fun = lambda match: self.getReplacement(match)
                     content = self.keyword.sub(fun, content)
             else:
                 # ... or within every POD expression or statement
@@ -740,8 +740,10 @@ class Grep(Program):
             self.dump(self.messageTexts[bool(self.repl)][False])
         elif verbose > 1:
             # Dump the match instances
-            for match in self.matches.values():
-                self.dump(repr(match))
+            matches = getattr(self, matches, None)
+            if matches:
+                for match in matches.values():
+                    self.dump(repr(match))
         if self.cleaned and verbose > 0:
             verb = 'would have been ' if self.dryRun else ''
             self.dump(S_CLEAN % (self.cleaned, verb))
