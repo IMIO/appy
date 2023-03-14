@@ -1,9 +1,12 @@
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
-# ------------------------------------------------------------------------------
-from appy.shared.xml_parser import XmlEnvironment, XmlParser
 
-class OdfEnvironment(XmlEnvironment):
-    '''This environment is specific for parsing ODF files.'''
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from appy.xml import Environment, Parser
+
+class OdfEnvironment(Environment):
+    '''This environment is specific for parsing ODF files'''
+
     # URIs of namespaces found in ODF files
     NS_OFFICE = 'urn:oasis:names:tc:opendocument:xmlns:office:1.0'
     NS_STYLE  = 'urn:oasis:names:tc:opendocument:xmlns:style:1.0'
@@ -29,9 +32,11 @@ class OdfEnvironment(XmlEnvironment):
     NS_XSD    = 'http://www.w3.org/2001/XMLSchema'
     NS_XSI    = 'http://www.w3.org/2001/XMLSchema-instance'
 
-class OdfParser(XmlParser):
-    '''XML parser that is specific for parsing ODF files.'''
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class OdfParser(Parser):
+    '''XML parser that is specific for parsing ODF files'''
+
     def __init__(self, env=None, caller=None):
-        if not env: env = OdfEnvironment()
-        XmlParser.__init__(self, env, caller)
-# ------------------------------------------------------------------------------
+        env = env or OdfEnvironment()
+        Parser.__init__(self, env, caller)
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

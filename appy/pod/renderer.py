@@ -1,50 +1,57 @@
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
-# ------------------------------------------------------------------------------
-from UserDict import UserDict
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from pathlib import Path
+from collections import UserDict
 import zipfile, shutil, xml.sax, os, os.path, re, mimetypes, time
 
 import appy.pod
+from appy import utils
+from appy.xml import Tag
+from appy.xml.escape import Escape
 from appy.pod.lo_pool import LoPool
-from appy.shared.zip import unzip, zip
+from appy.utils.zip import unzip, zip
 from appy.pod.buffers import FileBuffer
 from appy.pod import PodError, Evaluator
-from appy.shared.xml_parser import Escape
-from appy.pod import styles_manager as sm
+from appy.utils.path import FolderDeleter
 from appy.pod.converter import FILE_TYPES
-from appy.pod import doc_importers as imps
-from appy.shared.xml_parser import XmlElement
-from appy.shared import mimeTypes, mimeTypesExts
+from appy.pod import styles_manager as sm
+from appy.pod import doc_importers as importers
 from appy.pod.xhtml2odt import Xhtml2OdtConverter
-from appy.shared.utils import FolderDeleter, FileWrapper
 from appy.pod.pod_parser import PodParser, PodEnvironment, OdInsert
 
-# ------------------------------------------------------------------------------
-BAD_CTX    = 'Context must be either a dict, a UserDict or an instance.'
-R_FOLDER   = 'Result file "%s" is a folder, please remove this.'
-R_EXISTS   = 'Result file "%s" exists.'
-TEMP_F_ERR = 'I cannot create temp folder "%s". %s'
-FMT_KO     = 'Result "%s" has a wrong extension. Allowed extensions are: "%s".'
-CONV_ERR   = 'An error occurred during the conversion. %s'
-NO_LO_POOL = 'For producing pod results of type "%s", LibreOffice must be ' \
-             'called in server mode. Specify its server name and port in ' \
-             'Renderer\'s ad hoc attributes.'
-DOC_KO     = 'Please specify a document to import, either with a stream ' \
-             '(parameter "content") or with a path (parameter "at").'
-DOC_F_ERR  = 'POD was unable to deduce the document format. Please specify ' \
-             'it through parameter named "format" (=odt, gif, png, ...).'
-DOC_F_KO   = 'Format "%s" is not supported.'
-FIN_ERR    = 'Warning: error while calling finalize function. %s'
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+BAD_CTX     = 'Context must be either a dict, a UserDict or an instance.'
+RES_FOLDER  = 'Result file "%s" is a folder, please remove this.'
+RES_EXISTS  = 'Result file "%s" exists.'
+TEMP_W_KO   = 'I cannot create temp folder "%s". %s'
+R_TYPE_KO   = 'Result "%s" has a wrong extension. Allowed extensions are: "%s".'
+CONV_ERR    = 'An error occurred during the conversion. %s'
+NO_LO_POOL  = 'For producing pod results of type "%s", LibreOffice must be ' \
+              'called in server mode. Specify its server name and port in ' \
+              'Renderer\'s ad hoc attributes.'
+DOC_KO      = 'Please specify a document to import, either with a stream ' \
+              '(parameter "content") or with a path (parameter "at").'
+DOC_FMT_KO  = 'POD was unable to deduce the document format. Please specify ' \
+              'it through parameter named "format" (=odt, gif, png, ...).'
+DOC_FMT_NS  = 'Format "%s" is not supported.'
+WARN_FIN_KO = 'Warning: error while calling finalize function. %s'
 
-# Default styles added by pod in content.xml and styles.xml
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Make sure any file on disk is opened as UTF-8. Windows' default encoding is
+# still CP1252 :-D
+enc = {'encoding': 'utf-8'}
+
+# Default styles added by POD in content.xml and styles.xml
 POD_STYLES = {}
 podFolder = os.path.dirname(appy.pod.__file__)
 for name in ('content', 'styles'):
-    f = file('%s/%s.xmlt' % (podFolder, name))
+    f = open('%s/%s.xmlt' % (podFolder, name), **enc)
     POD_STYLES[name] = f.read()
     f.close()
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class CsvOptions:
     '''When the POD result is of type CSV, use this class to define CSV
        options.'''
@@ -65,10 +72,7 @@ class CsvOptions:
     def asString(self):
         '''Returns options as a string, ready-to-be sent to the Converter'''
         # Manage the optional text delimiter
-        if self.textDelimiter:
-            delim = ord(self.textDelimiter)
-        else:
-            delim = ''
+        delim = ord(self.textDelimiter) if self.textDelimiter else ''
         # Manage encoding
         enc = self.encoding
         if isinstance(enc, int) or enc.isdigit():
@@ -80,8 +84,10 @@ class CsvOptions:
 # Create a default instance
 CsvOptions.default = CsvOptions()
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Renderer:
+    '''Produce (="render") a document from a template'''
+
     templateTypes = ('odt', 'ods') # Types of POD templates
     # Regular expression for finding the title within metadata
     metaRex = re.compile('<dc:title>.*?</dc:title>', re.S)
@@ -103,7 +109,7 @@ class Renderer:
       ooServer='localhost', ooPort=2002, stream='auto', stylesMapping={},
       stylesOutlineDeltas=None, html=False, forceOoCall=False,
       finalizeFunction=None, overwriteExisting=False, raiseOnError=False,
-      imageResolver=None, rotateImages=False, stylesTemplate=None,
+      findImage=None, rotateImages=False, stylesTemplate=None,
       optimalColumnWidths=False, distributeColumns=False, script=None,
       evaluator=None, managePageStyles=None, resolveFields=False,
       expressionsHolders=defaultExpressionsHolders, metadata=True,
@@ -137,26 +143,26 @@ class Renderer:
         # up-and-running.
 
         # p_stream dictates the communication between the renderer and LO.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # p_stream can hold the following values.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "auto"     | if p_ooServer is "localhost", exchanging the ODT result
         # (default)  | produced by the renderer (=the input) and the converted
         #            | file produced by LO (=the output) will be made via files
         #            | on disk. Else, the renderer will consider that LO runs on
         #            | another machine and the exchange will be made via streams
         #            | over the network.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # True       | If you want to force communication of the input and
         #            | output files as streams, use stream=True.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # False      | If you want to force communication of the input and
         #            | output files via the disk, use stream=False.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "in"       | The input is streamed and the output is written on disk.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "out"      | The input is read from disk and the output is streamed.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         # If you plan to make "XHTML to OpenDocument" conversions, via the POD
         # function "xhtml", you may specify (a) a "styles mapping" in
@@ -181,12 +187,25 @@ class Renderer:
 
         # If p_raiseOnError is False (the default value), any error encountered
         # during the generation of the result file will be dumped into it, as a
-        # Python traceback within a note. Else, the error will be raised.
+        # Python traceback within a note. Else, the error will be raised. If the
+        # template is an ODS template, exceptions cannot be dumped as inner
+        # notes: p_raiseOnError is forced to True, whatever value you may have
+        # passed to the Renderer.
 
-        # p_imageResolver allows POD to retrieve images, from "img" tags within
-        # XHTML content. Indeed, POD may not be able (ie, may not have the
-        # permission to) perform a HTTP GET on those images. Currently, the
-        # resolver can only be a Zope application object.
+        # When, in the process of converting a chunk of XHTML code to ODF, a
+        # "img" tag is encountered, POD performs a HTTP GET to retrieve it. If
+        # the image is stored on the same server running POD, this can be
+        # problematic in two ways:
+        # 1) regarding performance, it would be better to retrieve the image
+        #    from disk;
+        # 2) via HTTP, POD may not be allowed to retrieve the image.
+        # In order to overcome these problems, place a function in "findImage".
+        # While converting chunks of XHTML code, everytime an "img" tag is
+        # encountered, this function will be called, with the image URL as
+        # unique arg. If the function returns the absolute path to the image, it
+        # will be used instead of performing a HTTP GET request. If the function
+        # returns None (ie: it has detected that is is a "truly external" URL),
+        # the HTTP GET will nevertheless be performed.
 
         # If p_rotateImages is True, for every image to inject in the result,
         # Appy will call ImageMagick to read EXIF data. If an orientation is
@@ -230,14 +249,14 @@ class Renderer:
 
         # If this document is a sub-document to be included in a master one, it
         # has sense to set a specific value for parameter p_managePageStyles:
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  "rename" | will rename all page styles with unique names. This way,
         #           | when imported into a master document, no name clash will
         #           | occur and elements tied to page styles (like headers and
         #           | footers) will be correctly imported for all included
         #           | sub-documents. The "do... pod" statement automatically
         #           | sets this parameter to "rename";
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #   <int>   | will rename page styles similarly to "rename" and will
         #           | also restart, in the sub-document, page numbering at this
         #           | integer value. It will only work if page styles are
@@ -248,7 +267,7 @@ class Renderer:
         #           | "default style". To check if it has worked, click inside
         #           | the first paragraph in the page, open its properties and
         #           | check that a page break has been defined on it.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         # If you want to replace (some) fields with their "hard-coded" values,
         # use p_resolveFields. It can be useful, for instance, if the POD result
@@ -272,9 +291,9 @@ class Renderer:
         # (in meta.xml) being the result file name, without its extension. If
         # p_metadata is a string, it will be used as title.
 
-        # If the result must be produced in PDF, options which are specific to
-        # this format can be given in p_pdfOptions, as a comma-separated string
-        # of key=value pairs, as in
+        # If the result must be produced in PDF, options being specific to this
+        # format can be passed in p_pdfOptions, as a comma-separated string of
+        # key=value pairs, as in
 
         #            ExportNotes=False,PageRange=1-20,Watermark=Sample
 
@@ -342,7 +361,7 @@ class Renderer:
         self.finalizeFunction = self.formatFinalizeFunction(finalizeFunction)
         self.overwriteExisting = overwriteExisting
         self.raiseOnError = raiseOnError
-        self.imageResolver = imageResolver
+        self.findImage = findImage
         self.rotateImages = rotateImages
         self.stylesTemplate = stylesTemplate
         self.optimalColumnWidths = optimalColumnWidths
@@ -384,7 +403,8 @@ class Renderer:
         # anymore within paragraphs. ODS files generated with pod and containing
         # error messages in annotations cause LibreOffice 3.5 and 4.0 to crash.
         # LibreOffice >= 4.1 simply does not show the annotation.
-        if info['mimetype'] == mimeTypes['ods']: self.raiseOnError = True
+        if info['mimetype'].decode() == utils.mimeTypes['ods']:
+            self.raiseOnError = True
         # Create the parsers for content.xml and styles.xml
         self.createParsers(context)
         # Store the styles mapping
@@ -405,7 +425,7 @@ class Renderer:
         self.stylesManager.stylesMapping = smap
 
     # Attributes to clone to a sub-renderer when using m_clone hereafter
-    cloneAttributes = ('html', 'raiseOnError', 'imageResolver', 'rotateImages',
+    cloneAttributes = ('html', 'raiseOnError', 'findImage', 'rotateImages',
       'stylesTemplate', 'optimalColumnWidths', 'distributeColumns',
       'expressionsHolders', 'protection', 'tabbedCR', 'fonts', 'evaluator')
 
@@ -449,8 +469,7 @@ class Renderer:
         r.update({'xhtml': self.renderXhtml, 'text': self.renderText,
           'document': self.importDocument, 'image': self.importImage,
           'pod': self.importPod, 'cell': self.importCell,
-          'shape': self.drawShape, 'test': self.evalIfExpression,
-          'TableProperties': sm.TableProperties,
+          'shape': self.drawShape, 'TableProperties': sm.TableProperties,
           'BulletedProperties': sm.BulletedProperties,
           'NumberedProperties': sm.NumberedProperties,
           'pageBreak': self.insertPageBreak,
@@ -479,39 +498,149 @@ class Renderer:
            respectively, in p_self.contentParser and p_self.stylesParser.'''
         nso = PodEnvironment.NS_OFFICE
         for name in ('content', 'styles'):
-            styleTag = (name == 'content') and 'automatic-styles' or 'styles'
-            inserts = (
-              OdInsert(POD_STYLES[name], XmlElement(styleTag, nsUri=nso)),)
+            styleTag = 'automatic-styles' if name == 'content' else 'styles'
+            inserts = (OdInsert(POD_STYLES[name], Tag(styleTag, nsUri=nso)),)
             parser = self.createPodParser('%s.xml' % name, context, inserts)
             setattr(self, '%sParser' % name, parser)
 
-    def renderXhtml(self, s, encoding='utf-8', stylesMapping={}, keepWithNext=0,
+    def renderXhtml(self, s, stylesMapping={}, keepWithNext=0,
                     keepImagesRatio=False, imagesMaxWidth='page', html=None,
-                    unwrap=False):
-        '''Method that can be used (under the name 'xhtml') into a pod template
-           for converting a chunk of XHTML content (p_s) into a chunk of ODT
-           content.
+                    inject=False, unwrap=False):
+        '''Method that can be used (under the name "xhtml") into a POD template
+           for converting a chunk of XHTML content (p_s) into a chunk of ODF
+           content.'''
 
-           For this conversion, beyond the global styles mapping defined at the
-           renderer level, a specific p_stylesMapping can be given: any key in
-           it overrides its homonym in the global mapping.
+        # For this conversion, beyond the global styles mapping defined at the
+        # renderer level, a specific p_stylesMapping can be passed: any key in
+        # it overrides its homonym in the global mapping.
 
-           If p_html is not None, it overrides renderer's homonym parameter.
-        '''
+        # Parameter p_keepWithNext is used to prevent the last part of a
+        # document to be left alone on top of the last page. Imagine your POD
+        # template is an official document ending with some director's scanned
+        # signature. Just before this signature, the document body is inserted
+        # using m_renderXhtml. Depending on p_s's length, in some cases, the
+        # scanned signature may end up alone on the last page. When using
+        # p_keepWithNext, POD applies a specific style to p_s's last paragraph,
+        # such that it will get standard LibreOffice property "keep-with-next"
+        # and will thus be "pushed" on the last page, together with the scanned
+        # signature, even if there is still space available on the previous one.
+
+        # p_keepWithNext may hold the following values.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  0  | (the default) Keep-with-next functionality is disabled.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  1  | Keep-with-next is enabled as described hereabove: p_s's last
+        #     | paragraph receives LibreOffice property "keep-with-next". It
+        #     | also works if the last paragraph is a bulleted or numbered item.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  >1 | If p_keepWithNext is higher than 1, it represents a number of
+        #     | characters to "keep-with-next". Indeed, in some cases, keeping
+        #     | only the last paragraph may not be sufficient: a bit more text
+        #     | could produce a better result. Based on this number of
+        #     | characters, POD will determine how many paragraphs will get
+        #     | property "keep-with-next" and will apply it to all of them. For
+        #     | example, suppose p_keepWithNext is defined to 60. The last 3
+        #     | paragraphs contain, respectively, 20, 30 and 35 characters. POD
+        #     | will apply property "keep-with-next" to the 2 last paragraphs.
+        #     | The algorithm is the following: POD walks p_s's paragraphs
+        #     | backwards, starting from the last one, counting and adding the
+        #     | number of characters for every walked paragraph. POD continues
+        #     | the walk until it reaches (or exceeds) the number of characters
+        #     | to keep. When it is the case, it stops. All the paragraphs
+        #     | walked so far receive property "keep-with-next".
+        #     | ~~~
+        #     | POD goes even one step further by applying "keep-with-next"
+        #     | properties to tables as well. In the previous example, if, when
+        #     | counting 60 characters backwards, we end up in the middle of a
+        #     | table, POD will apply property "keep-with-next" to the whole
+        #     | table. However, with tables spanning more than one page, there
+        #     | is a problem: if property "keep-with-next" is applied to such a
+        #     | table, LibreOffice will insert a page break at the beginning of
+        #     | the table. This can be annoying. While this may be considered a
+        #     | bug (maybe because it represents a constraint being particularly
+        #     | hard to implement), it is the behaviour implemented in
+        #     | LibreOffice, at least >= 3 and <= 6.4. Consequently, at the POD
+        #     | level, an (expensive) workaround has been found: when
+        #     | p_keepWithNext characters lead us inside a table, POD will split
+        #     | it into 2 tables: a first table containing all the rows that
+        #     | were not walked by the keep-with-next algorithm, and a second
+        #     | containing the remaining, walked rows. On this second table
+        #     | only, property "keep-with-next" is applied. Because splitting
+        #     | tables that way requires LibreOffice running in server mode, as
+        #     | soon as you specify p_keepWithNext > 1, POD wil assume
+        #     | LibreOffice runs in server mode.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        # If p_keepImagesRatio is True, while importing images from "img" tags
+        # within p_s, their width/height ratio will be kept. Note that in most
+        # cases, it is useless to specify it, because POD computes the image's
+        # real width and height.
+
+        # Parameter p_imagesMaxWidth corresponds to parameter p_maxWith from POD
+        # function m_document. Being "page" by default, it prevents the images
+        # defined in p_s to exceed the ODT result's page width.
+        
+        # If p_html is not None, it will override renderer's homonym parameter.
+        # Set p_html to True if p_s is not valid XHTML but standard HTML, where
+        # invalid-XML tags like <br> may appear.
+
+        # If, in p_s, you have inserted special "a" tags allowing to inject
+        # specific content, like parts of external Python source code files or
+        # PX, set parameter p_inject to True. In that case, everytime such a
+        # link will be encountered, it will replaced with the appropriate
+        # content. In the case of an external Python source code file, POD will
+        # retrieve it via a HTTP request and incorporate the part (class,
+        # method..) specified in the link's "title" attribute, into the
+        # resulting chunk of ODF code. If a PX is specified, it will be called
+        # with the current PX context, and the result will be injected where the
+        # link has been defined. For more information about this functionality,
+        # check Appy's Rich field in class appy.model.fields.rich.c_Rich.
+
+        # If you set p_unwrap being True, if the resulting ODF chunk is
+        # completely included in a single paragraph (<text:p>), this paragraph's
+        # start and end tags will be removed from the result (keeping only its
+        # content). Avoid using this. p_unwrap should only be used internally by
+        # POD itself.
+
         stylesMapping = self.stylesManager.checkStylesMapping(stylesMapping)
         if html is None: html = self.html
-        return Xhtml2OdtConverter(s, encoding, self.stylesManager,
-                                  stylesMapping, keepWithNext, keepImagesRatio,
-                                  imagesMaxWidth, self, html, unwrap).run()
+        return Xhtml2OdtConverter(s, self.stylesManager, stylesMapping,
+                                  keepWithNext, keepImagesRatio, imagesMaxWidth,
+                                  self, html, inject, unwrap).run()
 
     def renderText(self, s, prefix=None, tags=None, firstCss=None,
                    otherCss=None, lastCss=None, stylesMapping={}):
-        '''Renders the pure text p_s'''
+        '''Renders the pure text p_s in the ODF result. For every carriage
+           return character present in p_s, a new paragraph is created in the
+           ODF result.'''
+
+        # p_prefix, if passed, must be a string that will be inserted before
+        # p_s's first line, followed by a tab.
+
+        # p_tags can be a sequence of XHTML single-letter tags (ie, "bu" for
+        # "bold" + "underline"). If passed, formatting as defined by these
+        # letters will be applied to the whole p_s (the p_prefix excepted).
+
+        # You may go further by applying CSS classes to the paragraphs produced
+        # by p_s's conversion to ODF. For every such class, if a style having
+        # the same name is found on the ODF template, it will be applied to the
+        # corresponding paragraph. The CSS class:
+
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # defined in      | will be
+        # attribute ...   | applied to ...
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # p_firstCss      | the ODF result's first paragraph;
+        # p_lastCss       | the ODF result's last paragraph;
+        # p_otherCss      | any other paragraph in between.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        # Moreover, because, internally, p_s is converted to a chunk of XHTML
+        # code, and passed to method m_renderXhtml, a p_stylesMapping can be
+        # passed to m_renderText, exactly as you would do for m_renderXhtml.
+        # ~~~
         # Determine the prefix to insert before the first line
-        if prefix:
-            prefix = '%s<tab/>' % prefix
-        else:
-            prefix = ''
+        prefix = '%s<tab/>' % prefix if prefix else ''
         # Split p_s into lines of text
         r = s.split('\n')
         if tags:
@@ -535,22 +664,11 @@ class Renderer:
                 css = lastCss
             else:
                 css = otherCss
-            if css:
-                css = ' class="%s"' % css
-            else:
-                css = ''
+            css = ' class="%s"' % css if css else ''
             r[i] = '<p%s>%s%s%s%s</p>' % (css, pre, opening,
                                           Escape.xhtml(r[i]), closing)
             i -= 1
         return self.renderXhtml(''.join(r), stylesMapping=stylesMapping)
-
-    def evalIfExpression(self, condition, ifTrue, ifFalse):
-        '''This method implements the method 'test' which is proposed in the
-           default pod context. It represents an 'if' expression (as opposed to
-           the 'if' statement): depending on p_condition, expression result is
-           p_ifTrue or p_ifFalse.'''
-        if condition: return ifTrue
-        return ifFalse
 
     # Supported image formats. "image" represents any format
     imageFormats = ('png', 'jpeg', 'jpg', 'gif', 'svg', 'image')
@@ -565,30 +683,39 @@ class Renderer:
       maxWidth='page', style=None, keepRatio=True, pageBreakBefore=False,
       pageBreakAfter=False, convertOptions=None):
         '''Implements the POD statement "do... from document"'''
+
         # If p_at is not None, it represents a path or url allowing to find the
-        # document. If p_at is None, the content of the document is supposed to
-        # be in binary format in p_content. The document p_format may be: odt or
-        # any format in imageFormats.
+        # document. It can be a string or a pathlib.Path instance. If p_at is
+        # None, the content of the document is supposed to be in binary format
+        # in p_content. The document p_format may be: odt or any format in
+        # imageFormats.
 
         # p_anchor, p_wrapInPara, p_size, p_sizeUnit, p_style and p_keepRatio
         # are only relevant for images:
         # * p_anchor defines the way the image is anchored into the document;
-        #       Valid values are 'page','paragraph', 'char' and 'as-char';
+        #       valid values are 'page', 'paragraph', 'char' and 'as-char', but
+        #       apply only in ODT templates. In an ODS template, implicit anchor
+        #       will be "to cell" and p_anchor will be ignored. In an ODS
+        #       template, anchoring "to the page" is currently not supported ;
         # * p_wrapInPara, if true, wraps the resulting 'image' tag into a 'p'
-        #       tag;
+        #       tag. Do NOT use this when importing an image into an ODS result
+        #       via this method. Here is an example of image import ito an ODS
+        #       file that will work:
+        #         do cell
+        #         from+ document(at='/some/path/a.png', wrapInPara=False)
         # * p_size, if specified, is a tuple of float or integers (width,
         #       height) expressing size in p_sizeUnit (see below). If not
-        #       specified, size will be computed from image info;
+        #       specified, size will be computed from image info ;
         # * p_sizeUnit is the unit for p_size elements, it can be "cm"
         #       (centimeters), "px" (pixels) or "pc" (percentage). Percentages,
-        #       in p_size, must be expressed as integers from 1 to 100.
+        #       in p_size, must be expressed as integers from 1 to 100 ;
         # * if p_maxWidth is specified (as a float value representing cm),
         #       image's width will not be greater than it. If p_maxWidth is
         #       "page" (the default), p_maxWidth will be computed as the width
-        #       of the main document's page style, margins excluded.
+        #       of the main document's page style, margins excluded ;
         # * if p_style is given, it is a appy.shared.css.CssStyles instance,
         #       containing CSS attributes. If "width" and "heigth" attributes
-        #       are found there, they will override p_size and p_sizeUnit.
+        #       are found there, they will override p_size and p_sizeUnit ;
         # * If p_keepRatio is True, the image width/height ratio will be kept
         #       when p_size is specified.
 
@@ -598,12 +725,11 @@ class Renderer:
         # have values:
         # * True     insert a page break;
         # * False    do no insert a page break;
-
-        # moreover, p_pageBreakAfter can have this additional parameter:
+        # moreover, p_pageBreakAfter can have this additional value:
         # * 'duplex' insert 2 page breaks if the sub-document has an odd number
         #            of pages, 1 else (useful for duplex printing).
 
-        # If p_convertOptions are given (for images only), ImageMagick will be
+        # If p_convertOptions are given (for images only), imagemagick will be
         # called with these options to perform some transformation on the image.
         # For example, if you specify
         #                    convertOptions="-rotate 90"
@@ -619,40 +745,38 @@ class Renderer:
         # your function does not return a string containing the convert options,
         # no conversion will occur.
 
-        importer = None
-        # Is there someting to import ?
+        # ~
+        # Is there something to import ?
         if not content and not at: raise PodError(DOC_KO)
-        # Convert Zope files into Appy wrappers
-        if content.__class__.__name__ in ('File', 'Image'):
-            content = FileWrapper(content)
+        # Convert p_at to a string if it is not the case
+        at = str(at) if isinstance(at, Path) else at
         # Guess document format
-        if isinstance(content, FileWrapper):
-            format = content.mimeType
         if not format:
             # It should be deduced from p_at
             if not at:
-                raise PodError(DOC_F_ERR)
+                raise PodError(DOC_FMT_KO)
             format = os.path.splitext(at)[1][1:]
         else:
             # If format is a mimeType, convert it to an extension
-            if mimeTypesExts.has_key(format):
-                format = mimeTypesExts[format]
-        isImage = False
-        isOdt = False
+            if format in utils.mimeTypesExts:
+                format = utils.mimeTypesExts[format]
+        format = format.lower()
+        isImage = isOdt = False
+        importer = None
         if format in self.ooFormats:
-            importer = imps.OdtImporter
+            importer = importers.OdtImporter
             self.forceOoCall = True
             isOdt = True
         elif (format in self.imageFormats) or not format:
             # If the format can't be guessed, we suppose it is an image
-            importer = imps.ImageImporter
+            importer = importers.ImageImporter
             isImage = True
         elif format == 'pdf':
-            importer = imps.PdfImporter
+            importer = importers.PdfImporter
         elif format in self.convertibleFormats:
-            importer = imps.ConvertImporter
+            importer = importers.ConvertImporter
         else:
-            raise PodError(DOC_F_KO % format)
+            raise PodError(DOC_FMT_NS % format)
         imp = importer(content, at, format, self)
         # Initialise image-specific parameters
         if isImage:
@@ -664,11 +788,14 @@ class Renderer:
     def importImage(self, content=None, at=None, format=None, size=None,
                     sizeUnit='cm', maxWidth='page', style=None, keepRatio=True,
                     convertOptions=None):
-        '''While p_importDocument allows to import a document or image via a
-           "do ... from document" statement, method p_importImage allows to
-           import an image anchored as a char via a pod expression
-           "image(...)", having almost the same parameters.'''
-        # 2 parameters are missing (1) "anchor" is forced to be "as-char" and
+        '''While m_importDocument allows to import a document or image via a
+           "do ... from document" statement, method m_importImage allows to
+           import an image anchored as a char via a POD expression
+           ":image(...)", having almost the same parameters.'''
+
+        # Compared to the "document" function, and due to the specific nature of
+        # the "image" function, 2 parameters are missing:
+        # (1) "anchor" is forced to be "as-char";
         # (2) "wrapInPara" is forced to False.
         return self.importDocument(content=content, at=at, format=format,
           wrapInPara=False, size=size, sizeUnit=sizeUnit, maxWidth=maxWidth,
@@ -680,17 +807,19 @@ class Renderer:
         return {'text': env.ns(env.NS_TEXT), 'style': env.ns(env.NS_STYLE)}
 
     def importPod(self, content=None, at=None, format='odt', context=None,
-          pageBreakBefore=False, pageBreakAfter=False,
-          managePageStyles='rename', renamePageStyles=None, resolveFields=False,
-          forceOoCall=INHERIT):
+                  pageBreakBefore=False, pageBreakAfter=False,
+                  managePageStyles='rename', resolveFields=False,
+                  forceOoCall=False):
         '''Implements the POD statement "do... from pod"'''
-        # Similar to m_importDocument, but allows to import the result of
-        # executing the POD template specified in p_content or p_at, and include
-        # it in the POD result.
 
-        # Renaming page styles for the sub-pod (p_managePageStyles being
+        # Similar to m_importDocument, but allows to import the result of
+        # executing the POD template whose absolute path is specified in p_at
+        # (or, but deprecated, whose binary content is passed in p_content, with
+        # this p_format) and include it in the POD result.
+
+        # Renaming page styles for the sub-POD (p_managePageStyles being
         # "rename") ensures there is no name clash between page styles (and tied
-        # elements such as headers and footers) coming from several sub-pods or
+        # elements such as headers and footers) coming from several sub-PODs or
         # with styles defined at the master document level. This takes some
         # processing, so you can set it to None if you are sure you do not need
         # it.
@@ -698,36 +827,30 @@ class Renderer:
         # p_resolveFields has the same meaning as the homonym parameter on the
         # Renderer.
 
-        # By default, if attribute "forceOoCall" is True for p_self, a sub-
-        # renderer ran by a imps.PodImporter will inherit from this attribute,
-        # excepted if parameter p_forceOoCall is different from INHERIT.
-
+        # By default, if p_forceOoCall is True for p_self, a sub-renderer ran by
+        # a c_PodImporter will inherit from this attribute, excepted if
+        # parameter p_forceOoCall is different from INHERIT.
+        # ~
         # Is there a pod template defined ?
-        if not content and not at:
-            raise PodError(DOC_KO)
-        # If the POD template is specified as a Zope file, convert it into a
-        # Appy FileWrapper.
-        if content.__class__.__name__ == 'File':
-            content = FileWrapper(content)
-        imp = imps.PodImporter(content, at, format, self)
+        if not content and not at: raise PodError(DOC_KO)
+        imp = importers.PodImporter(content, at, format, self)
+        # Importing a sub-pod into a main pod is done by defining, in the main
+        # pod, a section linked to an external file being the sub-pod result.
+        # Then, LibreOffice is asked to "resolve" such sections = replacing the
+        # section with the content of the linked file. This task is done by
+        # LibreOffice itself and triggered via a UNO command. Consequently,
+        # Renderer attribute "forceOoCall" must be forced to True in that case.
         self.forceOoCall = True
         # Define the context to use: either the current context of the current
         # POD renderer, or p_context if given.
-        if context:
-            ctx = context
-        else:
-            ctx = self.contentParser.env.context
-        # Manage the deprecated parameter "renamePageStyles"
-        if renamePageStyles is not None:
-            managePageStyles = (renamePageStyles == True) and 'rename' or None
-        imp.init(ctx, pageBreakBefore, pageBreakAfter,
-                 managePageStyles, resolveFields, forceOoCall)
+        context = context or self.contentParser.env.context
+        imp.init(context, pageBreakBefore, pageBreakAfter, managePageStyles,
+                 resolveFields, forceOoCall)
         return imp.run()
 
     def importCell(self, content, style='Default'):
-        '''Creates a chunk of ODF code ready to be dumped as table cell'''
-        # The generated cell will contain this textual p_content and this
-        # p_style will be applied.
+        '''Creates a chunk of ODF code ready to be dumped as a table cell
+           containing this p_content and styled with this p_style.'''
         return '<table:table-cell table:style-name="%s">' \
                '<text:p>%s</text:p></table:table-cell>' % (style, content)
 
@@ -750,8 +873,9 @@ class Renderer:
 
     def _insertBreak(self, type):
         '''Inserts a page or column break into the result'''
-        name = (type == 'page') and 'podPageBreakAfter' or 'podColumnBreak'
+        name = 'podPageBreakAfter' if type == 'page' else 'podColumnBreak'
         return '<text:p text:style-name="%s"></text:p>' % name
+
     def insertPageBreak(self): return self._insertBreak('page')
     def insertColumnBreak(self): return self._insertBreak('column')
 
@@ -762,18 +886,18 @@ class Renderer:
         self.result = os.path.abspath(self.result)
         # Raise an error if the result already exists and we can't overwrite it
         if os.path.isdir(self.result):
-            raise PodError(R_FOLDER % self.result)
+            raise PodError(RES_FOLDER % self.result)
         exists = os.path.isfile(self.result)
         if not self.overwriteExisting and exists:
-            raise PodError(R_EXISTS % self.result)
+            raise PodError(RES_EXISTS % self.result)
         # Remove the result if it exists
         if exists: os.remove(self.result)
         # Create a temp folder for storing temporary files
         self.tempFolder = '%s.%f' % (self.result, time.time())
         try:
             os.mkdir(self.tempFolder)
-        except OSError, oe:
-            raise PodError(TEMP_F_ERR % (self.result, oe))
+        except OSError as oe:
+            raise PodError(TEMP_W_KO % (self.result, oe))
         # The "unzip" folder is a sub-folder, within self.tempFolder, where
         # p_self.template will be unzipped.
         self.unzipFolder = os.path.join(self.tempFolder, 'unzip')
@@ -787,9 +911,7 @@ class Renderer:
         j = os.path.join
         if self.fileNames:
             toInsert = ''
-            for fileName in self.fileNames.iterkeys():
-                if fileName.endswith('.svg'):
-                    fileName = os.path.splitext(fileName)[0] + '.png'
+            for fileName in self.fileNames.keys():
                 mimeType = mimetypes.guess_type(fileName)[0]
                 toInsert += ' <manifest:file-entry manifest:media-type="%s" ' \
                             'manifest:full-path="%s"/>\n' % (mimeType, fileName)
@@ -797,13 +919,13 @@ class Renderer:
             # Read the the content of this file, if not already in
             # self.manifestXml.
             if not self.manifestXml:
-                f = file(manifestName)
+                f = open(manifestName, **enc)
                 self.manifestXml = f.read()
                 f.close()
             hook = '</manifest:manifest>'
             content = self.manifestXml.replace(hook, toInsert + hook)
             # Write the new manifest content
-            f = file(manifestName, 'w')
+            f = open(manifestName, 'w', **enc)
             f.write(content)
             f.close()
         # Patch meta.xml
@@ -812,20 +934,20 @@ class Renderer:
             metaName = j(self.unzipFolder, 'meta.xml')
             # Read the content of this file, if not already in self.metaXml
             if not self.metaXml:
-                f = open(metaName)
+                f = open(metaName, **enc)
                 self.metaXml = f.read()
                 f.close()
             # Remove the existing title, if it exists
             content = self.metaRex.sub('', self.metaXml)
             # Add a new title, based on the result name
-            if isinstance(metadata, basestring):
+            if isinstance(metadata, str):
                 title = metadata
             else:
                 title = os.path.splitext(os.path.basename(self.result))[0]
             hook = self.metaHook
             title = '<dc:title>%s</dc:title>%s' % (title, hook)
             content = content.replace(hook, title)
-            f = open(metaName, 'w')
+            f = open(metaName, 'w', **enc)
             f.write(content)
             f.close()
 
@@ -845,8 +967,12 @@ class Renderer:
             # Re-zip the result
             self.finalize()
         finally:
-            if self.deleteTempFolder:
-                FolderDeleter.delete(self.tempFolder)
+            try:
+                if self.deleteTempFolder:
+                    FolderDeleter.delete(self.tempFolder)
+            except PermissionError:
+                # The temp folder could not be deleted
+                pass
 
     def getStyles(self):
         '''Returns a dict of the styles that are defined into the template'''
@@ -864,7 +990,7 @@ class Renderer:
             if ocw or dis:
                 sm.TableProperties.initStylesMapping(stylesMapping, ocw, dis)
             manager.stylesMapping = manager.checkStylesMapping(stylesMapping)
-        except PodError, po:
+        except PodError as po:
             self.contentParser.env.currentBuffer.content.close()
             self.stylesParser.env.currentBuffer.content.close()
             if os.path.exists(self.tempFolder):
@@ -876,17 +1002,14 @@ class Renderer:
            p_template is a string, it is a file name: simply get its extension.
            Else, it is a binary file in a StringIO instance: seek the MIME type
            from the first bytes.'''
-        if isinstance(template, basestring):
+        if isinstance(template, str):
             r = os.path.splitext(template)[1][1:]
         else:
             # A StringIO instance
             template.seek(0)
-            firstBytes = template.read(90)
-            firstBytes = firstBytes[firstBytes.index('mimetype')+8:]
-            if firstBytes.startswith(mimeTypes['ods']):
-                r = 'ods'
-            else:
-                r = 'odt' # We suppose this is ODT
+            sbytes = template.read(90)
+            sbytes = sbytes[sbytes.index('mimetype')+8:]
+            r = 'ods' if sbytes.startswith(utils.mimeTypes['ods']) else 'odt'
         return r
 
     def callLibreOffice(self, resultName, format=None, outputName=None):
@@ -903,7 +1026,7 @@ class Renderer:
         # them accordingly.
         pageStyles = None
         mps = self.managePageStyles
-        if mps != None:
+        if mps is not None:
             pageStyles = self.stylesManager.pageStyles.init(mps, self.template)
         # Patch styles.xml and content.xml
         dynamic = self.stylesManager.dynamicStyles
@@ -913,7 +1036,7 @@ class Renderer:
             shutil.copy(j(self.tempFolder, fn), j(self.unzipFolder, fn))
             # Get the file content
             fn = os.path.join(self.unzipFolder, fn)
-            f = file(fn)
+            f = open(fn, **enc)
             content = f.read()
             f.close()
             # Inject self.fonts, when present, in styles.xml
@@ -927,15 +1050,15 @@ class Renderer:
             if pageStyles:
                 content = pageStyles.renameIn(name, content)
             # Write the updated content to the file
-            f = file(fn, 'w')
+            f = open(fn, 'w', **enc)
             f.write(content)
             f.close()
         # Call the user-defined "finalize" function(s) when present
         if self.finalizeFunction:
             try:
                 for fun in self.finalizeFunction: fun(self.unzipFolder, self)
-            except Exception, e:
-                print(FIN_ERR % str(e))
+            except Exception as e:
+                print(WARN_FIN_KO % str(e))
         # Re-zip the result, first as an OpenDocument file of the same type as
         # the POD template (odt, ods...)
         resultName = os.path.join(self.tempFolder,
@@ -947,7 +1070,7 @@ class Renderer:
             os.rename(resultName, self.result)
         else:
             if resultType not in FILE_TYPES:
-                raise PodError(FMT_KO % (self.result, FILE_TYPES.keys()))
+                raise PodError(R_TYPE_KO % (self.result, FILE_TYPES.keys()))
             # Call LibreOffice to perform the conversion or document update
             output = self.callLibreOffice(resultName, outputName=self.result)
             # I (should) have the result in self.result
@@ -959,4 +1082,4 @@ class Renderer:
                     os.rename(resultName, self.result)
                 else:
                     raise PodError(CONV_ERR % output)
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

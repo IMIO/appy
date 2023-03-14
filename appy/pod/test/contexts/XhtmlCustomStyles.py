@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 xhtmlInput='''
 <!-- "margin-left" property on paragraphs -->
-<p>Normal paragraph with a specia char\n\t\v\x0cUn montant de \x0b\v145,00 \xe2\x82\xac TVAC</p>
+<p>Normal paragraph with a specia char\n\t\v\x0cUn montant de \x0b\v145,00 € TVAC</p>
 <p style="margin-left: 25px">25px margin left</p>
 <p style="margin-left: 4cm">4cm margin left</p>
 <p style="margin-left:-1cm">Text with a negative left margin</p>

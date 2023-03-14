@@ -1,28 +1,28 @@
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
-# ------------------------------------------------------------------------------
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.pod import PodError
 from appy.pod.elements import *
-from appy import Object, commercial
-from appy.shared.utils import Traceback
-from appy.shared.errors import CommercialError
+from appy.model.utils import Object as O
+from appy.utils import Traceback, commercial, CommercialError
 
-# ------------------------------------------------------------------------------
-EVAL_ERROR = 'Error while evaluating expression "%s". %s'
-FROM_EVAL_ERROR = 'Error while evaluating the expression "%s" defined in the ' \
-                  '"from" part of a statement. %s'
-WRONG_SEQ_TYPE = 'Expression "%s" is not iterable.'
-WRONG_ITERATOR = 'Name "%s" cannot be used for an iterator variable.'
-TABLE_NOT_ONE_CELL = "The table you wanted to populate with '%s' " \
-                     "can\'t be dumped with the '-' option because it has " \
-                     "more than one cell in it."
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+EVAL_ERROR  = 'Error while evaluating expression "%s". %s'
+FROM_EV_ERR = 'Error while evaluating the expression "%s" defined in the ' \
+              '"from" part of a statement. %s'
+SEQ_TYP_KO  = 'Expression "%s" is not iterable.'
+WRONG_ITER  = 'Name "%s" cannot be used for an iterator variable.'
+TBL_X_CELL  = "The table you wanted to populate with '%s' can\'t be dumped " \
+              "with the '-' option because it has more than one cell in it."
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EvaluationError(Exception):
     def __init__(self, originalError, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
         self.originalError = originalError
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Action:
     '''Abstract class representing a action (=statement) that must be performed
        on the content of a buffer (if, for...).'''
@@ -59,7 +59,7 @@ class Action:
     def getExceptionLine(self, e):
         '''Gets the line describing exception p_e, containing the exception
            class, message and line number.'''
-        return '%s: %s' % (e.__class__.__name__, str(e))
+        return f'{e.__class__.__name__}: {str(e)}'
 
     def manageError(self, result, context, errorMessage, originalError=None):
         '''Manage the encountered error: dump it into the buffer or raise an
@@ -71,11 +71,10 @@ class Action:
                 locator = self.buffer.env.parser.locator
                 # The column number may not be given
                 col = locator.getColumnNumber()
-                if col is None: col = ''
-                else: col = ', column %d' % col
-                errorMessage += ' (line %s%s)' % (locator.getLineNumber(), col)
+                col = '' if col is None else f', column {col}'
+                errorMessage += f' (line {locator.getLineNumber()}{col})'
                 # Integrate the traceback (at least, its last lines)
-                errorMessage += '\n' + Traceback.get(6).decode('utf-8')
+                errorMessage += '\n' + Traceback.get(6)
             if originalError:
                 raise EvaluationError(originalError, errorMessage)
             raise Exception(errorMessage)
@@ -90,18 +89,19 @@ class Action:
 
     def _evalExpr(self, expr, context):
         '''Evaluates p_expr with p_context. p_expr can contain an error expr,
-           in the form "someExpr|errorExpr". If it is the case, if the "normal"
-           expr raises an error, the "error" expr is evaluated instead.'''
+           in the form "normalExpr|errorExpr". If it is the case, if the
+           "normal" expression raises an error, the "error" expression is
+           evaluated instead.'''
         eval = context['_eval_'].run
         if '|' not in expr:
-            res = eval(expr, context)
+            r = eval(expr, context)
         else:
             expr, errorExpr = expr.rsplit('|', 1)
             try:
-                res = eval(expr, context)
+                r = eval(expr, context)
             except Exception:
-                res = eval(errorExpr, context)
-        return res
+                r = eval(errorExpr, context)
+        return r
 
     def evaluateExpression(self, result, context, expr):
         '''Evaluates expression p_expr with the current p_context. Returns a
@@ -109,15 +109,11 @@ class Action:
         try:
             res = self._evalExpr(expr, context)
             error = False
-        except Exception, e:
+        except Exception as e:
             # Hack for MessageException instances: always re-raise it as is
             if e.__class__.__name__ == 'MessageException': raise e
             res = None
-            line = self.getExceptionLine(e)
-            try:
-                errorMessage = EVAL_ERROR % (expr, line)
-            except UnicodeDecodeError:
-                errorMessage = EVAL_ERROR % (expr, line.decode('utf-8'))
+            errorMessage = EVAL_ERROR % (expr, self.getExceptionLine(e))
             self.manageError(result, context, errorMessage, e)
             error = True
         return res, error
@@ -127,8 +123,8 @@ class Action:
            p_result.'''
         # Check that if minus is set, we have an element which can accept it
         if self.minus and isinstance(self.elem, Table) and \
-           (not self.elem.tableInfo.isOneCell()):
-            self.manageError(result, context, TABLE_NOT_ONE_CELL % self.expr)
+           not self.elem.tableInfo.isOneCell():
+            self.manageError(result, context, TBL_X_CELL % self.expr)
         else:
             error = False
             # Evaluate self.expr in eRes
@@ -154,10 +150,7 @@ class Action:
         # Determine the source
         source = forceSource or self.source
         # Determine "minus"
-        if ignoreMinus:
-            minus = False
-        else:
-            minus = self.minus
+        minus = False if ignoreMinus else self.minus
         if source == 'buffer':
             self.buffer.evaluate(result, context, removeMainElems=minus,
                                  slice=self.getBufferSlice(context))
@@ -169,8 +162,8 @@ class Action:
             error = False
             try:
                 fromRes = context['_eval_'].run(self.fromExpr, context)
-            except Exception, e:
-                msg = FROM_EVAL_ERROR % (self.fromExpr,self.getExceptionLine(e))
+            except Exception as e:
+                msg = FROM_EV_ERR % (self.fromExpr,self.getExceptionLine(e))
                 self.manageError(result, context, msg, e)
                 error = True
             if not error:
@@ -211,6 +204,7 @@ class Action:
            formed or not.'''
         return True, None
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class If(Action):
     '''Action that determines if we must include the content of the buffer in
        the result or not.'''
@@ -223,8 +217,9 @@ class If(Action):
         else:
             if self.buffer.isMainElement(Cell.OD):
                 # Don't leave the current row with a wrong number of cells
-                result.dumpElement(Cell.OD.elem)
+                result.dumpElement(Cell.OD.nsName)
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Else(If):
     '''Action that is linked to a previous "if" action. In fact, an "else"
        action works exactly like an "if" action, excepted that instead of
@@ -241,6 +236,7 @@ class Else(If):
         iRes, error = ifAction.evaluateExpression(result,context,ifAction.expr)
         If.do(self, result, context, not iRes)
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class For(Action):
     '''Actions that will include the content of the buffer as many times as
        specified by the action parameters.'''
@@ -255,41 +251,44 @@ class For(Action):
            is possible that this loop overrides an outer loop whose iterator
            has the same name. This method returns a tuple
            (loop, outerOverriddenLoop).'''
+
         # The "loop" object, made available in the POD context, contains info
         # about all currently walked loops. For every walked loop, a specific
-        # object, accessible at getattr(loop, self.iters[0]), stores info about
-        # its status:
-        # ----------------------------------------------------------------------
+        # object, accessible at getattr(loop, p_self.iters[0]), stores info
+        # about its status:
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  length   | the total number of walked elements within the loop
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  nb       | the index (starting at 0) of the currently walked element
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  first    | True if the currently walked element is the first one
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  last     | True if the currently walked element is the last one
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  odd      | True if the currently walked element is odd
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  even     | True if the currently walked element is even
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  previous | Points to the previous element, if any
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # For example, if you have a "for" statement like this:
+        #
         #                 for elem in myListOfElements
+        #
         # Within the part of the ODT document impacted by this statement, you
         # may access to loop.elem.length to know the total length of
         # myListOfElements, or loop.elem.nb to know the index of the current
         # elem within myListOfElements.
         if 'loop' not in context:
             # Attribute "_all_" stores the list of all currently running loops
-            loops = context['loop'] = Object(_all_=[])
+            loops = context['loop'] = O(_all_=[])
         else:
             loops = context['loop']
         try:
             total = len(elems)
         except Exception:
             total = 0
-        curLoop = Object(length=total, previous=None, buffer=self.buffer)
+        curLoop = O(length=total, previous=None, buffer=self.buffer)
         loops._all_.append(curLoop)
         # Does this loop override an outer loop with homonym iterator ?
         outerLoop = None
@@ -330,15 +329,15 @@ class For(Action):
         try:
             # All "iterable" objects are OK
             iter(elems)
-        except TypeError, te:
-            self.manageError(result, context, WRONG_SEQ_TYPE % self.expr, te)
+        except TypeError as te:
+            self.manageError(result, context, SEQ_TYP_KO % self.expr, te)
             return
         # Remember variables hidden by iterators if any
         hiddenVars = {}
         for name in self.iters:
             # Prevent reserved names to be used
             if name == '_all_':
-                self.manageError(result, context, WRONG_ITERATOR % name)
+                self.manageError(result, context, WRONG_ITER % name)
                 return
             if name in context:
                 hiddenVars[name] = context[name]
@@ -360,7 +359,7 @@ class For(Action):
             # If p_elems is empty, dump an empty cell to avoid having the wrong
             # number of cells for the current row.
             if not elems:
-                result.dumpElement(Cell.OD.elem)
+                result.dumpElement(Cell.OD.nsName)
         # Enter the "for" loop
         loop, outerLoop = self.initialiseLoop(context, elems)
         i = -1
@@ -369,13 +368,13 @@ class For(Action):
             loop.nb = i
             loop.first = i == 0
             loop.last = i == (loop.length-1)
-            loop.even = (i%2)==0
+            loop.even = (i%2) == 0
             loop.odd = not loop.even
             self.updateContext(context, item)
             # Cell: add a new row if we are at the end of a row
             if isCell and currentColIndex == nbOfColumns:
-                result.dumpEndElement(Row.OD.elem)
-                result.dumpStartElement(Row.OD.elem, rowAttributes)
+                result.dumpEndElement(Row.OD.nsName)
+                result.dumpStartElement(Row.OD.nsName, rowAttributes)
                 currentColIndex = 0
             # If a sub-action is defined, execute it
             if self.subAction:
@@ -405,9 +404,9 @@ class For(Action):
                     self.updateContext(context, None, forcedValue='')
                     for i in range(nbOfMissingCells):
                         self.buffer.evaluate(result, context, subElements=False)
-                result.dumpEndElement(Row.OD.elem)
+                result.dumpEndElement(Row.OD.nsName)
                 # Create additional row with remaining cells
-                result.dumpStartElement(Row.OD.elem, rowAttributes)
+                result.dumpStartElement(Row.OD.nsName, rowAttributes)
                 nbOfRemainingCells = wrongNbOfCells + nbOfMissingCells
                 nbOfMissingCellsLastLine = nbOfColumns - nbOfRemainingCells
                 self.updateContext(context, None, forcedValue='')
@@ -457,6 +456,7 @@ class For(Action):
                 # Still do not dump the end tag
                 return start, end
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Null(Action):
     '''Action that does nothing. Used in conjunction with a "from" clause, it
        allows to insert in a buffer arbitrary odt content.'''
@@ -477,6 +477,7 @@ class Null(Action):
             return False, self.noFromError
         return True, None
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class MetaIf(Action):
     '''Action allowing a note not to be evaluated and re-dumped as-is in the
        result, depending on some (meta-) condition.'''
@@ -491,7 +492,7 @@ class MetaIf(Action):
         # Use some fake buffer and dump the note in it. Reuse the code for
         # dumping an error, also dumped as a note.
         buf = self.buffer.clone()
-        PodError.dump(buf, u'</text:p>\n<text:p>'.join(self.statements),
+        PodError.dump(buf, '</text:p>\n<text:p>'.join(self.statements),
                       dumpTb=False, escapeMessage=False)
         return buf
 
@@ -516,6 +517,7 @@ class MetaIf(Action):
             self.evaluateBuffer(result, context,
                                 forceSource='buffer', ignoreMinus=True)
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Variables(Action):
     '''Action that allows to define a set of variables somewhere in the
        template.'''
@@ -525,22 +527,27 @@ class Variables(Action):
         # expression, because several expressions can exist here, one for
         # every defined variable.
         Action.__init__(self, name, buff, None, elem, minus)
-        # Definitions of variables: ~[(s_name|[s_name], s_expr)]~
+        # Definitions of variables: ~[(s_name|[s_name], s_expr)]~. It allows a
+        # variable definition to be of the form ("*", s_expr). In that case, it
+        # is a multi-variable definition: s_expr must return a dict-like object
+        # whose keys are strings. For every entry in this dict, a variable will
+        # be defined, whose name is the key in the dict, and whose value is the
+        # corresponding value at that key.
         self.variables = variables
         # If p_lasting is:
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # False | (the default) every variable's scope will be the target
         #       | element (as determined by the corresponding buffer), not more.
         #       | Any homonym variable being defined in the outer scope will be
         #       | hidden in the context of the target element, and will be
         #       | visible again as soon as the walk leaves this sub-scope.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # True  | From the moment such a "lasting" variable is defined, its
         #       | scope will be the remaining of the document. So, its scope
         #       | encompasses the target element + the remaining of the
         #       | document. Any homonym variable being previously defined will
         #       | be hidden forever, as soon as the lasting variable is defined.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.lasting = lasting
 
     def storeVariable(self, name, value, context, hidden):
@@ -581,14 +588,26 @@ class Variables(Action):
 
         # If the currently defined variables are not lasting, the names and
         # values of the variables that will be hidden in the context will be
-        # stored: after execution of this buffer, their values will be restored.
+        # stored in v_hidden. After execution of this buffer, their values
+        # will be restored. v_multi stores (in reverse order) encountered
+        # multivariable values.
 
-        hidden = None
+        hidden = multi = None
         for names, expr in self.variables:
-            # Evaluate variable expression in v_value
+            # Evaluate variable expression in v_expr
             value, error = self.evaluateExpression(result, context, expr)
             if error: return
-            if isinstance(names, basestring):
+            if names == '*':
+                # A multi-variable
+                if value:
+                    for name, val in value.items():
+                        hidden = self.storeVariable(name, val, context, hidden)
+                # Remember variables in v_multi
+                if multi is None:
+                    multi = [value]
+                else:
+                    multi.insert(0, value)
+            elif isinstance(names, str):
                 # A single variable name
                 hidden = self.storeVariable(names, value, context, hidden)
             else:
@@ -609,9 +628,14 @@ class Variables(Action):
         # Delete not-hidden variables, if not lasting
         if not self.lasting:
             for names, expr in self.variables:
-                if isinstance(names, basestring):
+                if names == '*':
+                    values = multi.pop()
+                    if values:
+                        for name in values.keys():
+                            self.removeVariable(name, context, hidden)
+                elif isinstance(names, str):
                     self.removeVariable(names, context, hidden)
                 else:
                     for name in names:
                         self.removeVariable(name, context, hidden)
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

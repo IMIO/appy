@@ -1,14 +1,16 @@
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import os.path, threading
 
 import appy.pod
+from appy import utils
 from appy.pod import PodError
 from appy.pod.converter import Converter
-from appy.shared.utils import executeCommand, getOsTempFolder
+from appy.utils.path import getOsTempFolder
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 LO_PORT_KO = 'Wrong LibreOffice port "%s". Make sure it is an integer.'
 CONV_ERR   = 'An error occurred during the conversion. %s'
 NO_PY_PATH = 'Extension of result file is "%s". In order to perform ' \
@@ -27,7 +29,7 @@ INCOMP_OD  = 'Warning: your OpenDocument file may not be complete (ie, ' \
              'imported documents may not be present). This is because we ' \
              'could not connect to LibreOffice in server mode: %s'
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class LO:
     '''Represents a LibreOffice (LO) server with which Appy communicates via its
        UNO API.'''
@@ -63,7 +65,7 @@ class LO:
                       ren.distributeColumns, ren.script, ren.resolveFields,
                       ren.pdfOptions, csvOptions, ren.ppp, ren.stream,
                       ren.pageStart).run()
-                except Converter.Error, ce:
+                except Converter.Error as ce:
                     raise PodError(CONV_ERR % str(ce))
             except ImportError:
                 # I do not have UNO. So try to launch a UNO-enabled Python
@@ -97,13 +99,13 @@ class LO:
                     add('-a'); add(str(ren.stream))
                 if ren.pageStart > 1:
                     add('-g'); add(str(ren.pageStart))
-                out, r = executeCommand(cmd)
-        except PodError, pe:
+                out, r = utils.executeCommand(cmd)
+        except PodError as pe:
             # When trying to call LO in server mode for producing ODT or ODS
             # (=forceOoCall=True), if an error occurs we have nevertheless
             # an ODT or ODS to return to the user. So we produce a warning
             # instead of raising an error.
-            if (format in ren.templateTypes) and ren.forceOoCall:
+            if format in ren.templateTypes and ren.forceOoCall:
                 print(INCOMP_OD % str(pe))
             else:
                 raise pe
@@ -112,7 +114,7 @@ class LO:
     def getLockFileName(self):
         '''Get the absolute path to the lock file, in the pool folder,
            corresponding to the current thread using this LO instance.'''
-        name = '%s.%d' % (threading._get_ident(), self.port)
+        name = '%s.%d' % (threading.get_ident(), self.port)
         return os.path.join(self.pool.folder, name)
 
     def lock(self):
@@ -138,7 +140,7 @@ class LO:
         '''p_self's short string representation'''
         return '<LO port=%d>' % self.port
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class LoPool:
     '''Via this class, Appy can manage communication with several LibreOffice
        (LO) servers.'''
@@ -246,12 +248,12 @@ class LoPool:
            request.'''
         # The result is a tuple (LO, b_multiple). The boolean value indicates if
         # there are at least 2 LO instances defined in p_self.los.
-        # ~~~
+        # ~
         # Return the unique LO instance
         if isinstance(self.los, LO): return self.los, False
         # Choose among several LO instances. Read info about busy LO instances.
         busy, oldest = self.readBusy()
-        for port, lo in self.los.iteritems():
+        for port, lo in self.los.items():
             if not busy or port not in busy:
                 # I have a free LO instance
                 return lo, True
@@ -265,15 +267,15 @@ class LoPool:
            is empty else.'''
 
         # If p_outputName is:
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # None     | The result will be a file whose name is p_resultName, whose
         #          | file extension has been replaced with the one specified in
         #          | p_format.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # not None | The result will be a file named p_outputName. p_format will
         #          | be ignored: the output format will depend on p_outputName's
         #          | file extension.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         r = ''
         # Determine the "result" to ask to LibreOffice
         if outputName:
@@ -292,4 +294,4 @@ class LoPool:
             # Unlock it when appropriate
             if multiple: lo.unlock()
         return r
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

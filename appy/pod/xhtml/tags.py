@@ -1,15 +1,9 @@
-# ------------------------------------------------------------------------------
-from appy import Object as O
-from appy.shared.xml_parser import Escape
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from appy.xml import XHTML_SC
+from appy.xml.escape import Escape
+from appy.model.utils import Object as O
 
-# ------------------------------------------------------------------------------
-# Self-closing XHTML tags
-n = None
-SELF_CLOSING = {'area':n, 'base':n, 'br':n, 'col':n, 'command':n, 'embed':n,
-                'hr':n, 'img':n, 'input':n, 'keygen':n, 'link':n, 'menuitem':n,
-                'meta':n, 'param':n, 'source':n, 'track':n, 'wbr':n}
-
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ChildrenIterator:
     ''''Iterator on children of a given tag'''
     def __init__(self, tag, types=None, reverse=False):
@@ -71,9 +65,7 @@ class ChildrenIterator:
                 if not self.hasNext(): raise StopIteration
         return child
 
-    next = __next__ # Python2-3 compliance
-
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Tag:
     '''Represents an HTML tag'''
     
@@ -93,7 +85,7 @@ class Tag:
         # The class name (name of a Tag sub-class)
         self.className = self.__class__.__name__
         # Is that a self-closing tag ?
-        self.selfClosing = name in SELF_CLOSING
+        self.selfClosing = name in XHTML_SC
         # Tag's attributes. CSS class(es) are extracted in self.css while other
         # attributes are stored in self.attrs.
         self.css = None
@@ -105,8 +97,8 @@ class Tag:
     def clone(self):
         '''Create and return a clone of this tag'''
         # Create the clone
-        klass = eval(self.className)
-        clone = klass(self.name)
+        class_ = eval(self.className)
+        clone = class_(self.name)
         # Copy attributes when present
         if self.attrs:
             clone.attrs = self.attrs.clone()
@@ -141,10 +133,10 @@ class Tag:
         self.parent = parent
         # Set p_self as p_parent's child
         children = parent.children
-        if children == None:
+        if children is None:
             parent.children = [self]
         else:
-            if at == None:
+            if at is None:
                 children.append(self)
             else:
                 children.insert(at, self)
@@ -222,7 +214,7 @@ class Tag:
             r.append(' class="%s"' % ' '.join(self.css))
         # Add other attributes
         if self.attrs:
-            for name, value in self.attrs.d().iteritems():
+            for name, value in self.attrs.d().items():
                 # Convert special chars into entities
                 r.append(' %s="%s"' % (name, Escape.xml(value)))
         # Stop here if it is a self-closing tag
@@ -242,7 +234,7 @@ class Tag:
         '''Iterates over p_self's children via a ChildIterator'''
         return ChildrenIterator(self, **kwargs)
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Para(Tag):
     '''Represents any paragraph-like tag: p, div, li...'''
 
@@ -274,7 +266,7 @@ class Cell(Tag):
 class List(Tag):
     '''Represents a "ol" or "ul" tag'''
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Mapping between HTML tags and classes representing it
 I = Inner
 classes = {
@@ -296,7 +288,7 @@ def get(elem):
     if elem in classes: return classes[elem]
     return Tag
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Content:
     isTag = False # This is not a tag, this is tag content
     walkable = False
@@ -313,4 +305,4 @@ class Content:
 
     def asXhtml(self):
         return self.text
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

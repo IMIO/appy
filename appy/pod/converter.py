@@ -1,8 +1,11 @@
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
-# ------------------------------------------------------------------------------
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import sys, os, os.path, re, time
 from optparse import OptionParser
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 htmlFilters = {'odt': 'HTML (StarWriter)',
                'ods': 'HTML (StarCalc)',
                'odp': 'impress_html_Export'}
@@ -48,10 +51,7 @@ defaultCsvOptions = '59,34,76,1'
 # Defaut options when reading a CSV file
 defaultCsvLoadOptions = defaultCsvOptions
 
-# ------------------------------------------------------------------------------
-class ConverterError(Exception): pass
-
-# Constants and messages -------------------------------------------------------
+# Constants and messages - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 DOC_NOT_FOUND = '"%s" not found.'
 URL_NOT_FOUND = 'Doc URL "%s" is wrong. %s'
 INPUT_TYPE_ERROR = 'Wrong input type "%s".'
@@ -127,11 +127,11 @@ HELP_CSV = 'If the ouput format is CSV, you can define here conversion ' \
   'documentation about CSV options can be found at %s.' % \
   (defaultCsvOptions, HELP_CSV_URL)
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Classes defined here are used to contact LibreOffice via input/output streams
 # instead of via the file system. In use when Libreoffice runs on a distant
 # server (converter.server is not "localhost").
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 try: # UNO may not be there
     import uno
     from unohelper import Base
@@ -174,7 +174,7 @@ try: # UNO may not be there
 except ImportError:
     pass
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class LoIter:
     '''Iterates over a collection of LibreOffice-UNO objects'''
     def __init__(self, collection, log=None, reverse=False):
@@ -204,9 +204,8 @@ class LoIter:
             # because, in documents including sub-documents, it also counts the
             # sections that are present within these sub-documents.
             raise StopIteration
-    next = __next__ # Python2-3 compliance
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PPP:
     '''This class represents the POD post-processor (=PPP), a series of UNO
        commands that execute instructions inlaid within element names.'''
@@ -239,10 +238,37 @@ class PPP:
         '''Find and execute all post-processing commands'''
         self.updateTables()
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class PdfOptions:
+    # Some PDF options' values must be converted
+    values = {'true': True, 'True': True, 'false': False, 'False': False}
+
+    @classmethod
+    def get(class_, options):
+        '''Get and convert PDF options to a dict'''
+        if not options: return
+        r = {}
+        for option in options.split(','):
+            if not option: continue
+            elems = option.split('=')
+            if len(elems) != 2: continue
+            key, value = elems
+            if not key or not value: continue
+            # Convert value when relevant
+            if value in class_.values:
+                value = class_.values[value]
+            elif value.isdigit():
+                value = int(value)
+            # Add the final value to the result
+            r[key] = value
+        return r
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Converter:
     '''Converts a document readable by LibreOffice into pdf, doc, txt, rtf...'''
-    Error = ConverterError
+
+    # Converter-specific error class
+    class Error(Exception): pass
 
     def __init__(self, docPath, result, server=DEFAULT_SERVER,
                  port=DEFAULT_PORT, templatePath=None, optimalColumnWidths=None,
@@ -290,7 +316,7 @@ class Converter:
         else:
             self.functions = {}
         # Options for conversion to PDF
-        self.pdfOptions = pdfOptions
+        self.pdfOptions = PdfOptions().get(pdfOptions)
         # Options for conversion to CSV
         self.csvOptions = csvOptions
         # Verbosity
@@ -314,7 +340,7 @@ class Converter:
     def getInputType(self, docPath):
         '''Extracts the input type from the p_docPath'''
         res = os.path.splitext(docPath)[1][1:].lower()
-        if res not in FILE_TYPES: raise ConverterError(INPUT_TYPE_ERROR % res)
+        if res not in FILE_TYPES: raise self.Error(INPUT_TYPE_ERROR % res)
         return res
 
     def getResultType(self, result):
@@ -348,7 +374,7 @@ class Converter:
            and the absolute path as the second element.''' 
         import unohelper
         if not os.path.exists(filePath) and not os.path.isfile(filePath):
-            raise ConverterError(DOC_NOT_FOUND % filePath)
+            raise self.Error(DOC_NOT_FOUND % filePath)
         docAbsPath = os.path.abspath(filePath)
         # Return one path for OO, one path for me
         return unohelper.systemPathToFileUrl(docAbsPath), docAbsPath
@@ -361,8 +387,8 @@ class Converter:
             if isinstance(res, dict):
                 res = res[self.inputType]
         else:
-            raise ConverterError(BAD_RESULT_TYPE % (self.resultType,
-                                                    FILE_TYPES.keys()))
+            raise self.Error(BAD_RESULT_TYPE % (self.resultType,
+                                                FILE_TYPES.keys()))
         return res
 
     def getResultUrl(self, result):
@@ -397,9 +423,8 @@ class Converter:
             f.close()
             os.remove(r)
             return unohelper.systemPathToFileUrl(r)
-        except (OSError, IOError):
-            e = sys.exc_info()[1]
-            raise ConverterError(CANNOT_WRITE_RESULT % (r, e))
+        except (OSError, IOError) as e:
+            raise self.Error(CANNOT_WRITE_RESULT % (r, e))
 
     def props(self, properties):
         '''Create a UNO-compliant tuple of properties, from tuple p_properties
@@ -459,9 +484,8 @@ class Converter:
                 helper = create('com.sun.star.frame.DispatchHelper', ctx)
                 self.dispatchHelper = helper
             self.log(' done.')
-        except NoConnectException:
-            e = sys.exc_info()[1]
-            raise ConverterError(CONNECT_ERROR % (self.port, e))
+        except NoConnectException as e:
+            raise self.Error(CONNECT_ERROR % (self.port, e))
 
     def getColumnModifiers(self):
         '''Returns the elements allowing to know if we must optimize or
@@ -689,9 +713,8 @@ class Converter:
                 pass
             # [ODT] After every change has been applied, refresh the TOC
             if isOdt: self.updateToc()
-        except IllegalArgumentException:
-            e = sys.exc_info()[1]
-            raise ConverterError(URL_NOT_FOUND % (self.docPath, e))
+        except IllegalArgumentException as e:
+            raise self.Error(URL_NOT_FOUND % (self.docPath, e))
 
     def setPdfOptions(self):
         '''If p_self.doc must be converted to PDF, and PDF options need to be
@@ -757,7 +780,7 @@ class Converter:
         if self.verbose:
             self.log('Done in %.2f second(s).' % (time.time() - start))
 
-# ConverterScript constants ----------------------------------------------------
+# ConverterScript constants  - - - - - - - - - - - - - - - - - - - - - - - - - -
 WRONG_NB_OF_ARGS = 'Wrong number of arguments.'
 ERROR_CODE = 1
 usage = '''usage: python3 converter.py fileToConvert output [options]
@@ -772,31 +795,9 @@ usage = '''usage: python3 converter.py fileToConvert output [options]
    "python" should be a UNO-enabled Python interpreter (ie the one which is
    included in the LibreOffice distribution).''' % str(FILE_TYPES.keys())
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ConverterScript:
     '''The command-line program'''
-    # Some PDF options' values must be converted
-    pdfOptionsValues = {'true': True, 'True': True,
-                        'false': False, 'False': False}
-
-    def getPdfOptions(self, options):
-        '''Get and convert PDF options to a dict'''
-        if not options: return
-        r = {}
-        for option in options.split(','):
-            if not option: continue
-            elems = option.split('=')
-            if len(elems) != 2: continue
-            key, value = elems
-            if not key or not value: continue
-            # Convert value when relevant
-            if value in self.pdfOptionsValues:
-                value = self.pdfOptionsValues[value]
-            elif value.isdigit():
-                value = int(value)
-            # Add the final value to the result
-            r[key] = value
-        return r
 
     def run(self):
         optParser = OptionParser(usage=usage)
@@ -840,23 +841,21 @@ class ConverterScript:
         if distribute in ('True', 'False'): distribute = eval(distribute)
         resolveFields = options.resolveFields
         if resolveFields == 'True': resolveFields = True
-        pdfOptions = self.getPdfOptions(options.pdf)
         stream = options.stream
         if stream in ('True', 'False'): stream = eval(stream)
         converter = Converter(args[0], args[1], options.server, options.port,
           options.template, optimize, distribute, options.script, resolveFields,
-          pdfOptions, options.csv, options.ppp, stream, options.pageStart,
+          options.pdf, options.csv, options.ppp, stream, options.pageStart,
           options.verbose)
         try:
             converter.run()
-        except ConverterError:
-            e = sys.exc_info()[1]
-            sys.stderr.write(str(e))
+        except Converter.Error as err:
+            sys.stderr.write(str(err))
             sys.stderr.write('\n')
             optParser.print_help()
             sys.exit(ERROR_CODE)
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if __name__ == '__main__':
     ConverterScript().run()
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

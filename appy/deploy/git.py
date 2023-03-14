@@ -1,0 +1,68 @@
+'''Execute commands to a Git repository'''
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# ~license~
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from pathlib import Path
+
+from appy.deploy.repository import Repository
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+GIT_EXE  = 'Executing %s...'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Git(Repository):
+    '''Represents a remote Git repository'''
+
+    def __init__(self, url, name=None, login=None, password=None):
+        '''Defines a distant Git repo'''
+        super().__init__(url, name)
+
+        # For a Git repository, it is not possible to define login/password
+        # credentials: public-key authentication is used instead. The Git repo
+        # must be configured with your public key; the machine running the
+        # import must either store the private key, or transmit it from your
+        # development machine. This latter option is preferable and is achieved
+        # by defining the deployment machine as a SSH forward agent. Here is an
+        # example.
+
+        # Suppose you have your development machine D. In your home folder, you
+        # have a .ssh folder, containing your private and public keys. Via the
+        # Appy deployer, you want to deploy code on some production machine P,
+        # named some.machine.net. You have configured the SSH daemon on P to be
+        # able to log on P with your public key. If, in your .ssh folder (on D),
+        # you add a file named "config" and containing the following content,
+        # when the Appy deployer will, from machine P, try to download or update
+        # the code from some repository machine M, it will transmit your private
+        # key without storing it on P, and the download/update will be done.
+        #
+        # Host some.machine.net
+        #   ForwardAgent yes
+        #
+        # Note that the SSH daemon on P must be configured as a forward agent.
+
+    def getDownloadCommand(self, folder):
+        '''Produce the complete command allowing to "git clone" this repo
+           (p_self) in this local p_folder.'''
+        local = self.getLocalFolder(folder)
+        command = 'git clone %s %s' % (self.url, str(local))
+        return command, local
+
+    def getUpdateCommand(self, folder):
+        '''Produce the complete command allowing to "svn up" this repo (p_self)
+           in this local p_folder.'''
+        local = self.getLocalFolder(folder)
+        command = 'git -C %s pull' % str(local)
+        return command, local
+
+    def collectIn(self, commands, base):
+        '''Collects, in set p_folders, the git-managed distant folders'''
+        # Build the absolute path to the folder
+        folder = self.getLocalFolder(Path(base) / 'lib')
+        command = 'git config --global --add safe.directory %s' % str(folder)
+        # Without this command, updating git repositories may pose problems, due
+        # to user permissions, if the user running git commands is not the same
+        # as the git repository user.
+        commands.add(command)
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -1,17 +1,17 @@
 '''This module contains all visitors for the tree of tags defined in tags.py
    and build by parser.py.'''
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.pod.xhtml import tags
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Visitor:
     '''Abstract base class for all visitors'''
 
     def visit(self, env):
         '''Visits the tree of tags that has been build in the p_env(ironment)'''
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TablesVisitor(Visitor):
     '''Abstract visitor that walks through all tables'''
 
@@ -25,7 +25,7 @@ class TablesVisitor(Visitor):
             r = r or updated
         return updated
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TablesNormalizer(TablesVisitor):
     '''Ensure all tables rows are under a tag "thead" or "tbody"'''
 
@@ -66,7 +66,7 @@ class TablesNormalizer(TablesVisitor):
         # been updated or not.
         return True
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TablesOptimizer(TablesVisitor):
     '''Removes most style information about tables'''
 
@@ -91,7 +91,7 @@ class TablesOptimizer(TablesVisitor):
         if not attrs: return
         # Walk undesired attributes
         for name in self.undesiredAttributes[tag.name]:
-            if hasattr(attrs, name):
+            if name in attrs:
                 delattr(attrs, name)
                 r = True
         return r
@@ -137,7 +137,7 @@ class TablesOptimizer(TablesVisitor):
             updated = updated or r
             # Remove undesired CSS properties
             attrs = cell.attrs
-            if attrs and hasattr(attrs, 'style'):
+            if attrs and 'style' in attrs:
                 r = self.removeProperties(cell)
                 updated = updated or r
         return updated
@@ -148,7 +148,7 @@ class TablesOptimizer(TablesVisitor):
         updated = self.removeAttributes(table)
         # Ensure the table as simple 1px border
         attrs = table.attrs
-        if not attrs or not hasattr(attrs, 'border') or (attrs.border != '1'):
+        if not attrs or 'border' not in attrs or attrs.border != '1':
             table.addAttribute('border', 1)
             updated = True
         # Remove undesired attributes on sub-tags: tr, th and td. Find and walk
@@ -162,8 +162,7 @@ class TablesOptimizer(TablesVisitor):
                     r = self.visitRow(row)
                     updated = updated or r
         return updated
-
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class KeepWithNext(Visitor):
     # CSS classes with "keep with next" functionality, by tag type. By default,
     # class "ParaKWN" is applied.
@@ -224,7 +223,9 @@ class KeepWithNext(Visitor):
         # Set attributes "keeprows" on "table1" and "table2"
         i = tbody1.children.index(self.splitRow)
         table1.addAttribute('keeprows', ':%d' % (headerRows+i))
+        table1.addAttribute('style', 'margin-bottom:0px')
         table2.addAttribute('keeprows', '%d:' % i)
+        table2.addAttribute('style', 'margin-top:0px')
         # Insert table2 just after table1
         parent = table1.parent
         table2.setParent(parent, at=parent.children.index(table1)+1)
@@ -285,7 +286,7 @@ class KeepWithNext(Visitor):
         if self.splitRow: self.splitTable()
         return True
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Cleaner(Visitor):
     '''Removes empty paragraphs at the end of the text and/or between non empty
        paragraphs.'''
@@ -360,4 +361,4 @@ class Cleaner(Visitor):
         if remove is None: return
         method = remove and 'removeEndingParas' or 'removeEmptyParas'
         return getattr(self, method)(env.r)
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

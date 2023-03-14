@@ -1,15 +1,18 @@
-# ------------------------------------------------------------------------------
-from appy.pod.xhtml import tags, visitors
-from appy.shared.xml_parser import XmlEnvironment, XmlParser, Escape
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# ~license~
 
-# ------------------------------------------------------------------------------
+from appy.xml.escape import Escape
+from appy.xml import Environment, Parser
+from appy.pod.xhtml import tags, visitors
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 CHUNK_NOT_WITH_FILE = 'Cannot parse a file when chunk=True, only a string.'
 
-# ------------------------------------------------------------------------------
-class XhtmlEnvironment(XmlEnvironment):
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class XhtmlEnvironment(Environment):
     def __init__(self):
         # Call the base constructor
-        XmlEnvironment.__init__(self)
+        Environment.__init__(self)
         # The parsing result will store a root Tag instance
         self.r = None
         # The currently walked tag (a tags.Tag or sub-class' instance)
@@ -34,16 +37,16 @@ class XhtmlEnvironment(XmlEnvironment):
         self.current = tag
         # Store it in self.tags if walkable. Do not store the root tag: it is a
         # tag that was artificially added to ensure there is a single root tag.
-        klass = tag.__class__
-        if not isRoot and klass.walkable:
-            name = klass.__name__
+        class_ = tag.__class__
+        if not isRoot and class_.walkable:
+            name = class_.__name__
             if name in self.tags:
                 self.tags[name].append(tag)
             else:
                 self.tags[name] = [tag]
 
-# ------------------------------------------------------------------------------
-class XhtmlParser(XmlParser):
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class XhtmlParser(Parser):
     '''Creates a tree of Tag elements from a chunk of XHTML code as a string'''
 
     def __init__(self, env=None, caller=None, chunk=False, encoded=False,
@@ -52,15 +55,12 @@ class XhtmlParser(XmlParser):
         # Define a default environment if p_env is None
         env = env or XhtmlEnvironment()
         # Call the base constructor
-        XmlParser.__init__(self, env, caller)
+        Parser.__init__(self, env, caller)
         # If the XHTML to parse is not a complete, single-root-tag XML, but,
         # instead, a chunk of XHTML potentially containing several tags at the
         # root level, p_chunk is True and the XHTML chunk will be surrounded by
         # a faxe "x" tag.
         self.chunk = chunk
-        # The parser will output UTF-8 in a unicode string. If you need it to be
-        # encoded as a str, specify p_encoded being True.
-        self.encoded = encoded
         # By default, "compress" is True: the parser will remove ignorable
         # whitespace to produce a shorter output. If it is a requirement to keep
         # the general formatting of the input XHTML, set p_compress to False.
@@ -92,7 +92,7 @@ class XhtmlParser(XmlParser):
             else:
                 raise Exception(CHUNK_NOT_WITH_FILE)
         # Call the base method
-        return XmlParser.parse(self, xml, source=source)
+        return Parser.parse(self, xml, source=source)
 
     def startElement(self, elem, attrs):
         '''Manages the start of a tag'''
@@ -140,10 +140,8 @@ class XhtmlParser(XmlParser):
         for visitor in self.visitors:
             updated = visitor.visit(env)
             self.updated = self.updated or updated
-        self.res = env.r.asXhtml()
+        self.r = env.r.asXhtml()
         if self.chunk:
             # Remove the base tag
-            self.res = self.res[3:-4]
-        if self.encoded:
-            self.res = self.res.encode('utf-8')
-# ------------------------------------------------------------------------------
+            self.r = self.r[3:-4]
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

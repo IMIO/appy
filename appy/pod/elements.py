@@ -1,23 +1,28 @@
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
-# ------------------------------------------------------------------------------
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from xml.sax.saxutils import quoteattr
 
+from appy.xml import Tag
+from appy.utils import asDict
 from appy.pod import PodError
-from appy.shared.xml_parser import XmlElement
 from appy.pod.odf_parser import OdfEnvironment as ns
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PodElement:
-    OD_TO_POD = {'p': 'Text', 'h': 'Title', 'list-item': 'Item',
-                 'section': 'Section', 'table': 'Table', 'table-row': 'Row',
-                 'table-cell': 'Cell', None: 'Expression', 'frame': 'Frame',
-                 'text': 'Doc'}
-    POD_ELEMS = ('text', 'title', 'item', 'section', 'table', 'row', 'cell',
-                 'frame', 'doc')
+    OD_TO_POD   = {'p': 'Text', 'h': 'Title', 'list-item': 'Item',
+                   'section': 'Section', 'table': 'Table', 'table-row': 'Row',
+                   'table-cell': 'Cell', None: 'Expression', 'frame': 'Frame',
+                   'text': 'Doc'}
+    POD_ELEMS   = ('text', 'title', 'item', 'section', 'table', 'row', 'cell',
+                   'frame', 'doc')
+    POD_ELEMS_D = asDict(POD_ELEMS)
     subTags = []
 
     # Elements for which the '-' operator can be applied
     MINUS_ELEMS = ('section', 'table')
+    MINUS_ELEMS_D = asDict(('section', 'table'))
 
     @staticmethod
     def create(elem):
@@ -25,38 +30,45 @@ class PodElement:
            for creating expressions, for example.'''
         return eval(PodElement.OD_TO_POD[elem])()
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Text(PodElement):
-    OD = XmlElement('p', nsUri=ns.NS_TEXT)
+    OD = Tag('p', nsUri=ns.NS_TEXT)
     # When generating an error we may need to surround it with a given tag and
     # sub-tags.
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Title(PodElement):
-    OD = XmlElement('h', nsUri=ns.NS_TEXT)
+    OD = Tag('h', nsUri=ns.NS_TEXT)
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Item(PodElement):
-    OD = XmlElement('list-item', nsUri=ns.NS_TEXT)
+    OD = Tag('list-item', nsUri=ns.NS_TEXT)
     subTags = [Text.OD]
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Section(PodElement):
-    OD = XmlElement('section', nsUri=ns.NS_TEXT)
+    OD = Tag('section', nsUri=ns.NS_TEXT)
     subTags = [Text.OD]
     # When we must remove the Section element from a buffer, the deepest element
     # to remove is the Section element itself.
     DEEPEST_TO_REMOVE = OD
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Cell(PodElement):
-    OD = XmlElement('table-cell', nsUri=ns.NS_TABLE)
+    OD = Tag('table-cell', nsUri=ns.NS_TABLE)
     subTags = [Text.OD]
     def __init__(self):
         self.tableInfo = None # ~OdTable~
         self.colIndex = None # The column index for this cell, within its table.
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Row(PodElement):
-    OD = XmlElement('table-row', nsUri=ns.NS_TABLE)
+    OD = Tag('table-row', nsUri=ns.NS_TABLE)
     subTags = [Cell.OD, Text.OD]
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Table(PodElement):
-    OD = XmlElement('table', nsUri=ns.NS_TABLE)
+    OD = Tag('table', nsUri=ns.NS_TABLE)
     subTags = [Row.OD, Cell.OD, Text.OD]
     # When we must remove the Table element from a buffer, the deepest element
     # to remove is the Cell (it can only be done for one-row, one-cell tables).
@@ -64,17 +76,20 @@ class Table(PodElement):
     def __init__(self):
         self.tableInfo = None # ~OdTable~
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Frame(PodElement):
-    OD = XmlElement('frame', nsUri=ns.NS_DRAW)
+    OD = Tag('frame', nsUri=ns.NS_DRAW)
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Doc(PodElement):
     '''Represents the base tag for a complete ODT document'''
-    OD = XmlElement('text', nsUri=ns.NS_OFFICE)
+    OD = Tag('text', nsUri=ns.NS_OFFICE)
     # End tag for the main tag representing the document
     END_TAG = '</office:text>'
     # End tag for the sub-tag containing sequence declarations
     SD_END_TAG = '</text:sequence-decls>'
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Expression(PodElement):
     '''Represents a Python expression that is found in a pod or px.'''
     OD = None
@@ -130,11 +145,11 @@ class Expression(PodElement):
         '''Gets the expression in its unevaluated form'''
         if not self.pod: return '' # Works just for pod
         wrap = self.metaWraps[self.metaWrap]
-        res = '<text:conditional-text text:condition="ooow:%s%s%s" ' \
-               'text:string-value-if-true="%s" ' \
-               'text:string-value-if-false="">%s</text:conditional-text>' % \
-               (wrap, self.metaCondition, wrap, self.expr, self.expr)
-        return res
+        cond = self.metaCondition
+        return f'<text:conditional-text text:condition="ooow:' \
+               f'{wrap}{cond}{wrap}" text:string-value-if-true="{self.expr}" ' \
+               f'text:string-value-if-false="">{self.expr}</text:conditional-' \
+               f'text>'
 
     def _eval(self, context):
         '''Evaluates self.expr with p_context. If self.errorExpr is defined,
@@ -142,12 +157,12 @@ class Expression(PodElement):
         eval = context['_eval_'].run
         if self.errorExpr:
             try:
-                res = eval(self.expr, context)
+                r = eval(self.expr, context)
             except Exception:
-                res = eval(self.errorExpr, context)
+                r = eval(self.errorExpr, context)
         else:
-            res = eval(self.expr, context)
-        return res
+            r = eval(self.expr, context)
+        return r
 
     def _evalMetaCondition(self, context):
         '''Checks whether the expression really needs to be evaluated'''
@@ -184,33 +199,28 @@ class Expression(PodElement):
         # pod/px result.
         resultType = res.__class__.__name__
         if resultType == 'NoneType':
-            res = u''
-        elif resultType == 'str':
-            try:
-                res = res.decode('utf-8')
-            except UnicodeDecodeError:
-                res = u'?' # Some unreadable char
-        elif resultType == 'unicode':
-            pass # Don't perform any conversion, unicode is the target type
+            res = ''
         elif resultType == 'Px':
             # A PX that must be called within the current PX. Call it with the
             # current context.
             res = res(context, applyTemplate=False)
             # Force escapeXml to False
             escapeXml = False
-        else:
-            res = unicode(res)
+        elif resultType != 'str':
+            # "str" is the target type
+            res = str(res)
         return res, escapeXml
 
     def __repr__(self):
         '''String representation for an expression'''
-        res = self.expr
-        if self.errorExpr: res += '|%s' % self.errorExpr
-        if self.escapeXml: res = ':' + res
-        if self.metaCondition: res += '[MC=%s]' % self.metaCondition
-        name = self.pod and 'Pod' or 'Px'
-        return '<%sExpr %s>' % (name, res)
+        r = self.expr
+        if self.errorExpr: r = f'{r}|{self.errorExpr}'
+        if self.escapeXml: r = f':{r}'
+        if self.metaCondition: r = f'{r}[MC={self.metaCondition}]'
+        name = 'Pod' if self.pod else 'Px'
+        return f'<{name}Expr {r}>'
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Attributes(PodElement):
     '''Represents a bunch of XML attributes that will be dumped for a given tag
        in the result. pod-only.'''
@@ -251,7 +261,7 @@ class Attributes(PodElement):
         try:
             self.tiedExpression.evaluate(context)
             self.tiedExpression.evaluated = True
-        except Exception, e:
+        except Exception as e:
             # Don't set "evaluated" to True. This way, when the buffer will
             # evaluate the expression directly, we will really evaluate it, so
             # the error will be dumped into the pod result.
@@ -259,11 +269,12 @@ class Attributes(PodElement):
         # Analyse the return type of the expression.
         self.computeAttributes(self.tiedExpression)
         # Now, self.attrs has been populated. Transform it into a string.
-        res = ''
-        for name, value in self.attrs.iteritems():
-            res += ' %s=%s' % (name, quoteattr(value))
-        return res
+        r = ''
+        for name, value in self.attrs.items():
+            r += f' {name}={quoteattr(value)}'
+        return r
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Attribute(PodElement):
     '''Represents an HTML special attribute like "selected" or "checked".
        px-only.'''
@@ -278,6 +289,6 @@ class Attribute(PodElement):
     def evaluate(self, context):
         # If p_self.expr evaluates to False, do not dump the attribute at all
         if context['_eval_'].run(self.expr, context):
-            return ' %s="%s"' % (self.name, self.name)
+            return f' {self.name}="{self.name}"'
         return ''
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -1,5 +1,5 @@
 # ~license~
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 '''Integration with RestrictedPython'''
 
@@ -7,17 +7,17 @@
 # want all Python expressions evaluated by POD to pass through the
 # RestrictedPython filter.
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 RP_N_INS  = 'Please install RestrictedPython before using this.'
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 try:
     import RestrictedPython as rp
     installed = True
 except ImportError:
     installed = False
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Evaluator:
     '''RestrictedPython-specific evaluator'''
 
@@ -76,7 +76,7 @@ class Evaluator:
             context.update(self.custom)
         else:
             # Use p_self's attributes
-            for key, name in Evaluator.contextMap.iteritems():
+            for key, name in Evaluator.contextMap.items():
                 val = getattr(self, name)
                 if val:
                     context[key] = val
@@ -88,4 +88,4 @@ class Evaluator:
         if self.attr:
             context['_getattr_'] = self.attr
         return eval(rp.compile_restricted(expr, '<string>', 'eval'), context)
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -1,15 +1,17 @@
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
-# ------------------------------------------------------------------------------
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import re
-from appy.shared.xml_parser import XmlElement
+
+from appy.xml import Tag
+from appy.pod.elements import *
 from appy.pod.buffers import FileBuffer, MemoryBuffer
 from appy.pod.odf_parser import OdfEnvironment, OdfParser
-from appy.pod.elements import *
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OdTable:
     '''Informations about the currently parsed Open Document (Od)table'''
-
     def __init__(self):
         self.nbOfColumns = 0
         self.nbOfRows = 0
@@ -19,28 +21,30 @@ class OdTable:
     def isOneCell(self):
         return self.nbOfColumns == 1 and self.nbOfRows == 1
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OdInsert:
     '''While parsing an odt/pod file, we may need to insert a specific odt chunk
        at a given place in the odt file (ie: add the pod-specific fonts and
        styles). OdInsert instances define such 'inserts' (what to insert and
        when).'''
-    def __init__(self, odtChunk, elem, nsUris={}):
-        self.odtChunk = odtChunk.decode('utf-8') # The odt chunk to insert
-        # The p_odtChunk will be inserted just after the p_elem starts, which
-        # must be an XmlElement instance. If more than one p_elem is present in
-        # the odt file, the p_odtChunk will be inserted only at the first
-        # p_elem occurrence.
-        self.elem = elem
+    def __init__(self, odtChunk, tag, nsUris={}):
+        # The odt chunk to insert
+        self.odtChunk = odtChunk
+        # The p_odtChunk will be inserted just after the p_tag starts. If more
+        # than one p_tag is present in the odt file, the p_odtChunk will be
+        # inserted only at the first p_tag occurrence.
+        self.tag = tag
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PodEnvironment(OdfEnvironment):
     '''Contains all elements representing the current parser state during
        parsing.'''
     # Possibles modes
-    # ADD_IN_BUFFER: when encountering an impactable element, we must
-    #                continue to dump it in the current buffer
+    # ADD_IN_BUFFER: when encountering an impactable tag, we must continue to
+    #                dump it in the current buffer.
     ADD_IN_BUFFER = 0
-    # ADD_IN_SUBBUFFER: when encountering an impactable element, we must
-    #                   create a new sub-buffer and dump it in it.
+    # ADD_IN_SUBBUFFER: when encountering an impactable tag, we must create a
+    #                   new sub-buffer and dump it in it.
     ADD_IN_SUBBUFFER = 1
     # Possible states
     IGNORING = 0 # We are ignoring what we are currently reading
@@ -70,9 +74,9 @@ class PodEnvironment(OdfEnvironment):
         # Current state
         self.state = self.READING_CONTENT
         # Elements we must ignore (they will not be included in the result)
-        self.ignorableElems = None # Will be set after namespace propagation
+        self.ignorableTags = None # Will be set after namespace propagation
         # Elements that may be impacted by POD statements
-        self.impactableElems = None # Idem
+        self.impactableTags = None # Idem
         # Elements representing start and end tags surrounding expressions
         self.exprStartElems = self.exprEndElems = None # Idem
         # Stack of currently visited tables
@@ -112,26 +116,26 @@ class PodEnvironment(OdfEnvironment):
         return res
 
     def transformInserts(self):
-        '''Now the namespaces were parsed; I can put p_inserts in the form of a
+        '''Now the namespaces were parsed; p_inserts can be set in the form of a
            dict for easier and more performant access while parsing.'''
-        res = {}
-        if not self.inserts: return res
+        r = {}
+        if not self.inserts: return r
         for insert in self.inserts:
-            elemName = insert.elem.getFullName(self.namespaces)
-            if not res.has_key(elemName):
-                res[elemName] = insert
-        return res
+            tagName = insert.tag.getFullName(self.namespaces)
+            if tagName not in r:
+                r[tagName] = insert
+        return r
 
-    def manageInserts(self, elem):
+    def manageInserts(self, tag):
         '''We just dumped the start of an elem. Here we will insert any odt
            chunk if needed.'''
-        if self.inserts.has_key(elem):
-            insert = self.inserts[elem]
+        if tag in self.inserts:
+            insert = self.inserts[tag]
             self.currentBuffer.write(insert.odtChunk)
             # The insert is destroyed after single use
-            del self.inserts[elem]
+            del self.inserts[tag]
 
-    def onStartElement(self, elem, attrs):
+    def onStartElement(self, tag, attrs):
         ns = self.namespaces
         if not self.gotNamespaces:
             # We suppose that all the interesting (from the POD point of view)
@@ -141,24 +145,24 @@ class PodEnvironment(OdfEnvironment):
             self.gotNamespaces = True
             self.propagateNamespaces()
         tableNs = self.ns(self.NS_TABLE)
-        if elem == Table.OD.elem:
+        if tag == Table.OD.nsName:
             self.tableStack.append(OdTable())
             self.tableIndex += 1
-        elif elem == Row.OD.elem:
+        elif tag == Row.OD.nsName:
             table = self.getTable()
             table.nbOfRows += 1
             table.curColIndex = -1
             table.curRowAttrs = attrs
-        elif elem == Cell.OD.elem:
+        elif tag == Cell.OD.nsName:
             colspan = 1
             attrSpan = self.tags['number-columns-spanned']
-            if attrs.has_key(attrSpan):
+            if attrSpan in attrs:
                 colspan = int(attrs[attrSpan])
             self.getTable().curColIndex += colspan
-        elif elem == self.tags['table-column']:
+        elif tag == self.tags['table-column']:
             table = self.getTable()
             cols = self.tags['number-columns-repeated']
-            if attrs.has_key(cols):
+            if cols in attrs:
                 table.nbOfColumns += int(attrs[cols])
             else:
                 table.nbOfColumns += 1
@@ -166,7 +170,7 @@ class PodEnvironment(OdfEnvironment):
 
     def onEndElement(self):
         ns = self.namespaces
-        if self.currentElem.elem == Table.OD.elem:
+        if self.currentTag.nsName == Table.OD.nsName:
             self.tableStack.pop()
             self.tableIndex -= 1
         return ns
@@ -206,14 +210,15 @@ class PodEnvironment(OdfEnvironment):
           'number-columns-repeated': '%s:number-columns-repeated' % table,
         }
         self.tags = tags
-        self.ignorableElems = (tags['tracked-changes'], tags['change'])
+        self.ignorableTags = (tags['tracked-changes'], tags['change'])
         self.exprStartElems = [self.exprStartTags[holder] \
                                for holder in self.expressionsHolders]
         self.exprEndElems = [self.exprEndTags[holder] \
                              for holder in self.expressionsHolders]
-        self.impactableElems = (Text.OD.elem, Title.OD.elem, Item.OD.elem,
-                                Table.OD.elem, Row.OD.elem, Cell.OD.elem,
-                                Section.OD.elem, Frame.OD.elem, Doc.OD.elem)
+        self.impactableTags = (
+          Text.OD.nsName, Title.OD.nsName, Item.OD.nsName   , Table.OD.nsName,
+          Row.OD.nsName , Cell.OD.nsName , Section.OD.nsName, Frame.OD.nsName,
+          Doc.OD.nsName)
         self.inserts = self.transformInserts()
 
     def getExpression(self, elem):
@@ -227,7 +232,7 @@ class PodEnvironment(OdfEnvironment):
         self.currentContent = ''
         return r.strip()
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PodParser(OdfParser):
     def __init__(self, env, caller):
         OdfParser.__init__(self, env, caller)
@@ -236,29 +241,28 @@ class PodParser(OdfParser):
     def endDocument(self):
         self.env.currentBuffer.content.close()
 
-    def startElement(self, elem, attrs):
-        e = OdfParser.startElement(self, elem, attrs)
-        ns = e.onStartElement(elem, attrs)
+    def startElement(self, tag, attrs):
+        e = OdfParser.startElement(self, tag, attrs)
+        ns = e.onStartElement(tag, attrs)
         officeNs = ns[e.NS_OFFICE]
         textNs = ns[e.NS_TEXT]
         tableNs = ns[e.NS_TABLE]
-        if elem in e.ignorableElems:
+        if tag in e.ignorableTags:
             e.state = e.IGNORING
-        elif elem == e.tags['annotation']:
+        elif tag == e.tags['annotation']:
             # Be it in an ODT or ODS template, an annotation is considered to
             # contain a POD statement.
             e.state = e.READING_STATEMENT
-        elif elem in e.exprStartElems:
+        elif tag in e.exprStartElems:
             # Any track-changed text or being in a conditional or input field is
             # considered to be a POD expression.
             e.state = e.READING_EXPRESSION
             e.exprHasStyle = False
-            if (elem == 'text:database-display') and \
-               attrs.has_key('text:column-name'):
+            if (tag == 'text:database-display') and \
+               ('text:column-name' in attrs):
                 e.currentDbExpression = attrs['text:column-name']
-        elif (elem == e.tags['table-cell']) and \
-             attrs.has_key(e.tags['formula']) and \
-             attrs.has_key(e.tags['value-type']) and \
+        elif (tag == e.tags['table-cell']) and e.tags['formula'] in attrs and \
+             e.tags['value-type'] in attrs and \
              (attrs[e.tags['value-type']] == 'string') and \
              attrs[e.tags['formula']].startswith('of:="'):
             # In an ODS template, any cell containing a formula of type "string"
@@ -271,8 +275,8 @@ class PodParser(OdfParser):
             # converted to the result of evaluating the POD expression.
             if e.mode == e.ADD_IN_SUBBUFFER:
                 e.addSubBuffer()
-            e.currentBuffer.addElement(e.currentElem.name)
-            hook = e.currentBuffer.dumpStartElement(elem, attrs,
+            e.currentBuffer.addElement(e.currentTag.name)
+            hook = e.currentBuffer.dumpStartElement(tag, attrs,
                      ignoreAttrs=(e.tags['formula'], e.tags['string-value'],
                                   e.tags['value-type']),
                      hook=True)
@@ -283,29 +287,29 @@ class PodParser(OdfParser):
             if e.state == e.IGNORING:
                 pass
             elif e.state == e.READING_CONTENT:
-                if elem in e.impactableElems:
+                if tag in e.impactableTags:
                     if e.mode == e.ADD_IN_SUBBUFFER:
                         e.addSubBuffer()
-                    e.currentBuffer.addElement(e.currentElem.name)
-                e.currentBuffer.dumpStartElement(elem, attrs)
+                    e.currentBuffer.addElement(e.currentTag.name)
+                e.currentBuffer.dumpStartElement(tag, attrs)
             elif e.state == e.READING_STATEMENT:
                 pass
             elif e.state == e.READING_EXPRESSION:
-                if (elem == (e.tags['span'])) and not e.currentContent.strip():
-                    e.currentBuffer.dumpStartElement(elem, attrs)
+                if (tag == (e.tags['span'])) and not e.currentContent.strip():
+                    e.currentBuffer.dumpStartElement(tag, attrs)
                     e.exprHasStyle = True
-        e.manageInserts(elem)
+        e.manageInserts(tag)
 
-    def endElement(self, elem):
+    def endElement(self, tag):
         e = self.env
         ns = e.onEndElement()
-        current = e.currentElem
-        OdfParser.endElement(self, elem) # Pops the currently walked element
+        current = e.currentTag
+        OdfParser.endElement(self, tag) # Pops the currently walked element
         officeNs = ns[e.NS_OFFICE]
         textNs = ns[e.NS_TEXT]
-        if elem in e.ignorableElems:
+        if tag in e.ignorableTags:
             e.state = e.READING_CONTENT
-        elif elem == e.tags['annotation']:
+        elif tag == e.tags['annotation']:
             # Manage statement
             oldCb = e.currentBuffer
             actionElemIndex = oldCb.createPodActions(e.currentStatement)
@@ -329,12 +333,12 @@ class PodParser(OdfParser):
                     e.currentOdsExpression = None
                     e.currentOdsHook = None
                 # Dump the ending tag
-                e.currentBuffer.dumpEndElement(elem)
-                if elem in e.impactableElems:
+                e.currentBuffer.dumpEndElement(tag)
+                if tag in e.impactableTags:
                     if isinstance(e.currentBuffer, MemoryBuffer):
-                        isMainElement = e.currentBuffer.isMainElement(elem)
+                        isMainElement = e.currentBuffer.isMainElement(tag)
                         # Unreference the element among buffer.elements
-                        e.currentBuffer.unreferenceElement(elem)
+                        e.currentBuffer.unreferenceElement(tag)
                         if isMainElement:
                             parent = e.currentBuffer.parent
                             if not e.currentBuffer.action:
@@ -353,14 +357,14 @@ class PodParser(OdfParser):
                                 e.currentBuffer = parent
                             e.mode = e.ADD_IN_SUBBUFFER
             elif e.state == e.READING_STATEMENT:
-                if elem == Text.OD.elem:
+                if tag == Text.OD.nsName:
                     statementLine = e.currentContent.strip()
                     if statementLine:
                         e.currentStatement.append(statementLine)
                     e.currentContent = ''
             elif e.state == e.READING_EXPRESSION:
-                if elem in e.exprEndElems:
-                    expression = e.getExpression(elem)
+                if tag in e.exprEndElems:
+                    expression = e.getExpression(tag)
                     # Manage expression
                     e.currentBuffer.addExpression(expression, current)
                     if e.exprHasStyle:
@@ -380,8 +384,8 @@ class PodParser(OdfParser):
                 e.currentBuffer.dumpContent(content)
         elif e.state == e.READING_STATEMENT:
             # Ignore note meta-data: creator, date, sender-initials.
-            if e.currentElem.elem in e.NOTE_TAGS:
+            if e.currentTag.nsName in e.NOTE_TAGS:
                 e.currentContent += content
         elif e.state == e.READING_EXPRESSION:
             e.currentContent += content
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

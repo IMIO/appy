@@ -10,7 +10,6 @@
 *.log
 .*.cfg
 .coverage
-bin/
 build/
 develop-eggs/
 downloads/

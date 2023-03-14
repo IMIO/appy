@@ -1,168 +1,107 @@
-'''Appy allows you to create easily complete applications in Python'''
+'''Appy is the simpliest way to build complex webapps'''
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
-# ------------------------------------------------------------------------------
-import os.path
-import version
-commercial = False
 
-# ------------------------------------------------------------------------------
-def getPath(): return os.path.dirname(__file__)
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import pathlib
+# Store here the path to the Appy root package, it is often requested
+path = pathlib.Path(__file__).parent
 
-def getVersion():
-    '''Returns a string containing the short and verbose Appy version'''
-    if version.short == 'dev': return 'dev'
-    return '%s (%s)' % version.short, version.verbose
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Config:
+    '''Root of all configuration options for your app'''
 
-def versionIsGreaterThanOrEquals(v):
-    '''This method returns True if the current Appy version is greater than or
-       equals p_v. p_v must have a format like "0.5.0".'''
-    if version.short == 'dev':
-        # We suppose that a developer knows what he is doing, so we return True
-        return True
-    else:
-        paramVersion = [int(i) for i in v.split('.')]
-        currentVersion = [int(i) for i in version.short.split('.')]
-        return currentVersion >= paramVersion
+    # These options are those managed by the app developer: they are not meant
+    # to be edited during the app lifetime by end users. For such "end-user"
+    # configuration options, you must extend the appy.model.tool.Tool class,
+    # designed for that purpose. In short, this Config file represents the "RAM"
+    # configuration, while the unique appy.model.tool.Tool instance within every
+    # app contains its "DB" configuration.
 
-# ------------------------------------------------------------------------------
-class Object:
-    '''At every place we need an object, but without any requirement on its
-       class (methods, attributes,...) we will use this minimalist class.'''
+    # In your app/__init__.py, create a class named "Config" that inherits from
+    # this one and will override some of the atttibutes defined here, ie:
 
-    def __init__(self, **fields):
-        for k, v in fields.iteritems():
-            setattr(self, k, v)
+    # import appy
+    # class Config(appy.Config):
+    #     someAttribute = "someValue"
 
-    def __repr__(self):
-        res = u'<O '
-        for attrName, attrValue in self.__dict__.iteritems():
-            v = attrValue
-            if hasattr(v, '__repr__'):
-                v = v.__repr__()
-            try:
-                res += u'%s=%s ' % (attrName, v)
-            except UnicodeDecodeError:
-                res += u'%s=<encoding problem> ' % attrName
-        res  = res.strip() + '>'
-        return res.encode('utf-8')
+    # If "someAttribute" is not a standard Appy attribute, this is a way to add
+    # your own configuration attributes.
 
-    def __nonzero__(self): return bool(self.__dict__)
+    # If you want to modify existing attributes, like model configuration or
+    # user interface configuration (that, if you have used appy/bin/make to
+    # generate your app, are already instantiated in attributes "model" and
+    # "ui"), after the attribute definition, modify it like this:
 
-    def d(self): return self.__dict__
+    # class Config(appy.Config):
+    #     ...
+    #     ui.languages = ('en', 'fr')
+    #     model.rootClasses = ['MyClass']
 
-    def get(self, name, default=None): return getattr(self, name, default)
+    # Place here a appy.server.Config instance defining the configuration
+    # of the Appy HTTP server.
+    server = None
+    # Place here a appy.server.guard.Config instance defining security options
+    security = None
+    # Place here a appy.database.Config instance defining database options
+    database = None
+    # Place here a appy.database.log.Config instance defining logging options
+    log = None
+    # Place here a appy.model.Config instance defining the application model
+    model = None
+    # Place here a appy.ui.Config instance defining user-interface options
+    ui = None
+    # When using a SMTP mail server for sending emails from your app, place an
+    # instance of class appy.utils.mail.Config in the field below.
+    mail = None
+    # Place here a appy.server.scheduler.Config instance, defining cron-like
+    # actions being automatically triggered.
+    jobs = None
+    # Place here an instance of appy.server.backup.Config if you want to backup
+    # data and logs from a Appy site.
+    backup = None
+    # Place here a appy.deploy.Config instance defining how to deploy this app
+    # on distant servers.
+    deploy = None
+    # In order to enable Google Analytics on your app, place here an instance of
+    # appy.utils.analytics.Analytics.
+    analytics = None
+    # When using Ogone, place an instance of appy.model.fields.ogone.Config in
+    # the field below.
+    ogone = None
+    # When using POD fields for producing documents with appy.pod, place here an
+    # instance of appy.model.fields.pod.Config
+    pod = None
+    # When the app has an extension, the name of this latter will be stored
+    # in the following attribute. Do not set it directly: it must be done via
+    # method m_declareExt below. If you use script appy/bin/make to create an
+    # ext, a call to declareExt will be present in the generated ext's
+    # __init__.py file.
+    ext = None
+    # An Appy site may communicate with peer sites. Defining peer sites is done
+    # by placing, in the following attribute, an instance of appy.peer.Config.
+    peers = None
 
-    def __getitem__(self, k):
-        '''Dict-like attribute get'''
-        return getattr(self, k)
+    @classmethod
+    def declareExt(class_, path):
+        '''Declares an extension to this app, whose path is p_path'''
+        name = path.name
+        class_.ext = name
+        # Add the ext's "static" folder to the static map
+        class_.server.static.map[name] = path / 'static'
 
-    def __setitem__(self, k, v):
-        '''Dict-like attribute set'''
-        self.__dict__[k] = v
-
-    def __eq__(self, other):
-        '''Equality between objects is, like standard Python dicts, based on
-           equality of all their attributes and values.'''
-        if isinstance(other, Object):
-            return self.__dict__ == other.__dict__
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def update(self, other):
-        '''Includes information from p_other into p_self'''
-        for k, v in other.__dict__.iteritems():
-            setattr(self, k, v)
-
-    def clone(self):
-        r = Object()
-        r.update(self)
-        return r
-
-# ------------------------------------------------------------------------------
-class Hack:
-    '''This class proposes methods for patching some existing code with
-       alternative methods.'''
-    @staticmethod
-    def patch(method, replacement, klass=None):
-        '''This method replaces m_method with a p_replacement method, but
-           keeps p_method on its class under name
-           "_base_<initial_method_name>_". In the patched method, one may use
-           Hack.base to call the base method. If p_method is static, you must
-           specify its class in p_klass.'''
-        # Get the class on which the surgery will take place
-        isStatic = klass
-        klass = klass or method.im_class
-        # On this class, store m_method under its "base" name
-        name = isStatic and method.func_name or method.im_func.__name__
-        baseName = '_base_%s_' % name
-        if isStatic:
-            # If "staticmethod" isn't called hereafter, the static functions
-            # will be wrapped in methods.
-            method = staticmethod(method)
-            replacement = staticmethod(replacement)
-        setattr(klass, baseName, method)
-        setattr(klass, name, replacement)
-
-    @staticmethod
-    def base(method, klass=None):
-        '''Allows to call the base (replaced) method. If p_method is static,
-           you must specify its p_klass.'''
-        isStatic = klass
-        klass = klass or method.im_class
-        name = isStatic and method.func_name or method.im_func.__name__
-        return getattr(klass, '_base_%s_' % name)
-
-    @staticmethod
-    def inject(patchClass, klass, verbose=False):
-        '''Injects any method or attribute from p_patchClass into klass.'''
-        # As a preamble, inject methods and attributes from p_patchClass's base
-        # classes, if any.
-        for base in patchClass.__bases__:
-            Hack.inject(base, klass, verbose=verbose)
-        patched = []
-        added = []
-        # Inject p_patchClass' own methods and attributes
-        for name, attr in patchClass.__dict__.items():
-            if name.startswith('__'): continue # Ignore special methods
-            # Unwrap functions from static methods
-            try:
-                className = attr.__class__.__name__
-            except AttributeError:
-                # In Python 2, classes themselves have no defined class
-                className = 'type'
-            if className == 'staticmethod':
-                attr = attr.__get__(attr)
-                static = True
-            else:
-                static = False
-            # Is this name already defined on p_klass ?
-            if hasattr(klass, name):
-                hasAttr = True
-                klassAttr = getattr(klass, name)
-            else:
-                hasAttr = False
-                klassAttr = None
-            if hasAttr and (className != 'type') and \
-               callable(attr) and callable(klassAttr):
-                # Patch this method via Hack.patch
-                if static:
-                    Hack.patch(klassAttr, attr, klass)
-                else:
-                    Hack.patch(klassAttr, attr)
-                patched.append(name)
-            else:
-                # Simply replace the static attr or add the new static
-                # attribute or method.
-                setattr(klass, name, attr)
-                added.append(name)
-        if verbose:
-            pName = patchClass.__name__
-            cName = klass.__name__
-            print '%d method(s) patched from %s to %s (%s)' % \
-                  (len(patched), pName, cName, str(patched))
-            print '%d method(s) and/or attribute(s) added from %s to %s (%s)'%\
-                  (len(added), pName, cName, str(added))
-# ------------------------------------------------------------------------------
+    @classmethod
+    def check(self):
+        '''Ensures the config is valid. Called at server startup'''
+        # Collect potential warning or info messages
+        messages = []
+        self.server.check(messages)
+        self.server.static.check(messages)
+        self.security.check(messages)
+        if self.jobs:
+            self.jobs.check(messages)
+        if self.backup:
+            self.backup.check(messages)
+        return messages
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

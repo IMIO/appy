@@ -1,126 +1,125 @@
+#!/usr/bin/python3
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
-# ------------------------------------------------------------------------------
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from pathlib import Path
 import os, os.path, sys, zipfile, re, shutil
-from appy.shared.test import Tester, TestFactory, TesterError
-from appy.shared.test import Test as BaseTest
-from appy.shared.utils import FolderDeleter
-from appy.shared.xml_parser import Escape
-from appy.pod.odf_parser import OdfEnvironment, OdfParser
+
+from appy.xml.escape import Escape
 from appy.pod.renderer import Renderer
-from appy.pod.styles_manager import \
-     TableProperties, BulletedProperties, NumberedProperties
+from appy.pod import styles_manager as sm
+from appy.test.integration import Test as BaseTest
+from appy.pod.odf_parser import OdfEnvironment, OdfParser
+from appy.test.integration import Tester, TestFactory, TesterError
 
-# TesterError-related constants ------------------------------------------------
-TEMPLATE_NOT_FOUND = 'Template file "%s" was not found.'
-CONTEXT_NOT_FOUND = 'Context file "%s" was not found.'
-EXPECTED_RESULT_NOT_FOUND = 'Expected result "%s" was not found.'
+# TesterError-related constants  - - - - - - - - - - - - - - - - - - - - - - - -
+TEMPLATE_KO = 'Template file "%s" was not found.'
+CONTEXT_KO  = 'Context file "%s" was not found.'
+EXP_RES_KO  = 'Expected result "%s" was not found.'
 
-# ------------------------------------------------------------------------------
-def sjoin(folder, name):
-    '''Shorthand for os.path.joining unicode strings.'''
-    return str(os.path.join(folder, name))
-
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class AnnotationsRemover(OdfParser):
     '''This parser is used to remove from content.xml and styles.xml the
        Python tracebacks that may be dumped into OpenDocument annotations by
        pod when generating errors. Indeed, those tracebacks contain lot of
        machine-specific info, like absolute paths to the python files, etc.'''
+
     def __init__(self, env, caller):
         OdfParser.__init__(self, env, caller)
-        self.res = u''
-        self.inAnnotation = False # Are we parsing an annotation ?
-        self.textEncountered = False # Within an annotation, have we already
-        # met a text ?
-        self.ignore = False # Must we avoid dumping the current tag/content
-        # into the result ?
+        self.r = ''
+        # Are we parsing an annotation ?
+        self.inAnnotation = False
+        # Within an annotation, have we already met a text ?
+        self.textEncountered = False
+        # Must we avoid dumping the current tag/content into the result ?
+        self.ignore = False
 
-    def startElement(self, elem, attrs):
-        e = OdfParser.startElement(self, elem, attrs)
+    def startElement(self, tag, attrs):
+        e = OdfParser.startElement(self, tag, attrs)
         # Do we enter into an annotation ?
-        if elem == '%s:annotation' % e.ns(e.NS_OFFICE):
+        if tag == f'{e.ns(e.NS_OFFICE)}:annotation':
             self.inAnnotation = True
             self.textEncountered = False
-        elif elem == '%s:p' % e.ns(e.NS_TEXT):
+        elif tag == f'{e.ns(e.NS_TEXT)}:p':
             if self.inAnnotation:
                 if not self.textEncountered:
                     self.textEncountered = True
                 else:
                     self.ignore = True
         if not self.ignore:
-            self.res += '<%s' % elem
-            for attrName, attrValue in attrs.items():
-                self.res += ' %s="%s"' % \
-                            (attrName, Escape.xml(attrValue, escapeApos=True))
-            self.res += '>'
+            self.r += f'<{tag}'
+            for name, value in attrs.items():
+                self.r += f' {name}="{Escape.xml(value,escapeApos=True)}"'
+            self.r += '>'
 
-    def endElement(self, elem):
+    def endElement(self, tag):
         e = self.env
-        if elem == '%s:annotation' % e.ns(e.NS_OFFICE):
+        if tag == f'{e.ns(e.NS_OFFICE)}:annotation':
             self.inAnnotation = False
             self.ignore = False
         if not self.ignore:
-            self.res += '</%s>' % elem
-        OdfParser.endElement(self, elem)
+            self.r += f'</{tag}>'
+        OdfParser.endElement(self, tag)
 
     def characters(self, content):
         e = OdfParser.characters(self, content)
-        if not self.ignore: self.res += Escape.xml(content)
+        if not self.ignore: self.r += Escape.xml(content)
 
     def getResult(self):
-        return self.res
+        return self.r.encode()
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Test(BaseTest):
     '''Abstract test class'''
     interestingOdtContent = ('content.xml', 'styles.xml')
+
     # "list-style"s can be generated in random order
     ignoreTags = ((OdfEnvironment.NS_DC, 'date'),
                   (OdfEnvironment.NS_STYLE, 'style'),
-                  (OdfEnvironment.NS_TEXT, 'list-style'),
-                  (OdfEnvironment.NS_STYLE, 'font-face'))
-    # 'text:style-name's can contained generated names base on time.time
+                  (OdfEnvironment.NS_STYLE, 'font-face'),
+                  (OdfEnvironment.NS_TEXT, 'list-style'))
+
+    # Tags "text:style-name" can contain generated names based on time.time
     ignoreAttrs = ('draw:name', 'text:name', 'text:bullet-char', 'table:name',
-                   'table:style-name', 'text:style-name', 'xlink:href',
-                   'xml:id')
+                  'table:style-name', 'text:style-name', 'xlink:href', 'xml:id',
+                  'text:date-value', 'text:time-value')
 
     def __init__(self, testData, testDescription, testFolder,
                  config, flavour, rendererParams):
         BaseTest.__init__(self, testData, testDescription, testFolder, config,
                           flavour, rendererParams)
-        self.templatesFolder = os.path.join(self.testFolder, 'templates')
-        self.contextsFolder = os.path.join(self.testFolder, 'contexts')
-        self.resultsFolder = os.path.join(self.testFolder, 'results')
+        self.templatesPath = Path(self.testFolder) / 'templates'
+        self.contextsPath = Path(self.testFolder) / 'contexts'
+        self.resultsPath = Path(self.testFolder) / 'results'
         self.result = None
         self.rendererParams = rendererParams
 
     def getContext(self, contextName):
         '''Gets the objects that are in the context'''
-        contextPy = os.path.join(self.contextsFolder, contextName + '.py')
-        if not os.path.exists(contextPy):
-            raise TesterError(CONTEXT_NOT_FOUND % contextPy)
-        contextPkg = 'appy.pod.test.contexts.%s' % contextName
-        exec 'import %s' % contextPkg
-        exec 'context = dir(%s)' % contextPkg
-        res = {}
-        for elem in context:
+        contextPy = self.contextsPath / f'{contextName}.py'
+        if not contextPy.is_file():
+            raise TesterError(CONTEXT_KO % str(contextPy))
+        exec(f'from appy.pod.test.contexts import {contextName}')
+        module = eval(contextName)
+        r = {}
+        for elem in dir(module):
             if not elem.startswith('__'):
-                exec 'res[elem] = %s.%s' % (contextPkg, elem)
-        return res
+                r[elem] = getattr(module, elem)
+        return r
 
     def do(self):
-        tempFileName = '%s.%s' % (self.data['Name'], self.data['Result'])
-        self.result = sjoin(self.tempFolder, tempFileName)
-        # Get the path to the template to use for this test
-        if self.data['Template'].endswith('.ods'):
-            suffix = ''
-        else:
-            # For ODT, which is the most frequent case, no need to specify the
-            # file extension.
-            suffix = '.odt'
-        template = sjoin(self.templatesFolder, self.data['Template'] + suffix)
-        if not os.path.exists(template):
-            raise TesterError(TEMPLATE_NOT_FOUND % template)
+        '''Runs the test'''
+        tempFileName = f'{self.data["Name"]}.{self.data["Result"]}'
+        self.result = self.tempFolder / tempFileName
+        # Get the path to the template to use for this test. For ODT, which is
+        # the most frequent case, the file extension is not specified (so, add
+        # it).
+        suffix = '' if self.data['Template'].endswith('.ods') else '.odt'
+        template = self.templatesPath / (self.data['Template'] + suffix)
+        if not template.is_file():
+            raise TesterError(TEMPLATE_KO % template)
         # Get the context
         context = self.getContext(self.data['Context'])
         # Get the LibreOffice port
@@ -132,22 +131,19 @@ class Test(BaseTest):
         params = {'ooPort': ooPort, 'pythonWithUnoPath': pythonWithUno,
                   'stylesMapping': stylesMapping, 'protection': True}
         params.update(self.rendererParams)
-        Renderer(template, context, self.result, **params).run()
+        Renderer(str(template), context, str(self.result), **params).run()
 
-    def getOdtContent(self, odtFile):
+    def getOdtContent(self, odtPath):
         '''Creates in the temp folder content.xml and styles.xml extracted
            from p_odtFile.'''
         contentXml = None
         stylesXml = None
-        if odtFile == self.result:
-            filePrefix = 'actual'
-        else:
-            filePrefix = 'expected'
-        zipFile = zipfile.ZipFile(odtFile)
+        version = 'actual' if odtPath == self.result else 'expected'
+        zipFile = zipfile.ZipFile(str(odtPath))
         for zippedFile in zipFile.namelist():
             if zippedFile in self.interestingOdtContent:
-                f = file(os.path.join(self.tempFolder,
-                                      '%s.%s' % (filePrefix, zippedFile)), 'wb')
+                path = self.tempFolder / f'{version}.{zippedFile}'
+                f = open(path, 'wb')
                 fileContent = zipFile.read(zippedFile)
                 # Python tracebacks that are in annotations include the full
                 # path to the Python files, which of course may be different
@@ -155,36 +151,33 @@ class Test(BaseTest):
                 remover = AnnotationsRemover(OdfEnvironment(), self)
                 remover.parse(fileContent)
                 fileContent = remover.getResult()
-                try:
-                    f.write(fileContent.encode('utf-8'))
-                except UnicodeDecodeError:
-                    f.write(fileContent)
+                f.write(fileContent)
                 f.close()
         zipFile.close()
 
     def checkResult(self):
         '''r_ is False if the test succeeded'''
         # Get styles.xml and content.xml from the actual result
-        res = False
+        r = False
         self.getOdtContent(self.result)
         # Get styles.xml and content.xml from the expected result
-        expectedResult = os.path.join(self.resultsFolder,
-                                  self.data['Name'] + '.' + self.data['Result'])
-        if not os.path.exists(expectedResult):
-            raise TesterError(EXPECTED_RESULT_NOT_FOUND % expectedResult)
+        expectedName = f'{self.data["Name"]}.{self.data["Result"]}'
+        expectedResult = self.resultsPath / expectedName
+        if not expectedResult.is_file():
+            raise TesterError(EXP_RES_KO % str(expectedResult))
         self.getOdtContent(expectedResult)
         for fileName in self.interestingOdtContent:
             diffOccurred = self.compareFiles(
-                os.path.join(self.tempFolder, 'actual.%s' % fileName),
-                os.path.join(self.tempFolder, 'expected.%s' % fileName),
-                areXml=True, xmlTagsToIgnore=Test.ignoreTags,
-                xmlAttrsToIgnore=Test.ignoreAttrs, encoding='utf-8')
+              self.tempFolder / f'actual.{fileName}',
+              self.tempFolder / f'expected.{fileName}', areXml=True,
+              xmlTagsToIgnore=Test.ignoreTags,
+              xmlAttrsToIgnore=Test.ignoreAttrs)
             if diffOccurred:
-                res = True
+                r = True
                 break
-        return res
+        return r
 
-# Concrete test classes --------------------------------------------------------
+# Concrete test classes  - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NominalTest(Test): pass
 class ErrorTest(Test):
     def onError(self):
@@ -192,7 +185,7 @@ class ErrorTest(Test):
         Test.onError(self)
         return not self.isExpectedError(self.data['Message'])
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PodTestFactory(TestFactory):
     @staticmethod
     def createTest(testData, testDescription, testFolder, config, flavour,
@@ -202,11 +195,11 @@ class PodTestFactory(TestFactory):
         return testClass(testData, testDescription, testFolder,
                          config, flavour, rendererParams)
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PodTester(Tester):
     def __init__(self, testPlan):
         Tester.__init__(self, testPlan, [], PodTestFactory)
 
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if __name__ == '__main__': PodTester('Tests.odt').run()
-# ------------------------------------------------------------------------------
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
