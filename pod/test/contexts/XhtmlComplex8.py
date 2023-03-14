@@ -6,6 +6,14 @@ xhtmlInput = '''
 <div style="text-align: justify;">Il charge le Ministre de la Fonction publique de l'exécution de la présente décision.</div>
 </li></ol>
 <p class="pmParaKeepWithNext">&nbsp;</p>
+<!-- li tags into div tags, as produced by Appy's HtmlDiff -->
+<ul>
+  <li>Ligne 1</li>
+  <div name="delete" style="color:red; text-decoration:line-through; rsor:help" title="">
+    <li>Ligne 2</li>
+  </div>
+  <li>Ligne 3</li>
+</ul>
 '''
 
 xhtml2 = '''
