@@ -435,7 +435,7 @@ class WhitespaceCruncher:
         # * converted to real whitespace;
         # * reduced in such a way that there cannot be 2 consecutive
         #   whitespace chars.
-        # ~~~
+        #
         # If p_previous is given, those rules must also apply globally to
         # previous+s.
         r = ''
@@ -461,4 +461,15 @@ def randomName(length=3):
     for i in range(length):
         r.append(random.choice(string.ascii_letters))
     return ''.join(r)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def firstMatch(rex, s):
+    '''Return, among p_s, the first chunk of text matching regular expression(s)
+       specified in p_rex.'''
+    # We do not talk here about precise match (ie method <regex>.search is used,
+    # not <regex>.match).
+    rex = rex if isinstance(rex, (list, tuple)) else [rex]
+    for regex in rex:
+        match = regex.search(s)
+        if match: return match.group(0)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

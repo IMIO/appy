@@ -255,6 +255,10 @@ msgstr "Deze waarde wordt niet geaccepteerd voor dit veld."
 msgid "bad_xml"
 msgstr ""
 
+#. Default: "Content found, considered as invalid or incomplete: ${text}"
+msgid "invalid_text"
+msgstr ""
+
 #. Default: "Choose a value between ${min} and ${max}."
 msgid "range_ko"
 msgstr ""

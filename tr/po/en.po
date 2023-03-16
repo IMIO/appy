@@ -256,6 +256,10 @@ msgstr "The value is not among possible values for this field."
 msgid "bad_xml"
 msgstr "The field content is not well-formed XML. ${error}"
 
+#. Default: "Content found, considered as invalid or incomplete: ${text}"
+msgid "invalid_text"
+msgstr "Content found, considered as invalid or incomplete: ${text}"
+
 #. Default: "Choose a value between ${min} and ${max}."
 msgid "range_ko"
 msgstr "Choose a value between ${min} and ${max}."

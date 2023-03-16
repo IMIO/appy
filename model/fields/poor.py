@@ -631,7 +631,7 @@ class Poor(Rich):
         # check must be performed.
         return True if ignoreInner else not self.isInner()
 
-    def getXhtmlCleaner(self):
+    def getXhtmlCleaner(self, forValidation=False):
         '''Returns a Cleaner instance tailored to p_self'''
         # More strict cleaning than the Rich
         tagsToIgnore = Cleaner.tagsToIgnoreWithContentStrict

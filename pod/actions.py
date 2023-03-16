@@ -107,16 +107,16 @@ class Action:
         '''Evaluates expression p_expr with the current p_context. Returns a
            tuple (result, errorOccurred).'''
         try:
-            res = self._evalExpr(expr, context)
+            r = self._evalExpr(expr, context)
             error = False
         except Exception as e:
             # Hack for MessageException instances: always re-raise it as is
             if e.__class__.__name__ == 'MessageException': raise e
-            res = None
+            r = None
             errorMessage = EVAL_ERROR % (expr, self.getExceptionLine(e))
             self.manageError(result, context, errorMessage, e)
             error = True
-        return res, error
+        return r, error
 
     def execute(self, result, context):
         '''Executes this action given some p_context and add the result to

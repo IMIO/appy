@@ -248,20 +248,20 @@ class Field:
       isSearch=layout == 'search';
       hostLayout=req.hostLayout;
       name=fieldName or field.name|field.name;
-      widgetName='w_%s' % name if isSearch else name;
+      widgetName=f'w_{name}' if isSearch else name;
       rawValue=field.getValueIf(o, name, layout, disable=isSearch);
       value=field.getFormattedValue(o, rawValue, layout, showChanges) 
             if not isSearch else None;
       requestValue=not isSearch and field.getStoredValue(o, name, True);
       inRequest=field.valueIsInRequest(o, req, name, layout);
-      error=req['%s_error' % name] or handler.validator.errors.get(name)|None;
+      error=req[f'{name}_error'] or handler.validator.errors.get(name)|None;
       isMultiple=field.isMultiValued();
-      masterCss='master_%s' % name if field.slaves else '';
+      masterCss=f'master_{name}' if field.slaves else '';
       tagCss=tagCss|None;
       tagCss=field.getTagCss(tagCss, layout);
       o=o or tool;
-      tagId='%d_%s' % (o.iid, name);
-      tagName=field.master and 'slave' or '';
+      tagId=f'{o.iid}_{name}';
+      tagName='slave' if field.master else '';
       layoutTarget=field">:field.getPx(_ctx_)</x>''')
 
     def doRender(self, layout, o, name=None, minimal=False, tagCss=None,
@@ -395,10 +395,10 @@ class Field:
         '''Python implementation of validation PX'''
         url = c.svg('warning')
         if c.error:
-            r = '<abbr title="%s"><img src="%s" class="iconS"/></abbr>' % \
-                (c.error, url)
+            r = f'<abbr title="{c.error}"><img src="{url}" class="iconS"/>' \
+                f'</abbr>'
         else:
-            r = '<img src="%s" class="iconS" style="visibility:hidden"/>' % url
+            r = f'<img src="{url}" class="iconS" style="visibility:hidden"/>'
         return r
     
     pxValidation = Px(validationPx)
@@ -411,7 +411,7 @@ class Field:
      <div if="not o.history.isEmpty(name)" style="margin-bottom: 5px">
       <input type="button"
         var="suffix='hide' if showChanges else 'show';
-             label=_('changes_%s' % suffix);
+             label=_(f'changes_{suffix}');
              css=ui.Button.getCss(label);
              icon='changesNo' if showChanges else 'changes';
              bp='False' if showChanges else 'True'"

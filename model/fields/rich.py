@@ -12,6 +12,7 @@ from xml.sax._exceptions import SAXParseException
 
 from appy.px import Px
 from appy.ui.layout import Layouts
+from appy.xml.escape import Escape
 from appy.model.fields import Field
 from appy.utils.diff import HtmlDiff
 from appy.utils.inject import Injector
@@ -22,6 +23,7 @@ from appy.xml.cleaner import Cleaner, StringCleaner
 from appy.model.fields.multilingual import Multilingual
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n'
 XML_ERROR   = 'Error while reading content of field %s on %s. %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -97,16 +99,16 @@ class Rich(Multilingual, Field):
              value=field.injectContent(o, value) if field.inject else value">
       <div if="not mayAjaxEdit"
            class=":css">::value or field.valueIfEmpty</div>
-      <x if="mayAjaxEdit" var2="name=lg and ('%s_%s' % (name, lg)) or name">
+      <x if="mayAjaxEdit" var2="name=f'{name}_{lg}' if lg else name">
        <div class=":css" contenteditable="true"
-            id=":'%d_%s_ck' % (o.iid, name)">::value or '-'</div>
+            id=":f'{o.iid}_{name}_ck'">::value or '-'</div>
        <script if="mayAjaxEdit">::field.getJsInlineInit(o, name, lg)</script>
       </x>
      </x>''')
 
     # Unilingual edit
     editUni = Px('''
-     <textarea var="inputId=name if not lg else ('%s_%s' % (name, lg))"
+     <textarea var="inputId=name if not lg else f'{name}_{lg}'"
        id=":inputId" name=":inputId" cols=":field.getTextareaCols()"
        style=":field.getTextareaStyle()"
        rows=":field.height">:field.getInputValue(inRequest, requestValue, value)
@@ -129,7 +131,7 @@ class Rich(Multilingual, Field):
       languagesLayouts=None, viewSingle=False, inlineEdit=False,
       toolbar='Standard', view=None, cell=None, buttons=None, edit=None,
       xml=None, translations=None, inject=False, valueIfEmpty='',
-      viewCss='xhtml'):
+      viewCss='xhtml', invalidTexts=None):
         # The list of styles that the user will be able to select in the styles
         # dropdown (within CKEditor) is defined hereafter.
         self.styles = styles
@@ -238,7 +240,12 @@ class Rich(Multilingual, Field):
         # class named "xhtml" is applied. If you want to specify another class,
         # use the following attribute. A method can also be passed.
         self.viewCss = viewCss
-        # ~
+        # If passed, p_invalidTexts must be a tuple or list of regular
+        # expressions. If the user tries to encode content, in this field, that
+        # matches at least one of these regexes, field validation will fail.
+        # Note that we are talking about non-exact matches here (ie, method
+        # regex.search will be used, and not regex.match).
+        self.invalidTexts = invalidTexts
         # Call base constructors
         Multilingual.__init__(self, languages, languagesLayouts, viewSingle)
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
@@ -318,19 +325,22 @@ class Rich(Multilingual, Field):
             r = value
         return r
 
-    def getXhtmlCleaner(self):
+    def getXhtmlCleaner(self, forValidation=False):
         '''Returns a Cleaner instance tailored to p_self'''
-        return Cleaner()
+        texts = self.invalidTexts if forValidation else None
+        return Cleaner(invalidTexts=texts)
 
     def validateUniValue(self, o, value):
         '''Ensure p_value as will be stored (=cleaned) is valid XHTML'''
         try:
-            self.getXhtmlCleaner().clean(value)
+            self.getXhtmlCleaner(forValidation=True).clean(value)
         except SAXParseException as err:
             # Try after removing problematic chars
             value = StringCleaner.clean(value)
             if not StringCleaner.isParsable(value):
                 return o.translate('bad_xml', mapping={'error': str(err)})
+        except Cleaner.InvalidText as err:
+            return o.translate('invalid_text', mapping={'text': str(err)})
 
     def getSearchValue(self, req, value=None):
         '''The input widget for a Rich field is of type "text". So behave like a
@@ -382,13 +392,13 @@ class Rich(Multilingual, Field):
         # If the width is expressed as a string, the field width must be
         # expressed in attribute "style" (so returned by this method) and not
         # via attribute "cols" (returned by m_getTextareaCols below).
-        return isinstance(self.width, str) and ('width:%s' % self.width) or ''
+        return f'width:{self.width}' if isinstance(self.width, str) else ''
 
     def getTextareaCols(self):
         '''When this widget must be rendered as an HTML field of type
            "textarea", get the content of its "cols" attribute.'''
         # Use this attribute only if width is expressed as an integer value
-        return isinstance(self.width, int) and self.width or ''
+        return self.width if isinstance(self.width, int) else ''
 
     ckLanguages = {'en': 'en_US', 'pt': 'pt_BR', 'da': 'da_DK', 'nl': 'nl_NL',
                    'fi': 'fi_FI', 'fr': 'fr_FR', 'de': 'de_DE', 'el': 'el_GR',
@@ -406,10 +416,10 @@ class Rich(Multilingual, Field):
 
     def getCkParams(self, o, language):
         '''Gets the base params to set on a rich text field'''
-        base = '%s/ckeditor' % o.buildUrl()
-        ckAttrs = {'customConfig': '%s/config.js?8' % base,
-                   'contentsCss': '%s/contents.css' % base,
-                   'stylesSet': '%s/styles.js' % base,
+        base = f'{o.buildUrl()}/ckeditor'
+        ckAttrs = {'customConfig': f'{base}/config.js?8',
+                   'contentsCss': f'{base}/contents.css',
+                   'stylesSet': f'{base}/styles.js',
                    'toolbar': self.toolbar, 'format_tags':';'.join(self.styles),
                    'scayt_sLang': self.getCkLanguage(o, language)}
         if self.width: ckAttrs['width'] = self.width
@@ -420,8 +430,8 @@ class Rich(Multilingual, Field):
         if self.customStyles:
             for style in self.customStyles:
                 id = style['id']
-                ckAttrs['format_%s' % id] = style
-                ckAttrs['format_tags'] += ';%s' % id
+                ckAttrs[f'format_{id}'] = style
+                ckAttrs['format_tags'] += f';{id}'
         if self.documents and not o.isTemp():
             base = o.url
             # Parameter "type=any" is only useful in order to have a parameter.
@@ -430,10 +440,11 @@ class Rich(Multilingual, Field):
             # If there is no existing parameter, the syntax is incorrect
             # (absence of '?' between the URL and its parameters) and the
             # request ends up with a 404 error.
-            ckAttrs['filebrowserUploadUrl'] = '%s/%s/upload?type=any' % \
-                                              (base, self.name)
-            ckAttrs['filebrowserBrowseUrl'] = '%s/pxField?name=%s&popup=True' \
-              '&selector=%d,%s,repl' % (base, self.documents, o.iid, self.name)
+            uploadUrl = f'{base}/{self.name}/upload?type=any'
+            ckAttrs['filebrowserUploadUrl'] = uploadUrl
+            browseUrl = f'{base}/pxField?name={self.documents}&popup=True&' \
+                        f'selector={o.iid},{self.name},repl'
+            ckAttrs['filebrowserBrowseUrl'] = browseUrl
         if not o.user.hasRole('Manager'):
             ckAttrs['removeButtons'] = 'Source'
         ck = []
@@ -441,8 +452,8 @@ class Rich(Multilingual, Field):
             if isinstance(v, int): sv = str(v)
             elif isinstance(v, bool): sv = str(v).lower()
             elif isinstance(v, dict): sv = str(v)
-            else: sv = '"%s"' % v
-            ck.append('%s: %s' % (k, sv))
+            else: sv = f'"{v}"'
+            ck.append(f'{k}: {sv}')
         return ', '.join(ck)
 
     def getJs(self, o, layout, r, config):
@@ -458,9 +469,8 @@ class Rich(Multilingual, Field):
            field (rich field only). If the field is multilingual, we must init
            the rich text editor for a given p_language (among self.languages).
            Else, p_languages is None.'''
-        name = self.name if not language else '%s_%s' % (self.name, language)
-        return 'CKEDITOR.replace("%s", {%s})' % \
-               (name, self.getCkParams(o, language))
+        name = f'{self.name}_{language}' if language else self.name
+        return f'CKEDITOR.replace("{name}", {{{self.getCkParams(o,language)}}})'
 
     def getJsInlineInit(self, o, name, language):
         '''Gets the Javascript init code for enabling inline edition of this
@@ -468,13 +478,14 @@ class Rich(Multilingual, Field):
            p_language is given and p_name includes it. Else, p_language is
            None.'''
         id = o.iid
-        fieldName = language and name.rsplit('_',1)[0] or name
         lg = language or ''
-        return "CKEDITOR.disableAutoInline = true;\n" \
-               "CKEDITOR.inline('%d_%s_ck', {%s, on: {blur: " \
-               "function( event ) { var content = event.editor.getData(); " \
-               "doInlineSave('%d','%s','%s','view',true,content,'%s')}}})" % \
-               (id, name, self.getCkParams(o,language), id, fieldName, o.url,lg)
+        params = self.getCkParams(o,language)
+        fieldName = language and name.rsplit('_',1)[0] or name
+        return f"CKEDITOR.disableAutoInline = true;{bn}" \
+               f"CKEDITOR.inline('{id}_{name}_ck', {{{params}, on: {{blur: " \
+               f"function(event) {{ let content = event.editor.getData(); " \
+               f"doInlineSave('{id}','{fieldName}','{o.url}','view',true," \
+               f"content,'{lg}')}}}}}})"
 
     def isInnerable(self):
         '''Rich fields cannot be used as inner fields'''
@@ -492,7 +503,7 @@ class Rich(Multilingual, Field):
         o.H().commit = True
         o.resp.setContentType('json')
         r = {'uploaded': 1, 'fileName': doc.title,
-             'url': '%s/file/download' % doc.url}
+             'url': f'{doc.url}/file/download'}
         o.log(UPLOADED % (ofile.name, o.iid, self.documents, self.name))
         return sutils.getStringFrom(r, c='"')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
