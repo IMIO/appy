@@ -3,7 +3,6 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import sys, re, os.path
-from urllib.parse import urlparse, parse_qsl
 
 from persistent.list import PersistentList
 
@@ -2336,18 +2335,17 @@ class Ref(Field):
 
     def getOnUnlink(self, q, _, o, tiedId, batch):
         '''Computes the JS code to execute when button "unlink" is clicked'''
-        js = "onLink('unlink','%s','%s','%s','%s','%s')" % \
-             (o.url, self.name, tiedId, batch.hook, batch.start)
+        js = f"onLink('unlink','{o.url}','{self.name}','{tiedId}'," \
+             f"'{batch.hook}','{batch.start}')"
         if not self.unlinkConfirm: return js
-        return "askConfirm('script', %s, %s)" % \
-               (q(js, False), q(_('action_confirm')))
+        text = _('action_confirm')
+        return f"askConfirm('script',{q(js, False)},{q(text)})"
 
     def getAddLabel(self, o, addLabel, tiedClassLabel, inMenu):
         '''Gets the label of the button allowing to add a new tied object. If
            p_inMenu, the label must contain the name of the class whose instance
            will be created by clincking on the button.'''
-        if not inMenu: return o.translate(self.addLabel)
-        return tiedClassLabel
+        return tiedClassLabel if inMenu else o.translate(self.addLabel)
 
     def getListLabel(self, inPickList):
         '''If self.link == "list", a label must be shown in front of the list.
@@ -2643,14 +2641,11 @@ class Ref(Field):
     def getLinkBackUrl(self, o, req):
         '''Get the URL to redirect the user to after having (un)linked an object
            via this Ref.'''
-        # Propagate key(s) of the form "_start"
-        referer = o.referer
-        url = urlparse(referer)
-        if not url.query: return referer
+        # Propagate key(s) of the form "*_start" and "page"
         params = {}
-        for name, value in parse_qsl(url.query):
-            if name.endswith('start') or (name == 'page'):
-                params[name] = value
+        for name, val in o.req.items():
+            if name.endswith('start') or name == 'page':
+                params[name] = val
         return o.getUrl(sub='view', **params)
 
     traverse['onLink'] = 'perm:write'
@@ -2662,7 +2657,7 @@ class Ref(Field):
         action = req.linkAction
         msg = None
         if not action.endswith('_many'):
-            method = eval('self.%sObject' % req.linkAction)
+            method = getattr(self, f'{req.linkAction}Object')
             tied = o.getObject(int(req.targetId))
             r = method(o, tied, secure=True)
         else:
@@ -2825,7 +2820,7 @@ class Ref(Field):
         # Compute back information
         back = self.back
         if back:
-            sback = ' %s %s' % (back.umlMultiplicities(), back.name)
+            sback = f' {back.umlMultiplicities()} {back.name}'
             assoc2 = '―◆' if back.composite else '⸺'
             breindex = back.getReindexAction(tool) if back.indexed else ''
         else:
@@ -2833,10 +2828,10 @@ class Ref(Field):
             assoc2 = '⸺'
             breindex = ''
         cname = self.class_.__name__
-        return '%s%s%s ⸻ %s%s %s %s<a class="bref" href="%s/view?page=' \
-               'model&className=%s">%s</a>' % \
-               (assoc, sback, breindex, self.name, reindex,
-                self.umlMultiplicities(), assoc2, tool.url, cname, cname)
+        return f'{assoc}{sback}{breindex} ⸻ {self.name}{reindex} ' \
+               f'{self.umlMultiplicities()} {assoc2}<a class="bref" ' \
+               f'href="{tool.url}/view?page=model&className={cname}">{cname}'\
+               f'</a>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def autoref(class_, field):
