@@ -1052,6 +1052,10 @@ msgstr "Non breaking blank (PC: Ctrl+space, Mac: Alt+Shift+space)"
 msgid "icon_dash"
 msgstr "Non breaking dash (PC: Ctrl+-, Mac: Alt+Shift+-)"
 
+#. Default: "Duplicate (Ctrl+D)"
+msgid "icon_dup"
+msgstr "Duplicate (Ctrl+D)"
+
 #. Default: "Lengthen (PC: Ctrl+_, Mac: Ctrl+!)"
 msgid "icon_lengthen"
 msgstr "Lengthen (PC: Ctrl+_, Mac: Ctrl+!)"

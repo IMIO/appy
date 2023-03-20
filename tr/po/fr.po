@@ -1052,6 +1052,10 @@ msgstr "Espace insécable (PC: Ctrl+espace, Mac: Alt+Shift+espace)"
 msgid "icon_dash"
 msgstr "Tiret insécable (PC: Ctrl+-, Mac: Alt+Shift+-)"
 
+#. Default: "Duplicate (Ctrl+D)"
+msgid "icon_dup"
+msgstr "Dupliquer (Ctrl+D)"
+
 #. Default: "Lengthen (PC: Ctrl+_, Mac: Ctrl+!)"
 msgid "icon_lengthen"
 msgstr "Allonger (PC: Ctrl+_, Mac: Ctrl+!)"

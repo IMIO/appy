@@ -1051,6 +1051,10 @@ msgstr ""
 msgid "icon_dash"
 msgstr ""
 
+#. Default: "Duplicate (Ctrl+D)"
+msgid "icon_dup"
+msgstr ""
+
 #. Default: "Lengthen (PC: Ctrl+_, Mac: Ctrl+!)"
 msgid "icon_lengthen"
 msgstr ""

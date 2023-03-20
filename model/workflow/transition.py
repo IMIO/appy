@@ -384,7 +384,9 @@ class Transition:
         # triggered, will not be executed.
 
         # If p_doHistory is False, there will be no trace from this transition
-        # triggering in p_o's history.
+        # triggering in p_o's history. WARNING: in that case, the state change
+        # could not be made! Indeed, the current object's state is stored on the
+        # last workflow event. So use this with extreme caution.
 
         # If p_doSay is False, we consider the transition as being triggered
         # programmatically, and no message is returned to the user.
@@ -411,8 +413,9 @@ class Transition:
             self.executeAction(o, pre=True)
         # Add the event in the object history
         history = o.history
-        event = history.add('Trigger', target.name, transition=name,
-                            comment=comment)
+        if doHistory:
+            event = history.add('Trigger', target.name, transition=name,
+                                comment=comment)
         # Update the object's last modification date when relevant
         if self.updateModified:
             history.modified = DateTime()

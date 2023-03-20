@@ -301,6 +301,7 @@ class Guard:
                 # Redirect to the page where the user can change its password
                 back = '%s/edit?page=password' % user.url
                 label = 'login_ok_change_password'
+                tool.resp.fleetingMessage = False
             elif req.goto:
                 # The user came to its home page for authenticating: he must now
                 # be redirected to the page at request key "goto".

@@ -156,6 +156,8 @@ Icon.all = [
   Icon('bulleted',  'wrapper', data='insertUnorderedList'),
   Icon('sub',       'wrapper', data='subscript'),
   Icon('sup',       'wrapper', data='superscript'),
+  # Duplicate selected text
+  Icon('dup',       'action' , data='', shortcut=68),
   # Increment the field height by <data>%
   Icon('lengthen',  'action',  data='30', shortcut=56)
 ]
@@ -340,6 +342,15 @@ class Poor(Rich):
         div.style.minHeight = String(height) + 'px';
       }
 
+      duplicateSelection = function(div) {
+        // Duplicates text selected in p_div
+        let sel = window.getSelection(),
+            range = sel.getRangeAt(0);
+        // Do nothing if no text is selected
+        if (range.collapsed) return;
+        // To continue
+      }
+
       useIcon = function(icon) {
         // Get the linked div (if already linked)
         let div = icon.parentNode['target'];
@@ -359,6 +370,7 @@ class Poor(Rich):
         else if (type == 'action') {
           // Actions
           if (icon.name == 'lengthen') lengthenDiv(div, parseInt(data));
+          else if (icon.name == 'dup') duplicateSelection(div);
         }
       }
 
