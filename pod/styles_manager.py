@@ -235,8 +235,6 @@ class ListProperties(Properties):
     def dumpStyle(self, name):
         '''Returns the OpenDocument style definition corresponding to this
            instance.'''
-        nsT = 'text'
-        nsS = 'style'
         r = []
         fmt = utils.formatNumber
         spaceBefore = 0
@@ -274,7 +272,7 @@ class BulletedProperties(ListProperties):
     textStyle = 'podBulletStyle'
 
     def __init__(self, levels=4, formats=defaultFormats,
-                 delta=0.32, firstDelta=None, space=0.32, paraStyle=None):
+                 delta=0.32, firstDelta=0.08, space=0.16, paraStyle=None):
         ListProperties.__init__(self, levels, formats, delta, firstDelta,
                                 space, paraStyle)
 
@@ -295,8 +293,8 @@ class NumberedProperties(ListProperties):
     textStyle = 'podNumberStyle'
 
     def __init__(self, levels=4, formats=defaultFormats,
-                 suffixes=defaultSuffixes, delta=0.32, firstDelta=None,
-                 space=0.32, paraStyle=None):
+                 suffixes=defaultSuffixes, delta=0.32, firstDelta=0.08,
+                 space=0.16, paraStyle=None):
         ListProperties.__init__(self, levels, formats, delta, firstDelta,
                                 space, paraStyle)
         # The list of suffixes
