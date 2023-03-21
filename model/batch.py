@@ -56,7 +56,7 @@ class Batch:
               gotoName='%d_%s_goto' % (o.iid, field.name)">
       <span class="gotoLab">:label</span>
       <input type="text" id=":gotoName" name=":gotoName" class="gotoNum"
-             size=":max(len(str(total))-2, 1)" onclick="this.select()"
+             size=":max(len(str(total))-1, 1)" onclick="this.select()"
              onkeydown="if (event.keyCode==13) this.nextSibling.click()"/>
       <img class="clickable"
              onclick=":'gotoTied(%s,%s,this.previousSibling,%s,%s)' % \

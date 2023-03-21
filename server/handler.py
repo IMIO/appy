@@ -288,6 +288,11 @@ class HttpHandler(Handler):
         req = self.req
         return req and req.ajax == 'True'
 
+    def inPopup(self):
+        '''Are we "in" the Appy iframe popup ?'''
+        req = self.req
+        return req and req.popup == 'True'
+
     def isPublished(self, o):
         '''Is object p_o the currently published object ?'''
         referer = self.headers.get('referer')

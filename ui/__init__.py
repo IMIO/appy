@@ -787,10 +787,12 @@ class LinkTarget:
            and if p_back is specified, when coming back from the popup, we will
            ajax-refresh a DOM node whose ID is specified in p_back.'''
         # The link leads to a instance of some Python p_class_ (the true Python
-        # class, not the metaclass)
+        # class, not the metaclass).
         self.class_ = class_
         # Does the link lead to a popup ?
         if popup or forcePopup:
+            # p_popup may be a "popup specifier" coming from a "viaPopup"
+            # attribute defined on a Ref or Search.
             toPopup = True
         elif popup is False:
             toPopup = False
@@ -798,18 +800,31 @@ class LinkTarget:
             toPopup = class_ and hasattr(class_, 'popup')
         # Determine the target of the "a" tag
         self.target = 'appyIFrame' if toPopup else '_self'
+        # If p_self does not open a popup, a companion target could be defined
+        # later on, allowing to open the same link in a popup. In that case, the
+        # following attribute will store the JS code to open the popup.
+        self.otherClick = None
         # If the link leads to a popup, a "onClick" attribute must contain the
         # JS code that opens the popup.
         if toPopup:
             # Create the chunk of JS code to open the popup
             size = popup or getattr(class_, 'popup', '350px')
+            click = 'onClick'
             if isinstance(size, str):
-                params = "%s,null" % size[:-2] # Width only
-            else: # Width and height
-                params = "%s,%s" % (size[0][:-2], size[1][:-2])
+                params = f'{size[:-2]},null' # Width only
+            else:
+                # A 2- or 3-tuple
+                params = f'{size[-2][:-2]},{size[-1][:-2]}'
+                if len(size) == 3:
+                    # We were wrong: finally, the current target isn't a popup
+                    self.onClick = ''
+                    self.target = '_self'
+                    # Opening a popup will be for a future, other link target
+                    click = 'otherClick'
             # If p_back is specified, included it in the JS call
-            if back: params += ",null,'%s'" % back
-            self.onClick = "openPopup('iframePopup',null,%s)" % params
+            if back:
+                params = f"{params},null,'{back}'"
+            setattr(self, click, f"openPopup('iframePopup',null,{params})")
         else:
             self.onClick = ''
 
@@ -825,14 +840,15 @@ class LinkTarget:
         if o:
             # Get the CSS class to apply to the popup
             css = o.class_.getCssFor(o, 'popup')
-            css = "'%s'" % css if css else 'null'
+            css = f"'{css}'" if css else 'null'
         else:
             css = 'null'
-        return r[:-1] + ",%s,'%s')" % (css, back)
+        return f"{r[:-1]},{css},'{back}')"
 
     def __repr__(self):
-        return '<LinkTarget for=%s,target=%s,onClick=%s>' % \
-               (self.__class__.__name__, self.target, self.onClick or '-')
+        cname = self.__class__.__name__
+        return f'<LinkTarget for={cname},target={self.target},onClick=' \
+               f'{self.onClick or "-"}>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Collapsible:
@@ -976,10 +992,10 @@ class Breadcrumb:
             self.parts.insert(0, part)
         # In a popup (or if "show" specifies it), limit the breadcrumb to the
         # current object.
-        if popup or (show == 'title'): return
+        if popup or show == 'title': return
         # Insert the part corresponding to the container if appropriate
         container = o.container
-        if container and (container.id != 'tool'):
+        if container and container.id != 'tool':
             # The tool itself can never appear in breadcrumbs
             self.compute(container)
 

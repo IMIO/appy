@@ -314,7 +314,8 @@ class Ref(Field):
     pxObjectActions = Px('''
      <div if="ifield.showActions"
           var2="layout='sub';
-                editable=guard.mayEdit(o);
+                toPopup=target and target.target != '_self';
+                editable=guard.mayEdit(o) and not (popup and toPopup);
                 class_=field.container;
                 iconsOnly=tiedClass.getIconsOnly();
                 locked=o.Lock.isSet(o, user, 'main')"
@@ -339,10 +340,8 @@ class Ref(Field):
            var2="text=_('object_edit')">
        <a if="not locked"
           var2="navInfo=ifield.getNavInfo(io, batch.start + currentNumber,
-                                          batch.total);
-                linkInPopup=popup or target.target != '_self'"
-          href=":o.getUrl(sub='edit', page='main', nav=navInfo, 
-                          popup=linkInPopup)"
+                                          batch.total) if not inMenu else 'no'"
+          href=":o.getUrl(sub='edit', page='main', nav=navInfo, popup=toPopup)"
           target=":target.target" onclick=":target.onClick">
         <img src=":svg('edit')" class="iconS" title=":text"/>
        </a>
@@ -411,17 +410,18 @@ class Ref(Field):
     # declared as addable and if multiplicities allow it.
 
     pxAdd = Px('''
-     <x if="mayAdd and not inPickList">
-      <form class=":inMenu and 'addFormMenu' or 'addForm'"
+     <x var="toPopup=target.target != '_self'"
+        if="mayAdd and not inPickList and not (popup and toPopup)">
+      <form class=":'addFormMenu' if inMenu else 'addForm'"
             name=":addFormName" id=":addFormName" target=":target.target"
-            action=":'%s/new' % o.url">
+            action=":f'{o.url}/new'">
        <input type="hidden" name="className" value=":tiedClass.name"/>
        <input type="hidden" name="template_" value=""/>
        <input type="hidden" name="insert" value=""/>
        <input type="hidden" name="nav"
               value=":field.getNavInfo(o, 0, batch.total)"/>
        <input type="hidden" name="popup"
-          value=":'True' if popup or target.target != '_self' else 'False'"/>
+              value=":'True' if toPopup else 'False'"/>
 
        <!-- The button, prefixed by, or containing, its icon -->
        <x if="not createFromSearch">
@@ -430,7 +430,7 @@ class Ref(Field):
              onclick="this.nextSibling.click()"/>
         <input type=":field.getAddButtonType(createVia)"
                var="addLabel=_(field.addLabel);
-                    label=inMenu and tiedClassLabel or addLabel;
+                    label=tiedClassLabel if inMenu else addLabel;
                     css=ui.Button.getCss(label, iconOut=field.iconOut)"
                class=":css" value=":label" title=":addLabel"
                style=":field.getIconUrl(url, asBG=True) if addIcon else ''"
@@ -448,7 +448,8 @@ class Ref(Field):
     # Button allowing to select, from a popup, objects to be linked via the Ref
 
     pxLink = Px('''
-     <x var="repl=popupMode == 'repl';
+     <x if="not popup"
+        var="repl=popupMode == 'repl';
              labelId='search_button' if repl else field.addLabel;
              icon='search.svg' if repl else field.addIcon;
              label=_(labelId)">
@@ -955,12 +956,40 @@ class Ref(Field):
         # also determines the popup dimensions. You can override this attribute
         # in the context of this Ref field by using attribute "viaPopup"
         # hereafter. Allowed values for this attribute are similar to those for
-        # attribute p_self.class_.popup. Note that, if "viaPopup" is:
+        # attribute p_self.class_.popup. Values that can be used for p_viaPopup
+        # as well as p_self.class_.popup are the following. If p_viaPopup is a:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # None  | it is ignored and p_self.class_.popup will be used instead;
+        # string  | the tied object will be shown in a popup whose width is
+        #         | specified in pixels, as in '500px' ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # False | it is taken into account and the form will not be opened in a
-        #       | popup, even if p_self.class_.popup exists and is not empty.
+        # 2-tuple | the tied object will be shown in a popup whose dimensions
+        #         | are passed, as a 2-tuple of strings of the form
+        #         | ~(s_width, s_height)~, as, for example:
+        #         |
+        #         |                   ('500px', '450px')
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # p_viaPopup can also hold these specific values. If p_viaPopup is:
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # None    | it is ignored and p_self.class_.popup will be used instead ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # False   | it is taken into account and the form will not be opened in
+        #         | a popup, even if p_self.class_.popup exists and is not
+        #         | empty.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # a 3-    | the link to the tied object will NOT display the tied object
+        # tuple   | in a popup, but an additional icon will allow to display it
+        #         | in a popup, whose dimensions are passed in the 2 last tuple
+        #         | elements. Passing a 3-tuple thus enables both ways to show
+        #         | tied object. Such a tuple must be of the form
+        #         | ~(False, s_width, s_height)~. Here is an example:
+        #         |
+        #         |                (False, '-50px', '-50px')
+        #         |
+        #         | This latter example also demonstrates that a dimension
+        #         | (width and/or height) can be specified as a negative number
+        #         | of pixels. In that case, the actual dimension will be
+        #         | computed as the window dimension minus the specified number
+        #         | of pixels.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.viaPopup = viaPopup
 

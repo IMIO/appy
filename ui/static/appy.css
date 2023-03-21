@@ -166,7 +166,7 @@ div.rbutton { float:right }
 .current { font-weight:bold }
 .inputSearch { height:15px; width:120px; margin:0 0 5px 5px !important }
 .content { padding:30px; width:100% }
-.contentP { width:100% }
+.contentP { width:98% }
 .public { width:100% }
 .subbed { width:100% }
 .subbed .topBase { position:static }
@@ -221,6 +221,8 @@ div.rbutton { float:right }
                     position:sticky; top:-30px; height:3em;
                     border-bottom:2px solid |darkColor|; z-index:1 }
 .list a { font-weight:bold }
+.list a.pop { font-weight:normal; float:right; font-size:150%; color:lightgrey;
+              margin:-6px 0 0 6px }
 .compact { font-size:95%; width:100% }
 .compact th, .compact td { padding:5px }
 .compact tr { vertical-align: middle }

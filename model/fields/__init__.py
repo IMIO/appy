@@ -326,7 +326,8 @@ class Field:
        <!-- Actions -->
        <div if="showActions" class=":class_.getSubCss(o, uiSearch)"
             var2="layout='sub';
-                  editable=guard.mayEdit(o);
+                  toPopup=target and target.target != '_self';
+                  editable=guard.mayEdit(o) and not (popup and toPopup);
                   iconsOnly=class_.getIconsOnly();
                   locked=o.Lock.isSet(o, user, 'main')">
 
@@ -345,12 +346,10 @@ class Field:
 
         <!-- Edit -->
         <div if="editable" class="ibutton" var2="text=_('object_edit')">
-         <a if="not locked" class="iflex1"
-            var2="linkInPopup=popup or target.target != '_self'"
-            target=":target.target"
+         <a if="not locked" class="iflex1" target=":target.target"
             onclick=":target.getOnClick(backHook or ohook)"
-            href=":o.getUrl(sub='edit', page=o.getDefaultPage('edit'), \
-                            nav=navInfo, popup=linkInPopup)">
+            href=":o.getUrl(sub='edit', page=o.getDefaultPage('edit'),
+                            nav=navInfo, popup=toPopup)">
           <img src=":svg('edit')" class="iconS" title=":text"/>
          </a>
          <x if="locked" var2="lockStyle='iconS'; page='main'">::o.Lock.px</x>

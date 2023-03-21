@@ -52,6 +52,6 @@ class Iframe:
         # will not work, because the browser will consider "appy.js" not being
         # the effective appy.js. In short, for the browser, appy.js is not
         # appy.js?6.
-        return class_.back % (Includer.js(o.buildUrl('appy.js?%d'% version)),
+        return class_.back % (Includer.js(o.buildUrl(f'appy.js?{version}')),
                               Includer.vars(o), o.iid)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -879,7 +879,7 @@ class Base:
       </div>
 
       <!-- The "back" icon -->
-      <div if="snav"
+      <div if="snav and not popup"
            class="pageIcons">::snav.getGotoSource(svg, _, imgCss='iconM')</div>
 
       <!-- Siblings navigation -->
@@ -1450,7 +1450,7 @@ class Base:
            related to this object are stored on the filesystem.'''
         return self.database.getFolder(self, create, withRelative)
 
-    def cancel(self, initiator=None, popup=False, isTemp=False):
+    def cancel(self, initiator=None, isTemp=False):
         '''Redirect the user after an object edition has been canceled'''
         self.H().commit = True
         # Render a message for the user. This message (and the url to redirect
@@ -1469,8 +1469,8 @@ class Base:
         else:
             # Remove the lock set on the current page
             Lock.remove(self, page)
-        # If we are in a popup, render a minimalist HTML page that will close it
-        if popup: return Iframe.goBack(self, initiator)
+        # If we must land, render a minimalist HTML page for closing the popup
+        if req.mustLand(self): return Iframe.goBack(self, initiator)
         # Determine, if not defined yet, the URL to go back to
         if self.gotoSet(): return
         self.goto(url or (self.req.referer if isTemp else self.getGotoUrl()))
@@ -1489,7 +1489,7 @@ class Base:
         initiator = self.getInitiator()
         # The precise action can be "save", but also "cancel"
         action = req.action
-        if action == 'cancel': return self.cancel(initiator, popup, isTemp)
+        if action == 'cancel': return self.cancel(initiator, isTemp)
         # Create a validator: he will manage validation of request data
         validator = self.H().validator = Validator(self, saveConfirmed)
         r = validator.run()
@@ -1504,8 +1504,9 @@ class Base:
         # If p_self has already been deleted ("text" being None in that case),
         # or if the logged user has lost the right to view it, redirect him to
         # its home page.
+        land = req.mustLand(self)
         if text is None or not guard.mayView(self):
-            if popup:
+            if land:
                 if text: self.say(text)
                 return Iframe.goBack(self, initiator)
             elif not self.gotoSet():
@@ -1514,8 +1515,8 @@ class Base:
         # If we are here, action is "save" and p_self has been updated. Redirect
         # the user to the appropriate page.
         self.say(text)
-        # Come back from the popup if we were in it
-        if popup and req.gotoLayout == 'view':
+        # Land if apprioriate
+        if land and req.gotoLayout == 'view':
             return Iframe.goBack(self, initiator)
         # Go to wherever has been defined, if already defined
         if self.gotoSet(): return
