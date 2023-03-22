@@ -603,6 +603,42 @@ msgstr ""
 msgid "passwords_mismatch"
 msgstr ""
 
+#. Default: "lowercase letters"
+msgid "pwd_lower"
+msgstr ""
+
+#. Default: "uppercase letters"
+msgid "pwd_upper"
+msgstr ""
+
+#. Default: "figures"
+msgid "pwd_figure"
+msgstr ""
+
+#. Default: "special chars"
+msgid "pwd_special"
+msgstr ""
+
+#. Default: "Chars considered as special: ${chars}"
+msgid "pwd_special_chars"
+msgstr ""
+
+#. Default: "Not enough ${group} · ${found} found, ${min} required."
+msgid "pwd_occur_ko"
+msgstr ""
+
+#. Default: "Minimum size for the password: ${min}"
+msgid "pwd_min_length"
+msgstr ""
+
+#. Default: "Minimum number of ${group}: ${min}${detail}"
+msgid "pwd_min"
+msgstr ""
+
+#. Default: "The password must respect the following rule·s:"
+msgid "pwd_rules"
+msgstr ""
+
 #. Default: "Please choose a password that is different from the current one."
 msgid "same_password"
 msgstr ""

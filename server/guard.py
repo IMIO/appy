@@ -1,6 +1,6 @@
 '''A guard is responsible for authenticating and authorizing app users, be they
    humans or other apps. A guard will ensure that any action is performed in the
-   respect of security rules defined: workflows, permissions, etc.'''
+   respect of security rules defined: policy, workflows, permissions, etc.'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
@@ -24,10 +24,13 @@ KO_LOG_TFM  = 'Invalid value "%s" for attribute "loginTransform".'
 KO_PERM     = '%s "%s": "%s" disallowed%s.'
 AUTH_KO     = 'Authentication failed with login %s.'
 AUTH_OK     = 'Logged in.'
+LOGGED_OUT  = 'Logged out.'
+COOKIE_KO   = 'Unreadable cookie (%s).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
     '''Security configuration'''
+
     # Allowed value for field "loginTransform"
     transformValues = ('lower', 'upper', 'capitalize')
 
@@ -52,7 +55,7 @@ class Config:
         # When a login is encoded by the user, a transform can be applied (one
         # among Config.transformValues).
         self.loginTransform = None
-        # When the user is in one of the following states, loggin in will be
+        # When the user is in one of the following states, logging in will be
         # blocked.
         self.noLoginStates = ('inactive',)
         # When using a LDAP for authenticating users, place an instance of class
@@ -209,7 +212,7 @@ class Guard:
 
     def stringInfo(self, info):
         '''Returns this additional p_info about an error, as a string'''
-        return '' if info is None else (' (%s)' % info.asString())
+        return '' if info is None else f' ({info.asString()})'
 
     def allows(self, o, permission='read', raiseError=False, info=None):
         '''Has the user p_permission on p_o ?'''
@@ -252,7 +255,7 @@ class Guard:
         # An additional, user-defined condition, may refine the base permission
         r = multicall(o, 'mayEdit', True)
         if not r and raiseError:
-            method = '%s::mayEdit' % o.class_.name
+            method = f'{o.class_.name}::mayEdit'
             s = self.stringInfo(info)
             raise Unauthorized(KO_PERM % (method, o.id, permission, s))
         return r
@@ -267,7 +270,7 @@ class Guard:
         # An additional, user-defined condition, may refine the base permission
         r = multicall(o, 'mayView', True)
         if not r and raiseError:
-            method = '%s::mayView' % o.class_.name
+            method = f'{o.class_.name}::mayView'
             s = self.stringInfo(info)
             raise Unauthorized(KO_PERM % (method, o.id, permission, s))
         return r
@@ -299,7 +302,7 @@ class Guard:
         if success:
             if user.changePasswordAtNextLogin:
                 # Redirect to the page where the user can change its password
-                back = '%s/edit?page=password' % user.url
+                back = f'{user.url}/edit?page=password'
                 label = 'login_ok_change_password'
                 tool.resp.fleetingMessage = False
             elif req.goto:
@@ -311,7 +314,7 @@ class Guard:
                 back = user.tool.computeHomePage()
                 info = req.authInfo
                 # Carry custom authentication data when appropriate
-                if info: back = '%s?authInfo=%s' % (back, info)
+                if info: back = f'{back}?authInfo={info}'
         else:
             # Stay on the same page
             back = tool.H().headers['Referer']
@@ -325,7 +328,7 @@ class Guard:
         # Disable the authentication cookie
         Cookie.disable(handler)
         # Log the action
-        handler.log('app', 'info', 'Logged out.')
+        handler.log('app', 'info', LOGGED_OUT)
         # Redirect the user to the app's home page
         back = self.config.server.getUrl(handler)
         handler.resp.goto(back, message=tool.translate('logout_ok'))
@@ -334,7 +337,7 @@ class Guard:
         '''The "logout" URL may not be the standard Appy one if the app is
            behind a SSO reverse proxy.'''
         if user.source == 'sso': return self.config.security.sso.logoutUrl
-        return '%s/guard/leave' % tool.url
+        return f'{tool.url}/guard/leave'
 
     def getLoginUrl(self, ctx):
         '''When discreet logins are in use, compute the JS code or link allowing
@@ -344,7 +347,7 @@ class Guard:
             # "discreet" may hold "home" or "homes". Attribue "stay" will force
             # to stay on this page. Indeed, without it, in "discreet login"
             # mode, tool/home[s] redirects to tool/public.
-            r = '%s/%s?stay=1' % (ctx.tool.url, ctx.cfg.home)
+            r = f'{ctx.tool.url}/{ctx.cfg.home}?stay=1'
         else:
             r = 'javascript:toggleLoginBox(true)'
         return r
@@ -353,9 +356,8 @@ class Guard:
         '''Gets the JS code allowing to create a User instance for the purpose
            of self-registering.'''
         # Compute the URL to post the form to
-        url = '%s/new' % tool.url
-        return "javascript:post('%s', {'action': 'Create', 'className': " \
-               "'User', 'nav': 'ref.tool.users.0.0'})" % url
+        return f"javascript:post('{tool.url}/new',{{'action':'Create'," \
+               f"'className':'User','nav':'ref.tool.users.0.0'}})"
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                         Password reinitialisation
@@ -391,10 +393,9 @@ class Guard:
         with (Path(putils.getOsTempFolder()) / login).open('w') as f:
             f.write(token)
         # Send an email
-        initUrl = '%s/guard/doPasswordReinit?login=%s&token=%s' % \
-                  (tool.url, login, token)
+        urlI = f'{tool.url}/guard/doPasswordReinit?login={login}&token={token}'
         subject = _('reinit_password')
-        map = {'url':initUrl, 'siteUrl':tool.siteUrl}
+        map = {'url':urlI, 'siteUrl':tool.siteUrl}
         body= _('reinit_password_body', mapping=map, asText=True)
         tool.sendMail(email, subject, body)
         return tool.goto(message=message)
@@ -446,14 +447,14 @@ class Guard:
     def getLoginLogo(self, tool, discreet, url):
         '''Returns the possibly clickable logo to include in the login box'''
         # Compute the "img" tag representing the logo
-        r = '<img src="%s"/>' % url('loginLogo')
+        r = f'<img src="{url("loginLogo")}"/>'
         # Wrap it, when appropriate, in a link allowing to go back to the public
         # or home page.
         if discreet == 'home' and tool.defaultPage:
-            r = '<a onclick="goto(siteUrl+\'/tool/public\')" ' \
-                'class="clickable">%s</a>' % r
+            r = f'<a onclick="goto(siteUrl+\'/tool/public\')" ' \
+                f'class="clickable">{r}</a>'
         elif discreet:
-            r = '<a onclick="goto(siteUrl)" class="clickable">%s</a>' % r
+            r = f'<a onclick="goto(siteUrl)" class="clickable">{r}</a>'
         return r
 
     def getLoginBoxCss(self, discreet):
@@ -466,7 +467,7 @@ class Guard:
      <div if="isAnon and config.security.activateForgotPassword"
           id="askPasswordReinitPopup" class="popup">
       <form id="askPasswordReinitForm" method="post"
-            action=":'%s/guard/askPasswordReinit' % tool.url">
+            action=":f'{tool.url}/guard/askPasswordReinit'">
        <div align="center">
         <p>:_('app_login')</p>
         <input type="text" size="35" name="rlogin" id="rlogin" value=""/>
@@ -485,7 +486,7 @@ class Guard:
                         (isAnon and _px_.name == 'public');
                display='none' if discreet and not req.stay else 'block'"
           class=":guard.getLoginBoxCss(discreet)"
-          style=":'display:%s' % display">
+          style=":f'display:{display}'">
 
       <!-- Allow to hide the box when relevant -->
       <img if="discreet == True" src=":svg('close')" style="float:right"
@@ -498,7 +499,7 @@ class Guard:
       <center class="sub">:_('please_connect')</center>
       <div class="loginSpace"></div>
       <form id="loginForm" name="loginForm" method="post" class="login"
-            action=":'%s/guard/enter' % tool.url">
+            action=":f'{tool.url}/guard/enter'">
 
        <!-- Login fields  -->
        <center><input type="text" name="login" id="login" value=""

@@ -17,9 +17,9 @@ from appy.model.utils import Object as O
 from appy.model.fields import Field, Show
 from appy.ui.layout import Layout, Layouts
 from appy.utils.dates import getLastDayOfMonth
-from appy.model.fields.calendar.totals import Totals
 from appy.model.fields.calendar.legend import Legend
 from appy.model.fields.calendar.timeslot import Timeslot
+from appy.model.fields.calendar.totals import Total, Totals
 from appy.model.fields.calendar.validation import Validation
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -316,6 +316,7 @@ class Calendar(Field):
     Other = Other
     Layer = Layer
     Event = Event
+    Total = Total
     Action = Action
     Legend = Legend
     DateTime = DateTime

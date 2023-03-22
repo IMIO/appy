@@ -604,6 +604,42 @@ msgstr "Les mots de passe doivent contenir au moins ${nb} caractères."
 msgid "passwords_mismatch"
 msgstr "Les mots de passe ne correspondent pas."
 
+#. Default: "lowercase letters"
+msgid "pwd_lower"
+msgstr "lettres minuscules"
+
+#. Default: "uppercase letters"
+msgid "pwd_upper"
+msgstr "lettres majuscules"
+
+#. Default: "figures"
+msgid "pwd_figure"
+msgstr "chiffres"
+
+#. Default: "special chars"
+msgid "pwd_special"
+msgstr "caractères spéciaux"
+
+#. Default: "Chars considered as special: ${chars}"
+msgid "pwd_special_chars"
+msgstr "Caractères considérés comme spéciaux: ${chars}"
+
+#. Default: "Not enough ${group} · ${found} found, ${min} required."
+msgid "pwd_occur_ko"
+msgstr "Pas assez de ${group} · ${found} trouvé·e·s, ${min} requis·es."
+
+#. Default: "Minimum size for the password: ${min} chars"
+msgid "pwd_min_length"
+msgstr "Taille minimale du mot de passe: ${min} caractères"
+
+#. Default: "Minimum number of ${group}: ${min}${detail}"
+msgid "pwd_min"
+msgstr "Nombre minimum de ${group}: ${min}${detail}"
+
+#. Default: "The password must respect the following rule·s:"
+msgid "pwd_rules"
+msgstr "Le mot de passe doit respecter la ou les règles suivantes:"
+
 #. Default: "Please choose a password that is different from the current one."
 msgid "same_password"
 msgstr "Choisissez un mot de passe qui est différent du mot de passe actuel."
