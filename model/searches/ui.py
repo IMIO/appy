@@ -106,6 +106,7 @@ class UiSearch:
              showNewSearch=showNewSearch|True;
              showHeaders=showHeaders|True;
              showTop=not popup or mayAdd;
+             showNav=batch and batch.showNav();
              totals=search.Totals.initialise(search, 'o', mode.columns)
                     if mode.isSummable() else None;
              specific=uiSearch.getResultsTop(mode, ajax)">
@@ -164,7 +165,7 @@ class UiSearch:
        </x>
 
        <!-- (Top) navigation -->
-       <div if="mode.batch and uiSearch.showTopNav and not mayAdd" class="snav"
+       <div if="showNav and uiSearch.showTopNav and not mayAdd" class="snav"
             style=":search.getNavMargins()">:mode.batch.pxNavigate</div>
 
        <!-- Pod templates -->
@@ -180,7 +181,7 @@ class UiSearch:
       <x if="not empty" var2="currentNumber=0">:mode.px</x>
 
       <!-- (Bottom) navigation -->
-      <div if="not empty and mode.batch and uiSearch.showBottomNav"
+      <div if="not empty and showNav and uiSearch.showBottomNav"
            class="snab" var2="scrollTop='payload'"
            align=":search.navAlign">:mode.batch.pxNavigate</div>
 

@@ -387,7 +387,7 @@ class History(PersistentList):
       <script>:history.getAjaxData(batch)</script>
 
       <!-- Navigate between history pages -->
-      <div align=":dright">:batch.pxNavigate</div>
+      <div align=":dright" if="batch.showNav()">:batch.pxNavigate</div>
 
       <!-- History -->
       <table width="100%" class="history">

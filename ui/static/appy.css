@@ -346,7 +346,7 @@ th input { margin:0 !important}
 .navSep { color:|altColor|; margin:0 0.3em }
 .highlight { background-color:yellow }
 .highlightRow { font-weight:bold; background-color:yellow; opacity:0.6 }
-.globalActions { display: flex; margin-bottom:30px }
+.globalActions { display: flex; margin-bottom:0.5em }
 .objectActions { display: flex; flex-wrap:wrap; align-items:flex-start;
                  margin:0.4em 0; gap:0.2em }
 .alignedActions { display:flex; flex-wrap:wrap; align-items:center; float:right;

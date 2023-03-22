@@ -1099,9 +1099,9 @@ function onDeleteObject(iid, back, text) {
 
 function onLink(action, url, fieldName, targetId, hook, start, semantics) {
   let params = {'linkAction': action, 'targetId': targetId};
-  if (hook) params[hook + '_start'] = start;
+  if (hook) params[`${hook}_start}`] = start;
   if (semantics) params['semantics'] = semantics;
-  post(url + '/' + fieldName + '/onLink', params);
+  post(`${url}/${fieldName}/onLink`, params);
 }
 
 function onLinkMany(action, url, id, start) {
@@ -1111,10 +1111,10 @@ function onLinkMany(action, url, id, start) {
       // Get the DOM node corresponding to the Ref
       node = document.getElementById(hook),
       // Get the ids of (un-)checked objects
-      statuses = node['_appy_' + cbType + '_cbs'],
+      statuses = node[`_appy_${cbType}_cbs`],
       ids = stringFromDict(statuses, true),
       // Get the array semantics
-      semantics = node['_appy_' + cbType + '_sem'];
+      semantics = node[`_appy_${cbType}_sem`];
   // Show an error message if no element is selected
   if ((semantics == 'checked') && (len(statuses) == 0)) {
     openPopup('alertPopup', no_elem_selected);

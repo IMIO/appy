@@ -232,7 +232,7 @@ class Ref(Field):
     # unlink many, etc.
 
     pxGlobalActions = Px('''
-     <div class="globalActions">
+     <div class="globalActions" if="not popup">
 
       <!-- Insert several objects (if in pick list) -->
       <input if="mayEdit and inPickList"
@@ -262,24 +262,24 @@ class Ref(Field):
                         (q(action), q(o.url), q(hook), q(batch.start))"
              style=":svg('deleteMany', bg='18px 18px')"/>
 
-      <!-- Select objects and close the popup -->
-      <input if="mayEdit and selector and selector.cbShown" type="button"
-             var="label=_('object_link_many'); css=ui.Button.getCss(label)"
-             value=":label" class=":css"
-             style=":svg('linkMany', bg='18px 18px')"
-             onclick=":'onSelectObjects(%s,%s,%s,%s,%s)' %
-              (q('%d_%s' % (o.iid, field.name)), q(selector.initiatorHook),
-               q(selector.initiator.url), q(selector.initiatorMode),
-               q(selector.onav))"/>
-
       <!-- Custom actions -->
-      <x if="not popup">
-       <div for="action in field.getActions(o)"
-            var2="checkHook='%d_%s' % (o.iid, field.name);
-                  fieldName='%s*%s' % (field.name, action.name); field=action;
-                  multi=action.getMulti(hook, checkHook);
-                  smallButtons=True">:action.pxRender</div>
-      </x>
+      <div for="action in field.getActions(o)"
+           var2="checkHook=f'{o.iid}_{field.name}';
+                 fieldName=f'{field.name}*{action.name}'; field=action;
+                 multi=action.getMulti(hook, checkHook);
+                 smallButtons=True">:action.pxRender</div>
+     </div>
+
+     <!-- Select objects and close the popup -->
+     <div class="globalActions"
+          if="popup and mayEdit and selector and selector.cbShown">
+      <input type="button" style=":svg('linkMany', bg='18px 18px')"
+        var="label=_('object_link_many'); css=ui.Button.getCss(label)"
+        value=":label" class=":css"
+        onclick=":'onSelectObjects(%s,%s,%s,%s,%s)' %
+                  (q(f'{o.iid}_{field.name}'), q(selector.initiatorHook),
+                   q(selector.initiator.url), q(selector.initiatorMode),
+                   q(selector.onav))"/>
      </div>''')
 
     # Icons for moving objects up / down
@@ -365,8 +365,8 @@ class Ref(Field):
       </div>
 
       <!-- Unlink -->
-      <div if="mayUnlink and ifield.mayUnlinkElement(io, o)" class="ibutton"
-           var2="text=_('object_unlink')">
+      <div if="mayUnlink and not popup and ifield.mayUnlinkElement(io, o)"
+           class="ibutton" var2="text=_('object_unlink')">
        <img var="iname='unlinkUp' if linkList else 'unlink'"
             class="clickable iconS" title=":text" src=":svg(iname)"
             onClick=":ifield.getOnUnlink(q, _, io, id, batch)"/>
@@ -509,7 +509,7 @@ class Ref(Field):
 
     pxSub = Px('''
      <!-- (Top) navigation -->
-     <div align=":dright">:batch.pxNavigate</div>
+     <div align=":dright" if="batch.showNav()">:batch.pxNavigate</div>
 
      <!-- No object is present -->
      <p class="discreet" if="not objects">:_(field.noObjectLabel)</p>
@@ -544,7 +544,7 @@ class Ref(Field):
              'showGlobalActions')">:field.pxGlobalActions</x>
 
      <!-- (Bottom) navigation -->
-     <div align=":dright" class="bottomSpace"
+     <div align=":dright" class="bottomSpace" if="batch.showNav()"
           var2="scrollTop='payload'">:batch.pxNavigate</div>
 
      <!-- Init checkboxes if present -->
@@ -560,8 +560,8 @@ class Ref(Field):
                 addCB=checkboxes)">
 
       <!-- Top controls -->
-      <div if="field.showControls and (mayAdd or mayLink or layout == 'view')"
-           class="topSpaceF">
+      <div if="field.showControls and (mayAdd or mayLink or layout == 'view')
+               and not popup" class="topSpaceF">
        <x if="field.collapsible and objects">:collapse.px</x>
        <span if="subLabel" class="discreet">:_(subLabel)</span>
        <span if="batch.length &gt; 1" class="discreet">

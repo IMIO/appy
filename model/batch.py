@@ -68,51 +68,47 @@ class Batch:
              .gotoLab { padding:0 0.5em; font-size:90% }''')
 
     pxNavigate = Px('''
-     <x if="batch.total &gt; batch.size">
+     <!-- Go to the first page -->
+     <img var="cond=batch.start != 0 and batch.start != batch.size;
+               css,js=batch.getInfo(cond, 0, _ctx_)"
+          class=":css" src=":svg('arrows')" onclick=":js"
+          title=":_('goto_first')" style="transform:rotate(90deg)"/>
 
-      <!-- Go to the first page -->
-      <img var="cond=batch.start != 0 and batch.start != batch.size;
-                css,js=batch.getInfo(cond, 0, _ctx_)"
-           class=":css" src=":svg('arrows')" onclick=":js"
-           title=":_('goto_first')" style="transform:rotate(90deg)"/>
+     <!-- Go to the previous page -->
+     <img var="cond=batch.start != 0;
+               sNumber=batch.start - batch.size;
+               css,js=batch.getInfo(cond, sNumber, _ctx_)"
+          class=":css" src=":svg('arrow')" onclick=":js"
+          title=":_('goto_previous')" style="transform:rotate(90deg)"/>
 
-      <!-- Go to the previous page -->
-      <img var="cond=batch.start != 0;
-                sNumber=batch.start - batch.size;
-                css,js=batch.getInfo(cond, sNumber, _ctx_)"
-           class=":css" src=":svg('arrow')" onclick=":js"
-           title=":_('goto_previous')" style="transform:rotate(90deg)"/>
+     <!-- Explain which elements are currently shown -->
+     <span class="navText"> 
+      <x>:batch.start + 1</x> ⇀
+      <x>:batch.start + batch.length</x> <span class="navSep">//</span> 
+      <span class="btot">:batch.total</span>
+     </span>
 
-      <!-- Explain which elements are currently shown -->
-      <span class="navText"> 
-       <x>:batch.start + 1</x> ⇀
-       <x>:batch.start + batch.length</x> <span class="navSep">//</span> 
-       <span class="btot">:batch.total</span>
-      </span>
+     <!-- Go to the next page -->
+     <img var="sNumber=batch.start + batch.size;
+               cond=sNumber &lt; batch.total;
+               css,js=batch.getInfo(cond, sNumber, _ctx_)"
+          class=":css" src=":svg('arrow')" title=":_('goto_next')"
+          style="transform:rotate(270deg)" onclick=":js"/>
 
-      <!-- Go to the next page -->
-      <img var="sNumber=batch.start + batch.size;
-                cond=sNumber &lt; batch.total;
-                css,js=batch.getInfo(cond, sNumber, _ctx_)"
-           class=":css" src=":svg('arrow')" title=":_('goto_next')"
-           style="transform:rotate(270deg)" onclick=":js"/>
+     <!-- Go to the last page -->
+     <img var="lastIncomplete=batch.total % batch.size;
+               complete=int(batch.total / batch.size);
+               counted=complete if lastIncomplete else complete-1;
+               sNumber= counted * batch.size;
+               cond=(batch.start != sNumber) and
+                    (batch.start != (sNumber-batch.size));
+               css,js=batch.getInfo(cond, sNumber, _ctx_)"
+          class=":css" src=":svg('arrows')" onclick=":js"
+          title=":_('goto_last')" style="transform: rotate(270deg)"/>
 
-      <!-- Go to the last page -->
-      <img var="lastPageIsIncomplete=batch.total % batch.size;
-                nbOfCompletePages=int(batch.total / batch.size);
-                nbOfCountedPages=lastPageIsIncomplete and \
-                                 nbOfCompletePages or nbOfCompletePages-1;
-                sNumber= nbOfCountedPages * batch.size;
-                cond=(batch.start != sNumber) and
-                     (batch.start != (sNumber-batch.size));
-                css,js=batch.getInfo(cond, sNumber, _ctx_)"
-           class=":css" src=":svg('arrows')" onclick=":js"
-           title=":_('goto_last')" style="transform: rotate(270deg)"/>
-
-      <!-- Go to the element number... -->
-      <x var="gotoNumber=gotoNumber|False" if="gotoNumber"
-         var2="sourceUrl=o.url; total=batch.total">:batch.pxGotoNumber</x>
-     </x>''')
+     <!-- Go to the element number... -->
+     <x var="gotoNumber=gotoNumber|False" if="gotoNumber"
+        var2="sourceUrl=o.url; total=batch.total">:batch.pxGotoNumber</x>''')
 
     def store(self, search, name=None):
         '''Returns the Javascript code allowing to store objects from this batch
@@ -131,6 +127,10 @@ class Batch:
     def isComplete(self):
         '''Does this batch contain all objects ?'''
         return self.length == self.total
+
+    def showNav(self):
+        '''Show the navigation only when appropriate'''
+        return self.total > self.size
 
     def __repr__(self):
         '''String representation'''
