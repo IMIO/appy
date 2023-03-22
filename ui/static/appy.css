@@ -77,7 +77,7 @@ form[name=search] input[type=button] { margin:0 }
 .changePassword { color:#494949 !important; font-style:italic; font-size:90% }
 .pageTitle { display:flex; flex-wrap:wrap; align-items:center; gap:0.1em;
              text-transform:uppercase; font-weight:bold; position:relative }
-.pageTitleP { text-align:center }
+.pageTitleP { text-align:|bcTitleAlignP| }
 .breadTitle { padding:0 0 30px 0; align-items:flex-start; gap:0.4em }
 .pageIcons { text-transform:uppercase; font-weight:bold; font-size:96% }
 .required { color:|warnColor|; font-weight:bold }

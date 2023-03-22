@@ -429,6 +429,7 @@ class Config:
         self.gridPadding = '10px' # Padding for tables having CSS class "grid"
         self.histMargin = 'margin:0 0 5px 0' # Margins for zone "history"
         self.lgMargin = '0' # Margin for a multi*l*in*g*ual block
+        self.bcTitleAlignP = 'center' # *b*read*c*rumb title align. in a *p*opup
 
         # Header
         self.headerHeight = '60px'
@@ -955,7 +956,7 @@ class Breadcrumb:
         # - "title" is the title of the object represented by this part;
         # - "url"   is the URL to this object.
         self.parts = None
-        # The CSS classes to apply to the main breacrumb tag
+        # The CSS classes to apply to the main breadcrumb tag
         self.css = 'pageTitle breadTitle'
         if popup: self.css += ' pageTitleP'
         # No breadcrumb is computed for the tool
