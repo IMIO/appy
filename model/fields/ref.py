@@ -575,7 +575,7 @@ class Ref(Field):
 
        <!-- The search selector if searches are defined -->
        <select var="searches=field.getSearches(o)" if="searches" class="refSel"
-               id=":'%s_%s_ssel' % (o.iid, field.name)"
+               id=":f'{o.iid}_{field.name}_ssel'"
                var2="sdef=field.getCurrentSearch(req, searches)"
                onchange=":'askBunchSwitchSearch(%s,%s,this.value)' %
                           (q(hook), q(field.name))">
@@ -1614,7 +1614,7 @@ class Ref(Field):
     def getCurrentSearchKey(self):
         '''In the context of a ref having p_self.searches, returns the key
            storing, in the request, the currently selected search.'''
-        return '%s_view' % self.name
+        return f'{self.name}_view'
 
     def getCurrentSearch(self, req, searches):
         '''Returns the name of the currently selected search, from this dict of
@@ -1632,8 +1632,12 @@ class Ref(Field):
         # results from one of the searches defined in it, or the standard list
         # of tied objects, depending on some request key.
         req = o.req
-        key = self.getCurrentSearchKey()
-        searchName = req[key] if key in req else ''
+        if isinstance(self.searches, Search):
+            # We have a unique search in front of the ref: use it
+            searchName = '_default_'
+        else:
+            key = self.getCurrentSearchKey()
+            searchName = req[key] if key in req else ''
         # If no search was found, show the standard list of tied objects
         if not searchName: return self.pxSub
         # If we are here, we must render the PX for rendering the found search.
@@ -1641,9 +1645,9 @@ class Ref(Field):
         # search PX.
         req.className = self.class_.meta.name
         # Key "search" allows to find the Search from the request
-        req.search = '%s,%s,search*%s' % (o.iid, self.name, searchName)
+        req.search = f'{o.iid},{self.name},search*{searchName}'
         # Key "ref" allows to restrict seach results to ref's tied objects
-        req.ref = '%s:%s' % (o.iid, self.name)
+        req.ref = f'{o.iid}:{self.name}'
         context = o.traversal.context
         Px.injectRequest(context, req, o.tool, specialOnly=True)
         context.className = req.className # Not automatically injected
