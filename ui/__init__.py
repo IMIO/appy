@@ -301,7 +301,10 @@ class Config:
         self.homeShowLogo = True # Logo on the top-left corner on the home page
         self.homeTextColor = self.brightColor # Text color
         self.homeTextLeft = '45px' # Distance from the left of the screen
+        self.homeTextFSize = '120%' # Text *f*ont size
         self.homeTextTop = '25px'  # Distance from the top of the screen
+        self.homeH1FSize = '300%'  # *F*ont size for h1 tags
+        self.homeH2FSize = '200%'  # *F*ont size for h2 tags
 
         # Styling the login box
         self.loginTitleWeight = 'normal'

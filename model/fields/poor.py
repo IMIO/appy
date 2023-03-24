@@ -156,8 +156,8 @@ Icon.all = [
   Icon('bulleted',  'wrapper', data='insertUnorderedList'),
   Icon('sub',       'wrapper', data='subscript'),
   Icon('sup',       'wrapper', data='superscript'),
-  # Duplicate selected text
-  Icon('dup',       'action' , data='', shortcut=68),
+  # Duplicate selected text (not yet)
+  #Icon('dup',       'action' , data='', shortcut=68),
   # Increment the field height by <data>%
   Icon('lengthen',  'action',  data='30', shortcut=56)
 ]
