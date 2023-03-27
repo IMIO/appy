@@ -434,7 +434,7 @@ class Grid(List):
            var2="mayView=guard.mayView(o);
                  showFields=mode.gridder.showFields">
 
-       <!-- A complete table will all visible fields -->
+       <!-- A complete table with all visible fields -->
        <table class="thumbtable" if="showFields">
         <tr var="@currentNumber=currentNumber + 1" valign="top"
             for="column in mode.columns"
@@ -727,7 +727,7 @@ class Calendar(Mode):
         params = {'sortBy':'date', 'sortOrder':'asc'}
         if self.monthIndex == 'date':
             # Define the search based on every event's (start) date.
-            # ~~~
+            #
             # As first date, prefer the first visible date in the p_grid instead
             # of the p_first day of the month.
             params['date'] = in_(gridFirst, gridLast)
@@ -757,37 +757,36 @@ class Calendar(Mode):
             # whole calendar view when coming back from the popup.
             eType = types[entryType]
             # What CSS class(es) to apply ?
-            css = ('calEvt %s' % eType.css) if eType.css else 'calEvt'
+            css = f'calEvt {eType.css}' if eType.css else 'calEvt'
             # Show start and/or end hour ?
             eHour = sHour = ''
             if eType.start:
-                sHour = '<td width="2em">%s</td>' % \
-                        o.date.strftime(self.hourFormat)
+                sDate = o.date.strftime(self.hourFormat)
+                sHour = f'<td width="2em">{sDate}</td>'
             if eType.end:
                 endDate = o.endDate
                 if endDate:
-                    eHour = ' <abbr title="%s">¬</abbr>' % \
-                            endDate.strftime(self.hourFormat)
+                    endS = endDate.strftime(self.hourFormat)
+                    eHour = f' <abbr title="{endS}">¬</abbr>'
             # Display indicators that the event spans more days
             past = '⇠ ' if eType.past else ''
             future = ' ⇢' if eType.future else ''
             # The event title
-            title = Title.get(o, target=self.target, popup=True,
-                              backHook='%dcalendar' % self.tool.iid,
-                              maxChars=24)
+            title = Title.get(o, target=self.target,
+                              backHook=f'{self.tool.iid}calendar', maxChars=24)
             # Display a "repetition" icon if the object is part of a series
             hasSuccessor = o.successor
             hasPredecessor = o.predecessor
             if hasSuccessor or hasPredecessor:
                 # For the last event of a series, show a more stressful icon
                 name = 'repeated' if hasSuccessor else 'repeated_last'
-                icon = '<img src="%s" class="help" title="%s"/>' % \
-                       (o.buildUrl(name), o.translate(name))
+                icon = f'<img src="{o.buildUrl(name)}" class="help" ' \
+                       f'title="{o.translate(name)}"/>'
             else:
                 icon = ''
             # Produce the complete entry
-            r.append('<table class="%s"><tr valign="top">%s<td>%s%s%s%s%s</td>'\
-                     '</tr></table>' % (css,sHour,past,title,future,eHour,icon))
+            r.append(f'<table class="{css}"><tr valign="top">{sHour}<td>' \
+                     f'{past}{title}{future}{eHour}{icon}</td></tr></table>')
         return '\n'.join(r)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
