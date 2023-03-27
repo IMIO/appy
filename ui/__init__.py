@@ -305,6 +305,7 @@ class Config:
         self.homeTextTop = '25px'  # Distance from the top of the screen
         self.homeH1FSize = '300%'  # *F*ont size for h1 tags
         self.homeH2FSize = '200%'  # *F*ont size for h2 tags
+        self.homeLinkColor = '#ffd8eb' # Link color (visited and not visited)
 
         # Styling the login box
         self.loginTitleWeight = 'normal'

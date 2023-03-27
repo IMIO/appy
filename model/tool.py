@@ -497,7 +497,7 @@ class Tool(Base):
       .homeText h1 { font-size:|homeH1FSize|; margin-left:-5px; padding:0 }
       .homeText h2 { font-size:|homeH2FSize| }
       .homeText p { font-size:|homeTextFSize|; margin:0 }
-      .homeText a, .homeText a:visited { color:#ffd8eb }
+      .homeText a, .homeText a:visited { color:|homeLinkColor| }
       .homeTop { position:fixed; top:20px; right:20px; color:|headerColor|;
                  z-index:1 }
      ''',
