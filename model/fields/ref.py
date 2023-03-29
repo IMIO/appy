@@ -336,8 +336,7 @@ class Ref(Field):
          var2="workflow=o.getWorkflow()">:workflow.pxTransitions</x>
 
       <!-- Edit -->
-      <div if="editable and createVia != 'noForm'" class="ibutton"
-           var2="text=_('object_edit')">
+      <div if="editable" class="ibutton" var2="text=_('object_edit')">
        <a if="not locked"
           var2="navInfo=ifield.getNavInfo(io, batch.start + currentNumber,
                                           batch.total) if not inMenu else 'no'"
