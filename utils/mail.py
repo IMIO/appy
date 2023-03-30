@@ -291,7 +291,7 @@ def sendMailIf(config, o, privilege, subject, body, attachments=None,
         recipients.append(recipient)
     if recipients:
         sendMail(config, recipients, subject, body, attachments, log=log,
-                 replyTo=replyTo)
+                 replyTo=replyTo, split=split)
     elif log:
         if isinstance(privilege, (list, tuple)):
             privilege = ', '.join(privilege)

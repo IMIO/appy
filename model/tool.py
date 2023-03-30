@@ -379,20 +379,21 @@ class Tool(Base):
     #  Main methods
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
-    def sendMail(self, to, subject, body, attachments=None, replyTo=None):
+    def sendMail(self, to, subject, body, attachments=None, replyTo=None,
+                 split=False):
         '''Sends a mail. See doc for appy.utils.mail.sendMail.'''
         return sendMail(self.config.mail, to, subject, body,
-                        attachments=attachments, log=self.log, replyTo=replyTo)
+          attachments=attachments, log=self.log, replyTo=replyTo, split=split)
 
     def sendMailIf(self, o, privilege, subject, body, attachments=None,
                    privilegeType='permission', excludeExpression='False',
-                   userMethod=None, replyTo=None):
+                   userMethod=None, replyTo=None, split=False):
         '''Sends a mail concerning this p_o(bject), to people having this
            p_privilege.'''
         return sendMailIf(o.config.mail, o, privilege, subject, body,
-                          attachments=attachments, privilegeType=privilegeType,
-                          excludeExpression=excludeExpression,
-                          userMethod=userMethod, log=o.log, replyTo=replyTo)
+          attachments=attachments, privilegeType=privilegeType,
+          excludeExpression=excludeExpression, userMethod=userMethod, log=o.log,
+          replyTo=replyTo, split=split)
 
     def computeHomePage(self):
         '''Compute the page that is shown to the user when he hits the app'''
