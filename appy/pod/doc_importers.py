@@ -12,6 +12,7 @@ from appy.utils.client import Resource
 from appy.model.utils import Object as O
 from appy.pod.odf_parser import OdfEnvironment
 from appy.utils.path import getOsTempFolder, getTempFileName
+from io import IOBase
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 FILE_KO  = "'%s' does not exist or is not a file."
@@ -55,9 +56,9 @@ class DocImporter:
             # The file content (in self.content) must be dumped in a temp file
             # first. It may be binary or a file handler.
             content = self.content
-            content = content.read() if isinstance(content, file) else content
+            content = content.read() if isinstance(content, IOBase) else content
             f = open(self.importPath, 'wb')
-            f.write(fileContent)
+            f.write(content)
             f.close()
         # Some importers add specific attrs via m_init
 
