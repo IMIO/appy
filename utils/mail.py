@@ -195,6 +195,10 @@ def sendMail(config, to, subject, body, attachments=None, log=None,
         if split:
             for recipient in to:
                 start = time.time()
+                # The mapping interface for v_msg is flawed: __setitem__ appends
+                # to an internal list instead of behaving like a mapping. Sad
+                # Barry...
+                del msg['To']
                 msg['To'] = recipient
                 body = msg.as_string()
                 r = smtpServer.sendmail(fromAddress, [recipient], body)
