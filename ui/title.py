@@ -55,10 +55,12 @@ class Title:
         # p_isSelect is True if we are in "select" mode (see p_get)
         r = base or ''
         if more:
-            r = '%s%s%s' % (r, (' ' if r else ''), more)
+            space = ' ' if r else ''
+            r = f'{r}{space}{more}'
         if isSelect:
-            r = '%s%sclickable' % (r, (' ' if r else ''))
-        return ' class="%s"' % r if r else ''
+            space = ' ' if r else ''
+            r = f'{r}{space}clickable'
+        return f' class="{r}"' if r else ''
 
     @classmethod
     def getIcon(class_, o, base, params, target):
@@ -114,12 +116,13 @@ class Title:
         # selecting objects: every title must not be a link, but clicking on it
         # must trigger Javascript code (in p_selectJs) that will select this
         # object.
+        isSelect = mode == 'select'
 
         # The last p_mode is "text". In this case, we simply show the object
         # title but with no tied action (link, select). If we are already in the
         # popup and the target is the popup, because we have a single level of
         # popups for now on, displaying a link will not be possible.
-        toPopup = target and target.target != '_self'
+        toPopup = target and target.target != '_self' and not isSelect
         if popup and toPopup: mode = 'text'
 
         # If p_highlight is True, keywords will be highlighted if we are in the
@@ -135,7 +138,6 @@ class Title:
         oclass = o.class_
 
         # Compute the "class" attribute
-        isSelect = mode == 'select'
         tcss = oclass.getCssFor(o, 'title')
         classAttr = class_.getClassAttribute(tcss, css, isSelect)
 
