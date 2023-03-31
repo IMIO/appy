@@ -186,7 +186,7 @@ def sendMail(config, to, subject, body, attachments=None, log=None,
         # Log the time spent while connecting, if we perform a single connection
         # for sending several mails.
         if split and log:
-            log(CONNECT_OK % (time.time()-start))
+            log(CONNECT_OK % (config.server, time.time()-start))
         # Precompute the mail body if a single mail must be sent
         if not split:
             msg['To'] = ', '.join(to)
