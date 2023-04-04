@@ -740,7 +740,7 @@ class Grep(Program):
             self.dump(self.messageTexts[bool(self.repl)][False])
         elif verbose > 1:
             # Dump the match instances
-            matches = getattr(self, matches, None)
+            matches = getattr(self, 'matches', None)
             if matches:
                 for match in matches.values():
                     self.dump(repr(match))
