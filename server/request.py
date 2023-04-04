@@ -164,26 +164,4 @@ class Request(Object):
         for field in o.getFields('edit'):
             if field.name in toExclude: continue
             field.setRequestValue(template)
-
-    def mustLand(self, o):
-        '''Must we "land", according data found on p_self ?'''
-        # "Landing" means: in the UI, leaving the iframe popup (sky) to go back
-        # to the main page (earth).
-        #
-        # If we are not in the popup, is has no sense to land
-        if self.popup != 'True': return
-        # The decision to stay in the popup or land is based on the referer and
-        # navigation info. We must land if:
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # (a) | the referer was on earth ;
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # (b) | the referer was in the popup, but there is no navigation info.
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        referer = self.referer or o.referer
-        parts = urllib.parse.urlparse(referer)
-        query = parts.query
-        if not query: return True # Earth is our default home
-        val = urllib.parse.parse_qs(query).get('popup')
-        if not val: return True
-        return 'False' in val or self.nav == 'no'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

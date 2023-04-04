@@ -265,7 +265,7 @@ class Marshaller:
                 className = o.class_.name
                 # Preamble: configure marshalling of File fields
                 self.marshallBinaries = o.config.model.marshallBinaries
-                if self.marshallBinaries:
+                if not self.marshallBinaries:
                     self.databaseFolder = o.config.database.binariesFolder
                 # Browse p_o's fields that must appear on the XML layout
                 for field in o.getFields('xml'):
