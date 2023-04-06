@@ -871,28 +871,27 @@ class Ref(Field):
       unlinkElement=None, unlinkConfirm=True, insert=None, beforeLink=None,
       afterLink=None, afterUnlink=None, back=None, backSecurity=True, show=True,
       renderable=None, page='main', group=None, layouts=None, showHeaders=False,
-      shownInfo=None, fshownInfo=None, select=None, maxPerPage=30,
-      maxPerLive=10, move=0, indexed=False, mustIndex=True, indexValue=None,
-      emptyIndexValue=0, indexAttribute='iid', searchable=False,
-      filterField=None, readPermission='read', writePermission='write',
-      width=None, height=5, maxChars=None, colspan=1, master=None,
-      masterValue=None, focus=False, historized=False, mapping=None,
-      generateLabel=None, label=None, queryable=False, queryFields=None,
-      queryNbCols=1, searches=None, navigable=False, changeOrder=True,
-      numbered=False, checkboxes=True, checkboxesDefault=False, sdefault='',
-      scolspan=1, swidth=None, sheight=None, fwidth='7em', fheight='14em',
-      sselect=None, fselect=None, persist=True, render='list',
-      renderMinimalSep=', ', listCss=None, menuIdMethod=None,
-      menuInfoMethod=None, menuUrlMethod=None, menuCss=None, dropdownCss=None,
-      menuItemWrap=False, view=None, cell=None, buttons=None, edit=None,
-      xml=None, translations=None, showActions='all', actionsDisplay='block',
-      showGlobalActions=True, collapsible=False, titleMode='link',
-      viewAdded=True, noValueLabel='choose_a_value', noObjectLabel='no_ref',
-      noSelectableLabel='no_selectable', addLabel='object_add',
-      addFromLabel='object_add_from', addIcon='add.svg', iconOut=False,
-      iconCss='iconS', filterable=True, supTitle=None, subTitle=None,
-      toggleSubTitles=None, separator=None, rowAlign='top', showControls=True,
-      actions=None, checkAll=True):
+      shownInfo=None, fshownInfo=None, select=None, maxPerPage=30, move=0,
+      indexed=False, mustIndex=True, indexValue=None, emptyIndexValue=0,
+      indexAttribute='iid', searchable=False, filterField=None,
+      readPermission='read', writePermission='write', width=None, height=5,
+      maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
+      historized=False, mapping=None, generateLabel=None, label=None,
+      queryable=False, queryFields=None, queryNbCols=1, searches=None,
+      navigable=False, changeOrder=True, numbered=False, checkboxes=True,
+      checkboxesDefault=False, sdefault='', scolspan=1, swidth=None,
+      sheight=None, fwidth='7em', fheight='14em', sselect=None, fselect=None,
+      persist=True, render='list', renderMinimalSep=', ', listCss=None,
+      menuIdMethod=None, menuInfoMethod=None, menuUrlMethod=None, menuCss=None,
+      dropdownCss=None, menuItemWrap=False, view=None, cell=None, buttons=None,
+      edit=None, xml=None, translations=None, showActions='all',
+      actionsDisplay='block', showGlobalActions=True, collapsible=False,
+      titleMode='link', viewAdded=True, noValueLabel='choose_a_value',
+      noObjectLabel='no_ref', noSelectableLabel='no_selectable',
+      addLabel='object_add', addFromLabel='object_add_from', addIcon='add.svg',
+      iconOut=False, iconCss='iconS', filterable=True, supTitle=None,
+      subTitle=None, toggleSubTitles=None, separator=None, rowAlign='top',
+      showControls=True, actions=None, checkAll=True):
         # The class whose tied objects will be instances of
         self.class_ = class_
         # Specify "attribute" only for a back reference: it will be the name
@@ -1035,7 +1034,10 @@ class Ref(Field):
         #            | chars in an input text field: in a dropdown, the first
         #            | matching objects will be shown and will be selectable.
         #            | The set of possible objects shown in the dropdown must be
-        #            | defined by a Search instance in attribute "select".
+        #            | defined by a Search instance in attribute "select". On
+        #            | this search instance, you can use attribute "maxPerLive"
+        #            | to configure the maximum number of matched objects
+        #            | appearing in the dropdown.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "popupRef" | the user will choose objects from a popup window, that
         #            | will display objects tied via a Ref field. In this case,
@@ -1198,9 +1200,6 @@ class Ref(Field):
         self.fselect = fselect or self.sselect
         # Maximum number of referenced objects shown at once
         self.maxPerPage = maxPerPage
-        # When p_link is "dropdown", the following parameter determines the
-        # maximum number of matching results that appear in the dropdown.
-        self.maxPerLive = maxPerLive
         # If param p_queryable is True, the user will be able to perform
         # searches from the UI within referenced objects. A Ref being queryable
         # requires an index. Two possibilities exist:

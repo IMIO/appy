@@ -556,10 +556,9 @@ class Search:
      <div var="search=uiSearch.search;
               filters=search.container.getFilters(tool);
               io,ifield=search.getRefInfo(tool, pre, nameOnly=False, sep='_');
-              initiator=ifield or search;
               objects=search.run(handler,filters=filters,
-                                 maxPerPage=initiator.maxPerLive).objects"
-          id=":'{pre}_LSResults'">
+                                 maxPerPage=search.maxPerLive).objects"
+          id=":f'{pre}_LSResults'">
       <p if="not objects">::_('query_no_result')</p>
       <div for="o in objects">
        <a href=":search.onSelectLiveResult(o, io, ifield)"
