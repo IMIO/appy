@@ -56,7 +56,9 @@ class Transition:
         # list /  | it is a sequence whose elements are any of the hereabove-
         # tuple   | mentioned values. The transition will be triggerable if the
         #         | currently logged user has *at least* one of the listed roles
-        #         | and if *all* listed methods return True.
+        #         | and if *all* listed methods return True. If you want to mix
+        #         | roles and methods, it is generally preferable to place roles
+        #         | before functions in the sequence.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.condition = condition
         if isinstance(condition, str):
@@ -342,7 +344,11 @@ class Transition:
                         hasRole = True
                 else: # It is a method
                     r = condition(proto, o)
-                    if not r: return r # False or a No instance
+                    if not r:
+                        # v_r is False or a No instance. If roles were also
+                        # mentioned among p_self.condition, and v_hasRole is
+                        # False so far, return False and not the No instance.
+                        return False if hasRole is False else r
             if hasRole != False:
                 return True
         else:
