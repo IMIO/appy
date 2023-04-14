@@ -2,13 +2,14 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from pathlib import Path
 from base64 import encodebytes
 import xml.sax, http.client, urllib.parse, ssl
-import re, time, socket, random, hashlib, gzip
+import re, io, time, socket, random, hashlib, gzip
 
-from appy.utils import json
-from appy.utils import copyData
-from appy.model.utils import Object
+from appy.utils import json, copyData
+from appy.utils import path as putils
+from appy.model.utils import Object as O
 from appy.xml.marshaller import Marshaller
 from appy.xml.unmarshaller import Unmarshaller
 
@@ -23,34 +24,116 @@ RESS_R    = '<Resource at %s>'
 CIC_ERR   = 'Check your Internet connection (%s)'
 CONN_ERR  = 'Connection error (%s)'
 URL_ERR   = 'Wrong URL: %s'
+ENC_ERR   = 'Cannot encode value %s'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class FormDataEncoder:
-    '''Allows to encode form data for sending it through a HTTP request'''
+    '''Encode form data for sending it through a HTTP POST request'''
 
     def __init__(self, data):
         self.data = data # The data to encode, as a dict
 
     def marshalValue(self, name, value):
         if isinstance(value, str):
-            return '%s=%s' % (name, urllib.parse.quote(value))
+            r = f'{name}={urllib.parse.quote(value)}'
         elif isinstance(value, float):
-            return '%s:float=%s' % (name, value)
+            r = f'{name}:float={value}'
         elif isinstance(value, int):
-            return '%s:int=%s' % (name, value)
+            r = f'{name}:int={value}'
         elif isinstance(value, long):
-            res = '%s:long=%s' % (name, value)
-            if res[-1] == 'L':
-                res = res[:-1]
-            return res
+            r = f'{name}:long={value}'
+            if r[-1] == 'L':
+                r = r[:-1]
         else:
-            raise Exception('Cannot encode value %s' % str(value))
+            raise Exception(ENC_ERR % str(value))
+        return r
+
+    def getSep(self):
+        '''Returns the separator to use between data attributes'''
+        return b'&'
 
     def encode(self):
+        '''Encodes all values from p_self.data as bytes'''
         r = []
         for name, value in self.data.items():
-            r.append(self.marshalValue(name, value).encode())
-        return b'&'.join(r)
+            val = self.marshalValue(name, value)
+            if not isinstance(val, bytes):
+                val = val.encode()
+            r.append(val)
+        return self.getSep().join(r)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class FormMultiEncoder(FormDataEncoder):
+    '''Encode form data in multipart format'''
+
+    # Parameters for creating a boundary
+    dashCount = 27
+    numbersCount = 25
+
+    # Part of the boundary separator
+    subSep = '\r\n'
+
+    # Base template for any value
+    anyValue = f'Content-Disposition: form-data; name="%s"'
+
+    # Template for a basic value
+    basicValue = f'{anyValue}{subSep}{subSep}%s'
+
+    # Template for file content
+    fileValue = f'{anyValue}; filename="%s"{subSep}Content-Type: %s' \
+                f'{subSep}{subSep}%s'
+
+    def __init__(self, data):
+        super().__init__(data)
+        # Define a boundary for separating form data
+        self.boundary = self.defineBoundary()
+
+    def defineBoundary(self):
+        '''Generates a boundary in p_self.boundary'''
+        # Start with dashes
+        dashes = '-' * self.dashCount
+        # End with a random figure
+        figures = []
+        i = 0
+        while i < self.numbersCount:
+            figures.append(str(random.randint(0,9)))
+            i += 1
+        return f'{dashes}{"".join(figures)}'
+
+    def getSep(self):
+        '''The attributes separator, for a multi-form encoder, is the
+           boundary.'''
+        sep = self.subSep
+        return f'{sep}--{self.boundary}{sep}'.encode()
+
+    def marshalValue(self, name, value):
+        '''Marshalls attribute having this p_name and p_value'''
+        if isinstance(value, io.BufferedReader):
+            # A file
+            path = Path(value.name)
+            fileName = path.name
+            mimeType = putils.guessMimeType(path)
+            # Create, directly as bytes, the chunk of data containing the file's
+            # metadata and its content.
+            base = self.fileValue.encode()
+            r = base % (name.encode(), fileName.encode(), mimeType.encode(),
+                        value.read())
+            # Now that file content has been read, close it
+            value.close()
+        else:
+            # Any other type of content
+            r = self.basicValue % (name, str(value))
+        return r
+
+    def encode(self):
+        '''Dumps all field values sequentially, then add the boundary as
+           prologue and epilogue.'''
+        r = super().encode()
+        # Add the prologue and epilogue
+        sep = self.getSep()
+        prologue = sep[2:]
+        epilogue = sep[:-2] + b'--\r\n'
+        return b''.join([prologue, r, epilogue])
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class SoapDataEncoder:
@@ -77,7 +160,7 @@ class SoapDataEncoder:
             r = self.data
         else:
             # self.data is here a Python object. Wrap it in a SOAP Body.
-            soap = Object(Body=self.data)
+            soap = O(Body=self.data)
             # Marshall it
             marshaller = Marshaller(rootTag='Envelope', namespaces=self.ns,
                                     namespacedTags=self.namespacedTags)
@@ -124,48 +207,49 @@ class DigestRealm:
         # Compute a client random nouce
         cnonce = self.md5(random.random())
         # Collect credentials info in a dict
-        res = {'username': login, 'uri': uri, 'realm': realm, 'nonce': nonce,
-               'algorithm': algorithm}
+        r = {'username': login, 'uri': uri, 'realm': realm, 'nonce': nonce,
+             'algorithm': algorithm}
         # Add optional attribute "opaque"
-        if hasattr(self, 'opaque'): res['opaque'] = self.opaque
+        if hasattr(self, 'opaque'): r['opaque'] = self.opaque
         # Precompute the "HA1" part of the response, that depends on the
         # algorithm in use (MD5 or MD5-sess).
-        ha1 = self.md5('%s:%s:%s' % (login, realm, resource.password))
+        ha1 = self.md5(f'{login}:{realm}:{resource.password}')
         if algorithm == 'MD5-sess':
-            ha1 = self.md5('%s:%s:%s' % (ha1, nonce, cnonce))
+            ha1 = self.md5(f'{ha1}:{nonce}:{cnonce}')
         # Take into account the quality of protection (qop)
         hasQop = hasattr(self, 'qop')
         if hasQop:
-            qop = res['qop'] = self.qop[0]
-            res['cnonce'] = cnonce
-            res['nc'] = '00000001'
+            qop = r['qop'] = self.qop[0]
+            r['cnonce'] = cnonce
+            r['nc'] = '00000001'
         else:
             qop = 'auth'
         # Precompute the "HA2" part of the response, that depends on qop
         if qop == 'auth-int':
             entity = self.md5('entity')
-            ha2 = self.md5('%s:%s:%s' % (httpMethod, uri, entity))
+            ha2 = self.md5(f'{httpMethod}:{uri}:{entity}')
         else:
-            ha2 = self.md5('%s:%s' % (httpMethod, uri))
+            ha2 = self.md5(f'{httpMethod}:{uri}')
         # Compute the complete response
         if hasQop:
-            response = self.md5('%s:%s:%s:%s:%s:%s' % \
-                                (ha1, nonce, res['nc'], cnonce, qop, ha2))
+            response = self.md5(f'{ha1}:{nonce}:{r["nc"]}:{cnonce}:{qop}:{ha2}')
         else:
-            response = self.md5('%s:%s:%s' % (ha1, nonce, ha2))
-        res['response'] = response
+            response = self.md5(f'{ha1}:{nonce}:{ha2}')
+        r['response'] = response
         # Convert the dict to a formatted list, quoting values when relevant
         attrs = []
-        for name, value in res.items():
+        for name, value in r.items():
             if name not in self.unquoted:
-                value = '"%s"' % value
-            attrs.append('%s=%s' % (name, value))
+                value = f'"{value}"'
+            attrs.append(f'{name}={value}')
         # Produce the final value
-        return 'Digest %s' % ', '.join(attrs)
+        attrs = ', '.join(attrs)
+        return f'Digest {attrs}'
 
     def __repr__(self):
-        pairs = ['%s=%s' % (k, v) for k, v in self.__dict__.items()]
-        return '<Realm %s>' % ','.join(pairs)
+        '''p_self's short string representation'''
+        pairs = ','.join([f'{k}={v}' for k, v in self.__dict__.items()])
+        return f'<Realm {pairs}>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class HttpResponse:
@@ -198,10 +282,11 @@ class HttpResponse:
         self.response = response
 
     def __repr__(self, complete=False):
+        '''p_self's short string representation'''
         duration = suffix = ''
         if self.duration: duration = DUR_SECS % self.duration
         if complete:
-            suffix = RESP_T %  (str(self.headers), str(self.body))
+            suffix = RESP_T % (str(self.headers), str(self.body))
         return RESP_R % (self.code, self.text, duration, suffix)
 
     def get(self): return self.__repr__(complete=True)
@@ -211,7 +296,7 @@ class HttpResponse:
         parts = urllib.parse.urlparse(url)
         r = parts.path or '/'
         if parts.query:
-            r += '?%s' % parts.query
+            r += f'?{parts.query}'
         return r
 
     def extractContentType(self, contentType):
@@ -235,21 +320,22 @@ class HttpResponse:
             if value.strip('"') == 'deleted':
                 # Do not set this cookie, and remove it if already present
                 if name in self.resource.cookies:
-                    del(self.resource.cookies[name])
+                    del self.resource.cookies[name]
             else:
                 self.resource.cookies[name] = value
 
     xmlHeaders = ('text/xml', 'application/xml', 'application/soap+xml')
 
     def extractData(self, responseType=None):
-        '''This method extracts, from the various parts of the HTTP response,
-           some useful information:
-           * it will find the URI where to redirect the user to if self.code
-             is 302 or 303;
-           * it will return authentication-related data, if present, if
-             self.code is 401;
-           * it will unmarshall XML or JSON data into Python objects;
-           * ...'''
+        '''Extracts, from the various parts of the HTTP response, some useful
+           information.'''
+        #
+        # - Find the URI where to redirect the user to if self.code is 302 or
+        #   303;
+        # - Return authentication-related data, if present, if self.code is 401;
+        # - Unmarshall XML or JSON data into Python objects;
+        # - etc
+        #
         # Extract information from HTTP headers when relevant
         headers = self.headers
         self.extractCookies(headers)
@@ -353,8 +439,8 @@ class Resource:
     def getHeaderHost(self, protocol, host, port):
         '''Gets the content of header key "Host"'''
         # Insert the port number if not standard
-        suffix = '' if port == Resource.standardPorts[protocol] else ':%d'% port
-        return '%s%s' % (host, suffix)
+        suffix = '' if port == Resource.standardPorts[protocol] else f':{port}'
+        return f'{host}{suffix}'
 
     def __repr__(self):
         '''p_self's short string representation'''
@@ -370,20 +456,20 @@ class Resource:
                     headers[k] = v
         # Add cookies
         if self.cookies:
-            headers['Cookie'] = '; '.join(['%s=%s' % (k, v) \
-                                          for k, v in self.cookies.items()])
+            cookiesL = [f'{k}={v}' for k, v in self.cookies.items()]
+            headers['Cookie'] = '; '.join(cookiesL)
         # Add credentials-related headers when relevant
         if 'Authorization' in headers: return
         method = self.authMethod
         if method == 'Basic':
             if self.username and self.password:
-                creds = ('%s:%s' % (self.username, self.password)).encode()
-                authorization = '%s %s' % (method,
-                                           encodebytes(creds).strip().decode())
+                creds = f'{self.username}:{self.password}'.encode()
+                credsD = encodebytes(creds).strip().decode()
+                authorization = f'{method} {credsD}'
                 headers['Authorization'] = authorization
         elif method == 'Bearer':
             if self.token:
-                headers['Authorization'] = '%s %s' % (method, self.token)
+                headers['Authorization'] = f'{method} {self.token}'
 
     def readResponse(self, response):
         '''Reads the response content. Unzip the result when appropriate'''
@@ -468,16 +554,17 @@ class Resource:
 
     def get(self, path=None, headers=None, params=None, followRedirect=True,
             responseType=None, unmarshallParams=None, timeout=None):
-        '''Perform a HTTP GET on the server. Parameters can be given as a dict
-           in p_params. p_responseType will be used if no "Content-Type" key is
-           found on the HTTP response. In the processs of unmarshalling received
-           data, specific parameters can be passed in dict
-           p_unmarshallParams. '''
+        '''Perform a HTTP GET on the server'''
+        # Parameters can be given as a dict in p_params. p_responseType will be
+        # used if no "Content-Type" key is found on the HTTP response. In the
+        # processs of unmarshalling received data, specific parameters can be
+        # passed in dict p_unmarshallParams.
         path = path or self.path
         # Encode and append params if given
         if params:
             sep = '&' if '?' in path else '?'
-            path = '%s%s%s' % (path, sep, urllib.parse.urlencode(params))
+            paramsE = urllib.parse.urlencode(params)
+            path = f'{path}{sep}{paramsE}'
         r = self.send('GET', path, headers=headers, responseType=responseType,
                       unmarshallParams=unmarshallParams, timeout=timeout)
         # Follow redirect when relevant
@@ -500,10 +587,32 @@ class Resource:
 
     def post(self, data=None, path=None, headers=None, encode='form',
              followRedirect=True, timeout=None):
-        '''Perform a HTTP POST on the server. If p_encode is "form", p_data is
-           considered to be a dict representing form data that will be
-           form-encoded. Else, p_data will be considered as the ready-to-send
-           body of the HTTP request.'''
+        '''Perform a HTTP POST on the server'''
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # If p_encode | It means that ...
+        # is ...      |
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "form"      | the method of encoding will be:
+        #             |        application/x-www-form-urlencoded
+        #             | and p_data must be a dict containing for parameters as
+        #             | key/value pairs ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "multi"     | the method of encoding will be:
+        #             |            multipart/form-data
+        #             | and p_data must be a dict containing for parameters as
+        #             | key/value pairs. If you want to pass a binary file as
+        #             | parameter, the value of the corresponding entry in
+        #             | p_data must be an open file handler, opened with
+        #             | attributes "rb" (="read binary"). This p_post method
+        #             | will close every such file handler after reading the
+        #             | file content.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # None        | the caller is supposed to have prepared everything prior
+        #             | to calling this p_post method; p_data is supposed to be
+        #             | a ready-to-send request body, as bytes or string, and
+        #             | the Content-Type header is supposed to be filled by the
+        #             | caller as well.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         path = path or self.path
         if headers is None: headers = {}
         # Prepare the data to send
@@ -511,6 +620,11 @@ class Resource:
             # Format the form data and prepare headers
             body = FormDataEncoder(data).encode()
             headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        elif encode == 'multi':
+            encoder = FormMultiEncoder(data)
+            headers['Content-Type'] = f'multipart/form-data; ' \
+                                      f'boundary={encoder.boundary}'
+            body = encoder.encode()
         else:
             body = data if isinstance(data, bytes) else data.encode()
         headers['Content-Length'] = str(len(body))
