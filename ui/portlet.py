@@ -12,6 +12,10 @@ class Portlet:
        column situated at the left of the screen for left-to-right languages,
        and at the right for right-to-left languages.'''
 
+    # Set here a PX if you want to customize the portlet bottom, rendered
+    # between the root-class-specific zones and the portlet footer
+    pxBottom = None
+
     @classmethod
     def show(class_, tool, px, c):
         '''When must the portlet be shown ?'''
@@ -231,12 +235,16 @@ class Portlet:
           <x>:search.px if search.type == 'group' else search.view</x>
          </x>
 
-         <!-- Portlet bottom, potentially customized by the app -->
+         <!-- Per-class portlet bottom, potentially customized by the app -->
          <x var="bt=class_.getPortletBottom(tool)" if="bt">::bt</x>
         </div>
        </div>
       </x>
-      <!-- The portlet footer -->
+
+      <!-- Global portlet bottom -->
+      <x>:ui.Portlet.pxBottom</x>
+
+      <!-- Portlet footer -->
       <div if="showFooterP" class="portletFooter">
        <img src=":url('portletLogoF')" class="portletLogoF"/>
       </div>
