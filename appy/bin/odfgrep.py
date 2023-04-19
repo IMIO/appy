@@ -412,15 +412,17 @@ class Grep:
     # defined in the keywords regex.
     groupsRex = re.compile('\\\(\d)+')
 
-
     # Regex for parsing a POD expression within an ODS formula
     formulaRex = re.compile('table:formula="of:=&quot;(.*?)&quot;"')
+
+    # ODF representation for possible input chars
+    odfEntities = {"'": '&apos;', '"': '&quot;'}
 
     def __init__(self, keyword, fileOrFolder, repl=None, inContent=False,
                  silent=None, verbose=1, dryRun=False, asString=False,
                  outputType='raw'):
         # Create a regex from the passed p_keyword
-        skeyword = self.getPureString(keyword)
+        skeyword = self.odfCompliantKeyword(self.getPureString(keyword))
         self.skeyword = skeyword
         # If p_asString is True, p_keyword is interpreted as a plain string.
         # Else, it is interpreted as a regular expression.
@@ -434,7 +436,7 @@ class Grep:
         self.tempFolder = sutils.getOsTempFolder()
         # (optional) The replacement text
         if repl is not None:
-            repl = self.getPureString(repl)
+            repl = self.odfCompliantKeyword(self.getPureString(repl))
         self.repl = repl
         # (optional) Find/replace p_keyword in raw ODF content, or in POD-
         #            controlled zones (fields, statements) ?
@@ -472,6 +474,14 @@ class Grep:
         # p_verbose), how must be rendered the diff representing the
         # replacement ? More info in method Match::getDiff.
         self.outputType = outputType
+
+    def odfCompliantKeyword(self, keyword):
+        '''Transform the p_keyword the way it can be found within an ODF
+           document.'''
+        r = keyword
+        for char, entity in self.odfEntities.iteritems():
+            r = r.replace(char, entity)
+        return r
 
     def getPureString(self, s):
         '''Converts p_value to a string, if unicode'''
@@ -652,7 +662,7 @@ class Grep:
                 counts.inXml = len(found)
                 if self.repl:
                     # Make the replacement
-                    fun = lambda match: self.getReplacement()
+                    fun = lambda match: self.getReplacement(match)
                     content = self.keyword.sub(fun, content)
             else:
                 # ... or within every POD expression or statement
@@ -722,8 +732,10 @@ class Grep:
             self.dump(self.messageTexts[bool(self.repl)][False])
         elif verbose > 1:
             # Dump the match instances
-            for match in self.matches.itervalues():
-                self.dump(repr(match))
+            matches = getattr(self, 'matches', None)
+            if matches:
+                for match in matches:
+                    self.dump(repr(match))
         if self.cleaned and verbose > 0:
             verb = self.dryRun and 'would have been ' or ''
             self.dump(S_CLEAN % (self.cleaned, verb))

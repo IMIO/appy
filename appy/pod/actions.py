@@ -27,6 +27,15 @@ class Action:
     '''Abstract class representing a action (=statement) that must be performed
        on the content of a buffer (if, for...).'''
 
+    # If the action implies evaluating an expression (see attribute "expr"
+    # defined in the Action constructor), must the expression result be stored
+    # in the context ? By default, no.
+    mustStoreExprResult = False
+
+    # Within the context, expression results will be stored in a dict at this
+    # key. This dict' keys will correspond to RAM IDs for Action objects.
+    storeExprKey = '__e_r__'
+
     def __init__(self, name, buffer, expr, elem, minus):
         # Actions may be named. Currently, the name of an action is only used
         # for giving a name to "if" actions; thanks to this name, "else" actions
@@ -103,6 +112,14 @@ class Action:
                 res = eval(errorExpr, context)
         return res
 
+    def storeExprResult(self, r, context):
+        '''Store this expression evaluation p_r(esult) in the context'''
+        key = self.storeExprKey
+        if key in context:
+            context[key][id(self)] = r
+        else:
+            context[key] = {id(self): r}
+
     def evaluateExpression(self, result, context, expr):
         '''Evaluates expression p_expr with the current p_context. Returns a
            tuple (result, errorOccurred).'''
@@ -133,9 +150,13 @@ class Action:
             error = False
             # Evaluate self.expr in eRes
             eRes = None
-            if self.expr:
-                eRes,error = self.evaluateExpression(result, context, self.expr)
+            expr = self.expr
+            if expr:
+                eRes, error = self.evaluateExpression(result, context, expr)
             if not error:
+                # Store the expression result in the context if relevant
+                if expr and self.mustStoreExprResult:
+                    self.storeExprResult(eRes, context)
                 # Trigger action-specific behaviour
                 self.do(result, context, eRes)
 
@@ -214,6 +235,11 @@ class Action:
 class If(Action):
     '''Action that determines if we must include the content of the buffer in
        the result or not.'''
+
+    # The result of evaluating an "if" expression will be stored in the context.
+    # That way, it can be reused by an "else" statement.
+    mustStoreExprResult = True
+
     def do(self, result, context, exprRes):
         if exprRes:
             if self.subAction:
@@ -237,8 +263,7 @@ class Else(If):
 
     def do(self, result, context, exprRes):
         # This action is executed if the tied "if" action is not executed
-        ifAction = self.ifAction
-        iRes, error = ifAction.evaluateExpression(result,context,ifAction.expr)
+        iRes = context[self.storeExprKey][id(self.ifAction)]
         If.do(self, result, context, not iRes)
 
 class For(Action):

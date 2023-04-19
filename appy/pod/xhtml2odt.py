@@ -44,7 +44,7 @@ OUTER_TAGS = TABLE_CELL_TAGS + ('li',)
 PARA_TAGS = ('p', 'div', 'blockquote', 'address')
 # The following elements can't be rendered inside paragraphs
 NOT_INSIDE_P = XHTML_HEADINGS + XHTML_LISTS + ('table',)
-NOT_INSIDE_P_OR_P = NOT_INSIDE_P + PARA_TAGS
+NOT_INSIDE_P_OR_P = NOT_INSIDE_P + PARA_TAGS + ('li',)
 NOT_INSIDE_LI =  XHTML_HEADINGS + ('table',) + PARA_TAGS
 NOT_INSIDE_LIST = ('table',)
 IGNORABLE_TAGS = ('meta', 'title', 'style', 'script')
@@ -201,6 +201,9 @@ class HtmlElement(Element):
             if self.elem in NOT_INSIDE_LI:
                 return (parent.parent.setConflictual(),parent.setConflictual(),)
         elif (parent.elemType == 'para') and (self.elem in NOT_INSIDE_P_OR_P):
+            # For conflictual case div > li, copy div styles to the li
+            if self.elem == 'li' and parent.cssStyles:
+                self.mergeInnerCssStyles(parent.cssStyles)
             return (parent.setConflictual(),)
         # Check inner paragraphs
         elif (parent.elem in INNER_TAGS) and (self.elemType == 'para'):
@@ -291,6 +294,14 @@ class HtmlElement(Element):
         # CSS styles.
         if self.innerCssStyles or not xhtmlElem.cssStyles: return
         self.innerCssStyles = xhtmlElem.cssStyles
+
+    def mergeInnerCssStyles(self, styles):
+        '''Sets p_styles as inner styles, or merge it if inner styles exist'''
+        inner = self.innerCssStyles
+        if inner:
+            inner.merge(styles)
+        else:
+            self.innerCssStyles = styles
 
     def dump(self, start, env):
         '''Dumps the start or end (depending on p_start) tag of this HTML

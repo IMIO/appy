@@ -241,7 +241,7 @@ class Ref(Field):
             onclick=":js % q('down')"/>
       </x>
       <!-- Edit -->
-      <x if="editable and (create != 'noForm')">
+      <x if="editable">
        <a if="not locked"
           var2="navInfo=field.getNavInfo(zobj, batch.start + currentNumber, \
                                          batch.total);

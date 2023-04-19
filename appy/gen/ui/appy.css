@@ -164,7 +164,8 @@ td.search { padding-top: 8px }
 .grid td { padding: 3px }
 .grid th, .grid td { padding: 1px 4px }
 .small { text-align: left; margin: 5px 0 }
-.small th { background-color: #e4e8f9; border: 1px solid grey; padding: 1px 5px}
+.small th { background-color: #e4e8f9; border: 1px solid grey;
+            padding: 1px 5px; position:inherit }
 .small td { border: 1px solid grey; padding: 1px 5px }
 .popup .grid th, .popup .grid td { border: 1px solid grey }
 .calTable { font-size: 95% }

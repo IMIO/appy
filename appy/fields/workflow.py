@@ -420,7 +420,12 @@ class Transition:
                         hasRole = True
                 else: # It is a method
                     res = condition(wf, obj.appy())
-                    if not res: return res # False or a No instance
+                    if not res:
+                        # v_res is False or a No instance. If roles were also
+                        # mentioned among p_self.condition, and v_hasRole is
+                        # False so far, return False and not the No instance.
+                        if hasRole is False: return
+                        return res
             if hasRole != False:
                 return True
         else:
