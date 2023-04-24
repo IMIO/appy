@@ -89,6 +89,14 @@ class FolderDeleter:
                 break
 
     @classmethod
+    def deleteAllEmpty(class_, dirName):
+        '''Deletes, within this p_folder, any sub-folder, at any depth level,
+           that would be empty.'''
+        for dirPath, dirNames, fileNames in os.walk(dirName, topdown=False):
+            if os.path.exists(dirPath) and not fileNames:
+                class_.deleteEmpty(dirPath)
+
+    @classmethod
     def delete(class_, dirName, move=False):
         '''Recursively deletes p_dirName. If p_move is True, instead of
            effectively deleting p_dirName, it tries to move it to the OS temp
@@ -144,7 +152,7 @@ def cleanFolder(folder, exts=extsToClean, folders=(), verbose=False):
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def resolvePath(path):
-    '''p_path is a file path that can contain occurences of "." and "..". This
+    '''p_path is a file path that can contain occurrences of "." and "..". This
        function resolves them and procuces a minimal path.'''
     res = []
     for elem in path.split(os.sep):

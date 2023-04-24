@@ -78,7 +78,7 @@ class Target:
         # The private key used to connect to the host in SSH
         self.sshKey = sshKey
         # Information about the Appy site on the target
-        # ~
+        #
         # The path to the site. Typically: /home/appy/<siteName>. Extract the
         # distant site name from it.
         self.sitePath = sitePath
@@ -104,7 +104,7 @@ class Target:
         # automatically chosen.
         self.default = default
         # Info about LibreOffice (LO) running in server mode on the target
-        # ~
+        #
         # The port on which LO listens on the target machine
         self.loPort = 2002
         # Info about an Apache virtual host that you may want to define, if you
@@ -114,7 +114,7 @@ class Target:
 
     def __repr__(self):
         '''p_self's string representation'''
-        return '<Target %s:%d@%s>' % (self.sshHost, self.sshPort, self.sitePath)
+        return f'<Target {self.sshHost}:{self.sshPort}@{self.sitePath}>'
 
     def execute(self, command, exe='ssh', forceExit=False):
         '''Executes p_command on this target'''
@@ -133,24 +133,24 @@ class Target:
         # terminal will be shut down.
         if forceExit:
             r.append('-t')
-        host = '%s@%s' % (self.sshLogin, self.sshHost)
+        host = f'{self.sshLogin}@{self.sshHost}'
         if exe == 'ssh':
             r.append(host)
-            r.append('"%s"' % command)
+            r.append(f'"{command}"')
             # Option for port is '-p'
             portOption = 'p'
         else:
             # Add the source file
             r.append(command[0])
             # Add the destination file
-            r.append('%s:%s' % (host, command[1]))
+            r.append(f'{host}:{command[1]}')
             # For scp, option is '-P'
             portOption = 'P'
         # Determine port
         if self.sshPort != 22:
-            r.insert(1, '-%s%d' % (portOption, self.sshPort))
+            r.insert(1, f'-{portOption}{self.sshPort}')
         # Determine "-i" option (path to the private key)
-        if self.sshKey: r.insert(1, '-i %s' % self.sshKey)
+        if self.sshKey: r.insert(1, f'-i {self.sshKey}')
         # Build the complete command
         r = ' '.join(r)
         print(T_EXEC % r)
@@ -171,7 +171,7 @@ class Config:
         # are target names, values are Target instances.
         self.targets = {}
         # Managing target's config.py files
-        # ~
+        #
         # If you want to automate the management of targets' config.py files, 
         # specify, in the following attribute, a path, on your local machine,
         # where local copies of config.py files will be created / updated, and
@@ -202,7 +202,7 @@ class Config:
         targets = self.targets
         info = O(missing=[], surplus=[])
         for name, target in targets.items():
-            fileName = '%s.config.py' % name
+            fileName = f'{name}.config.py'
             path = folder / fileName
             if not path.is_file():
                 info.missing.append(fileName)
@@ -243,7 +243,7 @@ class Config:
             # Misuse class local.Target: I want to use one of its methods
             o = local.Target()
             o.folder = target.sitePath
-            o.app = target.siteApp.getLocalFolder(Path('%s/lib' % o.folder))
+            o.app = target.siteApp.getLocalFolder(Path(f'{o.folder}/lib'))
             o.port = target.sitePort
             o.createFile(folder/missing, local.config)
             print(SYNC_F_C % missing)
@@ -255,12 +255,12 @@ class Config:
         folder = self.configFiles
         if not folder: return
         # Find the local file
-        local = Path(folder) / ('%s.config.py' % targetName)
+        local = Path(folder) / f'{targetName}.config.py'
         if not local.is_file():
             print(SYNC_NF % local)
             return
         # Copy it to the p_target
-        target.copy(str(local), '%s/config.py' % target.sitePath)
+        target.copy(str(local), f'{target.sitePath}/config.py')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Deployer:
@@ -307,11 +307,12 @@ class Deployer:
     def quote(self, arg):
         '''Surround p_arg with quotes'''
         r = arg if isinstance(arg, str) else str(arg)
-        return "'%s'" % r
+        return f"'{r}'"
 
     def buildPython(self, statements):
         '''Builds a p_command made of these Python p_statements'''
-        return "python3 -c \\\"%s\\\"" % ';'.join(statements)
+        statements = ';'.join(statements)
+        return f"python3 -c \\\"{statements}\\\""
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                              Commands
@@ -338,8 +339,8 @@ class Deployer:
         # Walk targets
         for name, target in config.targets.items():
             suffix = ' [default]' if target.default else ''
-            info = '%s. %s - %s%s' % (str(i).zfill(2), name.ljust(longest),
-                                      target, suffix)
+            zi = str(i).zfill(2)
+            info = f'{zi}. {name.ljust(longest)} - {target}{suffix}'
             infos.append(info)
             if name == 'ALL':
                 # This word is reserved
@@ -398,7 +399,7 @@ class Deployer:
         target = self.target
         commands = [
           # Install required dependencies via Aptitude
-          '%s %s' % (self.apt, self.osDependencies),
+          f'{self.apt} {self.osDependencies}',
           # Install Appy and dependencies via pip
           'pip3 install appy -U',
           # Create special user "appy"
@@ -429,9 +430,10 @@ class Deployer:
                 args.append(q(dep.asSpecifier()))
                 dep.collectIn(configCommands, t.sitePath)
         # Build the statements to pass to the distant Python interpreter
+        argsS = ','.join(args)
         statements = [
           'import sys', 'from appy.bin.make import Make',
-          "sys.argv=['make.py','site',%s]" % ','.join(args),
+          f"sys.argv=['make.py','site',{argsS}]",
           'Make().run()'
         ]
         command = self.buildPython(statements)
@@ -478,21 +480,21 @@ class Deployer:
             siteOwner = target.siteOwner
             lib = Path(target.sitePath) / 'lib'
             for name in ('App', 'Ext'):
-                repo = getattr(target, 'site%s' % name)
+                repo = getattr(target, f'site{name}')
                 if repo:
                     command, folder = repo.getUpdateCommand(lib)
                     commands.append(command)
-                    commands.append('chown -R %s %s' % (siteOwner, folder))
+                    commands.append(f'chown -R {siteOwner} {folder}')
             # Update dependencies
             for repo in target.siteDependencies:
                 command, folder = repo.getUpdateCommand(lib)
                 commands.append(command)
-                commands.append('chown -R %s %s' % (siteOwner, folder))
+                commands.append(f'chown -R {siteOwner} {folder}')
             # Run those commands as the main SSH user: else, agent forwarding
             # will not be allowed and will prevent to update repositories using
             # public key authentication.
-            command = '%s %s' % (Repository.getEnvironment(),
-                                 ';'.join(commands))
+            commandS = ';'.join(commands)
+            command = f'{Repository.getEnvironment()} {commandS}'
             target.execute(command)
             # (2) Copy the config.py file if applicable
             self.config.deploy.pushFile(targetName, target)
@@ -501,9 +503,9 @@ class Deployer:
             # (4) Build and run the command to restart the distant site and
             #     possibly display its log file.
             commands = []
-            restart = '%s/bin/site restart' % target.sitePath
+            restart = f'{target.sitePath}/bin/site restart'
             if self.method:
-                restart = '%s -m %s' % (restart, self.method)
+                restart = f'{restart} -m {self.method}'
             commands.append(restart)
             # Display the site's app.log (if not blind)
             if not self.blind:
@@ -512,7 +514,7 @@ class Deployer:
             command = ';'.join(commands)
             owner = siteOwner.split(':')[0]
             if owner != target.sshLogin:
-                command = "su %s -c '%s'" % (owner, command)
+                command = f"su {owner} -c '{command}'"
             target.execute(command, forceExit=self.blind)
 
     def view(self):

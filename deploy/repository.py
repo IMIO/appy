@@ -77,6 +77,9 @@ class Repository:
         # p_folder is a pathlib.Path instance
         raise Exception(M_OVERR)
 
+    def getBranch(self):
+        '''A sub-class may define a branch within its repo'''
+
     @classmethod
     def getEnvironment(class_, asString=True):
         '''Define environment variable GIT_SSH_COMMAND before launching a
@@ -116,7 +119,7 @@ class Repository:
     def getConcrete(class_, type):
         '''Returns the concrete Repository class corresponding to this p_type'''
         info = class_.concrete[type]
-        module = __import__('appy.deploy.%s' % info.package).deploy
+        module = __import__(f'appy.deploy.{info.package}').deploy
         return getattr(getattr(module, info.package), info.class_)
 
     @classmethod
@@ -143,16 +146,22 @@ class Repository:
         concrete = class_.getConcrete(type)
         # Instantiate it
         r = concrete(params.url, params.name)
+        if type == 'git':
+            if params.branch:
+                r.branch = params.branch
         if type == 'svn' and params.login and password:
             r.login = params.login
             r.password = password
         return r
 
     def asSpecifier(self):
-        '''Returns the p_self's specifier version'''
-        r = 'url=%s' % self.url
+        '''Returns p_self's specifier version'''
+        r = f'url={self.url}'
         if self.name:
-            r = '%s,name=%s' % (r, self.name)
+            r = f'{r},name={self.name}'
+        branch = self.getBranch()
+        if branch:
+            r = f'{r},branch={branch}'
         return r
 
     def collectIn(self, commands, base):

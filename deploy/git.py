@@ -15,9 +15,14 @@ GIT_EXE  = 'Executing %s...'
 class Git(Repository):
     '''Represents a remote Git repository'''
 
-    def __init__(self, url, name=None, login=None, password=None):
+    def __init__(self, url, name=None, login=None, password=None,
+                 branch='master'):
+
         '''Defines a distant Git repo'''
         super().__init__(url, name)
+
+        # The name of the branch to retrieve
+        self.branch = branch
 
         # For a Git repository, it is not possible to define login/password
         # credentials: public-key authentication is used instead. The Git repo
@@ -46,21 +51,26 @@ class Git(Repository):
         '''Produce the complete command allowing to "git clone" this repo
            (p_self) in this local p_folder.'''
         local = self.getLocalFolder(folder)
-        command = 'git clone %s %s' % (self.url, str(local))
+        command = f'git clone {self.url} {str(local)} --single-branch ' \
+                  f'--branch {self.branch}'
         return command, local
 
     def getUpdateCommand(self, folder):
-        '''Produce the complete command allowing to "svn up" this repo (p_self)
-           in this local p_folder.'''
+        '''Produce the complete command allowing to "git pull" this repo
+           (p_self) in this local p_folder.'''
         local = self.getLocalFolder(folder)
-        command = 'git -C %s pull' % str(local)
+        command = f'git -C {str(local)} pull'
         return command, local
+
+    def getBranch(self):
+        '''Return the branch of interest within this repo'''
+        return self.branch
 
     def collectIn(self, commands, base):
         '''Collects, in set p_folders, the git-managed distant folders'''
         # Build the absolute path to the folder
         folder = self.getLocalFolder(Path(base) / 'lib')
-        command = 'git config --global --add safe.directory %s' % str(folder)
+        command = f'git config --global --add safe.directory {str(folder)}'
         # Without this command, updating git repositories may pose problems, due
         # to user permissions, if the user running git commands is not the same
         # as the git repository user.

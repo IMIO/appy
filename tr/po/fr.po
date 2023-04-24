@@ -262,7 +262,7 @@ msgstr "Contenu trouvé, considéré comme invalide ou incomplet: ${text}"
 
 #. Default: "Choose a value between ${min} and ${max}."
 msgid "range_ko"
-msgstr "Choisissez une valeur entre ${min} and ${max}."
+msgstr "Choisissez une valeur entre ${min} et ${max}."
 
 #. Default: "(Un)select all"
 msgid "select_delesect"

@@ -248,22 +248,43 @@ class Traceback:
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def executeCommand(cmd, stdin=None, env=None, shell=False, stringOutput=True):
-    '''Executes command p_cmd and returns a tuple (s_stdout, s_stderr)
-       containing the data output by the subprocesss on stdout and stderr. p_cmd
-       should be a list of args (the 1st arg being the command in itself, the
-       remaining args being the parameters), but it can also be a string, too
-       (see subprocess.Popen doc).'''
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=stdin,
-                            stderr=subprocess.PIPE, env=env, shell=shell)
-    out, err = proc.communicate()
-    # The output may be a binary file as well: p_stringOutput may need to be
-    # False in that case.
-    if stringOutput and isinstance(out, bytes):
-        out = out.decode()
-    if stringOutput and isinstance(err, bytes):
-        err = err.decode()
-    return out, err
+def executeCommand(cmd, stdin=None, env=None, shell=False, stringOutput=True,
+                   wait=True):
+    '''Executes command p_cmd'''
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # If p_wait | The function ...
+    # is ...    |
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #   True    | Waits for the command to complete, and returns a tuple
+    #           | (s_stdout, s_stderr) containing output data written by the
+    #           | subprocesss on stdout and stderr. If p_stringOuput is True,
+    #           | the tuple contains strings. Else, it contains bytes. This last
+    #           | option can be interesting if output data is a binary file.
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #   False   | The method does not wait for the command to complete and
+    #           | returns the sub-process ID. Consequently, it is not possible
+    #           | to communicate with the sub-process: parameters p_stdin and
+    #           | p_stringOutput are ignored and it is not possible to retrieve
+    #           | anything that would have been written by the subprocess on
+    #           | stdout or stderr.
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # p_cmd should be a list of args (the 1st arg being the command in itself,
+    # the remaining args being the parameters), but it can also be a string, too
+    # (see subprocess.Popen doc).
+    if wait:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=stdin,
+                                stderr=subprocess.PIPE, env=env, shell=shell)
+        out, err = proc.communicate()
+        # The output may be a binary file as well: p_stringOutput may need to be
+        # False in that case.
+        if stringOutput and isinstance(out, bytes):
+            out = out.decode()
+        if stringOutput and isinstance(err, bytes):
+            err = err.decode()
+        r = out, err
+    else:
+        r = subprocess.Popen(cmd, env=env, shell=shell).pid
+    return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ImageMagick:
