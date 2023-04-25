@@ -1189,7 +1189,8 @@ class Ref(Field):
         self.select = select
         if not select and self.link == 'popup':
             # Create a query for getting all objects
-            self.select = Search(sortBy='title', maxPerPage=maxPerPage)
+            max = maxPerPage if isinstance(maxPerPage, int) else 30
+            self.select = Search(sortBy='title', maxPerPage=max)
         # If you want to specify, on the search form, a list of objects being
         # different from the one produced by self.select, define an alternative
         # (method or Search instance) in attribute "sselect" below.
@@ -1198,7 +1199,9 @@ class Ref(Field):
         # different than p_self.sselect, define an alternative in attribute
         # "fselect" below.
         self.fselect = fselect or self.sselect
-        # Maximum number of referenced objects shown at once
+        # Maximum number of referenced objects shown at once. It can be directly
+        # expressed as an integer value, or by a method accepting the source Ref
+        # object as unique arg and returning this integer value.
         self.maxPerPage = maxPerPage
         # If param p_queryable is True, the user will be able to perform
         # searches from the UI within referenced objects. A Ref being queryable
@@ -1530,7 +1533,7 @@ class Ref(Field):
         r.ajaxSuffix = 'poss' if r.inPickList else 'objs'
         r.hook = '%s_%s_%s' % (r.iid, r.name, r.ajaxSuffix)
         r.inMenu = False
-        batch = self.getBatch(r.render, req, r.hook)
+        batch = self.getBatch(o, r.render, req, r.hook)
         r.batch = batch if c.ajaxSingle else \
                   self.getViewValues(o, r.name, r.scope, batch, r.hook)
         r.objects = r.batch.objects
@@ -1756,7 +1759,7 @@ class Ref(Field):
         total = len(r)
         # Manage p_start and p_maxPerPage
         if start is not None:
-            maxPerPage = maxPerPage or self.maxPerPage
+            maxPerPage = maxPerPage or self.getAttribute(o, 'maxPerPage')
             # Create a sub-list containing only the relevant objects
             sub = []
             i = start
@@ -1858,7 +1861,7 @@ class Ref(Field):
         # p_usage can be one of the PV_* constants as defined above.
         req = o.req
         paginated = start is not None
-        maxPerPage = maxPerPage or self.maxPerPage
+        maxPerPage = maxPerPage or self.getAttribute(o, 'maxPerPage')
         isSearch = False
         master = self.master
         if master and callable(self.masterValue):
@@ -2087,9 +2090,9 @@ class Ref(Field):
         # Return the base + custom CSS
         r = css(o, menu.objects) if callable(css) else css
         if not r: return base or ''
-        return '%s %s' % (base, r) if base else r
+        return f'{base} {r}' if base else r
 
-    def getBatch(self, render, req, hook):
+    def getBatch(self, o, render, req, hook):
         '''This method returns a Batch instance in the single objective of
            collecting batch-related information that might be present in the
            request.'''
@@ -2100,9 +2103,9 @@ class Ref(Field):
         # When using any render mode, "list" excepted, all objects must be shown
         if render != 'list': return r
         # Get the index of the first object to show
-        r.start = int(req['%s_start' % hook] or req.start or 0)
+        r.start = int(req[f'{hook}_start'] or req.start or 0)
         # Get batch size
-        r.size = int(req.maxPerPage or self.maxPerPage)
+        r.size = int(req.maxPerPage or self.getAttribute(o, 'maxPerPage'))
         return r
 
     def getBatchFor(self, hook, objects):
@@ -2544,7 +2547,8 @@ class Ref(Field):
     def getPageIndexOf(self, o, tied):
         '''Returns the index of the first object of the page where p_tied is'''
         index = self.getIndexOf(o, tied)
-        return int(index/self.maxPerPage) * self.maxPerPage
+        maxPerPage = self.getAttribute(o, 'maxPerPage')
+        return int(index/maxPerPage) * maxPerPage
 
     traverse['sort'] = 'perm:write'
     def sort(self, o):
@@ -2584,17 +2588,18 @@ class Ref(Field):
            objects.'''
         # Transmit the original navigation when existing
         nav = o.req.nav
-        suffix = '&onav=%s' % nav if nav else ''
+        suffix = f'&onav={nav}' if nav else ''
         if self.link in ('popup', 'dropdown'):
             # Go to the page for querying objects
-            r = '%s/Search/results?className=%s&search=%d,%s,%s&popup=1%s' % \
-             (o.tool.url, self.class_.meta.name, o.iid, name, popupMode, suffix)
+            cname = self.class_.meta.name
+            r = f'{o.tool.url}/Search/results?className={cname}&search=' \
+                f'{o.iid},{name},{popupMode}&popup=1{suffix}'
         elif self.link == 'popupRef':
             # Go to the page that displays a single field
             po, fieldName = self.select(o) # "po" = the *p*opup *o*bject
-            r = '%s/pxField?name=%s&pageLayout=w-b&popup=True&maxPerPage=%d' \
-                '&selector=%d,%s,%s%s' % (po.url, fieldName, self.maxPerPage,
-                                          o.iid, name, popupMode, suffix)
+            max = self.getAttribute(o, 'maxPerPage')
+            r = f'{po.url}/pxField?name={fieldName}&pageLayout=w-b&popup=True&'\
+                f'maxPerPage={max}&selector={o.iid},{name},{popupMode}{suffix}'
         return r
 
     def getSelector(self, o, req):
@@ -2610,7 +2615,7 @@ class Ref(Field):
         cbClass = '' if cbShown else 'hide'
         return O(initiator=initiator, initiatorField=initiatorField,
                  initiatorMode=mode, onav=req.onav or '',
-                 initiatorHook='%d_%s' % (initiator.iid, name),
+                 initiatorHook=f'{initiator.iid}_{name}',
                  cbShown=cbShown, cbClass=cbClass,
                  # The originator can also be a rich field for which images must
                  # be browsed. In that case, we transmit "ckNum", a number being
