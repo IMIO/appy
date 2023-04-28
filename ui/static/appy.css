@@ -236,7 +236,7 @@ div.rbutton { float:right }
 .small { text-align:left; margin:8px 0 }
 .small th { background-color:|darkColor|; padding:1px 5px; height:unset;
             border:1px solid grey; color:|brightColor|; position:inherit }
-.small td { border:1px solid grey; padding:1px 5px }
+.small td { border:1px solid darkgrey; padding:1px 5px }
 .small label { font-size:80% }
 .small ul { margin:0 0 0.1em 0.1em }
 .small li { padding:0 2px 0 10px; text-align:left }

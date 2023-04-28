@@ -168,7 +168,7 @@ class Search:
            context of this search.'''
         # The name of the search may be passed in p_name
         name = name or self.name
-        return '%s_%s' % (self.container.name, name)
+        return f'{self.container.name}_{name}'
 
     mergeAttributes = ('sortBy', 'sortOrder', 'showActions', 'actionsDisplay',
                        'actions', 'maxPerPage', 'resultModes', 'shownInfo',
@@ -266,7 +266,7 @@ class Search:
             backName = refField.back.name
             if refField.composite:
                 # Use the "cid" index (object containment)
-                params['cid'] = '%d_%s' % (refObject.iid, backName)
+                params['cid'] = f'{refObject.iid}_{backName}'
             else:
                 # We suppose the Ref field is indexed
                 params[backName] = refObject.iid
@@ -442,7 +442,7 @@ class Search:
             # Ref info may not be in the request, but may de deduced from the
             # search name.
             parts = params.search.split(',')
-            info = '%s:%s' % (parts[0], parts[1])
+            info = f'{parts[0]}:{parts[1]}'
         else:
             info = None
         refObject, refField = class_.getRefInfo(tool, info=info, nameOnly=False)
@@ -594,15 +594,15 @@ class Search:
         # URL corresponding to this URL, there will be no error: the "GET" part
         # is "replayable" (even if, of course, it will not produce exactly the
         # same results, the POST parameters being missing).
-        r = '%s/Search/results?className=%s&source=searchForm&search=' \
-            'customSearch' % (tool.url, className)
+        r = f'{tool.url}/Search/results?className={className}&source=' \
+            f'searchForm&search=customSearch'
         rinfo = tool.req.ref
         if rinfo:
             # Compute URL (b)
             id, name = rinfo.split(':')
             o = tool.getObject(id)
             field = o.getField(name)
-            back = '%s/view?page=%s' % (o.url, field.page.name)
+            back = f'{o.url}/view?page={field.page.name}'
         else:
             back = None
         return r, back

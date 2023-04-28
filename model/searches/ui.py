@@ -107,6 +107,7 @@ class UiSearch:
              showHeaders=showHeaders|True;
              showTop=not popup or mayAdd;
              showNav=batch and batch.showNav();
+             descr=uiSearch.translatedDescr;
              totals=search.Totals.initialise(search, 'o', mode.columns)
                     if mode.isSummable() else None;
              specific=uiSearch.getResultsTop(mode, ajax)">
@@ -130,13 +131,15 @@ class UiSearch:
          <span class="btot">:mode.batch.total</span>
         </x>
         <!-- Search description -->
-        <img if="uiSearch.translatedDescr" src=":svg('detail')"
-             class="sdetail" title=":uiSearch.translatedDescr"/>
+        <img if="descr" src=":svg('detail')" class="sdetail" title=":descr"/>
 
         <!-- Class-specific colored border (*t*itle *bot*tom) -->
         <div var="css=class_.getCssFor(tool, 'tbot')"
              if="css" class=":'tbot %s' % css"></div>
        </div>
+
+       <!-- Search description in the popup -->
+       <div class="discreet" if="popup and descr">::descr</div>
 
        <!-- Icons -->
        <x if="search.showTitle">
