@@ -763,7 +763,7 @@ class Database:
                     className = o.translate(o.class_.name)
                     tied.history.add('Unlink', deletion=True,
                                      field=field.back.name,
-                                     comment='%s: %s' % (className, title))
+                                     comment=f'{className}: {title}')
         if not isTemp:
             # Unindex p_o if it was indexed
             if o.class_.isIndexable(): o.reindex(unindex=True)

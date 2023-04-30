@@ -473,11 +473,7 @@ class Field:
         self.renderable = renderable
         # When displaying/editing the whole object, on what page and phase must
         # this field value appear ?
-        if page:
-            self.page = Page.get(page)
-            self.pageName = self.page.name
-        else:
-            self.page = self.pageName = None
+        self.setPage(page)
         # Within self.page, in what group of fields must this one appear?
         self.group = Group.get(group)
         # The following attribute allows to move a field back to a previous
@@ -894,6 +890,15 @@ class Field:
         #   be returned by this method, depending on the master value(s) that
         #   are given to it, as its unique parameter.
         self.masterValue = utils.initMasterValue(masterValue)
+
+    def setPage(self, page):
+        '''Puts p_self into this p_page. If p_page is None, p_self will be
+           rendered in the default page.'''
+        if page:
+            self.page = Page.get(page)
+            self.pageName = self.page.name
+        else:
+            self.page = self.pageName = None
 
     def getCss(self, o, layout, r):
         '''Complete list p_r with the names of CSS files that are required for

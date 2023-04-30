@@ -10,6 +10,7 @@ from appy.model.utils import Object
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Page:
     '''Used for describing a page, its related phase, show condition, etc.'''
+
     subElements = ('save', 'cancel', 'edit')
 
     def __init__(self, name, phase='main', show=True, showSave=True,
