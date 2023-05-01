@@ -87,7 +87,7 @@ class Switch(Field):
         '''In order to be able to access the value of every switch sub-field as
            any other p_class_ field, via expression
 
-                               instance.[field name]
+                               o.[field name]
 
            this method, called at server startup, injects all switch sub-fields
            as p_class_ attributes.

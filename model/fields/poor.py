@@ -519,13 +519,13 @@ class Poor(Rich):
       <div var="inToolbar=showToolbar and hostLayout;
                 align='left' if inToolbar else 'right';
                 fdir='row' if inToolbar else 'column'"
-           style=":'float:%s;display:flex;flex-direction:%s' % (align, fdir)">
+           style=":f'float:{align};display:flex;flex-direction:{fdir}'">
        <div>
-        <img id=":'%s_save' % pid" src=":svg('saveS')"
+        <img id=":f'{pid}_save'" src=":svg('saveS')"
              class=":'iconS %s' % ('clickable' if inToolbar else 'inlineIcon')"
              title=":_('object_save')"/></div>
        <div>
-        <img id=":'%s_cancel' % pid" src=":svg('cancelS')"
+        <img id=":f'{pid}_cancel'" src=":svg('cancelS')"
              class=":'iconS %s' % ('clickable' if inToolbar else 'inlineIcon')"
              title=":_('object_cancel')"/></div>
       </div>
@@ -534,8 +534,8 @@ class Poor(Rich):
 
     # Unilingual edit
     editUni = Px('''
-     <x var="pid='%s_%s' % (name, lg) if lg else name;
-             tbid='%s_tb' % pid;
+     <x var="pid=f'{name}_{lg}' if lg else name;
+             tbid=f'{pid}_tb';
              x=hostLayout and o.Lock.set(o, user, field=field);
              showToolbar=field.showToolbar(ignoreInner=hostLayout)">
 
@@ -551,8 +551,8 @@ class Poor(Rich):
            onfocus=":field.onFocus(pid, lg, hostLayout)"
            onpaste="getPastedData(event)" oncopy="getCopiedData(event)"
            onkeydown="onPoorKeyDown(event)"
-           id=":'%sP' % pid" >::field.getInputValue(inRequest, requestValue,
-                                                    value)</div>
+           id=":f'{pid}P'">::field.getInputValue(inRequest, requestValue,
+                                                 value)</div>
       <!-- The hidden form field -->
       <textarea id=":pid" name=":pid" style="display:none"></textarea>
      </x>''')
@@ -603,11 +603,11 @@ class Poor(Rich):
     def getWidgetStyle(self, edit):
         '''Returns style for the main poor tag'''
         # Potentially use a specific font shipped with Appy
-        font = 'font-family:"%s",sans-serif' % self.font if self.font else None
+        font = f'font-family:"{self.font}",sans-serif' if self.font else None
         if edit:
-            r = 'width:%s;min-height:%s' % (self.width, self.height)
+            r = f'width:{self.width};min-height:{self.height}'
             if font:
-                r = '%s;%s' % (r, font)
+                r = f'{r};{font}'
         else:
             r = font if font else ''
         return r
@@ -621,8 +621,8 @@ class Poor(Rich):
             id = pid
         else:
             # For inner fields, there is a unique global toolbar
-            id = '%s_%s' % (self.name, lg) if lg else self.name
-        return "linkToolbar('%s_tb', this)" % id
+            id = f'{self.name}_{lg}' if lg else self.name
+        return f"linkToolbar('{id}_tb', this)"
 
     def getListHeader(self, c):
         '''When used as an inner field, the toolbar must be rendered only once,
@@ -633,7 +633,8 @@ class Poor(Rich):
             bar = self.pxToolbar(c)
         else:
             bar = ''
-        return '%s%s' % (super().getListHeader(c), bar)
+        header = super().getListHeader(c)
+        return f'{header}{bar}'
 
     def showToolbar(self, ignoreInner=False):
         '''Show the toolbar if the field is not inner. Indeed, in that latter
