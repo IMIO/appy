@@ -435,7 +435,13 @@ class Base:
         '''Returns the list of fields to render on p_layout'''
         r = []
         # Browse p_self's fields, or p_fields if passed
-        for field in (fields or self.class_.fields.values()):
+        if fields is None:
+            class_ = self.class_
+            fields = class_.fields.values()
+            useClassFields = True
+        else:
+            useClassFields = False
+        for field in fields:
             # Ignore fields not being on p_page
             if page and field.pageName != page: continue
             # Ignore fields not being on any page in p_phase
@@ -447,6 +453,10 @@ class Base:
             # Ignore unshowable fields
             if not field.isShowable(self, layout): continue
             r.append(field)
+        # Dump switch sub-fields when relevant
+        if useClassFields and class_.switchFields and layout == 'xml':
+            r += self.getFields(layout, page=page, phase=phase, type=type,
+                                fields=class_.switchFields.values())
         return r
 
     def getGroupedFields(self, page, layout, collect=True, fields=None):

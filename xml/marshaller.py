@@ -76,7 +76,7 @@ class Marshaller:
         prefix = ''
         if name in self.namespacedTags: prefix = self.namespacedTags[name]
         elif '*' in self.namespacedTags: prefix = self.namespacedTags['*']
-        return '%s:%s' % (prefix, name) if prefix else name
+        return f'{prefix}:{name}' if prefix else name
 
     def isAppy(self, o):
         '''Returns True if p_o is an Appy object'''
@@ -93,18 +93,17 @@ class Marshaller:
         typed = not self.untyped
         tagName = self.getTagName(self.rootTagName)
         typeAttr = ' type="object"' if typed else ''
-        r.write('<%s%s' % (tagName, typeAttr))
+        r.write(f'<{tagName}{typeAttr}')
         # Dumps namespace definitions if any
         for prefix, url in self.namespaces.items():
             if not prefix:
                 pre = 'xmlns' # The default namespace
             else:
-                pre = 'xmlns:%s' % prefix
-            r.write(' %s="%s"' % (pre, url))
+                pre = f'xmlns:{prefix}'
+            r.write(f' {pre}="{url}"')
         # Dumps Appy-specific attributes
         if typed and self.isAppy(o):
-            r.write(' id="%s" iid="%d" className="%s"' % \
-                    (o.id, o.iid, o.class_.name))
+            r.write(f' id="{o.id}" iid="{o.iid}" className="{o.class_.name}"')
         r.write('>')
         return tagName
 
@@ -127,10 +126,10 @@ class Marshaller:
         # p_value contains an instance of class appy.model.fields.file.FileInfo.
         # Encode it in Base64, in one or several parts.
         partTag = self.getTagName('part')
-        r.write('<%s type="base64" number="1">' % partTag)
+        r.write(f'<{partTag} type="base64" number="1">')
         path = v.getFilePath(self.o) if v.inDb() else v.fsPath
         if not os.path.isfile(path) or v.size == 0:
-            w('</%s>' % partTag) # Close the (empty) tag
+            w(f'</{partTag}>') # Close the (empty) tag
             return
         f = open(path, 'rb')
         partNb = 1
@@ -141,9 +140,9 @@ class Marshaller:
             # the first chunk: the start tag has already been dumped, see
             # above).
             if partNb > 1:
-                w('<%s type="base64" number="%d">' % (partTag, partNb))
+                w(f'<{partTag} type="base64" number="{partNb}">')
             w(encodebytes(chunk).decode())
-            w('</%s>' % partTag) # Close the tag
+            w(f'</{partTag}>') # Close the tag
             partNb += 1
         f.close()
 
@@ -151,7 +150,7 @@ class Marshaller:
         '''Dumps in p_r the XML version of dict p_value'''
         typeAttr = '' if self.untyped else ' type="object"'
         for k, v in value.items():
-            r.write('<entry%s>' % typeAttr)
+            r.write(f'<entry{typeAttr}>')
             self.dumpField(r, 'k', k)
             self.dumpField(r, 'v', v)
             r.write('</entry>')
@@ -177,9 +176,9 @@ class Marshaller:
         if not type:
             self.dumpString(r, value or '')
         else:
-            method = 'dump%s' % type.capitalize()
+            method = f'dump{type.capitalize()}'
             if hasattr(self, method):
-                eval('self.%s' % method)(r, value)
+                eval(f'self.{method}')(r, value)
             else:
                 r.write(str(value))
 
@@ -211,36 +210,36 @@ class Marshaller:
             return
         # Dump the start tag
         tagName = self.getTagName(name)
-        r.write('<%s' % tagName)
+        r.write(f'<{tagName}')
         # Dump value's type as an XML attribute (when applicable)
         if typed:
-            if type:  r.write(' type="%s"' % type)
-            if cname: r.write(' className="%s"' % cname)
+            if type:  r.write(f' type="{type}"')
+            if cname: r.write(f' className="{cname}"')
             # Dump the value's length if multi-valued
             if isList:
                 length = len(value) if value else 0
-                r.write(' count="%d"' % length)
+                r.write(f' count="{length}"')
         # Dump file-related attributes
         if value and type == 'file':
             # Dump the MIME type
-            r.write(' mimeType="%s"' % value.mimeType)
+            r.write(f' mimeType="{value.mimeType}"')
             # Dump the file name
-            r.write(' name=%s' % quoteattr(value.uploadName))
+            r.write(f' name={quoteattr(value.uploadName)}')
             # Dump the file location when appropriate
             if not self.marshallBinaries:
                 if value.fsName:
                     # This is a DB-controlled file
-                    location = '%s/%s/%s' % (self.databaseFolder, value.fsPath,
-                                             Escape.xml(value.fsName))
+                    fsName = Escape.xml(value.fsName)
+                    location = f'{self.databaseFolder}/{value.fsPath}/{fsName}'
                 else:
                     # A not-in-db file
                     location = value.fsPath
-                r.write(' location="%s"' % location)
+                r.write(f' location="{location}"')
         r.write('>')
         # Dump the field value
         self.dumpValue(r, value, type, className)
         # Dump the end tag
-        r.write('</%s>' % tagName)
+        r.write(f'</{tagName}>')
 
     def mustDump(self, name, className):
         '''Must attribute named p_name on the class named p_className be part of
@@ -276,7 +275,7 @@ class Marshaller:
                     self.dumpField(r, field.name, v)
             else:
                 # Dump its URL
-                r.write('%s/xml' % o.url)
+                r.write(f'{o.url}/xml')
         else:
             # A non-Appy object: dump it in its entirety
             className = o.__class__.__name__
@@ -311,7 +310,7 @@ class Marshaller:
             # Dump the fields of this root object
             self.dumpObject(r, o, complete=True, fieldNames=fieldNames)
             self.marshallSpecificElements(o, r)
-            r.write('</%s>' % rootTagName)
+            r.write(f'</{rootTagName}>')
         else:
             self.dumpField(r, self.rootTagName, o)
         # Return the result when relevant

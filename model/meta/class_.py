@@ -177,7 +177,11 @@ class Class(Meta):
         # but this should be avoided in conjunction with ZODB and pickle.
         class_ = self.concrete
         # Inject one property for every field
-        fields = fields or self.fields
+        if fields is None:
+            useClassFields = True
+            fields = self.fields
+        else:
+            useClassFields = False
         for name, field in fields.items():
             # To get a field value is done via method Field::getValue
             getter = lambda self, field=field: field.getValue(self)    
@@ -189,7 +193,7 @@ class Class(Meta):
                 setter = lambda self, v, field=field: field.store(self, v)
             setattr(class_, name, property(getter, setter))
         # Inject one property for every potential switch field
-        if fields is None and self.switchFields:
+        if useClassFields and self.switchFields:
             self.injectProperties(fields=self.switchFields)
 
     def getFieldClasses(self, class_):
