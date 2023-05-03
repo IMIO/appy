@@ -421,6 +421,9 @@ class Base:
         class_ = self.H().server.model.classes[className] if className \
                                                           else self.getClass()
         r = class_.fields.get(name)
+        if r is None and class_.switchFields:
+            # p_name could be a switch sub-field
+            r = class_.switchFields.get(name)
         # Get the sub-field when relevant
         if r and isInner: r = r.getField(sub)
         # Raise an error if the field was not found and p_raiseError is True

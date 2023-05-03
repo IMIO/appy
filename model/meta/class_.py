@@ -30,6 +30,7 @@ from appy.model.utils import Object as O
 from appy.model.fields.phase import Phase
 from appy.model.fields.string import String
 from appy.model.fields.select import Select
+from appy.model.fields.switch import Switch
 from appy.model.translation import Translation
 from appy.model.workflow.history import History
 from appy.model.searches.gridder import Gridder
@@ -168,7 +169,7 @@ class Class(Meta):
         name = self.name
         return name if name in Model.baseClasses else 'Base'
 
-    def injectProperties(self):
+    def injectProperties(self, fields=None):
         '''Injects, on p_self.concrete, a property for every field defined on
            this class, in order to get and set its value.'''
         # Other techniques could have been implemented for injecting such
@@ -176,7 +177,8 @@ class Class(Meta):
         # but this should be avoided in conjunction with ZODB and pickle.
         class_ = self.concrete
         # Inject one property for every field
-        for name, field in self.fields.items():
+        fields = fields or self.fields
+        for name, field in fields.items():
             # To get a field value is done via method Field::getValue
             getter = lambda self, field=field: field.getValue(self)    
             # To set a value is done via method Field::store
@@ -186,6 +188,9 @@ class Class(Meta):
             else:
                 setter = lambda self, v, field=field: field.store(self, v)
             setattr(class_, name, property(getter, setter))
+        # Inject one property for every potential switch field
+        if fields is None and self.switchFields:
+            self.injectProperties(fields=self.switchFields)
 
     def getFieldClasses(self, class_):
         '''Returns, on p_class_ and its base classes, the list of classes where
@@ -193,7 +198,7 @@ class Class(Meta):
         # Add p_class_ in itself
         r = [class_]
         # Scan now p_class_'s base class
-        if (class_ != self.python) or (self.type == 'base'):
+        if class_ != self.python or self.type == 'base':
             base = class_.__bases__[0]
         else:
             base = eval(self.getBaseClass())
@@ -214,12 +219,27 @@ class Class(Meta):
         if page.name not in phase.pages:
             phase.pages[page.name] = page
 
+    def checkFieldName(self, class_, name):
+        '''Ensure this field p_name is acceptable'''
+        # Perform the base check
+        self.checkAttributeName(name)
+        # Add a field-specific check
+        if not class_.__module__.startswith('appy.model') and \
+           Meta.unallowedName(name):
+            raise Model.Error(NAME_KO % (name, self.name))
+
     def readFields(self):
-        '''Create attribute "fields" as an ordered dict storing all fields
-           defined on this class and parent classes.'''
+        '''Create attributes "fields" and "switchFields", as ordered dicts
+           storing all fields defined on this class and parent classes.'''
         class_ = self.python
-        r = collections.OrderedDict()
-        Err = Model.Error
+        r = collections.OrderedDict() # Will become p_self.fields
+        sr = None # Will become p_self.switchFields, collecting sub-fields found
+                  # within Switch fields. Sub-fields found within Switch fields
+                  # must be considered, in some aspects, as first-class fields:
+                  # they must have a read/write property (as produced by
+                  # m_injectProperties) and they must be retrievable via method
+                  # o.getField. But their rendering is specific and is managed
+                  # internally by their switch.
         # Find field in p_class_ and base classes
         for aClass in self.getFieldClasses(class_):
             tfield = sfield = None
@@ -227,12 +247,9 @@ class Class(Meta):
                 if name.startswith('__'): continue
                 if isinstance(field, Field):
                     # Ensure the field name is acceptable
-                    self.checkAttributeName(name)
-                    if not aClass.__module__.startswith('appy.model') and \
-                       Meta.unallowedName(name):
-                        raise Err(NAME_KO % (name, self.name))
+                    self.checkFieldName(aClass, name)
                     # A field was found.
-                    # ~
+                    #
                     # Special fields "title", "record", "searchable" and "state"
                     # must be duplicated. Else, all app classes will get the
                     # modifications that the developer can apply to it via
@@ -251,10 +268,17 @@ class Class(Meta):
                     r[name] = field
                     if field.page:
                         self.readPage(field.page)
-            # Reify the link betweeen fields "title" and "searchable" on their
+                    # Manage Switch sub-fields
+                    if isinstance(field, Switch) and field.fields:
+                        # Store any found sub-field within v_sr
+                        if sr is None:
+                            sr = collections.OrderedDict()
+                        field.injectFields(self, aClass, sr)
+            # Reify the link between fields "title" and "searchable" on their
             # duplicates for this v_aClass.
             if tfield and sfield: tfield.filterField = sfield
         self.fields = r
+        self.switchFields = sr
 
     def setField(self, name, field):
         '''Possibly called by p_self.python's m_update method, this method adds,
