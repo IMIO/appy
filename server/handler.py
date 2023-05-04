@@ -183,7 +183,7 @@ class Handler:
         server = self.server
         # Add the "log char" to the message when relevant
         if message and self.logChar:
-            message = '%s %s' % (self.logChar, message)
+            message = f'{self.logChar} {message}'
         logger = getattr(server.loggers, type)
         cfg = getattr(server.config.log, type)
         # Get the parts of the message to dump
