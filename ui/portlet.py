@@ -267,6 +267,7 @@ class Portlet:
                        align-items:center; text-transform:|pgTransform|;
                        padding:|pgPadding|; margin:|pgMargin|;
                        color:|portletTextColor|; line-height:|pgLineHeight| }
+       .groupTop { margin-top:0.4em }
        .portletGC { padding:|gcPadding|; font-size:|gcFSize|;
                     font-style:|gcFStyle| }
        .portletAdv { margin:|asMargin|; font-size:|asFSize| }

@@ -1113,7 +1113,8 @@ class Ref(Field):
 
         # Immediately before an object is going to be linked via this Ref field,
         # method potentially specified in "beforeLink" will be executed and will
-        # take the object to link as single parameter.
+        # take the object to link as single parameter. If the method returns
+        # False, the object will not be linked.
         self.beforeLink = beforeLink
         # Immediately after an object has been linked via this Ref field, method
         # potentially specified in "afterLink" will be executed and will take
@@ -2664,7 +2665,7 @@ class Ref(Field):
                 search = self.getSelect(o)
                 r = search.run(o.H(), batch=False, sortBy=req.sortKey,
                                sortOrder=req.sortOrder,
-                               filters=self.class_.meta.getFilters(req))
+                               filters=self.class_.meta.getFilters(tool))
             elif self.link == 'popupRef':
                 initiatorObj, fieldName = self.select(o)
                 r = getattr(initiatorObj, fieldName)

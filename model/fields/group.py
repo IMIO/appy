@@ -244,7 +244,7 @@ class UiGroup:
        <th for="colNb in range(len(field.columnsWidths))"
            align=":ui.Language.flip(field.columnsAligns[colNb], dir)"
            width=":field.columnsWidths[colNb]">::field.hasHeaders and \
-            _('%s_col%d' % (field.labelId, (colNb+1))) or ''</th>
+            _(f'{field.labelId}_col{colNb+1}') or ''</th>
       </tr>
 
       <!-- The rows of widgets -->
@@ -271,13 +271,13 @@ class UiGroup:
      <table width=":field.wide" class=":groupCss" id=":tagId" name=":tagName">
       <!-- First row: the tabs -->
       <tr class="tabRow"><td>
-       <table class="tabs" id=":'tabs_%s' % field.name">
+       <table class="tabs" id=":f'tabs_{field.name}'">
         <tr valign="middle">
          <x for="sub in field.elements"
-            var2="suffix='%s_%s' % (field.name, sub.name);
-                  tabId='tab_%s' % suffix">
+            var2="suffix=f'{field.name}_{sub.name}';
+                  tabId=f'tab_{suffix}'">
           <td class="tab" id=":tabId">
-           <a onclick=":'showTab(%s)' % q(suffix)"
+           <a onclick=":f'showTab({q(suffix)})'"
               class="clickable">:_(sub.labelId)</a>
           </td>
          </x>
@@ -287,13 +287,13 @@ class UiGroup:
 
       <!-- Other rows: the fields -->
       <tr for="sub in field.elements"
-          id=":'tabcontent_%s_%s' % (field.name, sub.name)"
-          style=":(loop.sub.nb==0) and 'display:table-row' or 'display:none'">
+          id=":f'tabcontent_{field.name}_{sub.name}'"
+          style=":'display:table-row' if loop.sub.nb == 0 else 'display:none'">
        <td var="field=sub">:field.pxRender</td>
       </tr>
      </table>
      <script>:'initTab(%s,%s,%s)' % \
-      (q('tab_%s'%field.name), q('%s_%s'%(field.name, field.elements[0].name)),\
+      (q(f'tab_{field.name}'), q(f'{field.name}_{field.elements[0].name}'),\
        'true' if o.isTemp() else 'false')</script>''')
 
     # Render a group with style = 'grid'
@@ -334,13 +334,13 @@ class UiGroup:
     pxRender = Px('''
      <x var="groupCss=field.getCss(layout);
              tagName='slave' if field.master else '';
-             tagId='%d_%s' % (o.iid, field.name)">:field.pxFromStyle()</x>''')
+             tagId=f'{o.iid}_{field.name}'">:field.pxFromStyle()</x>''')
 
     # PX that renders a group of searches
     pxViewSearches = Px('''
      <x var="collapse=field.getCollapseInfo(field.labelId, req)">
       <!-- Group name, prefixed by the expand/collapse icon -->
-      <div class="portletGroup"><x>:collapse.px</x>
+      <div class=":field.getSearchCss()"><x>:collapse.px</x>
        <x>:field.translated or _(field.labelId)</x>
       </div>
       <!-- Group content -->
@@ -412,10 +412,10 @@ class UiGroup:
                 if group.label[1]: labelName = group.label[1]
                 if group.label[0]: prefix = group.label[0]
         if not prefix:
-            prefix = '%s_group' % className
-        self.labelId = '%s_%s' % (prefix, labelName)
-        self.descrId = self.labelId + '_descr'
-        self.helpId  = self.labelId + '_help'
+            prefix = f'{className}_group'
+        self.labelId = f'{prefix}_{labelName}'
+        self.descrId = f'{self.labelId}_descr'
+        self.helpId  = f'{self.labelId}_help'
 
     def addElement(self, element):
         '''Adds p_element into self.elements. We try first to add p_element into
@@ -451,7 +451,7 @@ class UiGroup:
         '''Get the PX to use for rendering a group, depending on its style'''
         style = self.style
         if style[-1].isdigit(): return self.pxFields # sectionX
-        px = 'px%s' % style.capitalize()
+        px = f'px{style.capitalize()}'
         return getattr(self, px)
 
     def showHeader(self):
@@ -473,11 +473,19 @@ class UiGroup:
                 r.append(css)
         # Add a potential class, depending on master/slave links
         if self.master:
-            css = 'slave*%s*%s' % (self.master.getMasterTag(layout), 
-                                   '*'.join(self.masterValue))
+            masterTag = self.master.getMasterTag(layout)
+            css = f'slave*{masterTag}*{"*".join(self.masterValue)}'
             r.append(css)
         # Add p_self.css if defined
         if self.css:
             r.append(self.css)
         return ' '.join(r)
+
+    def getSearchCss(self):
+        '''Returns the CSS class(es) to apply to p_self's main tag when used to
+           group searches.'''
+        r = 'portletGroup'
+        if self.css:
+            r = f'{r} {self.css}'
+        return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
