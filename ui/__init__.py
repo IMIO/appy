@@ -33,8 +33,9 @@ traverse = {'Language': True}
 class Config:
     '''Represents user-interface configuration for your app'''
 
-    # Defaults fonts used in the web user interface
-    defaultFonts = "Rajdhani, sans-serif"
+    # Defaults fonts used in the web UI
+    defaultGoogleFont = 'Montserrat'
+    defaultFonts = f"{defaultGoogleFont}, sans-serif"
 
     def __init__(self):
         '''Constructor for the UI configuration'''
@@ -221,7 +222,7 @@ class Config:
         # Among the fonts listed above, specify here, as a tuple, those being
         # Google fonts. That way, the corresponding "CSS include" will be
         # injected into all the pages from your app.
-        self.googleFonts = ('Rajdhani',)
+        self.googleFonts = (Config.defaultGoogleFont,)
 
         # You may need to use custom fonts, loaded via font-face CSS at-rules.
         # Appy itself contains at least one custom font (see

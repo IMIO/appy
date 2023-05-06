@@ -20,8 +20,20 @@ class Message:
            errors.'''
         r = handler.req.AppyMessage
         if not r or isinstance(r, str): return r
-        # Something is wrong with the AppyMessage value
+        # Something is wrong with the AppyMessage value. The following code must
+        # be robust: indeed, a cookie value being carried at every server
+        # request, if it is wrong, any server hit for the same user could lead
+        # to an error.
         if isinstance(r, list):
+            # Remove any non-string or empty value
+            i = len(r) - 1
+            while i >= 0:
+                elem = r[i]
+                if not elem or not isinstance(elem, str):
+                    del r[i]
+                else:
+                    r[i] = r[i].strip()
+                i -= 1
             # Try to merge several values
             try:
                 r = ' · '.join(r)

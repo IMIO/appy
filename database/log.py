@@ -214,7 +214,7 @@ class Viewer:
             .logControls select { padding:0; margin:0; font-size:90% }
             .textual { display:flex; align-items:center; font-size:90%;
                        color:grey }
-            .logText { overflow:auto;width:65vw;height:65vh;font-size:90% }
+            .logText { overflow:auto;width:65vw;height:55vh;font-size:90% }
             .editNB { margin:0 0.1em 0 0.3em; text-align:center }
             .rateR { width:2.5em }
             .tailN { width:4em; margin-right:0.4em }

@@ -100,7 +100,7 @@ class User(Base):
     #  Title, name, first name
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
-    baseGroup = Group('main', style='grid', hasLabel=False)
+    baseGroup = Group('main', ['15%','85%'], style='grid', hasLabel=False)
 
     pm = {'page': Page('main', label='User_page_main', icon='pageProfile.svg'),
           'width': 28, 'layouts': Layouts.g, 'label': 'User',
