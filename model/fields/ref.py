@@ -341,7 +341,7 @@ class Ref(Field):
           var2="navInfo=ifield.getNavInfo(io, batch.start + currentNumber,
                                           batch.total) if not inMenu else 'no'"
           href=":o.getUrl(sub='edit', page='main', nav=navInfo, popup=toPopup)"
-          target=":target.target" onclick=":target.onClick">
+          target=":target.get(popup, toPopup)" onclick=":target.onClick">
         <img src=":svg('edit')" class="iconS" title=":text"/>
        </a>
        <x if="locked" var2="lockStyle='iconS'; page='main'">::o.Lock.px</x>

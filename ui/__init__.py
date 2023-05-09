@@ -851,6 +851,11 @@ class LinkTarget:
             css = 'null'
         return f"{r[:-1]},{css},'{back}')"
 
+    def get(self, popup, toPopup):
+        '''Returns p_self.target, excepted if we are in the popup and we must
+           land to the parent window.'''
+        return '_parent' if popup and not toPopup else self.target
+
     def __repr__(self):
         cname = self.__class__.__name__
         return f'<LinkTarget for={cname},target={self.target},onClick=' \

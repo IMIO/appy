@@ -179,7 +179,9 @@ class Title:
             else:
                 start = f'{icon}<a{classAttr}'
                 end = '</a>'
-            r = f'{start} name="title" href="{url}" target="{target.target}"' \
+            # Link target: land if we are in the popup and we must not go to it
+            r = f'{start} name="title" href="{url}" ' \
+                f'target="{target.get(popup, toPopup)}"' \
                 f'{onClick}{lt}>{title}{end}'
         elif isSelect:
             r = f'<span onclick="{selectJs}"{classAttr}>{title}</span>'
