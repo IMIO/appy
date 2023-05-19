@@ -50,7 +50,7 @@ class Dict(List):
      <!-- Row -->
      <tr if="rowId" valign="top" class=":'even' if loop.rowId.odd else 'odd'"
          var2="x=totalsC.reset() | None">
-      <x>:field.pxFirstCell</x>
+      <x if="not minimal">:field.pxFirstCell</x>
       <td><b>::text</b></td>
       <td for="subName, field in subFields" if="field" align="center"
           var2="fieldName=outer.getEntryName(field, rowId)">:field.pxRender</td>
@@ -74,9 +74,10 @@ class Dict(List):
 
       <!-- Header -->
       <tr valign=":field.headerAlign">
-       <th width=":swidths[0]" style="border:none; background-color:unset"></th>
-       <th for="subName, sub in subFields" if="sub"
-           width=":swidths[loop.subName.nb + 1]">::sub.getListHeader(_ctx_)</th>
+       <th style=":field.getHeaderStyle(0, swidths)"></th>
+       <th for="subName, sub in subFields"
+           style=":field.getHeaderStyle(loop.subName.nb+1, swidths)"
+           if="sub">::sub.getListHeader(_ctx_)</th>
 
        <!-- Total headers -->
        <x if="totalsC is not None">:totalsC.pxHeaders</x>
@@ -124,6 +125,15 @@ class Dict(List):
     def getWidths(self, subFields):
         '''Get the widths to appply to these p_subFields'''
         return self.widths or [''] * (len(subFields) + 1)
+
+    def getHeaderStyle(self, i, widths):
+        '''Return CSS properties for the p_i(th) header cell'''
+        r = 'border:none; background-color:unset' if i == 0 else ''
+        width = widths[i]
+        if width:
+            width = f'width:{width}'
+            r = f'{r};{width}' if r else width
+        return r
 
     def getStorableValue(self, o, value, single=False):
         '''Gets p_value in a form that can be stored in the database'''

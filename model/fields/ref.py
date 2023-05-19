@@ -1631,9 +1631,7 @@ class Ref(Field):
         if key in req:
             r = req[key]
         else:
-            r = self.getDefaultSearch(searches, True)
-            if r:
-                req[key] = r
+            r = req[key] = self.getDefaultSearch(searches, True)
         return r
 
     def getListPx(self, o):

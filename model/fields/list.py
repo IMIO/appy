@@ -43,11 +43,12 @@ class List(Field):
 
     # A 1st invisible cell containing a virtual field allowing to detect this
     # row at server level.
-    pxFirstCell = Px('''<td style="display:none">
-     <table var="rid=field.getEntryName('-row-', rowId, field.name)"
-            id=":f'{o.iid}_{rid}'">
-      <tr><td><input type="hidden" id=":rid" name=":rid"/></td></tr>
-     </table></td>''')
+    pxFirstCell = Px('''
+     <td style="display:none" if="not minimal">
+      <table var="rid=field.getEntryName('-row-', rowId, field.name)"
+             id=":f'{o.iid}_{rid}'">
+       <tr><td><input type="hidden" id=":rid" name=":rid"/></td></tr>
+      </table></td>''')
 
     # PX for rendering a single row
     pxRow = Px('''
@@ -110,7 +111,7 @@ class List(Field):
       <thead>
        <tr valign=":field.headerAlign">
         <th for="name, sub in subFields" if="sub"
-            width=":swidths[loop.name.nb]">
+            style=":field.getHeaderStyle(loop.name.nb, swidths)">
          <x var="field=sub">::field.getListHeader(_ctx_)</x></th>
 
         <!-- Total headers -->
@@ -389,6 +390,11 @@ class List(Field):
         elif not isinstance(r, str):
             r = r.get(c.layout) or default
         return r
+
+    def getHeaderStyle(self, i, widths):
+        '''Return CSS properties for the p_i(th) header cell'''
+        width = widths[i]
+        return f'width:{width}' if width else ''
 
     def getWidths(self, subFields):
         '''Get the widths to apply to these p_subFields'''
