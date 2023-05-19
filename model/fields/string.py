@@ -126,7 +126,7 @@ class String(Multilingual, Field):
     BELGIAN_ENTERPRISE_NUMBER = MODULO_97_COMPLEMENT
 
     # Prefixes for which the Belgian NISS must be patched (see m_BELGIAN_NISS)
-    nissModuloPrefixes = ('0', '1', '2')
+    nissModuloPrefixes = ('0', '1', '2', '3')
 
     @staticmethod
     def BELGIAN_NISS(o, value):

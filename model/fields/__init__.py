@@ -845,7 +845,7 @@ class Field:
             return {'label':mapping, 'descr':mapping, 'help':mapping}
 
     def getPx(self, c):
-        '''Returns the PX corresponding to p_layout'''
+        '''Returns the PX corresponding to p_c.layout'''
         layout = c.hostLayout or c.layout
         if c.minimal:
             # Call directly the layout-related PX on the field (bypass the
@@ -861,10 +861,7 @@ class Field:
             c.table = table
             r = table.pxRender
         # Before rendering the PX, compute totals if required
-        if self.summable and c.totals:
-            # Get the currently looped object
-            looped = c[c.totals.iterator]
-            Totals.update(c.totals, c.o, looped, self.name, c.rawValue, c.loop)
+        if self.summable: Totals.updateAll(self, c)
         return r
 
     def setMandatoriness(self, required):

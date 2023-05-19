@@ -108,8 +108,7 @@ class UiSearch:
              showTop=not popup or mayAdd;
              showNav=batch and batch.showNav();
              descr=uiSearch.translatedDescr;
-             totals=search.Totals.initialise(search, 'o', mode.columns)
-                    if mode.isSummable() else None;
+             totals=uiSearch.getRunningTotals(mode);
              specific=uiSearch.getResultsTop(mode, ajax)">
 
      <!-- Application, class-specific code before displaying results -->
@@ -215,15 +214,15 @@ class UiSearch:
         else:
             # The label may be specific in some special cases
             labelDescr = ''
-            if search.name == 'allSearch': label = '%s_plural' % className
+            if search.name == 'allSearch': label = f'{className}_plural'
             elif search.name == 'customSearch': label = 'search_results'
             elif not search.name: label = None
             else:
-                label = '%s_%s' % (className, search.name)
-                labelDescr = label + '_descr'
+                label = f'{className}_{search.name}'
+                labelDescr = f'{label}_descr'
             _ = tool.translate
-            self.translated = label and _(label) or ''
-            self.translatedDescr = labelDescr and _(labelDescr) or ''
+            self.translated = _(label) if label else ''
+            self.translatedDescr = _(labelDescr) if labelDescr else ''
         # Strip the description (a single space may be present)
         self.translatedDescr = self.translatedDescr.strip()
         # An initiator instance if the search is in a popup
@@ -303,3 +302,10 @@ class UiSearch:
     def highlight(self, text):
         '''Highlight search results within p_text'''
         return Criteria.highlight(self.tool.H(), text)
+
+    def getRunningTotals(self, mode):
+        '''If totals must be computed, returns a Running* object'''
+        search = self.search
+        if not search.totalRows or not mode.isSummable(): return
+        return search.Totals.init(search, 'o', mode.columns, search.totalRows)
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

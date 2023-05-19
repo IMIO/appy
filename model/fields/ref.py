@@ -576,8 +576,8 @@ class Ref(Field):
        <select var="searches=field.getSearches(o)" if="searches" class="refSel"
                id=":f'{o.iid}_{field.name}_ssel'"
                var2="sdef=field.getCurrentSearch(req, searches)"
-               onchange=":'askBunchSwitchSearch(%s,%s,this.value)' %
-                          (q(hook), q(field.name))">
+               onchange=":f'askBunchSwitchSearch({q(hook)},{q(field.name)},'
+                          f'this.value)'">
          <!-- The first option is used to select the default pxSub -->
          <option value="" selected=":sdef==''">:_('standard_view')</option>
          <option for="name, rs in searches.items()"
@@ -1628,7 +1628,13 @@ class Ref(Field):
         key = self.getCurrentSearchKey()
         # The absence of that key means: use the default one. Note that "r" can
         # be the empty string: in that case, the standard view must be shown.
-        return req[key] if key in req else self.getDefaultSearch(searches, True)
+        if key in req:
+            r = req[key]
+        else:
+            r = self.getDefaultSearch(searches, True)
+            if r:
+                req[key] = r
+        return r
 
     def getListPx(self, o):
         '''Get the sub-PX to display inside pxList'''

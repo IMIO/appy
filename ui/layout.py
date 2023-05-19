@@ -66,7 +66,7 @@ class Cell:
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Row:
-    '''Represents a a row within a layout (see appy.ui.layout.Layout)'''
+    '''Represents a row within a layout (see appy.ui.layout.Layout)'''
 
     def __init__(self, content, valign, isHeader=False):
         self.valign = valign
@@ -220,7 +220,7 @@ class Layout:
         # Initialise simple params, either from the true params, or from
         # the p_other Layout instance.
         for param in Layout.baseAttributes:
-            setattr(self, param, eval('%s%s' % (source, param)))
+            setattr(self, param, eval(f'{source}{param}'))
         # The following attribute will store a special Row instance used for
         # defining column properties.
         self.headerRow = None
@@ -312,7 +312,7 @@ class Layout:
                 content = self.rows[0].cells[0].content
                 content.insert(1, Layout.pxs['r'])
 
-    def __repr__(self): return '<Layout %s>' % self.layoutString
+    def __repr__(self): return f'<Layout {self.layoutString}>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class LayoutF(Layout):
@@ -323,14 +323,18 @@ class LayoutF(Layout):
     rowDelimiters =  {'-':'center', '=':'start', '_':'end'}
     rowDelms = ''.join(rowDelimiters.keys())
 
+    # Mapping between cell's horizoontaal alignment and values for flex property
+    # "justify-contents"
+    cellMap = {'left': 'start', 'center': 'center', 'right': 'end'}
+
     pxRender = Px('''
      <div style=":table.getStyle()" class=":table.getCss(_ctx_)"
           id=":tagId" name=":tagName">
       <x for="cell in table.row.cells">
        <x for="c in cell.content">
         <span if="cell.basis &gt; 1"
-              style=":'flex:1 0 %s%%' % cell.basis">:cell.render(c, layout,
-                                                                 layoutTarget)
+              style=":f'flex:1 0 {cell.basis}%'">:cell.render(c, layout,
+                                                              layoutTarget)
         </span>
         <x if="cell.basis == 1">:cell.render(c, layout, layoutTarget)</x>
        </x>
@@ -346,8 +350,8 @@ class LayoutF(Layout):
         if direction == 'row':
             self.direction = None # This is the default value
         else:
-            self.direction = 'flex-direction:%s' % direction
-        # Define flef-wrap
+            self.direction = f'flex-direction:{direction}'
+        # Define flex-wrap
         if wrap:
             self.wrap = 'flex-wrap:wrap'
         else:
@@ -358,15 +362,20 @@ class LayoutF(Layout):
 
     def getStyle(self):
         '''Get content of the main tag's "style" attribute'''
-        r = 'display:flex;align-items:%s' % self.row.valign
-        if self.direction: r = '%s;%s' % (r, self.direction)
-        if self.style:     r = '%s;%s' % (r, self.style)
-        if self.wrap:      r = '%s;%s' % (r, self.wrap)
+        row = self.row
+        r = f'display:flex;align-items:{row.valign}'
+        if len(row.cells) == 1:
+            # Get the horizontal alignment from this unique cell
+            cell = row.cells[0]
+            r = f'{r};justify-content:{self.cellMap[cell.align]}'
+        if self.direction: r = f'{r};{self.direction}'
+        if self.style:     r = f'{r};{self.style}'
+        if self.wrap:      r = f'{r};{self.wrap}'
         return r
 
     def getCss(self, c):
         '''Get the CSS class(es) to apply to the main tag's "class" attribute'''
-        r = '%s %s' % (c.tagCss or '', self.css or '')
+        r = f'{c.tagCss or ""} {self.css or ""}'
         return r.strip()
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
