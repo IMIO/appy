@@ -2,7 +2,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os, os.path, re, stat, shutil, struct, urllib.parse, imghdr, base64
+import os, os.path, re, stat, shutil, struct, urllib.parse, imghdr, base64, io
 
 import appy.pod
 from appy import utils
@@ -24,6 +24,7 @@ PDF_ERR  = 'ConvertImporter error while converting a doc to PDF: %s.'
 class DocImporter:
     '''Base class used for importing external content into a pod template (an
        image, another pod template, another odt document...'''
+
     def __init__(self, content, at, format, renderer):
         self.content = content
         self.renderer = renderer
@@ -54,11 +55,9 @@ class DocImporter:
         else:
             # The file content (in self.content) must be dumped in a temp file
             # first. It may be binary or a file handler.
-            content = self.content
-            content = content.read() if isinstance(content, file) else content
-            f = open(self.importPath, 'wb')
-            f.write(fileContent)
-            f.close()
+            cont = self.content
+            cont = cont.read() if isinstance(cont, io.IOBase) else cont
+            with open(self.importPath, 'wb') as f: f.write(cont)
         # Some importers add specific attrs via m_init
 
     def checkAt(self, at, raiseOnError=True):

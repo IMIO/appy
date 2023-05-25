@@ -665,7 +665,8 @@ Layouts.defaults = {'normal': Layouts.b, 'grid': Layouts.g}
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 class PageLayouts:
-    # The default layouts
+    '''Default page layouts'''
+
     defaults = Layouts(edit=Layout('b-w', width=None), view=Layout('e-b-w'))
     # Wide
     wide = Layouts(edit=Layout('b-w'), view=Layout('e-b-w'))
@@ -674,9 +675,12 @@ class PageLayouts:
                        view=Layout('e-b|-w|', align='center'))
     # Headless (without header on "view")
     headless = Layouts(edit=Layout('b-w', width=None), view=Layout('b-w'))
-    # Complete (with preamble and header), wide or narrow
+    # Complete (with preamble and header), wide or *N*arrow
     complete = Layouts(edit=Layout('b-w'), view=Layout('p-e-b-w'))
     completeN = Layouts(edit=Layout('b-w', width=None), view=Layout('p-e-b-w'))
+    # *N*arrow, *B*oth (edit and view)
+    completeNB = Layouts(edit=Layout('b-w', width=None),
+                         view=Layout('p-e-b-w', width=None))
 
 Layouts.Page = PageLayouts
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
