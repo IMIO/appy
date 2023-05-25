@@ -10,6 +10,7 @@ from appy.utils import css
 from appy.pod import PodError, getUuid
 from appy.utils.client import Resource
 from appy.model.utils import Object as O
+from appy.pod.metadata import MetadataReader
 from appy.pod.odf_parser import OdfEnvironment
 from appy.utils.path import getOsTempFolder, getTempFileName
 
