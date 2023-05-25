@@ -76,8 +76,12 @@ def parseStyleAttribute(value, asDict=False):
     for attr in value.split(';'):
         if not attr.strip(): continue
         name, value = attr.split(':', 1)
-        if asDict: res[name.strip()] = value.strip()
-        else:      res.append( (name.strip(), value.strip()) )
+        val = value.strip()
+        # Ignore values referring CSS variables
+        if not val or val.startswith('var('): continue
+        n = name.strip()
+        if asDict: res[n] = val
+        else:      res.append( (n, val) )
     return res
 
 # ------------------------------------------------------------------------------
