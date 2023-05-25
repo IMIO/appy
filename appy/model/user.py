@@ -100,7 +100,7 @@ class User(Base):
     #  Title, name, first name
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
-    baseGroup = Group('main', style='grid', hasLabel=False)
+    baseGroup = Group('main', ['15%','85%'], style='grid', hasLabel=False)
 
     pm = {'page': Page('main', label='User_page_main', icon='pageProfile.svg'),
           'width': 28, 'layouts': Layouts.g, 'label': 'User',
@@ -124,12 +124,12 @@ class User(Base):
             if firstName and name:
                 # Apply a transform if requested
                 if nameTransform:
-                    name = eval('name.%s()' % nameTransform)
+                    name = eval(f'name.{nameTransform}()')
                 if firstNameTransform:
-                    firstName = eval('firstName.%s()' % firstNameTransform)
+                    firstName = eval(f'firstName.{firstNameTransform}()')
                 # Concatenate first and last names in the right order
-                r = '%s %s' % (name, firstName) if nameFirst \
-                    else ('%s %s' % (firstName, name))
+                r = f'{name} {firstName}' if nameFirst else \
+                    f'{firstName} {name}'
         r = r or self.title or login
         return Normalize.accents(r) if normalized else r
 
@@ -150,9 +150,10 @@ class User(Base):
         # For external users, note the source and last synchronization date in
         # the icon's title.
         sdate = self.syncDate
-        suffix = (' - sync@ %s' % self.tool.formatDate(sdate)) if sdate else ''
-        return '<img src="%s" title="%s%s" class="help"/>' % \
-               (self.buildUrl('external'), self.source.upper(), suffix)
+        url = self.buildUrl('external')
+        suffix = f' - sync@ {self.tool.formatDate(sdate)}' if sdate else ''
+        return f'<img src="{url}" title="{self.source.upper()}{suffix}" ' \
+               f'class="help"/>'
 
     def ensureAdminIsManager(self):
         '''User "admin" must always have role "Manager"'''
@@ -166,8 +167,7 @@ class User(Base):
     def showName(self):
         '''Name and first name, by default, can not be edited for non-local
            users.'''
-        if (self.source != 'zodb'): return Show.E_
-        return True
+        return True if self.source == 'zodb' else Show.E_
 
     name = String(show=showName, **pm)
     firstName = String(show=showName, **pm)
@@ -269,7 +269,7 @@ class User(Base):
         r = roles[:]
         # Get the user logins
         for login in logins:
-            r.append('user:%s' % login)
+            r.append(f'user:{login}')
         return or_(*r)
 
     def getAllowedValue(self):
@@ -300,7 +300,7 @@ class User(Base):
         r = self.email or self.login
         # Ensure this is really an email
         if not String.EMAIL.match(r): return
-        return '%s <%s>' % (self.getTitle(normalized=normalized), r)
+        return f'{self.getTitle(normalized=normalized)} <{r}>'
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #  Roles and permissions
@@ -403,9 +403,9 @@ class User(Base):
             for role in roles:
                 if role in allowedRoles: return True
 
-    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Source
-    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                               Source
+    #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # Where is this user stored ? By default, in the ZODB. But the user can be
     # stored in an external LDAP (source='ldap').
@@ -426,9 +426,9 @@ class User(Base):
         # Log the operation
         self.log(USR_CONV % (self.login, origSource, source))
 
-    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Editable pages
-    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                            Editable pages
+    #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def showEPages(self):
         '''Show the list of editable pages to Managers and the user itself,
@@ -437,9 +437,9 @@ class User(Base):
         user = self.user
         if self.login == user.login or user.hasRole('Manager'): return 'view'
 
-    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Actions
-    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                               Actions
+    #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def doResetPassword(self, secure=True):
         '''Triggered from the UI, this method defines a new, automatically
@@ -455,7 +455,7 @@ class User(Base):
         if self == user:
             self.guard.Cookie.updatePassword(self.H(), password)
         message = self.translate('new_password_text',
-                                    mapping={'password': password})
+                                 mapping={'password': password})
         self.say(message, fleeting=False)
 
     def showResetPassword(self):
@@ -526,9 +526,9 @@ class User(Base):
         # No supported language was found among user's prefered languages
         return supported[0]
 
-    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  PXs
-    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                                  PXs
+    #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # Display, in the user strip, a link to the User instance of the logged user
     pxLink = Px('''
@@ -580,7 +580,7 @@ class User(Base):
         try:
             login, password, ctx = guard.Cookie.read(handler)
         except Exception as e:
-            handler.log('app', 'error', 'Unreadable cookie (%s)' % str(e))
+            handler.log('app', 'error', COOKIE_KO % str(e))
         if login: place = 'cookie'
         # b. Identify the user from HTTP basic authentication
         if not login and 'Authorization' in handler.headers:
@@ -702,19 +702,20 @@ class User(Base):
                 context['user'] = user
                 # Evaluate it
                 if not eval(expr, context): continue
-            rows.append('<tr><td><a href="%s">%s</a></td><td>%s</td></tr>' % \
-                        (user.url, user.title, tool.formatDate(access)))
+            rows.append(f'<tr><td><a href="{user.url}">{user.title}</a></td>' \
+                        f'<td>{tool.formatDate(access)}</td></tr>')
         # Create an empty row if no user has been found
         if not rows:
-            rows.append('<tr><td colspan="2" align="center">%s</td></tr>' %
-                        tool.translate('no_value'))
+            text = tool.translate('no_value')
+            rows.append(f'<tr><td colspan="2" align="center">{text}</td></tr>')
             count = 0
         else:
             count = len(rows)
         # Build the entire table
-        r = '<table class="small"><tr><th>(%d)</th><th>%s</th></tr>' % \
-            (count, tool.translate('last_user_access'))
-        return r + '\n'.join(rows) + '</table>'
+        rows = '\n'.join(rows)
+        last = tool.translate('last_user_access')
+        return f'<table class="small"><tr><th>({count})</th><th>{last}</th>' \
+               f'</tr>{rows}</table>'
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #  Appy methods

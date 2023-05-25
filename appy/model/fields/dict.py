@@ -25,10 +25,10 @@ class SepRow:
 
     def get(self, field):
         '''Produces the chunk of XHTML code representing this row'''
-        rowCss = ' class="%s"' % self.rowCss if self.rowCss else ''
-        cellCss = ' class="%s"' % self.cellCss if self.cellCss else ''
-        return '<tr valign="top"%s><td colspan="%s"%s>%s</td></tr>' % \
-               (rowCss, len(field.fields) + 1, cellCss, self.text)
+        rowCss = f' class="{self.rowCss}"' if self.rowCss else ''
+        cellCss = f' class="{self.cellCss}"' if self.cellCss else ''
+        return f'<tr valign="top"{rowCss}><td colspan="{len(field.fields)+1}"' \
+               f'{cellCss}>{self.text}</td></tr>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Dict(List):
@@ -44,33 +44,50 @@ class Dict(List):
 
     # PX for rendering a single row
     pxRow = Px('''
-     <!-- Render a separation row -->
+     <!-- Separation row -->
      <x if="not rowId">::text.get(field)</x>
-     <tr if="rowId" valign="top" class=":'even' if loop.rowId.odd else 'odd'">
-      <x>:field.pxFirstCell</x>
+
+     <!-- Row -->
+     <tr if="rowId" valign="top" class=":'even' if loop.rowId.odd else 'odd'"
+         var2="x=totalsC.reset() | None">
+      <x if="not minimal">:field.pxFirstCell</x>
       <td><b>::text</b></td>
       <td for="subName, field in subFields" if="field" align="center"
           var2="fieldName=outer.getEntryName(field, rowId)">:field.pxRender</td>
+
+      <!-- Column totals -->
+      <x if="totalsC">:totalsC.px</x>
      </tr>''')
 
     # PX for rendering the dict (shared between pxView and pxEdit)
     pxTable = Px('''
      <table var="isEdit=layout == 'edit'" if="isEdit or value"
-            id=":'list_%s' % name" class=":field.getTableCss(_ctx_)"
+            id=":f'list_{name}'" class=":field.getTableCss(_ctx_)"
             width=":field.width"
             var2="keys=field.keys(o);
                   subFields=field.getSubFields(o, layout);
                   swidths=field.getWidths(subFields);
+                  totals=field.getRunningTotals(subFields,isEdit);
+                  totalsC=field.getRunningTotals(subFields,isEdit,rows=False);
                   outer=field;
                   o=alto|o">
+
       <!-- Header -->
       <tr valign=":field.headerAlign">
-       <th width=":swidths[0]"></th>
-       <th for="subName, sub in subFields" if="sub"
-           width=":swidths[loop.subName.nb + 1]">::sub.getListHeader(_ctx_)</th>
+       <th style=":field.getHeaderStyle(0, swidths)"></th>
+       <th for="subName, sub in subFields"
+           style=":field.getHeaderStyle(loop.subName.nb+1, swidths)"
+           if="sub">::sub.getListHeader(_ctx_)</th>
+
+       <!-- Total headers -->
+       <x if="totalsC is not None">:totalsC.pxHeaders</x>
       </tr>
+
       <!-- Rows of data -->
       <x for="rowId, text in keys">:field.pxRow</x>
+
+      <!-- Totals -->
+      <x if="totals">:totals.px</x>
      </table>''')
 
     def __init__(self, keys, fields, validator=None, multiplicity=(0,1),
@@ -80,21 +97,23 @@ class Dict(List):
       master=None, masterValue=None, focus=False, historized=False,
       mapping=None, generateLabel=None, label=None, subLayouts=List.Layouts.sub,
       widths=None, view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None, headerAlign='middle', listCss=None):
+      translations=None, totalRows=None, totalCols=None, headerAlign='middle',
+      listCss=None):
         # Call the base constructor
         List.__init__(self, fields, validator, multiplicity, default,
           defaultOnEdit, show, renderable, page, group, layouts, move,
           readPermission, writePermission, width, height, maxChars, colspan,
           master, masterValue, focus, historized, mapping, generateLabel, label,
           subLayouts, widths, view, cell, buttons, edit, xml, translations,
-          headerAlign=headerAlign, listCss=listCss)
+          totalRows=totalRows, totalCols=totalCols, headerAlign=headerAlign,
+          listCss=listCss)
         # Method in "keys" must return a list of tuples (key, title): "key"
         # determines the key that will be used to store the entry in the
         # database, while "title" will get the text that will be shown in the ui
         # while encoding/viewing this entry.
 
         # WARNING: a key must be a string and cannot contain char "*". A key is
-        # typically an object ID, CONVERTED to a string.
+        # typically an object iid converted to a string.
 
         # For a nice rendering of your dict, some of the tuples returned by
         # method "keys" can be "separator rows". The tuple representing such a
@@ -106,6 +125,15 @@ class Dict(List):
     def getWidths(self, subFields):
         '''Get the widths to appply to these p_subFields'''
         return self.widths or [''] * (len(subFields) + 1)
+
+    def getHeaderStyle(self, i, widths):
+        '''Return CSS properties for the p_i(th) header cell'''
+        r = 'border:none; background-color:unset' if i == 0 else ''
+        width = widths[i]
+        if width:
+            width = f'width:{width}'
+            r = f'{r};{width}' if r else width
+        return r
 
     def getStorableValue(self, o, value, single=False):
         '''Gets p_value in a form that can be stored in the database'''
@@ -223,4 +251,13 @@ class Dict(List):
         '''Returns an iterator over p_self's values on p_o'''
         values = getattr(o, self.name)
         return values.itervalues() if values else ()
+
+    def getTotalsInfo(self, rows):
+        '''Returns info allowing to manage totals while rendering p_self's value
+           on some object.'''
+        # The name of the iterator variable
+        iterName = 'rowId' if rows else 'subName'
+        # A Dict has a preamble corresponding to dict keys
+        preamble = ['key']
+        return iterName, preamble
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

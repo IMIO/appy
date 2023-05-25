@@ -80,13 +80,16 @@ MERGE_VAL_ERR = 'Non-string CSS values cannot be merged or unmixed.'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Value:
     '''Represents a CSS value'''
+
     # CSS properties having a unit, with their default unit
     unitProperties = {'width': 'px', 'height': 'px', 'margin-left': 'px',
       'margin-right': 'px', 'margin-top': 'px', 'margin-bottom': 'px',
       'text-indent': 'px', 'font-size': None, 'border-spacing': 'px',
       'line-height': ''} # line-height can be "normal" or a value with a unit
+
     # CSS properties defining colors
     colorProperties = ('color', 'background-color')
+
     # Regular expressions for parsing (parts of) CSS values
     valueRex = re.compile('(-?\d*(?:\.\d+)?)(%|px|cm|pt|em|ex)?')
     rgbVal = '\s*([\d.]+)\s*'
@@ -243,8 +246,12 @@ class Styles:
         for attr in value.split(';'):
             if not attr.strip(): continue
             name, value = attr.split(':', 1)
-            if asDict: r[name.strip()] = value.strip()
-            else: r.append( (name.strip(), value.strip()) )
+            val = value.strip()
+            # Currently ignore values referring CSS variables
+            if not val or val.startswith('var('): continue
+            n = name.strip()
+            if asDict: r[n] = val
+            else: r.append( (n, val) )
         return r
 
     def __init__(self, elem=None, attrs=None, other=None, **kwargs):
@@ -260,7 +267,7 @@ class Styles:
         # The content of a potential "class" attribute in p_attrs
         self.classes = ''
         # Parse first the "style" attribute if present
-        if attrs and ('style' in attrs):
+        if attrs and 'style' in attrs:
             value = attrs['style']
             if value:
                 styles = Styles.parse(attrs['style'], asDict=True)
@@ -275,12 +282,12 @@ class Styles:
                     self.add(self.xhtml2css[name], value, override=False)
         # If a "class" attribute is defined, store, in attribute "classes", the
         # "external" class(es) defined in it.
-        if attrs and ('class' in attrs):
+        if attrs and 'class' in attrs:
             css = attrs['class']
             if css: self.addClass(css)
         # Add the style(s) corresponding to p_elem when relevant, excepted if
         # the corresponding Value is already defined.
-        if elem and (elem in self.tag2css):
+        if elem and elem in self.tag2css:
             self.merge(self.tag2css[elem], override=False)
         # Get the styles from p_other and/or p_kwargs. Those styles will
         # override any exsting one.
@@ -290,13 +297,13 @@ class Styles:
         self.split()
 
     def __repr__(self):
-        r = '<CSS'
+        r = '-=CSS'
         for name, value in self.__dict__.items():
             if name == 'classes':
-                if value: r += ' %s::%s' % (name, value)
+                if value: r = f'{r} {name}::{value}'
             else:
-                r += ' %s:%s' % (name, value)
-        return r + '>'
+                r = f'{r} {name}:{value}'
+        return f'{r}=-'
 
     def __bool__(self):
         # Count all attributes but "classes" that is always present

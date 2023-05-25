@@ -204,8 +204,12 @@ class Traversal:
                     permission = self.getPermission(info)
                     r = o.allows(permission=permission)
                 elif type == 'user':
-                    # The user must be the one whose login is in "info"
+                    # The user must be the one whose login is "info"
                     r = self.user.login == info
+                elif type == 'meth':
+                    # The user is authorized if executing method "info" on p_o
+                    # returns True.
+                    r = getattr(o, info)()
                 else:
                     raise self.handler.guard.Error(TRAV_KO % type)
         elif info is None:

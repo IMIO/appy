@@ -186,7 +186,7 @@ def sendMail(config, to, subject, body, attachments=None, log=None,
         # Log the time spent while connecting, if we perform a single connection
         # for sending several mails.
         if split and log:
-            log(CONNECT_OK % (time.time()-start))
+            log(CONNECT_OK % (config.server, time.time()-start))
         # Precompute the mail body if a single mail must be sent
         if not split:
             msg['To'] = ', '.join(to)
@@ -195,6 +195,10 @@ def sendMail(config, to, subject, body, attachments=None, log=None,
         if split:
             for recipient in to:
                 start = time.time()
+                # The mapping interface for v_msg is flawed: __setitem__ appends
+                # to an internal list instead of behaving like a mapping. Sad
+                # Barry...
+                del msg['To']
                 msg['To'] = recipient
                 body = msg.as_string()
                 r = smtpServer.sendmail(fromAddress, [recipient], body)
@@ -291,7 +295,7 @@ def sendMailIf(config, o, privilege, subject, body, attachments=None,
         recipients.append(recipient)
     if recipients:
         sendMail(config, recipients, subject, body, attachments, log=log,
-                 replyTo=replyTo)
+                 replyTo=replyTo, split=split)
     elif log:
         if isinstance(privilege, (list, tuple)):
             privilege = ', '.join(privilege)

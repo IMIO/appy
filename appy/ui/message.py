@@ -7,9 +7,44 @@ import urllib.parse
 from appy.px import Px
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+AM_ERR   = 'Wrong AppyMessage value :: %s'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Message:
     '''Manages the "message zone" allowing to display messages coming from the
        Appy server to the end user.'''
+
+    @classmethod
+    def getAppyMessage(class_, handler):
+        '''Get the value from the AppyMessage cookie and manage potential
+           errors.'''
+        r = handler.req.AppyMessage
+        if not r or isinstance(r, str): return r
+        # Something is wrong with the AppyMessage value. The following code must
+        # be robust: indeed, a cookie value being carried at every server
+        # request, if it is wrong, any server hit for the same user could lead
+        # to an error.
+        if isinstance(r, list):
+            # Remove any non-string or empty value
+            i = len(r) - 1
+            while i >= 0:
+                elem = r[i]
+                if not elem or not isinstance(elem, str):
+                    del r[i]
+                else:
+                    r[i] = r[i].strip()
+                i -= 1
+            # Try to merge several values
+            try:
+                r = ' · '.join(r)
+            except Exception as err:
+                text = f'{str(r)} ({str(err)})'
+                handler.log('app', 'error', AM_ERR % text)
+                r = None
+        else:
+            handler.log('app', 'error', AM_ERR % str(r))
+            r = None
+        return r
 
     @classmethod
     def consumeAll(class_, handler, unlessRedirect=False):
@@ -19,7 +54,7 @@ class Message:
         if unlessRedirect and 'Appy-Redirect' in handler.resp.headers:
             return None, 'null'
         # Try to get messages from the 'AppyMessage' cookie
-        message = handler.req.AppyMessage
+        message = class_.getAppyMessage(handler)
         if message:
             # Must it be fleeting or not ?
             if message.startswith('*'):

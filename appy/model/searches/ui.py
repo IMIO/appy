@@ -106,8 +106,9 @@ class UiSearch:
              showNewSearch=showNewSearch|True;
              showHeaders=showHeaders|True;
              showTop=not popup or mayAdd;
-             totals=search.Totals.initialise(search, 'o', mode.columns)
-                    if mode.isSummable() else None;
+             showNav=batch and batch.showNav();
+             descr=uiSearch.translatedDescr;
+             totals=uiSearch.getRunningTotals(mode);
              specific=uiSearch.getResultsTop(mode, ajax)">
 
      <!-- Application, class-specific code before displaying results -->
@@ -129,13 +130,15 @@ class UiSearch:
          <span class="btot">:mode.batch.total</span>
         </x>
         <!-- Search description -->
-        <img if="uiSearch.translatedDescr" src=":svg('detail')"
-             class="sdetail" title=":uiSearch.translatedDescr"/>
+        <img if="descr" src=":svg('detail')" class="sdetail" title=":descr"/>
 
         <!-- Class-specific colored border (*t*itle *bot*tom) -->
         <div var="css=class_.getCssFor(tool, 'tbot')"
              if="css" class=":'tbot %s' % css"></div>
        </div>
+
+       <!-- Search description in the popup -->
+       <div class="discreet" if="popup and descr">::descr</div>
 
        <!-- Icons -->
        <x if="search.showTitle">
@@ -164,7 +167,7 @@ class UiSearch:
        </x>
 
        <!-- (Top) navigation -->
-       <div if="mode.batch and uiSearch.showTopNav and not mayAdd" class="snav"
+       <div if="showNav and uiSearch.showTopNav and not mayAdd" class="snav"
             style=":search.getNavMargins()">:mode.batch.pxNavigate</div>
 
        <!-- Pod templates -->
@@ -180,7 +183,7 @@ class UiSearch:
       <x if="not empty" var2="currentNumber=0">:mode.px</x>
 
       <!-- (Bottom) navigation -->
-      <div if="not empty and mode.batch and uiSearch.showBottomNav"
+      <div if="not empty and showNav and uiSearch.showBottomNav"
            class="snab" var2="scrollTop='payload'"
            align=":search.navAlign">:mode.batch.pxNavigate</div>
 
@@ -211,15 +214,15 @@ class UiSearch:
         else:
             # The label may be specific in some special cases
             labelDescr = ''
-            if search.name == 'allSearch': label = '%s_plural' % className
+            if search.name == 'allSearch': label = f'{className}_plural'
             elif search.name == 'customSearch': label = 'search_results'
             elif not search.name: label = None
             else:
-                label = '%s_%s' % (className, search.name)
-                labelDescr = label + '_descr'
+                label = f'{className}_{search.name}'
+                labelDescr = f'{label}_descr'
             _ = tool.translate
-            self.translated = label and _(label) or ''
-            self.translatedDescr = labelDescr and _(labelDescr) or ''
+            self.translated = _(label) if label else ''
+            self.translatedDescr = _(labelDescr) if labelDescr else ''
         # Strip the description (a single space may be present)
         self.translatedDescr = self.translatedDescr.strip()
         # An initiator instance if the search is in a popup
@@ -299,3 +302,10 @@ class UiSearch:
     def highlight(self, text):
         '''Highlight search results within p_text'''
         return Criteria.highlight(self.tool.H(), text)
+
+    def getRunningTotals(self, mode):
+        '''If totals must be computed, returns a Running* object'''
+        search = self.search
+        if not search.totalRows or not mode.isSummable(): return
+        return search.Totals.init(search, 'o', mode.columns, search.totalRows)
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

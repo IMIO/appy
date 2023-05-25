@@ -104,7 +104,7 @@ class Config:
         #
         # Keys must correspond to file names, not prefixed with any path-related
         # info.
-        self.versions = {'appy.css':54, 'appy.js':39, 'calendar.js':3}
+        self.versions = {'appy.css':56, 'appy.js':40, 'calendar.js':3}
 
     def check(self, messages):
         '''Checks that every entry in p_self.map is valid'''

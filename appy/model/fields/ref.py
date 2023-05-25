@@ -3,7 +3,6 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import sys, re, os.path
-from urllib.parse import urlparse, parse_qsl
 
 from persistent.list import PersistentList
 
@@ -233,7 +232,7 @@ class Ref(Field):
     # unlink many, etc.
 
     pxGlobalActions = Px('''
-     <div class="globalActions">
+     <div class="globalActions" if="not popup">
 
       <!-- Insert several objects (if in pick list) -->
       <input if="mayEdit and inPickList"
@@ -263,24 +262,24 @@ class Ref(Field):
                         (q(action), q(o.url), q(hook), q(batch.start))"
              style=":svg('deleteMany', bg='18px 18px')"/>
 
-      <!-- Select objects and close the popup -->
-      <input if="mayEdit and selector and selector.cbShown" type="button"
-             var="label=_('object_link_many'); css=ui.Button.getCss(label)"
-             value=":label" class=":css"
-             style=":svg('linkMany', bg='18px 18px')"
-             onclick=":'onSelectObjects(%s,%s,%s,%s,%s)' %
-              (q('%d_%s' % (o.iid, field.name)), q(selector.initiatorHook),
-               q(selector.initiator.url), q(selector.initiatorMode),
-               q(selector.onav))"/>
-
       <!-- Custom actions -->
-      <x if="not popup">
-       <div for="action in field.getActions(o)"
-            var2="checkHook='%d_%s' % (o.iid, field.name);
-                  fieldName='%s*%s' % (field.name, action.name); field=action;
-                  multi=action.getMulti(hook, checkHook);
-                  smallButtons=True">:action.pxRender</div>
-      </x>
+      <div for="action in field.getActions(o)"
+           var2="checkHook=f'{o.iid}_{field.name}';
+                 fieldName=f'{field.name}*{action.name}'; field=action;
+                 multi=action.getMulti(hook, checkHook);
+                 smallButtons=True">:action.pxRender</div>
+     </div>
+
+     <!-- Select objects and close the popup -->
+     <div class="globalActions"
+          if="popup and mayEdit and selector and selector.cbShown">
+      <input type="button" style=":svg('linkMany', bg='18px 18px')"
+        var="label=_('object_link_many'); css=ui.Button.getCss(label)"
+        value=":label" class=":css"
+        onclick=":'onSelectObjects(%s,%s,%s,%s,%s)' %
+                  (q(f'{o.iid}_{field.name}'), q(selector.initiatorHook),
+                   q(selector.initiator.url), q(selector.initiatorMode),
+                   q(selector.onav))"/>
      </div>''')
 
     # Icons for moving objects up / down
@@ -315,7 +314,8 @@ class Ref(Field):
     pxObjectActions = Px('''
      <div if="ifield.showActions"
           var2="layout='sub';
-                editable=guard.mayEdit(o);
+                toPopup=target and target.target != '_self';
+                editable=guard.mayEdit(o) and not (popup and toPopup);
                 class_=field.container;
                 iconsOnly=tiedClass.getIconsOnly();
                 locked=o.Lock.isSet(o, user, 'main')"
@@ -336,15 +336,12 @@ class Ref(Field):
          var2="workflow=o.getWorkflow()">:workflow.pxTransitions</x>
 
       <!-- Edit -->
-      <div if="editable and createVia != 'noForm'" class="ibutton"
-           var2="text=_('object_edit')">
+      <div if="editable" class="ibutton" var2="text=_('object_edit')">
        <a if="not locked"
           var2="navInfo=ifield.getNavInfo(io, batch.start + currentNumber,
-                                          batch.total);
-                linkInPopup=popup or target.target != '_self'"
-          href=":o.getUrl(sub='edit', page='main', nav=navInfo, 
-                          popup=linkInPopup)"
-          target=":target.target" onclick=":target.onClick">
+                                          batch.total) if not inMenu else 'no'"
+          href=":o.getUrl(sub='edit', page='main', nav=navInfo, popup=toPopup)"
+          target=":target.get(popup, toPopup)" onclick=":target.onClick">
         <img src=":svg('edit')" class="iconS" title=":text"/>
        </a>
        <x if="locked" var2="lockStyle='iconS'; page='main'">::o.Lock.px</x>
@@ -367,8 +364,8 @@ class Ref(Field):
       </div>
 
       <!-- Unlink -->
-      <div if="mayUnlink and ifield.mayUnlinkElement(io, o)" class="ibutton"
-           var2="text=_('object_unlink')">
+      <div if="mayUnlink and not popup and ifield.mayUnlinkElement(io, o)"
+           class="ibutton" var2="text=_('object_unlink')">
        <img var="iname='unlinkUp' if linkList else 'unlink'"
             class="clickable iconS" title=":text" src=":svg(iname)"
             onClick=":ifield.getOnUnlink(q, _, io, id, batch)"/>
@@ -412,17 +409,18 @@ class Ref(Field):
     # declared as addable and if multiplicities allow it.
 
     pxAdd = Px('''
-     <x if="mayAdd and not inPickList">
-      <form class=":inMenu and 'addFormMenu' or 'addForm'"
+     <x var="toPopup=target.target != '_self'"
+        if="mayAdd and not inPickList and not (popup and toPopup)">
+      <form class=":'addFormMenu' if inMenu else 'addForm'"
             name=":addFormName" id=":addFormName" target=":target.target"
-            action=":'%s/new' % o.url">
+            action=":f'{o.url}/new'">
        <input type="hidden" name="className" value=":tiedClass.name"/>
        <input type="hidden" name="template_" value=""/>
        <input type="hidden" name="insert" value=""/>
        <input type="hidden" name="nav"
               value=":field.getNavInfo(o, 0, batch.total)"/>
        <input type="hidden" name="popup"
-          value=":'True' if popup or target.target != '_self' else 'False'"/>
+              value=":'True' if toPopup else 'False'"/>
 
        <!-- The button, prefixed by, or containing, its icon -->
        <x if="not createFromSearch">
@@ -431,7 +429,7 @@ class Ref(Field):
              onclick="this.nextSibling.click()"/>
         <input type=":field.getAddButtonType(createVia)"
                var="addLabel=_(field.addLabel);
-                    label=inMenu and tiedClassLabel or addLabel;
+                    label=tiedClassLabel if inMenu else addLabel;
                     css=ui.Button.getCss(label, iconOut=field.iconOut)"
                class=":css" value=":label" title=":addLabel"
                style=":field.getIconUrl(url, asBG=True) if addIcon else ''"
@@ -449,7 +447,8 @@ class Ref(Field):
     # Button allowing to select, from a popup, objects to be linked via the Ref
 
     pxLink = Px('''
-     <x var="repl=popupMode == 'repl';
+     <x if="not popup"
+        var="repl=popupMode == 'repl';
              labelId='search_button' if repl else field.addLabel;
              icon='search.svg' if repl else field.addIcon;
              label=_(labelId)">
@@ -509,7 +508,7 @@ class Ref(Field):
 
     pxSub = Px('''
      <!-- (Top) navigation -->
-     <div align=":dright">:batch.pxNavigate</div>
+     <div align=":dright" if="batch.showNav()">:batch.pxNavigate</div>
 
      <!-- No object is present -->
      <p class="discreet" if="not objects">:_(field.noObjectLabel)</p>
@@ -544,7 +543,7 @@ class Ref(Field):
              'showGlobalActions')">:field.pxGlobalActions</x>
 
      <!-- (Bottom) navigation -->
-     <div align=":dright" class="bottomSpace"
+     <div align=":dright" class="bottomSpace" if="batch.showNav()"
           var2="scrollTop='payload'">:batch.pxNavigate</div>
 
      <!-- Init checkboxes if present -->
@@ -560,8 +559,8 @@ class Ref(Field):
                 addCB=checkboxes)">
 
       <!-- Top controls -->
-      <div if="field.showControls and (mayAdd or mayLink or layout == 'view')"
-           class="topSpaceF">
+      <div if="field.showControls and (mayAdd or mayLink or layout == 'view')
+               and not popup" class="topSpaceF">
        <x if="field.collapsible and objects">:collapse.px</x>
        <span if="subLabel" class="discreet">:_(subLabel)</span>
        <span if="batch.length &gt; 1" class="discreet">
@@ -575,10 +574,10 @@ class Ref(Field):
 
        <!-- The search selector if searches are defined -->
        <select var="searches=field.getSearches(o)" if="searches" class="refSel"
-               id=":'%s_%s_ssel' % (o.iid, field.name)"
+               id=":f'{o.iid}_{field.name}_ssel'"
                var2="sdef=field.getCurrentSearch(req, searches)"
-               onchange=":'askBunchSwitchSearch(%s,%s,this.value)' %
-                          (q(hook), q(field.name))">
+               onchange=":f'askBunchSwitchSearch({q(hook)},{q(field.name)},'
+                          f'this.value)'">
          <!-- The first option is used to select the default pxSub -->
          <option value="" selected=":sdef==''">:_('standard_view')</option>
          <option for="name, rs in searches.items()"
@@ -772,7 +771,7 @@ class Ref(Field):
 
       <!-- The dropdown showing results when typing keywords -->
       <x if="dropdown"
-         var2="pre='%d_%s' % (o.iid, field.name);
+         var2="pre=f'{o.iid}_{field.name}';
                className=field.class_.meta.name;
                liveCss='lsRef'">:tool.Search.live</x>
 
@@ -956,12 +955,40 @@ class Ref(Field):
         # also determines the popup dimensions. You can override this attribute
         # in the context of this Ref field by using attribute "viaPopup"
         # hereafter. Allowed values for this attribute are similar to those for
-        # attribute p_self.class_.popup. Note that, if "viaPopup" is:
+        # attribute p_self.class_.popup. Values that can be used for p_viaPopup
+        # as well as p_self.class_.popup are the following. If p_viaPopup is a:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # None  | it is ignored and p_self.class_.popup will be used instead;
+        # string  | the tied object will be shown in a popup whose width is
+        #         | specified in pixels, as in '500px' ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # False | it is taken into account and the form will not be opened in a
-        #       | popup, even if p_self.class_.popup exists and is not empty.
+        # 2-tuple | the tied object will be shown in a popup whose dimensions
+        #         | are passed, as a 2-tuple of strings of the form
+        #         | ~(s_width, s_height)~, as, for example:
+        #         |
+        #         |                   ('500px', '450px')
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # p_viaPopup can also hold these specific values. If p_viaPopup is:
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # None    | it is ignored and p_self.class_.popup will be used instead ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # False   | it is taken into account and the form will not be opened in
+        #         | a popup, even if p_self.class_.popup exists and is not
+        #         | empty.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # a 3-    | the link to the tied object will NOT display the tied object
+        # tuple   | in a popup, but an additional icon will allow to display it
+        #         | in a popup, whose dimensions are passed in the 2 last tuple
+        #         | elements. Passing a 3-tuple thus enables both ways to show
+        #         | tied object. Such a tuple must be of the form
+        #         | ~(False, s_width, s_height)~. Here is an example:
+        #         |
+        #         |                (False, '-50px', '-50px')
+        #         |
+        #         | This latter example also demonstrates that a dimension
+        #         | (width and/or height) can be specified as a negative number
+        #         | of pixels. In that case, the actual dimension will be
+        #         | computed as the window dimension minus the specified number
+        #         | of pixels.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.viaPopup = viaPopup
 
@@ -1007,7 +1034,10 @@ class Ref(Field):
         #            | chars in an input text field: in a dropdown, the first
         #            | matching objects will be shown and will be selectable.
         #            | The set of possible objects shown in the dropdown must be
-        #            | defined by a Search instance in attribute "select".
+        #            | defined by a Search instance in attribute "select". On
+        #            | this search instance, you can use attribute "maxPerLive"
+        #            | to configure the maximum number of matched objects
+        #            | appearing in the dropdown.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "popupRef" | the user will choose objects from a popup window, that
         #            | will display objects tied via a Ref field. In this case,
@@ -1083,7 +1113,8 @@ class Ref(Field):
 
         # Immediately before an object is going to be linked via this Ref field,
         # method potentially specified in "beforeLink" will be executed and will
-        # take the object to link as single parameter.
+        # take the object to link as single parameter. If the method returns
+        # False, the object will not be linked.
         self.beforeLink = beforeLink
         # Immediately after an object has been linked via this Ref field, method
         # potentially specified in "afterLink" will be executed and will take
@@ -1159,7 +1190,8 @@ class Ref(Field):
         self.select = select
         if not select and self.link == 'popup':
             # Create a query for getting all objects
-            self.select = Search(sortBy='title', maxPerPage=20)
+            max = maxPerPage if isinstance(maxPerPage, int) else 30
+            self.select = Search(sortBy='title', maxPerPage=max)
         # If you want to specify, on the search form, a list of objects being
         # different from the one produced by self.select, define an alternative
         # (method or Search instance) in attribute "sselect" below.
@@ -1168,7 +1200,9 @@ class Ref(Field):
         # different than p_self.sselect, define an alternative in attribute
         # "fselect" below.
         self.fselect = fselect or self.sselect
-        # Maximum number of referenced objects shown at once
+        # Maximum number of referenced objects shown at once. It can be directly
+        # expressed as an integer value, or by a method accepting the source Ref
+        # object as unique arg and returning this integer value.
         self.maxPerPage = maxPerPage
         # If param p_queryable is True, the user will be able to perform
         # searches from the UI within referenced objects. A Ref being queryable
@@ -1500,7 +1534,7 @@ class Ref(Field):
         r.ajaxSuffix = 'poss' if r.inPickList else 'objs'
         r.hook = '%s_%s_%s' % (r.iid, r.name, r.ajaxSuffix)
         r.inMenu = False
-        batch = self.getBatch(r.render, req, r.hook)
+        batch = self.getBatch(o, r.render, req, r.hook)
         r.batch = batch if c.ajaxSingle else \
                   self.getViewValues(o, r.name, r.scope, batch, r.hook)
         r.objects = r.batch.objects
@@ -1586,7 +1620,7 @@ class Ref(Field):
     def getCurrentSearchKey(self):
         '''In the context of a ref having p_self.searches, returns the key
            storing, in the request, the currently selected search.'''
-        return '%s_view' % self.name
+        return f'{self.name}_view'
 
     def getCurrentSearch(self, req, searches):
         '''Returns the name of the currently selected search, from this dict of
@@ -1594,7 +1628,11 @@ class Ref(Field):
         key = self.getCurrentSearchKey()
         # The absence of that key means: use the default one. Note that "r" can
         # be the empty string: in that case, the standard view must be shown.
-        return req[key] if key in req else self.getDefaultSearch(searches, True)
+        if key in req:
+            r = req[key]
+        else:
+            r = req[key] = self.getDefaultSearch(searches, True)
+        return r
 
     def getListPx(self, o):
         '''Get the sub-PX to display inside pxList'''
@@ -1604,8 +1642,12 @@ class Ref(Field):
         # results from one of the searches defined in it, or the standard list
         # of tied objects, depending on some request key.
         req = o.req
-        key = self.getCurrentSearchKey()
-        searchName = req[key] if key in req else ''
+        if isinstance(self.searches, Search):
+            # We have a unique search in front of the ref: use it
+            searchName = '_default_'
+        else:
+            key = self.getCurrentSearchKey()
+            searchName = req[key] if key in req else ''
         # If no search was found, show the standard list of tied objects
         if not searchName: return self.pxSub
         # If we are here, we must render the PX for rendering the found search.
@@ -1613,9 +1655,9 @@ class Ref(Field):
         # search PX.
         req.className = self.class_.meta.name
         # Key "search" allows to find the Search from the request
-        req.search = '%s,%s,search*%s' % (o.iid, self.name, searchName)
+        req.search = f'{o.iid},{self.name},search*{searchName}'
         # Key "ref" allows to restrict seach results to ref's tied objects
-        req.ref = '%s:%s' % (o.iid, self.name)
+        req.ref = f'{o.iid}:{self.name}'
         context = o.traversal.context
         Px.injectRequest(context, req, o.tool, specialOnly=True)
         context.className = req.className # Not automatically injected
@@ -1722,7 +1764,7 @@ class Ref(Field):
         total = len(r)
         # Manage p_start and p_maxPerPage
         if start is not None:
-            maxPerPage = maxPerPage or self.maxPerPage
+            maxPerPage = maxPerPage or self.getAttribute(o, 'maxPerPage')
             # Create a sub-list containing only the relevant objects
             sub = []
             i = start
@@ -1824,7 +1866,7 @@ class Ref(Field):
         # p_usage can be one of the PV_* constants as defined above.
         req = o.req
         paginated = start is not None
-        maxPerPage = maxPerPage or self.maxPerPage
+        maxPerPage = maxPerPage or self.getAttribute(o, 'maxPerPage')
         isSearch = False
         master = self.master
         if master and callable(self.masterValue):
@@ -2053,9 +2095,9 @@ class Ref(Field):
         # Return the base + custom CSS
         r = css(o, menu.objects) if callable(css) else css
         if not r: return base or ''
-        return '%s %s' % (base, r) if base else r
+        return f'{base} {r}' if base else r
 
-    def getBatch(self, render, req, hook):
+    def getBatch(self, o, render, req, hook):
         '''This method returns a Batch instance in the single objective of
            collecting batch-related information that might be present in the
            request.'''
@@ -2066,9 +2108,9 @@ class Ref(Field):
         # When using any render mode, "list" excepted, all objects must be shown
         if render != 'list': return r
         # Get the index of the first object to show
-        r.start = int(req['%s_start' % hook] or req.start or 0)
+        r.start = int(req[f'{hook}_start'] or req.start or 0)
         # Get batch size
-        r.size = int(req.maxPerPage or self.maxPerPage)
+        r.size = int(req.maxPerPage or self.getAttribute(o, 'maxPerPage'))
         return r
 
     def getBatchFor(self, hook, objects):
@@ -2336,18 +2378,17 @@ class Ref(Field):
 
     def getOnUnlink(self, q, _, o, tiedId, batch):
         '''Computes the JS code to execute when button "unlink" is clicked'''
-        js = "onLink('unlink','%s','%s','%s','%s','%s')" % \
-             (o.url, self.name, tiedId, batch.hook, batch.start)
+        js = f"onLink('unlink','{o.url}','{self.name}','{tiedId}'," \
+             f"'{batch.hook}','{batch.start}')"
         if not self.unlinkConfirm: return js
-        return "askConfirm('script', %s, %s)" % \
-               (q(js, False), q(_('action_confirm')))
+        text = _('action_confirm')
+        return f"askConfirm('script',{q(js, False)},{q(text)})"
 
     def getAddLabel(self, o, addLabel, tiedClassLabel, inMenu):
         '''Gets the label of the button allowing to add a new tied object. If
            p_inMenu, the label must contain the name of the class whose instance
            will be created by clincking on the button.'''
-        if not inMenu: return o.translate(self.addLabel)
-        return tiedClassLabel
+        return tiedClassLabel if inMenu else o.translate(self.addLabel)
 
     def getListLabel(self, inPickList):
         '''If self.link == "list", a label must be shown in front of the list.
@@ -2511,7 +2552,8 @@ class Ref(Field):
     def getPageIndexOf(self, o, tied):
         '''Returns the index of the first object of the page where p_tied is'''
         index = self.getIndexOf(o, tied)
-        return int(index/self.maxPerPage) * self.maxPerPage
+        maxPerPage = self.getAttribute(o, 'maxPerPage')
+        return int(index/maxPerPage) * maxPerPage
 
     traverse['sort'] = 'perm:write'
     def sort(self, o):
@@ -2551,17 +2593,18 @@ class Ref(Field):
            objects.'''
         # Transmit the original navigation when existing
         nav = o.req.nav
-        suffix = '&onav=%s' % nav if nav else ''
+        suffix = f'&onav={nav}' if nav else ''
         if self.link in ('popup', 'dropdown'):
             # Go to the page for querying objects
-            r = '%s/Search/results?className=%s&search=%d,%s,%s&popup=1%s' % \
-             (o.tool.url, self.class_.meta.name, o.iid, name, popupMode, suffix)
+            cname = self.class_.meta.name
+            r = f'{o.tool.url}/Search/results?className={cname}&search=' \
+                f'{o.iid},{name},{popupMode}&popup=1{suffix}'
         elif self.link == 'popupRef':
             # Go to the page that displays a single field
             po, fieldName = self.select(o) # "po" = the *p*opup *o*bject
-            r = '%s/pxField?name=%s&pageLayout=w-b&popup=True&maxPerPage=%d' \
-                '&selector=%d,%s,%s%s' % (po.url, fieldName, self.maxPerPage,
-                                          o.iid, name, popupMode, suffix)
+            max = self.getAttribute(o, 'maxPerPage')
+            r = f'{po.url}/pxField?name={fieldName}&pageLayout=w-b&popup=True&'\
+                f'maxPerPage={max}&selector={o.iid},{name},{popupMode}{suffix}'
         return r
 
     def getSelector(self, o, req):
@@ -2577,7 +2620,7 @@ class Ref(Field):
         cbClass = '' if cbShown else 'hide'
         return O(initiator=initiator, initiatorField=initiatorField,
                  initiatorMode=mode, onav=req.onav or '',
-                 initiatorHook='%d_%s' % (initiator.iid, name),
+                 initiatorHook=f'{initiator.iid}_{name}',
                  cbShown=cbShown, cbClass=cbClass,
                  # The originator can also be a rich field for which images must
                  # be browsed. In that case, we transmit "ckNum", a number being
@@ -2626,7 +2669,7 @@ class Ref(Field):
                 search = self.getSelect(o)
                 r = search.run(o.H(), batch=False, sortBy=req.sortKey,
                                sortOrder=req.sortOrder,
-                               filters=self.class_.meta.getFilters(req))
+                               filters=self.class_.meta.getFilters(tool))
             elif self.link == 'popupRef':
                 initiatorObj, fieldName = self.select(o)
                 r = getattr(initiatorObj, fieldName)
@@ -2643,14 +2686,11 @@ class Ref(Field):
     def getLinkBackUrl(self, o, req):
         '''Get the URL to redirect the user to after having (un)linked an object
            via this Ref.'''
-        # Propagate key(s) of the form "_start"
-        referer = o.referer
-        url = urlparse(referer)
-        if not url.query: return referer
+        # Propagate key(s) of the form "*_start" and "page"
         params = {}
-        for name, value in parse_qsl(url.query):
-            if name.endswith('start') or (name == 'page'):
-                params[name] = value
+        for name, val in o.req.items():
+            if name.endswith('start') or name == 'page':
+                params[name] = val
         return o.getUrl(sub='view', **params)
 
     traverse['onLink'] = 'perm:write'
@@ -2662,7 +2702,7 @@ class Ref(Field):
         action = req.linkAction
         msg = None
         if not action.endswith('_many'):
-            method = eval('self.%sObject' % req.linkAction)
+            method = getattr(self, f'{req.linkAction}Object')
             tied = o.getObject(int(req.targetId))
             r = method(o, tied, secure=True)
         else:
@@ -2825,7 +2865,7 @@ class Ref(Field):
         # Compute back information
         back = self.back
         if back:
-            sback = ' %s %s' % (back.umlMultiplicities(), back.name)
+            sback = f' {back.umlMultiplicities()} {back.name}'
             assoc2 = '―◆' if back.composite else '⸺'
             breindex = back.getReindexAction(tool) if back.indexed else ''
         else:
@@ -2833,10 +2873,10 @@ class Ref(Field):
             assoc2 = '⸺'
             breindex = ''
         cname = self.class_.__name__
-        return '%s%s%s ⸻ %s%s %s %s<a class="bref" href="%s/view?page=' \
-               'model&className=%s">%s</a>' % \
-               (assoc, sback, breindex, self.name, reindex,
-                self.umlMultiplicities(), assoc2, tool.url, cname, cname)
+        return f'{assoc}{sback}{breindex} ⸻ {self.name}{reindex} ' \
+               f'{self.umlMultiplicities()} {assoc2}<a class="bref" ' \
+               f'href="{tool.url}/view?page=model&className={cname}">{cname}'\
+               f'</a>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def autoref(class_, field):

@@ -379,20 +379,21 @@ class Tool(Base):
     #  Main methods
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
-    def sendMail(self, to, subject, body, attachments=None, replyTo=None):
+    def sendMail(self, to, subject, body, attachments=None, replyTo=None,
+                 split=False):
         '''Sends a mail. See doc for appy.utils.mail.sendMail.'''
         return sendMail(self.config.mail, to, subject, body,
-                        attachments=attachments, log=self.log, replyTo=replyTo)
+          attachments=attachments, log=self.log, replyTo=replyTo, split=split)
 
     def sendMailIf(self, o, privilege, subject, body, attachments=None,
                    privilegeType='permission', excludeExpression='False',
-                   userMethod=None, replyTo=None):
+                   userMethod=None, replyTo=None, split=False):
         '''Sends a mail concerning this p_o(bject), to people having this
            p_privilege.'''
         return sendMailIf(o.config.mail, o, privilege, subject, body,
-                          attachments=attachments, privilegeType=privilegeType,
-                          excludeExpression=excludeExpression,
-                          userMethod=userMethod, log=o.log, replyTo=replyTo)
+          attachments=attachments, privilegeType=privilegeType,
+          excludeExpression=excludeExpression, userMethod=userMethod, log=o.log,
+          replyTo=replyTo, split=split)
 
     def computeHomePage(self):
         '''Compute the page that is shown to the user when he hits the app'''
@@ -474,7 +475,7 @@ class Tool(Base):
         var2="x=tool.goto(tool.computeHomePage())"></x>
 
      <!-- Links -->
-     <div class=":'%sTop' % _px_.name">:Template.pxTemplateLinks</div>
+     <div class=":f'{_px_.name}Top'">:Template.pxTemplateLinks</div>
 
      <!-- The home logo and text -->
      <div if="isAnon and _px_.name == 'home'" class="homeText">
@@ -488,16 +489,16 @@ class Tool(Base):
      <div if="_px_.name == 'homes'" class="homes">
       <div for="fileName, width in cfg.homesBackgrounds.items()"
            var2="bg=tool.buildUrl(fileName, bg=True)"
-           style=":'%s;width:%s' % (bg, width)"></div>
+           style=":f'{bg};width:{width}'"></div>
      </div>''',
 
      css='''
       .homeText { position:fixed; left:|homeTextLeft|; top:|homeTextTop|;
                   color:|homeTextColor| }
-      .homeText h1 { font-size:300%; margin-left:-5px; padding:0 }
-      .homeText h2 { font-size:200% }
-      .homeText p { font-size: 120%; margin: 0 }
-      .homeText a, .homeText a:visited { color: #ffd8eb }
+      .homeText h1 { font-size:|homeH1FSize|; margin-left:-5px; padding:0 }
+      .homeText h2 { font-size:|homeH2FSize| }
+      .homeText p { font-size:|homeTextFSize|; margin:0 }
+      .homeText a, .homeText a:visited { color:|homeLinkColor| }
       .homeTop { position:fixed; top:20px; right:20px; color:|headerColor|;
                  z-index:1 }
      ''',

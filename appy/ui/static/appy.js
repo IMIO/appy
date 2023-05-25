@@ -80,8 +80,15 @@ function toggleLoginBox(show) {
   loginBox.style.display = (show)? 'block': 'none';
 }
 
-function goto(url) {
-  let win = (window.name == 'appyIFrame')? window.parent: window;
+function goto(url, stay) {
+  // Display this p_url in the current window
+  let win = null;
+  if (stay) {
+    win = window;
+  }
+  else { // Refresh the whole page if we are in the iframe
+    win = (window.name == 'appyIFrame')? window.parent: window;
+  }
   win.location = url;
 }
 
@@ -510,8 +517,8 @@ function gotoTied(objectUrl, field, numberWidget, total, popup) {
     let number = parseInt(numberWidget.value);
     if (!isNaN(number)) {
       if ((number >= 1) && (number <= total)) {
-        goto(objectUrl + '/' + field + '/gotoTied?number=' + number +
-             '&popup=' + popup);
+        goto(`${objectUrl}/${field}/gotoTied?number=${number}&popup=${popup}`,
+             true);
       }
       else numberWidget.style.background = wrongTextInput; }
     else numberWidget.style.background = wrongTextInput; }
@@ -1092,9 +1099,9 @@ function onDeleteObject(iid, back, text) {
 
 function onLink(action, url, fieldName, targetId, hook, start, semantics) {
   let params = {'linkAction': action, 'targetId': targetId};
-  if (hook) params[hook + '_start'] = start;
+  if (hook) params[`${hook}_start}`] = start;
   if (semantics) params['semantics'] = semantics;
-  post(url + '/' + fieldName + '/onLink', params);
+  post(`${url}/${fieldName}/onLink`, params);
 }
 
 function onLinkMany(action, url, id, start) {
@@ -1104,10 +1111,10 @@ function onLinkMany(action, url, id, start) {
       // Get the DOM node corresponding to the Ref
       node = document.getElementById(hook),
       // Get the ids of (un-)checked objects
-      statuses = node['_appy_' + cbType + '_cbs'],
+      statuses = node[`_appy_${cbType}_cbs`],
       ids = stringFromDict(statuses, true),
       // Get the array semantics
-      semantics = node['_appy_' + cbType + '_sem'];
+      semantics = node[`_appy_${cbType}_sem`];
   // Show an error message if no element is selected
   if ((semantics == 'checked') && (len(statuses) == 0)) {
     openPopup('alertPopup', no_elem_selected);
@@ -1269,20 +1276,33 @@ function openPopup(popupId, msg, width, height, css, back, commentLabel) {
   let popup = document.getElementById(popupId),
       frame = popupId == 'iframePopup', // Is it the "iframe" popup ?
       mobile = window.matchMedia(queryMobile).matches, // Mobile device ?
-      deltaX = (mobile)? 40: 300,
-      deltaY = (mobile)? 40: 100;
-  /* Define height and width. For non-iframe popups, do not set its height: it
-     will depend on its content. */
-  if (!width || mobile) { width =  (frame)? window.innerWidth -deltaX: null }
-  if (!height|| mobile) { height = (frame)? window.innerHeight-deltaY: null }
-  if (width)  popup.style.width = width.toFixed() + 'px';
-  if (height) popup.style.height = height.toFixed() + 'px';
+      winW = window.innerWidth, winH = window.innerHeight,
+      deltaX = (mobile)? 40: 300, deltaY = (mobile)? 40: 100,
+      w = width, h = height;
+  // Define height and width
+  if (!w || mobile) { w = (frame)? winW - deltaX: null }
+  if (!h || mobile) { h = (frame)? winH - deltaY: null }
+  /* If width or height is negative, it represents a margin w.r.t the windows'
+     inner dimension. */
+  if (w && w < 0) w = winW + w;
+  if (h && h < 0) h = winH + h;
+  // Set popup width and height, expressed in pixels
+  if (w) popup.style.width = `${w}px`;
+  if (h) popup.style.height = `${h}px`;
   if (frame) {
     // Set the enclosed iframe dimensions and show the mask
     const iframe = document.getElementById('appyIFrame');
-    iframe.style.width  = (width -20).toFixed() + 'px';
-    iframe.style.height = (height-20).toFixed() + 'px';
-    if (!mobile) setMask();
+    iframe.style.width = `${w-20}px`;
+    iframe.style.height = `${h-20}px`;
+    if (!mobile) {
+      // (Re)position the popup at the center of the screen
+      if (popup.style.top) {
+        popup.style.top = `${(Math.abs(winH-h)/2.5).toFixed()}px` }
+      if (popup.style.left) {
+        popup.style.left = `${(Math.abs(winW-w)/2.5).toFixed()}px` }
+      // Enable the mask
+      setMask();
+    }
     popup.backHook = back;
   }
   // Apply the CSS class to the popup

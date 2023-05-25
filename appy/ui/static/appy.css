@@ -77,7 +77,7 @@ form[name=search] input[type=button] { margin:0 }
 .changePassword { color:#494949 !important; font-style:italic; font-size:90% }
 .pageTitle { display:flex; flex-wrap:wrap; align-items:center; gap:0.1em;
              text-transform:uppercase; font-weight:bold; position:relative }
-.pageTitleP { text-align:center }
+.pageTitleP { text-align:|bcTitleAlignP| }
 .breadTitle { padding:0 0 30px 0; align-items:flex-start; gap:0.4em }
 .pageIcons { text-transform:uppercase; font-weight:bold; font-size:96% }
 .required { color:|warnColor|; font-weight:bold }
@@ -166,7 +166,7 @@ div.rbutton { float:right }
 .current { font-weight:bold }
 .inputSearch { height:15px; width:120px; margin:0 0 5px 5px !important }
 .content { padding:30px; width:100% }
-.contentP { width:100% }
+.contentP { width:98% }
 .public { width:100% }
 .subbed { width:100% }
 .subbed .topBase { position:static }
@@ -221,6 +221,8 @@ div.rbutton { float:right }
                     position:sticky; top:-30px; height:3em;
                     border-bottom:2px solid |darkColor|; z-index:1 }
 .list a { font-weight:bold }
+.list a.pop { font-weight:normal; float:right; font-size:150%; color:lightgrey;
+              margin:-6px 0 0 6px }
 .compact { font-size:95%; width:100% }
 .compact th, .compact td { padding:5px }
 .compact tr { vertical-align: middle }
@@ -233,8 +235,8 @@ div.rbutton { float:right }
 .grid>tbody>tr>td { padding:|gridPadding| }
 .small { text-align:left; margin:8px 0 }
 .small th { background-color:|darkColor|; padding:1px 5px; height:unset;
-            border:1px solid grey; color:|brightColor| }
-.small td { border:1px solid grey; padding:1px 5px }
+            border:1px solid grey; color:|brightColor|; position:inherit }
+.small td { border:1px solid darkgrey; padding:1px 5px }
 .small label { font-size:80% }
 .small ul { margin:0 0 0.1em 0.1em }
 .small li { padding:0 2px 0 10px; text-align:left }
@@ -344,7 +346,7 @@ th input { margin:0 !important}
 .navSep { color:|altColor|; margin:0 0.3em }
 .highlight { background-color:yellow }
 .highlightRow { font-weight:bold; background-color:yellow; opacity:0.6 }
-.globalActions { display: flex; margin-bottom:30px }
+.globalActions { display: flex; margin-bottom:0.5em }
 .objectActions { display: flex; flex-wrap:wrap; align-items:flex-start;
                  margin:0.4em 0; gap:0.2em }
 .alignedActions { display:flex; flex-wrap:wrap; align-items:center; float:right;

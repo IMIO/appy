@@ -183,7 +183,7 @@ class LoPool:
 
     def getFolder(self):
         '''Return the pool folder on this machine. Create it if it does not
-           exist yet/'''
+           exist yet.'''
         # If several LO servers are in use, a temp folder must be created, named
         #
         #                     <OS temp folder>/appy/lo
@@ -209,12 +209,12 @@ class LoPool:
     def readBusy(self):
         '''Return info about the currently running LO servers'''
         # Returns a tuple (busy, oldest), where:
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # busy   | is a dict ~{i_port: s_threadId}~, indicating which thread is
         #        | currently communicating with which LO ;
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # oldest | is the LO instance corresponding to the oldest contacted LO.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Read files from the pool folder
         folder = self.folder
         names = os.listdir(folder)
@@ -248,7 +248,7 @@ class LoPool:
            request.'''
         # The result is a tuple (LO, b_multiple). The boolean value indicates if
         # there are at least 2 LO instances defined in p_self.los.
-        # ~
+
         # Return the unique LO instance
         if isinstance(self.los, LO): return self.los, False
         # Choose among several LO instances. Read info about busy LO instances.

@@ -28,47 +28,47 @@ ms = 'application/vnd.openxmlformats-officedocument'
 ms2 = 'application/vnd.ms'
 
 mimeTypes = {
-  'odt':  '%s.text' % od,
-  'ods':  '%s.spreadsheet' % od,
+  'odt':  f'{od}.text',
+  'ods':  f'{od}.spreadsheet',
   'doc':  'application/msword',
-  'docx': '%s.wordprocessingml.document' % ms,
+  'docx': f'{ms}.wordprocessingml.document',
   'rtf':  'text/rtf',
   'pdf':  'application/pdf',
   'xml':  'text/xml'
 }
 
 mimeTypesExts = {
-  '%s.text'        % od:  'odt',
-  '%s.spreadsheet' % od:  'ods',
-  'application/msword':   'doc',
-  'text/rtf':             'rtf',
-  'application/pdf':      'pdf',
-  'image/png':            'png',
-  'image/jpeg':           'jpg',
-  'image/pjpeg':          'jpg',
-  'image/gif':            'gif',
-  'text/xml':             'xml',
-  'application/xml':      'xml',
-  '%s.wordprocessingml.document'               % ms:  'docx',
-  '%s.spreadsheetml.sheet'                     % ms:  'xlsx',
-  '%s.presentationml.presentation'             % ms:  'pptx',
-  '%s-excel'                                   % ms2: 'xls',
-  '%s-powerpoint'                              % ms2: 'ppt',
-  '%s-word.document.macroEnabled.12'           % ms2: 'docm',
-  '%s-excel.sheet.macroEnabled.12'             % ms2: 'xlsm',
-  '%s-powerpoint.presentation.macroEnabled.12' % ms2: 'pptm'
+  f'{od}.text'        : 'odt',
+  f'{od}.spreadsheet' : 'ods',
+  'application/msword': 'doc',
+  'text/rtf'          : 'rtf',
+  'application/pdf'   : 'pdf',
+  'image/png'         : 'png',
+  'image/jpeg'        : 'jpg',
+  'image/pjpeg'       : 'jpg',
+  'image/gif'         : 'gif',
+  'text/xml'          : 'xml',
+  'application/xml'   : 'xml',
+  f'{ms}.wordprocessingml.document'               : 'docx',
+  f'{ms}.spreadsheetml.sheet'                     : 'xlsx',
+  f'{ms}.presentationml.presentation'             : 'pptx',
+  f'{ms2}-excel'                                  : 'xls',
+  f'{ms2}-powerpoint'                             : 'ppt',
+  f'{ms2}-word.document.macroEnabled.12'          : 'docm',
+  f'{ms2}-excel.sheet.macroEnabled.12'            : 'xlsm',
+  f'{ms2}-powerpoint.presentation.macroEnabled.12': 'pptm'
 }
 
 def getMimeType(fileName, default='application/octet-stream'):
     '''Tries to guess mime type from p_fileName'''
-    res, encoding = mimetypes.guess_type(fileName)
-    if not res:
+    r, encoding = mimetypes.guess_type(fileName)
+    if not r:
         if fileName.endswith('.po'):
-            res = 'text/plain'
+            r = 'text/plain'
             encoding = 'utf-8'
-    if not res: return default
-    if not encoding: return res
-    return '%s;;charset=%s' % (res, encoding)
+    if not r: return default
+    if not encoding: return r
+    return f'{r};;charset={encoding}'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class CommercialError(Exception):
@@ -106,16 +106,16 @@ class No:
        message.'''
     def __init__(self, msg): self.msg = msg
     def __bool__(self): return False
-    def __repr__(self): return '<No: %s>' % self.msg
+    def __repr__(self): return f'<No: {self.msg}>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def initMasterValue(v):
     '''Standardizes p_v as a list of strings, excepted if p_v is a method'''
     if callable(v): return v
-    if not isinstance(v, bool) and not v: res = []
-    elif type(v) not in sequenceTypes: res = [v]
-    else: res = v
-    return [str(v) for v in res]
+    if not isinstance(v, bool) and not v: r = []
+    elif type(v) not in sequenceTypes: r = [v]
+    else: r = v
+    return [str(v) for v in r]
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def encodeData(data, encoding=None):
@@ -127,21 +127,22 @@ def encodeData(data, encoding=None):
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def copyData(data, target, targetMethod, type='string', encoding=None,
              chunkSize=1024):
-    '''Copies p_data to a p_target, using p_targetMethod. For example, it copies
-       p_data which is a string containing the binary content of a file, to
-       p_target, which can be a HTTP connection or a file object.
+    '''Copies p_data to a p_target, using p_targetMethod'''
+    #  For example, it copies p_data which is a string containing the binary
+    # content of a file, to p_target, which can be a HTTP connection or a file
+    # object.
 
-       p_targetMethod can be "write" (files) or "send" (HTTP connections) or ...
-       p_type can be "string" or "file". In the latter case, one may, in
-       p_chunkSize, specify the amount of bytes transmitted at a time.
+    # p_targetMethod can be "write" (files) or "send" (HTTP connections) or ...
+    # p_type can be "string" or "file". In the latter case, one may, in
+    # p_chunkSize, specify the amount of bytes transmitted at a time.
 
-       If an p_encoding is specified, it is applied on p_data before copying.
+    # If an p_encoding is specified, it is applied on p_data before copying.
 
-       Note that if the p_target is a Python file, it must be opened in a way
-       that is compatible with the content of p_data, ie open('myFile.doc','wb')
-       if content is binary.'''
+    # Note that if the p_target is a Python file, it must be opened in a way
+    # that is compatible with the content of p_data, ie open('myFile.doc','wb')
+    # if content is binary.
     dump = getattr(target, targetMethod)
-    if not type or (type == 'string'): dump(encodeData(data, encoding))
+    if not type or type == 'string': dump(encodeData(data, encoding))
     elif type == 'file':
         while True:
             chunk = data.read(chunkSize)
@@ -155,16 +156,16 @@ def splitList(l, sub):
 
        For example, if l = [1,2,3,4,5] and sub = 3, the method returns
        [ [1,2,3], [4,5] ].'''
-    res = []
+    r = []
     i = -1
     for elem in l:
         i += 1
         if (i % sub) == 0:
             # A new sub-list must be created
-            res.append([elem])
+            r.append([elem])
         else:
-            res[-1].append(elem)
-    return res
+            r[-1].append(elem)
+    return r
 
 class IterSub:
     '''Iterator over a list of lists'''
@@ -247,22 +248,43 @@ class Traceback:
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def executeCommand(cmd, stdin=None, env=None, shell=False, stringOutput=True):
-    '''Executes command p_cmd and returns a tuple (s_stdout, s_stderr)
-       containing the data output by the subprocesss on stdout and stderr. p_cmd
-       should be a list of args (the 1st arg being the command in itself, the
-       remaining args being the parameters), but it can also be a string, too
-       (see subprocess.Popen doc).'''
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=stdin,
-                            stderr=subprocess.PIPE, env=env, shell=shell)
-    out, err = proc.communicate()
-    # The output may be a binary file as well: p_stringOutput may need to be
-    # False in that case.
-    if stringOutput and isinstance(out, bytes):
-        out = out.decode()
-    if stringOutput and isinstance(err, bytes):
-        err = err.decode()
-    return out, err
+def executeCommand(cmd, stdin=None, env=None, shell=False, stringOutput=True,
+                   wait=True):
+    '''Executes command p_cmd'''
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # If p_wait | The function ...
+    # is ...    |
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #   True    | Waits for the command to complete, and returns a tuple
+    #           | (s_stdout, s_stderr) containing output data written by the
+    #           | subprocesss on stdout and stderr. If p_stringOuput is True,
+    #           | the tuple contains strings. Else, it contains bytes. This last
+    #           | option can be interesting if output data is a binary file.
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #   False   | The method does not wait for the command to complete and
+    #           | returns the sub-process ID. Consequently, it is not possible
+    #           | to communicate with the sub-process: parameters p_stdin and
+    #           | p_stringOutput are ignored and it is not possible to retrieve
+    #           | anything that would have been written by the subprocess on
+    #           | stdout or stderr.
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # p_cmd should be a list of args (the 1st arg being the command in itself,
+    # the remaining args being the parameters), but it can also be a string, too
+    # (see subprocess.Popen doc).
+    if wait:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=stdin,
+                                stderr=subprocess.PIPE, env=env, shell=shell)
+        out, err = proc.communicate()
+        # The output may be a binary file as well: p_stringOutput may need to be
+        # False in that case.
+        if stringOutput and isinstance(out, bytes):
+            out = out.decode()
+        if stringOutput and isinstance(err, bytes):
+            err = err.decode()
+        r = out, err
+    else:
+        r = subprocess.Popen(cmd, env=env, shell=shell).pid
+    return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ImageMagick:
@@ -301,37 +323,37 @@ def formatNumber(n, sep=',', precision=2, tsep=' ', removeTrailingZeros=False):
     if n is None: return ''
     # Manage precision
     if precision is None:
-        res = str(n)
+        r = str(n)
     else:
         format = '%%.%df' % precision
-        res = format % n
+        r = format % n
     # Use the correct decimal separator
-    res = res.replace('.', sep)
+    r = r.replace('.', sep)
     # Insert p_tsep every 3 chars in the integer part of the number
-    splitted = res.split(sep)
-    res = ''
-    if len(splitted[0]) < 4: res = splitted[0]
+    splitted = r.split(sep)
+    r = ''
+    if len(splitted[0]) < 4: r = splitted[0]
     else:
         i = len(splitted[0])-1
         j = 0
         while i >= 0:
             j += 1
-            res = splitted[0][i] + res
+            r = splitted[0][i] + r
             if (j % 3) == 0:
-                res = tsep + res
+                r = tsep + r
             i -= 1
     # Add the decimal part if not 0
     if len(splitted) > 1:
         try:
             decPart = int(splitted[1])
             if decPart != 0:
-                res += sep + splitted[1]
-            if removeTrailingZeros: res = res.rstrip('0')
+                r += sep + splitted[1]
+            if removeTrailingZeros: r = r.rstrip('0')
         except ValueError:
             # This exception may occur when the float value has an "exp"
             # part, like in this example: 4.345e-05
-            res += sep + splitted[1]
-    return res
+            r += sep + splitted[1]
+    return r
 
 def roundNumber(n, base=5):
     '''Rounds an integer number p_n to an integer value being p_base'''
@@ -343,17 +365,17 @@ def multicall(o, name, block, *args):
        p_o, on its base class from the framework AND on its base class from the
        app. This method may execute both methods, only one of them or does
        nothing if method name p_name is not defined at any level.'''
-    # ~~~
+
     # This is typically used to call framework methods like "onEdit": the method
     # first calls the base method provided by the framework, then the method
     # defined in the app.
-    # ~~~
+
     # If p_block is True, if the framework method returns False or equivalent,
     # the app method is not called.
-    # ~~~
+
     # (block mode only) The method returns the result of the last called method,
     # or True if no method was called at all.
-    # ~~~
+
     r = True if block else None
     bases = o.__class__.__bases__
     for i in (1, 0):

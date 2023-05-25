@@ -421,6 +421,9 @@ class Base:
         class_ = self.H().server.model.classes[className] if className \
                                                           else self.getClass()
         r = class_.fields.get(name)
+        if r is None and class_.switchFields:
+            # p_name could be a switch sub-field
+            r = class_.switchFields.get(name)
         # Get the sub-field when relevant
         if r and isInner: r = r.getField(sub)
         # Raise an error if the field was not found and p_raiseError is True
@@ -432,7 +435,13 @@ class Base:
         '''Returns the list of fields to render on p_layout'''
         r = []
         # Browse p_self's fields, or p_fields if passed
-        for field in (fields or self.class_.fields.values()):
+        if fields is None:
+            class_ = self.class_
+            fields = class_.fields.values()
+            useClassFields = True
+        else:
+            useClassFields = False
+        for field in fields:
             # Ignore fields not being on p_page
             if page and field.pageName != page: continue
             # Ignore fields not being on any page in p_phase
@@ -444,6 +453,10 @@ class Base:
             # Ignore unshowable fields
             if not field.isShowable(self, layout): continue
             r.append(field)
+        # Dump switch sub-fields when relevant
+        if useClassFields and class_.switchFields and layout == 'xml':
+            r += self.getFields(layout, page=page, phase=phase, type=type,
+                                fields=class_.switchFields.values())
         return r
 
     def getGroupedFields(self, page, layout, collect=True, fields=None):
@@ -879,7 +892,7 @@ class Base:
       </div>
 
       <!-- The "back" icon -->
-      <div if="snav"
+      <div if="snav and not popup"
            class="pageIcons">::snav.getGotoSource(svg, _, imgCss='iconM')</div>
 
       <!-- Siblings navigation -->

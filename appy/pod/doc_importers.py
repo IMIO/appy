@@ -2,7 +2,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os, os.path, re, stat, shutil, struct, urllib.parse, imghdr, base64
+import os, os.path, re, stat, shutil, struct, urllib.parse, imghdr, base64, io
 
 import appy.pod
 from appy import utils
@@ -10,9 +10,9 @@ from appy.utils import css
 from appy.pod import PodError, getUuid
 from appy.utils.client import Resource
 from appy.model.utils import Object as O
+from appy.pod.metadata import MetadataReader
 from appy.pod.odf_parser import OdfEnvironment
 from appy.utils.path import getOsTempFolder, getTempFileName
-from io import IOBase
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 FILE_KO  = "'%s' does not exist or is not a file."
@@ -25,6 +25,7 @@ PDF_ERR  = 'ConvertImporter error while converting a doc to PDF: %s.'
 class DocImporter:
     '''Base class used for importing external content into a pod template (an
        image, another pod template, another odt document...'''
+
     def __init__(self, content, at, format, renderer):
         self.content = content
         self.renderer = renderer
@@ -55,11 +56,9 @@ class DocImporter:
         else:
             # The file content (in self.content) must be dumped in a temp file
             # first. It may be binary or a file handler.
-            content = self.content
-            content = content.read() if isinstance(content, IOBase) else content
-            f = open(self.importPath, 'wb')
-            f.write(content)
-            f.close()
+            cont = self.content
+            cont = cont.read() if isinstance(cont, io.IOBase) else cont
+            with open(self.importPath, 'wb') as f: f.write(cont)
         # Some importers add specific attrs via m_init
 
     def checkAt(self, at, raiseOnError=True):

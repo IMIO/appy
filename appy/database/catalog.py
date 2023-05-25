@@ -439,7 +439,7 @@ class Catalog(PersistentMapping):
         <td colspan="3"><x>:o.localRoles</x></td>
        </tr>
        <tr>
-        <td>Local roles only ?</td>
+        <td>Local roles only ?</td>
         <td colspan="3"><x>:'Yes' if o.localRoles.only else 'No'</x></td>
        </tr>
        <tr><th>Index name</th><th>Type</th><th>Content</th><th>

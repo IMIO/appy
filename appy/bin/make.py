@@ -24,8 +24,8 @@ class Make(Program):
     allowedTargets = ('app', 'site', 'ext')
 
     # Help messages
-    APP_S   = 'url=<url>,[type=<type>,name=<name>,login=<login>,' \
-              'password=<password>]'
+    APP_S   = 'url=<url>,[type=<type>,name=<name>,branch=<branch>,' \
+              'login=<login>,password=<password>]'
     HELP_TG = 'can be "app" for creating/updating an app, "site" for ' \
               'creating a site or "ext" for creating an extension to an app.'
     HELP_F  = 'folder is the absolute path to the base folder for the app, ' \
@@ -169,7 +169,7 @@ class Make(Program):
                        self.dependencies, self.ext).create()
         elif target == 'app':
             action = 'update' if self.folder.exists() else 'create'
-            eval('local.App(self.folder).%s()' % action)
+            eval(f'local.App(self.folder).{action}()')
         elif target == 'ext':
             local.Ext(self.folder, self.app).create()
         print(RUN_DONE)

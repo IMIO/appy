@@ -83,24 +83,13 @@ class Switch(Field):
                 return fieldset, [field for name, field in fields]
         return fieldset, ()
 
-    def injectFields(self, class_):
-        '''In order to be able to access the value of every switch sub-field as
-           any other p_class_ field, via expression
-
-                               instance.[field name]
-
-           this method, called at server startup, injects all switch sub-fields
-           as p_class_ attributes.
-        '''
-        # Note that Switch sub-fields are not added in p_class_.__fields__: only
-        # "root" fields are in this attribute. So when Appy gets all fields of
-        # some p_class_, it will not retrieve Switch sub-fields. So mechanisms
-        # like checking fields showability and validation are performed on
-        # "root" fields only, and, when relevant, on the chosen fieldset within
-        # Switch fields. This is more performant and elegant. Moreover, if
-        # Switch sub-fields were considered "root" fields, we would have to
-        # determine global showability for it, that would be a mess.
-        for fieldset, fields in self.fields:
+    def injectFields(self, meta, class_, r):
+        '''Adds, in dict p_r, any switch sub-field'''
+        # p_r is a dict of fields that will be stored on p_self's p_meta-class,
+        # as attribute "switchFields".
+        for case, fields in self.fields:
             for name, field in fields:
-                setattr(class_, name, field)
+                # Ensure this name can be used
+                meta.checkFieldName(class_, name)
+                r[name] = field
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -33,8 +33,9 @@ traverse = {'Language': True}
 class Config:
     '''Represents user-interface configuration for your app'''
 
-    # Defaults fonts used in the web user interface
-    defaultFonts = "Rajdhani, sans-serif"
+    # Defaults fonts used in the web UI
+    defaultGoogleFont = 'Montserrat'
+    defaultFonts = f"{defaultGoogleFont}, sans-serif"
 
     def __init__(self):
         '''Constructor for the UI configuration'''
@@ -221,7 +222,7 @@ class Config:
         # Among the fonts listed above, specify here, as a tuple, those being
         # Google fonts. That way, the corresponding "CSS include" will be
         # injected into all the pages from your app.
-        self.googleFonts = ('Rajdhani',)
+        self.googleFonts = (Config.defaultGoogleFont,)
 
         # You may need to use custom fonts, loaded via font-face CSS at-rules.
         # Appy itself contains at least one custom font (see
@@ -301,7 +302,11 @@ class Config:
         self.homeShowLogo = True # Logo on the top-left corner on the home page
         self.homeTextColor = self.brightColor # Text color
         self.homeTextLeft = '45px' # Distance from the left of the screen
+        self.homeTextFSize = '120%' # Text *f*ont size
         self.homeTextTop = '25px'  # Distance from the top of the screen
+        self.homeH1FSize = '300%'  # *F*ont size for h1 tags
+        self.homeH2FSize = '200%'  # *F*ont size for h2 tags
+        self.homeLinkColor = '#ffd8eb' # Link color (visited and not visited)
 
         # Styling the login box
         self.loginTitleWeight = 'normal'
@@ -429,6 +434,7 @@ class Config:
         self.gridPadding = '10px' # Padding for tables having CSS class "grid"
         self.histMargin = 'margin:0 0 5px 0' # Margins for zone "history"
         self.lgMargin = '0' # Margin for a multi*l*in*g*ual block
+        self.bcTitleAlignP = 'center' # *b*read*c*rumb title align. in a *p*opup
 
         # Header
         self.headerHeight = '60px'
@@ -787,10 +793,12 @@ class LinkTarget:
            and if p_back is specified, when coming back from the popup, we will
            ajax-refresh a DOM node whose ID is specified in p_back.'''
         # The link leads to a instance of some Python p_class_ (the true Python
-        # class, not the metaclass)
+        # class, not the metaclass).
         self.class_ = class_
         # Does the link lead to a popup ?
         if popup or forcePopup:
+            # p_popup may be a "popup specifier" coming from a "viaPopup"
+            # attribute defined on a Ref or Search.
             toPopup = True
         elif popup is False:
             toPopup = False
@@ -798,18 +806,31 @@ class LinkTarget:
             toPopup = class_ and hasattr(class_, 'popup')
         # Determine the target of the "a" tag
         self.target = 'appyIFrame' if toPopup else '_self'
+        # If p_self does not open a popup, a companion target could be defined
+        # later on, allowing to open the same link in a popup. In that case, the
+        # following attribute will store the JS code to open the popup.
+        self.otherClick = None
         # If the link leads to a popup, a "onClick" attribute must contain the
         # JS code that opens the popup.
         if toPopup:
             # Create the chunk of JS code to open the popup
             size = popup or getattr(class_, 'popup', '350px')
+            click = 'onClick'
             if isinstance(size, str):
-                params = "%s,null" % size[:-2] # Width only
-            else: # Width and height
-                params = "%s,%s" % (size[0][:-2], size[1][:-2])
+                params = f'{size[:-2]},null' # Width only
+            else:
+                # A 2- or 3-tuple
+                params = f'{size[-2][:-2]},{size[-1][:-2]}'
+                if len(size) == 3:
+                    # We were wrong: finally, the current target isn't a popup
+                    self.onClick = ''
+                    self.target = '_self'
+                    # Opening a popup will be for a future, other link target
+                    click = 'otherClick'
             # If p_back is specified, included it in the JS call
-            if back: params += ",null,'%s'" % back
-            self.onClick = "openPopup('iframePopup',null,%s)" % params
+            if back:
+                params = f"{params},null,'{back}'"
+            setattr(self, click, f"openPopup('iframePopup',null,{params})")
         else:
             self.onClick = ''
 
@@ -825,14 +846,20 @@ class LinkTarget:
         if o:
             # Get the CSS class to apply to the popup
             css = o.class_.getCssFor(o, 'popup')
-            css = "'%s'" % css if css else 'null'
+            css = f"'{css}'" if css else 'null'
         else:
             css = 'null'
-        return r[:-1] + ",%s,'%s')" % (css, back)
+        return f"{r[:-1]},{css},'{back}')"
+
+    def get(self, popup, toPopup):
+        '''Returns p_self.target, excepted if we are in the popup and we must
+           land to the parent window.'''
+        return '_parent' if popup and not toPopup else self.target
 
     def __repr__(self):
-        return '<LinkTarget for=%s,target=%s,onClick=%s>' % \
-               (self.__class__.__name__, self.target, self.onClick or '-')
+        cname = self.__class__.__name__
+        return f'<LinkTarget for={cname},target={self.target},onClick=' \
+               f'{self.onClick or "-"}>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Collapsible:
@@ -939,7 +966,7 @@ class Breadcrumb:
         # - "title" is the title of the object represented by this part;
         # - "url"   is the URL to this object.
         self.parts = None
-        # The CSS classes to apply to the main breacrumb tag
+        # The CSS classes to apply to the main breadcrumb tag
         self.css = 'pageTitle breadTitle'
         if popup: self.css += ' pageTitleP'
         # No breadcrumb is computed for the tool
@@ -976,10 +1003,10 @@ class Breadcrumb:
             self.parts.insert(0, part)
         # In a popup (or if "show" specifies it), limit the breadcrumb to the
         # current object.
-        if popup or (show == 'title'): return
+        if popup or show == 'title': return
         # Insert the part corresponding to the container if appropriate
         container = o.container
-        if container and (container.id != 'tool'):
+        if container and container.id != 'tool':
             # The tool itself can never appear in breadcrumbs
             self.compute(container)
 

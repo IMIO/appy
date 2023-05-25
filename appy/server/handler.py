@@ -183,7 +183,7 @@ class Handler:
         server = self.server
         # Add the "log char" to the message when relevant
         if message and self.logChar:
-            message = '%s %s' % (self.logChar, message)
+            message = f'{self.logChar} {message}'
         logger = getattr(server.loggers, type)
         cfg = getattr(server.config.log, type)
         # Get the parts of the message to dump
@@ -287,6 +287,11 @@ class HttpHandler(Handler):
         '''Is this handler handling an Ajax request ?'''
         req = self.req
         return req and req.ajax == 'True'
+
+    def inPopup(self):
+        '''Are we "in" the Appy iframe popup ?'''
+        req = self.req
+        return req and req.popup == 'True'
 
     def isPublished(self, o):
         '''Is object p_o the currently published object ?'''

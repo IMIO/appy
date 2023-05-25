@@ -144,6 +144,16 @@ class Multilingual:
         if isinstance(r, Multilingual.types): r = r.copy()
         return r
 
+    def setRequestValue(self, o):
+        '''Manages a potential multilingual value'''
+        req = o.req
+        value = self.getValue(o) # A copy is not required
+        if isinstance(value, Multilingual.types):
+            for lang, val in value.items():
+                req[f'{self.name}_{lang}'] = val
+        else:
+            req[self.name] = value
+
     def updateHistoryValue(self, o, values):
         '''If p_self is multilingual, remove its dict value from p_values and
            set, instead, a key for every language-specific value.'''

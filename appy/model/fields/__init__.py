@@ -248,20 +248,20 @@ class Field:
       isSearch=layout == 'search';
       hostLayout=req.hostLayout;
       name=fieldName or field.name|field.name;
-      widgetName='w_%s' % name if isSearch else name;
+      widgetName=f'w_{name}' if isSearch else name;
       rawValue=field.getValueIf(o, name, layout, disable=isSearch);
       value=field.getFormattedValue(o, rawValue, layout, showChanges) 
             if not isSearch else None;
       requestValue=not isSearch and field.getStoredValue(o, name, True);
       inRequest=field.valueIsInRequest(o, req, name, layout);
-      error=req['%s_error' % name] or handler.validator.errors.get(name)|None;
+      error=req[f'{name}_error'] or handler.validator.errors.get(name)|None;
       isMultiple=field.isMultiValued();
-      masterCss='master_%s' % name if field.slaves else '';
+      masterCss=f'master_{name}' if field.slaves else '';
       tagCss=tagCss|None;
       tagCss=field.getTagCss(tagCss, layout);
       o=o or tool;
-      tagId='%d_%s' % (o.iid, name);
-      tagName=field.master and 'slave' or '';
+      tagId=f'{o.iid}_{name}';
+      tagName='slave' if field.master else '';
       layoutTarget=field">:field.getPx(_ctx_)</x>''')
 
     def doRender(self, layout, o, name=None, minimal=False, tagCss=None,
@@ -326,7 +326,8 @@ class Field:
        <!-- Actions -->
        <div if="showActions" class=":class_.getSubCss(o, uiSearch)"
             var2="layout='sub';
-                  editable=guard.mayEdit(o);
+                  toPopup=target and target.target != '_self';
+                  editable=guard.mayEdit(o) and not (popup and toPopup);
                   iconsOnly=class_.getIconsOnly();
                   locked=o.Lock.isSet(o, user, 'main')">
 
@@ -345,12 +346,10 @@ class Field:
 
         <!-- Edit -->
         <div if="editable" class="ibutton" var2="text=_('object_edit')">
-         <a if="not locked" class="iflex1"
-            var2="linkInPopup=popup or target.target != '_self'"
-            target=":target.target"
+         <a if="not locked" class="iflex1" target=":target.target"
             onclick=":target.getOnClick(backHook or ohook)"
-            href=":o.getUrl(sub='edit', page=o.getDefaultPage('edit'), \
-                            nav=navInfo, popup=linkInPopup)">
+            href=":o.getUrl(sub='edit', page=o.getDefaultPage('edit'),
+                            nav=navInfo, popup=toPopup)">
           <img src=":svg('edit')" class="iconS" title=":text"/>
          </a>
          <x if="locked" var2="lockStyle='iconS'; page='main'">::o.Lock.px</x>
@@ -395,10 +394,10 @@ class Field:
         '''Python implementation of validation PX'''
         url = c.svg('warning')
         if c.error:
-            r = '<abbr title="%s"><img src="%s" class="iconS"/></abbr>' % \
-                (c.error, url)
+            r = f'<abbr title="{c.error}"><img src="{url}" class="iconS"/>' \
+                f'</abbr>'
         else:
-            r = '<img src="%s" class="iconS" style="visibility:hidden"/>' % url
+            r = f'<img src="{url}" class="iconS" style="visibility:hidden"/>'
         return r
     
     pxValidation = Px(validationPx)
@@ -411,7 +410,7 @@ class Field:
      <div if="not o.history.isEmpty(name)" style="margin-bottom: 5px">
       <input type="button"
         var="suffix='hide' if showChanges else 'show';
-             label=_('changes_%s' % suffix);
+             label=_(f'changes_{suffix}');
              css=ui.Button.getCss(label);
              icon='changesNo' if showChanges else 'changes';
              bp='False' if showChanges else 'True'"
@@ -474,11 +473,7 @@ class Field:
         self.renderable = renderable
         # When displaying/editing the whole object, on what page and phase must
         # this field value appear ?
-        if page:
-            self.page = Page.get(page)
-            self.pageName = self.page.name
-        else:
-            self.page = self.pageName = None
+        self.setPage(page)
         # Within self.page, in what group of fields must this one appear?
         self.group = Group.get(group)
         # The following attribute allows to move a field back to a previous
@@ -685,18 +680,18 @@ class Field:
             prefix = prefix or class_.name
             label = label or self.name
             # Determine name to use for i18n
-            self.labelId = '%s_%s' % (prefix, label)
-            self.descrId = '%s_descr' % self.labelId
-            self.helpId  = '%s_help' % self.labelId
+            self.labelId = f'{prefix}_{label}'
+            self.descrId = f'{self.labelId}_descr'
+            self.helpId  = f'{self.labelId}_help'
 
     def __repr__(self, start='<', end='>'):
-        '''String representation for this field'''
+        '''Short string representation for this field'''
         # If p_self's repr goes to the UI, using surrounding chars "<" and ">"
         # may cause XHTML escaping problems.
-        name = '%s::%s' % (self.container.name, self.name) \
+        name = f'{self.container.name}::{self.name}' \
                if hasattr(self, 'container') else 'uninit'
-        return '%sfield %s (%s)%s' % (start, name,
-                                      self.__class__.__name__.lower(), end)
+        cname = self.__class__.__name__.lower()
+        return f'{start}field {name} ({cname}){end}'
 
     def asString(self):
         '''p_self's alternate short string representation'''
@@ -711,11 +706,11 @@ class Field:
         '''Return p_self's multiplicities in UML format'''
         s, e = self.multiplicity
         if e is None:
-            r = '*' if s == 0 else ('%d..*' % s)
+            r = '*' if s == 0 else f'{s}..*'
         elif e == s:
             r = str(s)
         else:
-            r = '%d..%d' % (s, e)
+            r = f'{s}..{e}'
         return r
 
     def isSortable(self, inRefs=False):
@@ -850,7 +845,7 @@ class Field:
             return {'label':mapping, 'descr':mapping, 'help':mapping}
 
     def getPx(self, c):
-        '''Returns the PX corresponding to p_layout'''
+        '''Returns the PX corresponding to p_c.layout'''
         layout = c.hostLayout or c.layout
         if c.minimal:
             # Call directly the layout-related PX on the field (bypass the
@@ -866,10 +861,7 @@ class Field:
             c.table = table
             r = table.pxRender
         # Before rendering the PX, compute totals if required
-        if self.summable and c.totals:
-            # Get the currently looped object
-            looped = c[c.totals.iterator]
-            Totals.update(c.totals, c.o, looped, self.name, c.rawValue, c.loop)
+        if self.summable: Totals.updateAll(self, c)
         return r
 
     def setMandatoriness(self, required):
@@ -895,6 +887,15 @@ class Field:
         #   be returned by this method, depending on the master value(s) that
         #   are given to it, as its unique parameter.
         self.masterValue = utils.initMasterValue(masterValue)
+
+    def setPage(self, page):
+        '''Puts p_self into this p_page. If p_page is None, p_self will be
+           rendered in the default page.'''
+        if page:
+            self.page = Page.get(page)
+            self.pageName = self.page.name
+        else:
+            self.page = self.pageName = None
 
     def getCss(self, o, layout, r):
         '''Complete list p_r with the names of CSS files that are required for
@@ -1120,7 +1121,8 @@ class Field:
             r = self.getUniFormattedValue(o, value, contentLanguage=language)
         # If p_r is a list, transform it into a HTML "ul" tag
         if isinstance(r, utils.sequenceTypes):
-            r = '<ul>%s</ul>' % ''.join(['<li>%s</li>' % v for v in r])
+            lis = ''.join([f'<li>{v}</li>' for v in r])
+            r = f'<ul>{lis}</ul>'
         elif not r:
             r = empty
         return r
@@ -1133,7 +1135,7 @@ class Field:
         # The base search widget corresponding to p_self is prefixed with "w_".
         # p_widgetName can be specified to get the sub-value of another widget
         # that is part of the complete search widget for p_self.
-        widgetName = widgetName or 'w_%s' % self.name
+        widgetName = widgetName or f'w_{self.name}'
         # p_req[widgetName] is the base (string) value encoded in the search
         # form. But the search value (or interval of values) can be made of
         # several form fields: overriden methods in Field sub-classes must build
@@ -1149,7 +1151,7 @@ class Field:
         # widget part "to", while, by default, the specified part is "from". For
         # some Field sub-classes, the search widget may be even more complex and
         # made of more parts.
-        widgetName = widgetName or ('w_%s' % self.name)
+        widgetName = widgetName or f'w_{self.name}'
         # Conditions in overriden methods can be more complex. For example, if
         # an interval of values (min, max) is expected, specifying only "min" or
         # "max" will allow to perform a search. In this case, we will consider
@@ -1171,16 +1173,16 @@ class Field:
             return value
         # Enable inline-edition, either via an additional icon or by clicking
         # in the value.
-        suffix = '_%s' % language if language else ''
-        hook = '%d_%s%s' % (o.iid, name or self.name, suffix)
-        onClick = 'onclick="askField(\'%s\',\'%s\',\'edit:%s\')"' % \
-                  (hook, o.url, layout)
+        suffix = f'_{language}' if language else ''
+        hook = f'{o.iid}_{name or self.name}{suffix}'
+        onClick= f'onclick="askField(\'{hook}\',\'{o.url}\',\'edit:{layout}\')"'
         if inlineEdit == 'icon':
-            r = '<img src="%s" title="%s" class="inlineIcon iconS" %s/>%s' % \
-                (o.buildSvg('editS'), o.translate('object_edit'), onClick,
-                 value)
+            iconUrl = o.buildSvg('editS')
+            iconText = o.translate('object_edit')
+            r = f'<img src="{iconUrl}" title="{iconText}" class="inlineIcon ' \
+                f'iconS" {onClick}/>{value}'
         else:
-            r = '<span class="editable" %s>%s</span>' % (onClick, value)
+            r = f'<span class="editable" {onClick}>{value}</span>'
         return r
 
     def getFakeObject(self, value, req):
@@ -1193,7 +1195,7 @@ class Field:
            store values of this field in a database catalog, or the class itself
            if p_class_ is True.'''
         r = self.indexType
-        return eval('catalog.%s' % r) if class_ else r
+        return eval(f'catalog.{r}') if class_ else r
 
     def getIndex(self, o):
         '''Gets the Index instance corresponding to this field, or None if the
@@ -1336,7 +1338,7 @@ class Field:
             r.append(tagCss)
         # Add a special class when this field is the slave of another field
         if self.master:
-            css = 'slave*%s*' % self.master.getMasterTag(layout)
+            css = f'slave*{self.master.getMasterTag(layout)}*'
             if not callable(self.masterValue):
                 css += '*'.join(self.masterValue)
             else:
@@ -1354,11 +1356,11 @@ class Field:
         url = o.url
         # When the field is on a search screen, we need p_className
         if className:
-            name = "'%s'" % className
-            url = '%s/@%s' % (url, className)
+            name = f"'{className}'"
+            url = f'{url}/@{className}'
         else:
             name = 'null'
-        return "updateSlaves(this,null,'%s','%s',%s,true)" % (url, layout, name)
+        return f"updateSlaves(this,null,'{url}','{layout}',{name},true)"
 
     def isEmptyValue(self, o, value):
         '''Returns True if the p_value must be considered as an empty value'''
@@ -1525,7 +1527,7 @@ class Field:
         '''Gets the value of attribute p_name on p_self, which can be a simple
            value or the result of a method call on p_o.'''
         r = getattr(self, name)
-        return r if not callable(r) else self.callMethod(o, r, cache=cache)
+        return self.callMethod(o, r, cache=cache) if callable(r) else r
 
     def getGroup(self, layout):
         '''Gets the group into wich this field is on p_layout'''
@@ -1571,7 +1573,7 @@ class Field:
            several values must be selected.'''
         if not isMultiple: return 1
         prefix = 's' if isSearch else ''
-        height = getattr(self, '%sheight' % prefix)
+        height = getattr(self, f'{prefix}height')
         if isinstance(height, int): return height
         # "height" can be defined as a string. In this case it is used to define
         # height via a attribute "style", not "size".
@@ -1591,7 +1593,7 @@ class Field:
             return '' if isPercentage else width
         else:
             # CSS attribute "width"
-            return 'width:%s' % width if isPercentage else ''
+            return f'width:{width}' if isPercentage else ''
 
     def getSelectStyle(self, isSearch, isMultiple):
         '''If this field must be rendered as a HTML "select" field, get the
@@ -1600,21 +1602,21 @@ class Field:
            several values must be selected.'''
         prefix = 's' if isSearch else ''
         # Compute CSS attributes
-        res = []
+        r = []
         # Height
-        height = getattr(self, '%sheight' % prefix)
+        height = getattr(self, f'{prefix}height')
         if isMultiple and isinstance(height, str):
-            res.append('height:%s' % height)
+            r.append(f'height:{height}')
             # If height is an integer value, it will be dumped in attribute
             # "size", not in CSS attribute "height".
         # Width
-        width = getattr(self, '%swidth' % prefix)
+        width = getattr(self, f'{prefix}width')
         if isinstance(width, str):
-            res.append('width:%s' % width)
+            r.append(f'width:{width}')
             # If width is an integer value, it represents a number of chars
             # (usable for truncating the shown values), not a width for the CSS
             # attribute.
-        return ';'.join(res)
+        return ';'.join(r)
 
     def getWidgetStyle(self, prefix=''):
         '''If this field must be rendered as any widget not being a select
@@ -1623,14 +1625,14 @@ class Field:
            the widget to these values, with a scrollbar when appropriate.'''
         # Prefix can be "s" (*s*earch) or "f" (*f*ilter)
         r = []
-        width = getattr(self, '%swidth' % prefix)
+        width = getattr(self, f'{prefix}width')
         if isinstance(width, str):
-            r.append('width:%s;overflow-x:auto' % width)
-        height = getattr(self, '%sheight' % prefix)
+            r.append(f'width:{width};overflow-x:auto')
+        height = getattr(self, f'{prefix}height')
         if isinstance(height, str):
             # Use "max-height" and not "height", because, if the widget content
             # is reduced, forcing the height will be ugly.
-            r.append('max-height:%s;overflow-y:auto' % height)
+            r.append(f'max-height:{height};overflow-y:auto')
         return ';'.join(r)
 
     def getWidthInChars(self, isSearch):
@@ -1639,7 +1641,7 @@ class Field:
            it contains a string, we must convert the value expressed in px
            (or in another CSS-compliant unit), to a number of chars.'''
         prefix = 's' if isSearch else ''
-        width = getattr(self, '%swidth' % prefix)
+        width = getattr(self, f'{prefix}width')
         if isinstance(width, int): return width
         if isinstance(width, str) and width.endswith('px'):
             return int(int(width[:-2]) / 5)

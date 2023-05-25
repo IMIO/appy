@@ -40,14 +40,15 @@ class Search:
     replayParams = ('className', 'search', 'sortKey', 'sortOrder', 'filters')
 
     def __init__(self, name=None, group=None, sortBy='title', sortOrder='asc',
-                 maxPerPage=30, default=False, colspan=1, viaPopup=None,
-                 show=True, showActions='all', actionsDisplay='block',
-                 showPods=True, showTitle=True, showFilters=True,
-                 showNav='both', navAlign='right', listCss=None,
-                 translated=None, translatedDescr=None, checkboxes=False,
-                 checkboxesDefault=True, container=None, add=False,
-                 addLabel='object_add', addFromLabel='object_add_from',
-                 resultModes=None, shownInfo=None, actions=None, rowAlign='top',
+                 maxPerPage=30, maxPerLive=10, default=False, colspan=1,
+                 viaPopup=None, show=True, showActions='all',
+                 actionsDisplay='block', showPods=True, showTitle=True,
+                 showFilters=True, showNav='both', navAlign='right',
+                 listCss=None, translated=None, translatedDescr=None,
+                 checkboxes=False, checkboxesDefault=True, container=None,
+                 add=False, addLabel='object_add',
+                 addFromLabel='object_add_from', resultModes=None,
+                 shownInfo=None, actions=None, rowAlign='top',
                  pageLayoutOnView=None, thumbnailCss='thumbnail',
                  gridFiltersAlign='center', totalRows=None,
                  noResultLabel='query_no_result', **fields):
@@ -58,7 +59,10 @@ class Search:
         self.group = Group.get(group)
         self.sortBy = sortBy
         self.sortOrder = sortOrder
+        # Maximum number of results, per page or in the dropdown, when the
+        # search is used "live".
         self.maxPerPage = maxPerPage
+        self.maxPerLive = maxPerLive
         # If this search is the default one, it will be triggered by clicking
         # on main link.
         self.default = default
@@ -164,7 +168,7 @@ class Search:
            context of this search.'''
         # The name of the search may be passed in p_name
         name = name or self.name
-        return '%s_%s' % (self.container.name, name)
+        return f'{self.container.name}_{name}'
 
     mergeAttributes = ('sortBy', 'sortOrder', 'showActions', 'actionsDisplay',
                        'actions', 'maxPerPage', 'resultModes', 'shownInfo',
@@ -262,7 +266,7 @@ class Search:
             backName = refField.back.name
             if refField.composite:
                 # Use the "cid" index (object containment)
-                params['cid'] = '%d_%s' % (refObject.iid, backName)
+                params['cid'] = f'{refObject.iid}_{backName}'
             else:
                 # We suppose the Ref field is indexed
                 params[backName] = refObject.iid
@@ -438,7 +442,7 @@ class Search:
             # Ref info may not be in the request, but may de deduced from the
             # search name.
             parts = params.search.split(',')
-            info = '%s:%s' % (parts[0], parts[1])
+            info = f'{parts[0]}:{parts[1]}'
         else:
             info = None
         refObject, refField = class_.getRefInfo(tool, info=info, nameOnly=False)
@@ -551,9 +555,10 @@ class Search:
     liveResults = Px('''
      <div var="search=uiSearch.search;
               filters=search.container.getFilters(tool);
-              objects=search.run(handler,filters=filters,maxPerPage=10).objects;
-              io,ifield=search.getRefInfo(tool, pre, nameOnly=False, sep='_')"
-          id=":'%s_LSResults' % pre">
+              io,ifield=search.getRefInfo(tool, pre, nameOnly=False, sep='_');
+              objects=search.run(handler,filters=filters,
+                                 maxPerPage=search.maxPerLive).objects"
+          id=":f'{pre}_LSResults'">
       <p if="not objects">::_('query_no_result')</p>
       <div for="o in objects">
        <a href=":search.onSelectLiveResult(o, io, ifield)"
@@ -563,7 +568,7 @@ class Search:
       </div>
       <!-- Go to the page showing all results -->
       <div if="objects and not io" align=":dright">
-       <a href=":'javascript:allLSResults(%s,%s)' % (q(pre), q(className))"
+       <a href=":f'javascript:allLSResults({q(pre)},{q(className)})'"
           class="lsAll">:_('search_results_all') + '...'</a>
       </div>
      </div>''')
@@ -589,15 +594,15 @@ class Search:
         # URL corresponding to this URL, there will be no error: the "GET" part
         # is "replayable" (even if, of course, it will not produce exactly the
         # same results, the POST parameters being missing).
-        r = '%s/Search/results?className=%s&source=searchForm&search=' \
-            'customSearch' % (tool.url, className)
+        r = f'{tool.url}/Search/results?className={className}&source=' \
+            f'searchForm&search=customSearch'
         rinfo = tool.req.ref
         if rinfo:
             # Compute URL (b)
             id, name = rinfo.split(':')
             o = tool.getObject(id)
             field = o.getField(name)
-            back = '%s/view?page=%s' % (o.url, field.page.name)
+            back = f'{o.url}/view?page={field.page.name}'
         else:
             back = None
         return r, back
@@ -669,9 +674,9 @@ class Search:
     live = Px('''
      <div var="searchLabel=_('search_button')" class=":liveCss">
       <img src=":svg('search')" class="iconM"/>
-      <div style="position: relative">
+      <div style="position:relative">
        <input type="text" name="w_searchable" autocomplete="off"
-              id=":'%s_LSinput' % pre" class="inputSearch"
+              id=":f'{pre}_LSinput'" class="inputSearch"
               title=":searchLabel" placeholder=":searchLabel"
               var="jsCall='onLiveSearchEvent(event,%s,%s,%s)' % \
                            (q(pre), q(className), q('auto'))"
@@ -679,8 +684,8 @@ class Search:
               onblur=":'onLiveSearchEvent(event,%s,%s,%s)' % \
                        (q(pre), q(className), q('hide'))"/>
        <!-- Dropdown containing live search results -->
-       <div id=":'%s_LSDropdown' % pre" class="dropdown sdrop">
-        <div id=":'%s_LSResults' % pre"></div>
+       <div id=":f'{pre}_LSDropdown'" class="dropdown sdrop">
+        <div id=":f'{pre}_LSResults'"></div>
        </div>
       </div>
      </div>''',

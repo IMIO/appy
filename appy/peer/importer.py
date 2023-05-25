@@ -196,7 +196,7 @@ class Importer:
             o.log(IMP_START % (verb, len(urls), tiedClass.name, o.class_.name,
                                field.name))
         else:
-            self.peer.printInfo('%s:%s:' % (verb, field.name))
+            self.peer.printInfo(f'{verb}:{field.name}:')
         # Count the number of objects that will be created, linked, ignored, and
         # those being unresolved at this step.
         counts = O(created=0, linked=0, ignored=0, unresolved=0, current=0)
@@ -263,12 +263,12 @@ class Importer:
         if add:
             prefix = REF_OBJS % (o.class_.name, field.name, tiedClass.name)
             suffix = ADD_DONE % (counts.created, counts.ignored, counts.linked)
-            o.log('%s:%s' % (prefix, suffix))
+            o.log(f'{prefix}:{suffix}')
         else:
             info = str(counts.linked)
             unresolved = counts.unresolved
             if unresolved:
-                info = '%s(U=%d)' % (info, unresolved)
+                info = f'{info}(U={unresolved})'
             self.peer.printInfo(info)
 
     def setInnerRefs(self, field, row):
@@ -342,32 +342,32 @@ class Importer:
         # event will be added in p_self.local's history.
         d = self.distant
         o = self.local
-        history = o.history
+        hist = o.history
         # Copy base history-related attributes
         if copyBase:
-            history[-1].login = d.creator or '?'
-            history[-1].date = d.created or DateTime()
-            history.modified = d.modified or DateTime()
+            hist[-1].login = d.creator or '?'
+            hist[-1].date = d.created or DateTime()
+            hist.modified = d.modified or DateTime()
         if copy and d.record:
-            initial = history.pop()
+            initial = hist.pop()
             # Get and copy distant events
             for devent in d.record.data:
                 # Ignore the initial event, already created locally
                 if devent.transition == '_init_': continue
                 # Create the appropriate Event sub-class instance
-                class_ = eval('history.%s' % devent.className)
+                class_ = eval(f'history.{devent.className}')
                 login, state, date = devent.login, devent.state, devent.date
                 params = devent.__dict__
                 for name in self.eventsNonKeyword:
                     del params[name]
                 event = class_(login, state, date, **params)
-                history.append(event)
+                hist.append(event)
             # Put the initial event at the end
-            history.append(initial)
+            hist.append(initial)
         # Add the p_add trigger event if defined
-        if add: history.add('Trigger', transition=add)
+        if add: hist.add('Trigger', transition=add)
         # Force v_o's current state to p_state, if passed
-        if state: history[0].state = state
+        if state: hist[0].state = state
 
     def setLocalRoles(self):
         '''To implement'''
@@ -387,7 +387,7 @@ class Importer:
         # Walk UnmarshalledFile instances
         for ufile in frozen:
             # Write this file in v_folder, with the right name
-            fname = '%s/%s' % (str(folder), ufile.name)
+            fname = f'{str(folder)}/{ufile.name}'
             if ufile.location:
                 shutil.copyfile(ufile.location, fname)
             else:

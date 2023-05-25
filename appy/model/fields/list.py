@@ -43,20 +43,25 @@ class List(Field):
 
     # A 1st invisible cell containing a virtual field allowing to detect this
     # row at server level.
-    pxFirstCell = Px('''<td style="display: none">
-     <table var="rid=field.getEntryName('-row-', rowId, field.name)"
-            id=":'%d_%s' % (o.iid, rid)">
-      <tr><td><input type="hidden" id=":rid" name=":rid"/></td></tr>
-     </table></td>''')
+    pxFirstCell = Px('''
+     <td style="display:none" if="not minimal">
+      <table var="rid=field.getEntryName('-row-', rowId, field.name)"
+             id=":f'{o.iid}_{rid}'">
+       <tr><td><input type="hidden" id=":rid" name=":rid"/></td></tr>
+      </table></td>''')
 
     # PX for rendering a single row
     pxRow = Px('''
      <tr valign="top" style=":'display:none' if rowId == -1 else ''"
-         class=":'odd' if loop.row.odd else 'even'">
+         class=":'odd' if loop.row.odd else 'even'"
+         var2="x=totalsC.reset() | None">
       <x if="not isCell">:field.pxFirstCell</x>
       <td for="name, field in subFields" if="field"
           var2="minimal=isCell;
                 fieldName=outer.getEntryName(field, rowId)">:field.pxRender</td>
+
+      <!-- Column totals -->
+      <x if="totalsC">:totalsC.px</x>
 
       <!-- Icons -->
       <td if="isEdit" align="center">
@@ -92,21 +97,25 @@ class List(Field):
     pxTable = Px('''
      <table var="isEdit=layout == 'edit';
                  isCell=layout == 'cell';
-                 tableId='list_%s' % name"
+                 tableId=f'list_{name}'"
             if="isEdit or value"
             id=":tableId" width=":field.width"
             class=":field.getTableCss(_ctx_)"
             var2="outer=field;
-                  Totals=field.Totals;
                   subFields=field.getSubFields(o, layout);
                   swidths=field.getWidths(subFields);
-                  totals=Totals.initialise(field, 'row', subFields, isEdit)">
+                  totals=field.getRunningTotals(subFields,isEdit);
+                  totalsC=field.getRunningTotals(subFields,isEdit,rows=False)">
+
       <!-- Header -->
       <thead>
        <tr valign=":field.headerAlign">
         <th for="name, sub in subFields" if="sub"
-            width=":swidths[loop.name.nb]">
+            style=":field.getHeaderStyle(loop.name.nb, swidths)">
          <x var="field=sub">::field.getListHeader(_ctx_)</x></th>
+
+        <!-- Total headers -->
+        <x if="totalsC">:totalsC.pxHeaders</x>
 
         <!-- Icon for adding a new row -->
         <th if="isEdit" style="text-align:center">
@@ -279,8 +288,8 @@ class List(Field):
       masterValue=None, focus=False, historized=False, mapping=None,
       generateLabel=None, label=None, subLayouts=Layouts.sub, widths=None,
       view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None, deleteConfirm=False, totalRows=None, rowClass=O,
-      headerAlign='middle', listCss=None):
+      translations=None, deleteConfirm=False, totalRows=None, totalCols=None,
+      rowClass=O, headerAlign='middle', listCss=None):
         # Call the base constructor
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
          show, renderable, page, group, layouts, move, False, True, None, None,
@@ -308,8 +317,12 @@ class List(Field):
         # When deleting a row, must we display a popup for confirming it ?
         self.deleteConfirm = deleteConfirm
         # If you want to specify additional rows representing totals, set, in
-        # "totalRows", a list of appy.model.totals::Totals instances.
+        # "totalRows", a list of appy.model.totals::Totals objects.
         self.totalRows = totalRows
+        # Similarly, specifying additional columns representing totals is done
+        # by placing, in "totalCols", a list of appy.model.totals::Totals
+        # objects.
+        self.totalCols = totalCols
         # By default, every row of data that is stored in a List value is an
         # instance of class Object, from package appy.model.utils. You can
         # choose an alternate class, by defining it in attribute p_rowClass
@@ -348,7 +361,7 @@ class List(Field):
         # computed.
         for sub, field in subFields:
             # Some fields cannot be defined as inner-fields for the moment
-            fullName = '%s_%s' % (self.name, sub)
+            fullName = f'%s_%s' % (self.name, sub)
             if not field.isInnerable():
                 raise Exception(INNER_KO % fullName)
             field.init(class_, fullName)
@@ -378,8 +391,13 @@ class List(Field):
             r = r.get(c.layout) or default
         return r
 
+    def getHeaderStyle(self, i, widths):
+        '''Return CSS properties for the p_i(th) header cell'''
+        width = widths[i]
+        return f'width:{width}' if width else ''
+
     def getWidths(self, subFields):
-        '''Get the widths to appply to these p_subFields'''
+        '''Get the widths to apply to these p_subFields'''
         return self.widths or [''] * len(subFields)
 
     def getField(self, name):
@@ -556,4 +574,24 @@ class List(Field):
             if not sub.isEmptyValue(row, getattr(row, name)):
                 return
         return True
+
+    def getTotalsInfo(self, rows):
+        '''Returns info allowing to manage totals while rendering p_self's value
+           on some object.'''
+        # The name of the iterator variable
+        iterName = 'row' if rows else 'name'
+        # There is no preamble column
+        return iterName, None
+
+    def getRunningTotals(self, subFields, isEdit, rows=True):
+        '''If totals must be computed, returns a Running* object'''
+        # Check if totals must be computed
+        if isEdit: return
+        name = 'totalRows' if rows else 'totalCols'
+        totals = getattr(self, name)
+        if not totals: return
+        # Create a Running* object
+        iterName, preamble = self.getTotalsInfo(rows)
+        subs = preamble + subFields if preamble else subFields
+        return Totals.init(self, iterName, subs, totals, rows=rows)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

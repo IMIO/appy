@@ -6,12 +6,13 @@ import random, hashlib, binascii
 
 from appy.px import Px
 from appy.model.fields import Field
+from appy.model.utils import Object as O
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PasswordGenerator:
     '''Class used to generate passwords'''
 
-    # No "0" or "1" that could be interpreted as letters "O" or "l"
+    # No "0" or "1" that could be misinterpreted as letters "O" or "l"
     passwordDigits = '23456789'
 
     # No letters i, l, o (nor lowercase nor uppercase) that could be misread
@@ -36,15 +37,38 @@ class Password(Field):
     '''Field allowing to edit and store a password'''
 
     view = cell = buttons = Px('''<x>******</x>''')
+
     edit = Px('''
+     <!-- Explain which rules the password must follow -->
+     <div class="discreet topSpace" var="text=field.explainRules(o)"
+          if="text">::text</div>
+
+     <!-- Dump 2 fields: one standard and one confirmation field -->
      <x for="confirm in (False, True)"
         var2="placeholder=field.getPlaceholder(o, confirm);
-              inputId=confirm and ('%s_confirm' % name) or name">
+              inputId=f'{name}_confirm' if confirm else name">
       <input type="password" id=":inputId" name=":inputId"
              size=":field.getInputSize()" style=":field.getInputSize(False)"
              maxlength=":field.maxChars" placeholder=":placeholder"/>
       <br if="not confirm"/>
      </x>''')
+
+    # Special chars
+    specialChars = '&`|@"\'!°$*%€·£+~/\#=()[]{}§µ'
+
+    # Default minimum occurrences for every group of chars within a password
+    defaultOccurrences = {
+      'lower'  : 1, # Lowercase letters
+      'upper'  : 0, # Uppercase letters
+      'figure' : 1, # Figures
+      'special': 0, # Special chars
+    }
+
+    # Ranges of ascii codes per group of chars
+    charRanges = {
+      'lower'  : (97, 122), 'upper'  : (65, 90),
+      'figure' : (48, 57) , 'special': specialChars
+    }
 
     def __init__(self, validator=None, multiplicity=(0,1), show=True,
       renderable=None, page='main', group=None, layouts=None, move=0,
@@ -53,9 +77,11 @@ class Password(Field):
       historized=False, mapping=None, generateLabel=None, label=None,
       sdefault='', scolspan=1, swidth=None, sheight=None, persist=True,
       placeholder=None, view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None, minLength=8):
+      translations=None, minLength=8, occurrences=None):
         # The minimum length for this password
         self.minLength = minLength
+        # The minimum number of occurrences for each group of chars
+        self.occurrences = occurrences or Password.defaultOccurrences
         # Call the base constructor
         Field.__init__(self, validator, multiplicity, None, None, show,
           renderable, page, group, layouts, move, False, True, None, None,
@@ -80,6 +106,65 @@ class Password(Field):
             r = o.translate(self.labelId) if r is True else r
         return r
 
+    def explainRules(self, o):
+        '''Produce a translated text explaining rules a password must respect'''
+        _ = o.translate
+        # Start with the password's minimum length
+        text = _('pwd_min_length', mapping={'min': self.minLength})
+        r = [f'<li>{text}</li>']
+        # Explain minimum occurrences for groups of chars that must be found
+        for name, min in self.occurrences.items():
+            # Be silent on groups for which there is no constraint
+            if min == 0: continue
+            # Get the text part concerning this group
+            textG = _(f'pwd_{name}')
+            if name == 'special':
+                # For special chars, include the list of all chars considered as
+                # such.
+                allChars = Password.specialChars
+                textD = _('pwd_special_chars', mapping={'chars':allChars})
+                detail = f'<br/><h4>{textD}</h4>'
+            else:
+                detail = ''
+            map = {'group': textG, 'min': min, 'detail': detail}
+            text = _('pwd_min', mapping=map)
+            r.append(f'<li>{text}</li>')
+        text = _('pwd_rules')
+        bullets = '\n'.join(r)
+        return f'💡 {text}<br/><br/><ul>{bullets}</ul>'
+
+    def validateOccurrences(self, o, password):
+        '''Ensure p_self.occurrences are respected within this p_password'''
+        # Count occurrences for each group of chars within p_password
+        counts = O()
+        for char in password:
+            code = ord(char) # The char's ascii code
+            for name, min in self.occurrences.items():
+                # It is useless to count chars for groups for which the min is 0
+                if min == 0: continue
+                range = Password.charRanges[name]
+                if isinstance(range, str):
+                    found = char in range
+                else:
+                    found = range[0] <= code <= range[1]
+                if not found: continue
+                # Count it
+                if name not in counts:
+                    counts[name] = 1
+                else:
+                    counts[name] += 1
+        # Are minimum occurrences respected ?
+        for name, min in self.occurrences.items():
+            # Ignore groups for which there is no minimum
+            if min == 0: continue
+            # Get the count
+            count = counts[name]
+            if count is None or count < min:
+                # Not enough chars from this group
+                groupText = o.translate(f'pwd_{name}')
+                map = {'group': groupText, 'found': count or 0, 'min': min}
+                return o.translate('pwd_occur_ko', mapping=map)
+
     def validateValue(self, o, password):
         '''Is p_password valid ?'''
         # Password must have a minimum length
@@ -87,8 +172,10 @@ class Password(Field):
             return o.translate('password_too_short',
                                mapping={'nb': self.minLength})
         # Ensure the "confirm" value is filled and is the same as p_password
-        if o.req['%s_confirm' % self.name] != password:
+        if o.req[f'{self.name}_confirm'] != password:
             return o.translate('passwords_mismatch')
+        # Check occurrences
+        return self.validateOccurrences(o, password)
 
     def encrypt(self, password, prefix=True, salt=None):
         '''Encrypt clear p_password with the SSHA scheme. If p_prefix is True,

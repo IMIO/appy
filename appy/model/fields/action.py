@@ -466,7 +466,10 @@ class Action(Field):
             r = Search.replay(tool, searchParams)
         else:
             # Get objets from a ref
-            name = req.hook.split('_')[1]
+            if req.hook:
+                name = req.hook.split('_')[1]
+            else:
+                name = req._get_.split('*',1)[0].split(':')[1].split('_')[1]
             r = list(getattr(o, name))
         # Remove those not being checked in the UI
         Search.keepCheckedResults(req, r, unchecked=ids)

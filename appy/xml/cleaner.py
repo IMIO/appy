@@ -10,11 +10,16 @@ from appy.utils import asDict
 from appy.utils.css import Styles
 from appy.xml.escape import Escape
 from appy.xml import Parser, XHTML_SC
+from appy.utils.string import firstMatch
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Cleaner(Parser):
     '''Cleans XHTML content, so it becomes ready to be stored into a
        Appy-compliant format.'''
+
+    class InvalidText(Exception):
+        '''Raised when invalid text is encountered in content to be cleaned by
+           the Cleaner.'''
 
     # Tags that will never be in the result, content included, lax or strict
     tagsToIgnoreWithContent = ('style', 'head')
@@ -55,7 +60,7 @@ class Cleaner(Parser):
                  tagsToIgnoreWithContent=tagsToIgnoreWithContent,
                  tagsToIgnoreKeepContent=tagsToIgnoreKeepContent,
                  attrsToIgnore=attrsToIgnore, propertiesToKeep=None,
-                 attrsToAdd=attrsToAdd, repair=False):
+                 attrsToAdd=attrsToAdd, repair=False, invalidTexts=None):
         # Call the base constructor
         Parser.__init__(self, env, caller, raiseOnError)
         self.tagsToIgnoreWithContent = tagsToIgnoreWithContent
@@ -69,6 +74,12 @@ class Cleaner(Parser):
         self.attrsToAdd = attrsToAdd
         # Potentially p_repair illegal tag configurations
         self.repair = repair
+        # If passed, p_invalidTexts must be a tuple or list of regular
+        # expressions. If textual content encountered by the cleaner matches one
+        # of these regexes, an InvalidText exception will be raised. Note that
+        # we are talking about non-exact matches here (ie, method regex.search
+        # will be used, and not regex.match).
+        self.invalidTexts = invalidTexts
 
     def startDocument(self):
         # The result will be cleaned XHTML, joined from self.r
@@ -142,6 +153,14 @@ class Cleaner(Parser):
             # conflict is considered being solved.
             e.insertIndex = -1
 
+    def checkInvalidText(self, content):
+        '''Raises an InvalidText exception if p_content contains invalid text'''
+        patterns = self.invalidTexts
+        if not patterns: return
+        text = firstMatch(patterns, content)
+        if text:
+            raise Cleaner.InvalidText(text)
+
     def dumpCurrentContent(self, beforeEnd=None):
         '''Dumps (if any) the current content as stored on p_self.env'''
         # Do nothing if there is no current content
@@ -152,6 +171,8 @@ class Cleaner(Parser):
         # representing a paragraph (p_beforeEnd), right-strip the content.
         if beforeEnd and beforeEnd in Cleaner.lineBreakTags:
             content = content.rstrip()
+        # Ensure no invalid text is present
+        self.checkInvalidText(content)
         # Add the current content to the result
         self.dump(content)
         # Reinitialise the current content to the empty string

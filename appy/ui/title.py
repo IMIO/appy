@@ -55,10 +55,31 @@ class Title:
         # p_isSelect is True if we are in "select" mode (see p_get)
         r = base or ''
         if more:
-            r = '%s%s%s' % (r, (' ' if r else ''), more)
+            space = ' ' if r else ''
+            r = f'{r}{space}{more}'
         if isSelect:
-            r = '%s%sclickable' % (r, (' ' if r else ''))
-        return ' class="%s"' % r if r else ''
+            space = ' ' if r else ''
+            r = f'{r}{space}clickable'
+        return f' class="{r}"' if r else ''
+
+    @classmethod
+    def getIcon(class_, o, base, params, target):
+        '''Compute, when appropriate, a companion, iconic link, for opening the
+           same link, but in a popup.'''
+        if not target.otherClick: return ''
+        params['popup'] = 'True'
+        return f'<a href="{class_.getUrl(o, base, params)}" class="pop" ' \
+               f'target="appyIFrame" onclick="{target.otherClick}">◳</a>'
+
+    @classmethod
+    def getUrl(class_, o, base, params):
+        '''Builds the URL to p_o'''
+        # Build the standard URL to p_o or patch p_base URL, if passed
+        if base is None:
+            r = o.getUrl(sub='view', **params)
+        else:
+            r = o.H().server.patchUrl(base, **params)
+        return r
 
     @classmethod
     def get(class_, o, mode='link', nav='no', target=None, page='main',
@@ -95,9 +116,14 @@ class Title:
         # selecting objects: every title must not be a link, but clicking on it
         # must trigger Javascript code (in p_selectJs) that will select this
         # object.
+        isSelect = mode == 'select'
 
         # The last p_mode is "text". In this case, we simply show the object
-        # title but with no tied action (link, select).
+        # title but with no tied action (link, select). If we are already in the
+        # popup and the target is the popup, because we have a single level of
+        # popups for now on, displaying a link will not be possible.
+        toPopup = target and target.target != '_self' and not isSelect
+        if popup and toPopup: mode = 'text'
 
         # If p_highlight is True, keywords will be highlighted if we are in the
         # context of a query with keywords.
@@ -112,7 +138,6 @@ class Title:
         oclass = o.class_
 
         # Compute the "class" attribute
-        isSelect = mode == 'select'
         tcss = oclass.getCssFor(o, 'title')
         classAttr = class_.getClassAttribute(tcss, css, isSelect)
 
@@ -128,40 +153,39 @@ class Title:
         if maxChars: title = Px.truncateText(title, width=maxChars)
         if mode == 'plink':
             # A link to stay in the public part of the site
-            url = '%s/public?rp=%d' % (o.tool.url, o.iid)
-            r = '<a href="%s">%s</a>' % (url, title)
+            url = f'{o.tool.url}/public?rp={o.iid}'
+            r = f'<a href="{url}">{title}</a>'
         elif mode.endswith('link'): # "link" or "dlink"
-            popup = popup or target.target != '_self'
-            params = {'page': page, 'nav': nav, 'popup': popup,
+            params = {'page': page, 'nav': nav, 'popup': toPopup,
                       'unique': oclass.produceUniqueLinks()}
             if pageLayout: params['pageLayout'] = pageLayout
             # Build the link URL, or patch the given p_baseUrl
-            if baseUrl is None:
-                url = o.getUrl(sub='view', **params)
-            else:
-                url = o.H().server.patchUrl(baseUrl, **params)
+            url = class_.getUrl(o, baseUrl, params)
             # Define attribute "onClick"
             if target.onClick:
-                onClick = ' onclick="%s"' % \
-                          target.getOnClick(backHook or str(o.iid), o)
+                oc = target.getOnClick(backHook or str(o.iid), o)
+                onClick = f' onclick="{oc}"'
             else:
                 onClick = ''
             # Set a "title" parameter when relevant
-            lt = (' title="%s"' % linkTitle) if linkTitle else ''
+            lt = f' title="{linkTitle}"' if linkTitle else ''
+            # Add a companion icon when appropriate
+            icon = class_.getIcon(o, baseUrl, params, target)
             if mode[0] == 'd':
                 # Wrap the link into a "div". In that case, the CSS class(es)
                 # apply to the div.
-                start = '<div%s><a' % classAttr
+                start = f'<div{classAttr}>{icon}<a'
                 end = '</a></div>'
             else:
-                start = '<a%s' % classAttr
+                start = f'{icon}<a{classAttr}'
                 end = '</a>'
-            r = '%s name="title" href="%s" target="%s"%s%s>%s%s' %\
-                (start, url, target.target, onClick, lt, title, end)
+            # Link target: land if we are in the popup and we must not go to it
+            r = f'{start} name="title" href="{url}" ' \
+                f'target="{target.get(popup, toPopup)}"' \
+                f'{onClick}{lt}>{title}{end}'
         elif isSelect:
-            r = '<span onclick="%s"%s>%s</span>' % \
-                (selectJs, classAttr, title)
+            r = f'<span onclick="{selectJs}"{classAttr}>{title}</span>'
         elif mode == 'text':
-            r = '<span%s>%s</span>' % (classAttr, title)
+            r = f'<span{classAttr}>{title}</span>'
         return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

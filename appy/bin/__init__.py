@@ -43,9 +43,9 @@ class Program:
         '''
 
     def exit(self, msg, printUsage=True):
-        '''Exists the program afer an error has been encountered and display
-           some p_msg.'''
-        print(msg)
+        '''Display this p_msg on stderr and exit the program afer an error has
+           been encountered.'''
+        print(msg, file=sys.stderr)
         if printUsage:
             self.parser.print_usage()
         return sys.exit(1)

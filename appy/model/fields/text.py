@@ -656,7 +656,7 @@ class Text(Multilingual, Field):
       translations=None, indexType='TextIndex',
       # Specific attributes
       placeholder=None, languages=('en',), languagesLayouts=None,
-      viewSingle=False, structured=False, readonly=False):
+      viewSingle=False, structured=False, readonly=False, invalidTexts=None):
         # You can define a placeholder in the following attribute. Please
         # consult the homonym attribute on class String from string.py for more
         # information.
@@ -677,6 +677,12 @@ class Text(Multilingual, Field):
         # on values not being normalized, use index "Index" instead of
         # "SortIndex".
         self.indexType = indexType
+        # If passed, p_invalidTexts must be a tuple or list of regular
+        # expressions. If the user tries to encode content, in this field, that
+        # matches at least one of these regexes, field validation will fail.
+        # Note that we are talking about non-exact matches here (ie, method
+        # regex.search will be used, and not regex.match).
+        self.invalidTexts = invalidTexts
         # Call base constructors
         Multilingual.__init__(self, languages, languagesLayouts, viewSingle)
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
@@ -775,7 +781,14 @@ class Text(Multilingual, Field):
         if max and (len(value) > max): value = value[:max]
         return value
 
-    def validateUniValue(self, o, value): return
+    def validateUniValue(self, o, value):
+        '''Ensures there is no invalid text within p_value'''
+        # Perfom no validation at all if there is no invalid text to detect
+        patterns = self.invalidTexts
+        if not patterns: return
+        found = sutils.firstMatch(patterns, value)
+        if found:
+            return o.translate('invalid_text', mapping={'text': found})
 
     def getFilterValue(self, value):
         '''Manipulates p_value such that it can become pertinent search

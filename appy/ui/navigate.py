@@ -189,11 +189,11 @@ class Siblings:
         # First index starts at O, so we calibrate self.number
         number = self.number - 1
         batchSize = self.getBatchSize()
-        res = 0
-        while (res < self.total):
-            if (number < res + batchSize): return res
-            res += batchSize
-        return res
+        r = 0
+        while r < self.total:
+            if number < r + batchSize: return r
+            r += batchSize
+        return r
 
     def __init__(self, tool, ctx, number, total, iconCss):
         self.tool = tool
@@ -302,12 +302,12 @@ class RefSiblings(Siblings):
            the list of tied objects.'''
         title = self.sourceObject.title
         text = self.tool.translate(self.field.labelId)
-        return '%s - %s' % (title, text) if title else text
+        return f'{title} - {text}' if title else text
 
     def getBatchSize(self):
         '''Returns the maximum number of shown objects at a time for this
            ref.'''
-        return self.field.maxPerPage
+        return self.field.getAttribute(self.sourceObject, 'maxPerPage')
 
     def getSiblings(self):
         '''Returns the siblings of the current object'''
