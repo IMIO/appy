@@ -1081,11 +1081,12 @@ class ToolMixin(BaseMixin):
 
     def portletBottom(self, klass):
         '''Is there a custom zone to display at the bottom of the portlet zone
-           for p_klass?'''
-        if not hasattr(klass, 'getPortletBottom'): return ''
-        res = klass.getPortletBottom(self.appy())
-        if not res: return ''
-        return res
+           for p_klass ?'''
+        method = getattr(klass, 'getPortletBottom', None)
+        if not method: return ''
+        elif type(method) == types.UnboundMethodType:
+            method = method.im_func
+        return method(self.appy()) or ''
 
     def getNavigationInfo(self, nav, inPopup):
         '''Produces a Siblings instance from navigation info p_nav'''
