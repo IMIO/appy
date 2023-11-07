@@ -1102,6 +1102,25 @@ class XhtmlEnvironment(XmlEnvironment):
             xhtmlElem.originalStyles = None
             self.mergedCount -= 1
 
+    def removeEmptyList(self, endTag):
+        '''We are about to dump this list-related p_endTag. If the list to dump
+           is empty, remove it from p_self.res.'''
+        # Find the last list tag
+        res = self.res
+        i = res.rfind('<text:list ')
+        if i == -1: return endTag # Should never occur
+        # Get the part of v_res being after this start tag
+        j = res.find('>', i+11)
+        if j == -1: return endTag # Should never occur
+        part = res[j+1:]
+        if not part:
+            # The last dumped list is empty. Remove it.
+            self.res = self.res[:i]
+            r = None
+        else:
+            r = endTag
+        return r
+
 # ------------------------------------------------------------------------------
 class XhtmlParser(XmlParser):
     def lowerizeInput(self, elem, attrs=None):
@@ -1238,6 +1257,11 @@ class XhtmlParser(XmlParser):
                     # We were in an inner list. So we must close the list-item
                     # tag that surrounds it.
                     endTag = '%s</text:list-item>' % endTag
+                else:
+                    # Avoid dumping a list having no bullet. If such an empty
+                    # list is detected, m_removeEmptyList returns an empty
+                    # v_endTag, preventing to dump it.
+                    endTag = e.removeEmptyList(endTag)
             if endTag and not current.removeTag and \
                (current.dumpStatus != 'waiting'):
                 dump(endTag)
