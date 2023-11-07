@@ -70,6 +70,9 @@ class Frame(PodElement):
 class Doc(PodElement):
     '''Represents the base tag for a complete ODT document'''
     OD = XmlElement('text', nsUri=ns.NS_OFFICE)
+    # Sub-tag "p" as defined below is currently used when dumping an error: an
+    # annotation must be within a paragraph within the global doc.
+    subTags = [Text.OD]
     # End tag for the main tag representing the document
     END_TAG = '</office:text>'
     # End tag for the sub-tag containing sequence declarations
