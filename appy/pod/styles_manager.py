@@ -153,18 +153,22 @@ class TableProperties(Properties):
         # Return the max between the p_value and the minimum value
         return max(val, self.minCellPadding)
 
-    def getMargins(self, attrs):
+    def getMargins(self, attrs, getWidth=False):
         '''Returns ODF properties allowing to define margins as specified by
            self.margins or by CSS p_attrs. If no margin is defined, r_ is an
            empty string.'''
+        # If p_getWidth is True, the result is a tuple, whose second element is
+        # the width (as a float representing cm) taken by potential left and/or
+        # right margins.
         r = ''
         i = -1
+        width = 0.0
         for direction in CssStyles.directions:
             i += 1
             # Get the value from CSS attributes
             cssValue = getattr(attrs, 'margin%s' % direction, None)
             if cssValue: cssValue = cssValue.cm(formatted=False)
-            # Get the the value as defined on p_self
+            # Get the value as defined on p_self
             tbValue = self.margins[i]
             # Choose the prevailing value
             if not self.prevails:
@@ -175,6 +179,10 @@ class TableProperties(Properties):
             # Determine the name of the corresponding ODF property
             name = 'fo:margin-%s' % direction
             r += ' %s="%.2fcm"' % (name, value)
+            if direction in CssStyles.directionsW:
+                width += value
+        if getWidth:
+            r = (r, width)
         return r
 
     @classmethod

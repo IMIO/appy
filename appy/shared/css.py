@@ -219,6 +219,8 @@ class CssStyles:
     # Directions in use in combined CSS properties (padding, margin, etc),
     # defined in the standard order.
     directions = ('top', 'right', 'bottom', 'left')
+    # Directions implied with *w*idth
+    directionsW = ('right', 'left')
     # Values, on combined attributes, that prevent splitting
     unsplittable = ('auto',)
     # Values that must be ignored

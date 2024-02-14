@@ -281,6 +281,12 @@ class HtmlElement(Element):
                     p.cssStyles.addClass(innerStyle)
                 dump(env.getOdfAttributes(p))
         else:
+            # If a CSS class is defined on the parent cell, transfer it to this
+            # paragraph.
+            if self.elem in ('td', 'th'):
+                css = self.getClass()
+                if css:
+                    p.cssStyles.addClass(css)
             dump(env.getOdfAttributes(p))
         dump('>')
         if not self.tagsToClose: self.tagsToClose = []
@@ -486,6 +492,8 @@ class HtmlTable(Element):
         width = tableProps.getWidth(cssStyles)
         originalWidth = tableProps.getWidth(cssStyles, original=True)
         align = getattr(cssStyles, 'textalign', 'left')
+        # Get margins if defined
+        margins, marginWidth = tableProps.getMargins(cssStyles, getWidth=True)
         # Get the page width, in cm, and the ratio "px2cm"
         pageWidth, px2cmRatio = tableProps.pageWidth, tableProps.px2cm
         pageWidth = pageWidth or self.env.pageWidth
@@ -508,8 +516,6 @@ class HtmlTable(Element):
             originalTableWidthPx = int(originalWidth.value)
         else:
             originalTableWidthPx = None
-        # Get margins if defined
-        margins = tableProps.getMargins(cssStyles)
         # Apply attribute "keep-with-next" ?
         kwn = cssStyles.hasClass('TableKWN') and \
               ' fo:keep-with-next="always"' or ''
@@ -521,13 +527,19 @@ class HtmlTable(Element):
            (align == 'left'):
             return 'podTable', tableWidthPx, originalTableWidthPx
         # Define a specific style for this table and return its name
+        if marginWidth:
+            # Do not dump relative width
+            rel = ''
+            tableWidth -= marginWidth
+        else:
+            rel = '%s:rel-width="%s%%" ' % (s, percentage)
         decl = '<%s:style %s:name="%s" %s:family="table" ' \
                '%s:parent-style-name="podTable"><%s:table-properties ' \
-               '%s:width="%scm" %s:rel-width="%s%%" %s:table-align="%s" ' \
-               '%s:align="%s"%s%s%s/></%s:style>' % \
+               '%s:width="%scm" %s%s:table-align="%s" %s:align="%s"%s%s%s/>' \
+               '</%s:style>' % \
                (s, s, self.name, s, s, s, s, formatNumber(tableWidth, sep='.'),
-                s, percentage, self.tableNs, align, self.tableNs, align,
-                margins, kwn, unbreak, s)
+                rel, self.tableNs, align, self.tableNs, align, margins, kwn,
+                unbreak, s)
         self.env.stylesManager.dynamicStyles.add('content', decl)
         return self.name, tableWidthPx, originalTableWidthPx
 
