@@ -61,6 +61,9 @@ class TableProperties(Properties):
     defaultMargins = (0.0, 0.0, 0.0, 0.0)
     columnModifiersPrefixes = {'optimize': 'OCW', 'distribute': 'DC'}
 
+    # Predefined width of 100%
+    width100 = CssValue('width', '100%')
+
     def __init__(self, pageWidth=None, px2cm=px2cm, cellPx2cm=10.0,
               wideAbove=495, minColumnWidth=0.07, columnModifier=None,
               minCellPadding=0.0, cellContentStyle='podCellContent',
@@ -128,14 +131,15 @@ class TableProperties(Properties):
         '''Return the table width as a appy.shared.css.CssValue instance.
            p_attrs is a CssStyles instance containing parsed table attributes.
            If p_original is False, self.wideAbove is not taken into account.'''
-        # Widths being "0" are simply ignored
-        if not hasattr(attrs, 'width') or (attrs.width.value == 0):
-            return CssValue('width', '100%')
+        # Widths being "0" or not being floats are simply ignored
+        if not hasattr(attrs, 'width') or (attrs.width.value == 0) or \
+           isinstance(attrs.width.value, basestring):
+            return self.width100
         res = attrs.width
         if original: return res
         if (self.wideAbove != None) and (res.unit == 'px') and \
            (res.value > self.wideAbove):
-            return CssValue('width', '100%')
+            return self.width100
         return res
 
     def getCellPadding(self, value):

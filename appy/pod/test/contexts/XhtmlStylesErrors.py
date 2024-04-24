@@ -5,7 +5,15 @@ xhtmlInput = '''
 Blabla.<br />
 <h3>SubHeading then.</h3>
 Another blabla.<br /><br /><br /> '''
-# I need a class.
+
+cssErrors = '''
+<table border="1" cellspacing="5"
+       style="border-collapse:collapse; height:4562px; width:width:100%">
+ <tr><td>T</td></tr>
+</table>
+'''
+
+# I need a class
 class D:
     def getAt1(self):
         return xhtmlInput

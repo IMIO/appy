@@ -16,7 +16,13 @@ WRONG_ITERATOR = 'Name "%s" cannot be used for an iterator variable.'
 TABLE_NOT_ONE_CELL = "The table you wanted to populate with '%s' " \
                      "can\'t be dumped with the '-' option because it has " \
                      "more than one cell in it."
+IF_UNEXEC   = 'The corresponding "if" action was not executed'
+NAM_IF_NE   = '%s, there seems to be a structural problem in your if/else ' \
+              'statements.' % IF_UNEXEC
+UNN_IF_NE   = '%s. Try to name the correspondoing "if" and link this "else" ' \
+              'to it.' % IF_UNEXEC
 
+# ------------------------------------------------------------------------------
 class EvaluationError(Exception):
     def __init__(self, originalError, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
@@ -262,9 +268,18 @@ class Else(If):
         self.ifAction = ifAction
 
     def do(self, result, context, exprRes):
-        # This action is executed if the tied "if" action is not executed
-        iRes = context[self.storeExprKey][id(self.ifAction)]
-        If.do(self, result, context, not iRes)
+        '''Execute this "else" action: it occurs when the tied "if" action is
+           not executed.'''
+        # Retrieve the tied if's evaluation result
+        evals = context[self.storeExprKey]
+        actionId = id(self.ifAction)
+        if actionId in evals:
+            If.do(self, result, context, not evals[actionId])
+        else:
+            # The corresponding "if" action has not bee executed (was probably
+            # included in a buffer whose main "if" action resolved to False).
+            message = self.name and NAM_IF_NE or UNN_IF_NE
+            self.manageError(result, context, message)
 
 class For(Action):
     '''Actions that will include the content of the buffer as many times as

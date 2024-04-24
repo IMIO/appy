@@ -56,6 +56,7 @@ BAD_VAR_NAME = 'Bad variable name "%s".'
 EVAL_EXPR_ERROR = 'Error while evaluating expression "%s". %s'
 BAD_META_CONDITION = 'Wrong meta-condition "%s". A meta-condition must be a ' \
   'Python expression surrounded by single or double quotes.'
+L_IF_KO  = 'No "if" action can be linked to this "else" action.'
 
 # ------------------------------------------------------------------------------
 class BufferIterator:
@@ -560,6 +561,15 @@ class MemoryBuffer(Buffer):
             i -= 1
         return r
 
+    def getLinkableIf(self, elseElem):
+        '''An (unnamed) "else" action needs to be created on this p_podElem.
+           Find and return an appropriate "if" from p_self.env.ifActions.'''
+        ifs = self.env.ifActions
+        while ifs:
+            action = ifs.pop()
+            if action.elem.isIfFor(elseElem):
+                return action
+
     def createPodAction(self, actionType, statements, statementName, subExpr,
                         podElem, minus, main=True):
         '''Creates an Action instance, depending on p_actionType'''
@@ -589,7 +599,8 @@ class MemoryBuffer(Buffer):
                 del self.env.namedIfActions[ifReference]
                 self.env.ifActions.remove(linkedIfAction)
             else:
-                linkedIfAction = self.env.ifActions.pop()
+                linkedIfAction = self.getLinkableIf(podElem)
+                if not linkedIfAction: raise ParsingError(L_IF_KO)
             r = actions.Else(statementName, self, None, podElem, minus,
                              linkedIfAction)
         elif actionType == 'for':

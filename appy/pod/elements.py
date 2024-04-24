@@ -19,6 +19,18 @@ class PodElement:
     # Elements for which the '-' operator can be applied
     MINUS_ELEMS = ('section', 'table')
 
+    # If this element is tied to an "else" action, what are the elements that
+    # are appropriate to host a "if" action for this "else" action ? None means
+    # that any element can used.
+    possibleIfs = None
+
+    def isIfFor(self, elseElem):
+        '''May p_self be used to host a "if" elem corresponding to the "else" as
+           defined in this p_elseElem ?'''
+        possible = elseElem.possibleIfs
+        if possible is None: return True
+        return self.__class__ in possible
+
     @staticmethod
     def create(elem):
         '''Used to create any POD elem that has an equivalent OD element. Not
@@ -54,6 +66,9 @@ class Cell(PodElement):
 class Row(PodElement):
     OD = XmlElement('table-row', nsUri=ns.NS_TABLE)
     subTags = [Cell.OD, Text.OD]
+
+# "do row else" is only possible if the "if" is itself defined on a row
+Row.possibleIfs = [Row]
 
 class Table(PodElement):
     OD = XmlElement('table', nsUri=ns.NS_TABLE)
