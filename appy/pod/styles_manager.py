@@ -626,6 +626,13 @@ class PageLayout:
         if substractMargins: r -= self.marginLeft + self.marginRight
         return r
 
+    def getHeight(self, substractMargins=True):
+        '''Return, as a float, the page height in cm'''
+        r = getattr(self, 'height', None)
+        if not r: return
+        if substractMargins: r -= self.marginTop + self.marginBottom
+        return r
+
     def __repr__(self): return '<Page layout %s>' % self.name
 
 # ------------------------------------------------------------------------------

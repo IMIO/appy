@@ -562,8 +562,8 @@ class Renderer:
 
     def importDocument(self, content=None, at=None, format=None,
       anchor='as-char', wrapInPara=True, size=None, sizeUnit='cm',
-      maxWidth='page', style=None, keepRatio=True, pageBreakBefore=False,
-      pageBreakAfter=False, convertOptions=None):
+      maxWidth='page', maxHeight='page', style=None, keepRatio=True,
+      pageBreakBefore=False, pageBreakAfter=False, convertOptions=None):
         '''Implements the POD statement "do... from document"'''
         # If p_at is not None, it represents a path or url allowing to find the
         # document. If p_at is None, the content of the document is supposed to
@@ -582,10 +582,11 @@ class Renderer:
         # * p_sizeUnit is the unit for p_size elements, it can be "cm"
         #       (centimeters), "px" (pixels) or "pc" (percentage). Percentages,
         #       in p_size, must be expressed as integers from 1 to 100.
-        # * if p_maxWidth is specified (as a float value representing cm),
-        #       image's width will not be greater than it. If p_maxWidth is
-        #       "page" (the default), p_maxWidth will be computed as the width
-        #       of the main document's page style, margins excluded.
+        # * if p_maxWidth (p_maxHeight) is specified (as a float value
+        #       representing cm), image's width (height) will not be greater
+        #       than it. If p_maxWidth (p_maxHeight) is "page" (the default),
+        #       p_maxWidth (p_maxHeight) will be computed as the width of the
+        #       main document's page style, margins excluded ;
         # * if p_style is given, it is a appy.shared.css.CssStyles instance,
         #       containing CSS attributes. If "width" and "heigth" attributes
         #       are found there, they will override p_size and p_sizeUnit.
@@ -656,14 +657,14 @@ class Renderer:
         imp = importer(content, at, format, self)
         # Initialise image-specific parameters
         if isImage:
-            imp.init(anchor, wrapInPara, size, sizeUnit, maxWidth, style,
-                     keepRatio, convertOptions)
+            imp.init(anchor, wrapInPara, size, sizeUnit, maxWidth, maxHeight,
+                     style, keepRatio, convertOptions)
         elif isOdt: imp.init(pageBreakBefore, pageBreakAfter)
         return imp.run()
 
     def importImage(self, content=None, at=None, format=None, size=None,
-                    sizeUnit='cm', maxWidth='page', style=None, keepRatio=True,
-                    convertOptions=None):
+                    sizeUnit='cm', maxWidth='page', maxHeight='page',
+                    style=None, keepRatio=True, convertOptions=None):
         '''While p_importDocument allows to import a document or image via a
            "do ... from document" statement, method p_importImage allows to
            import an image anchored as a char via a pod expression
@@ -672,7 +673,8 @@ class Renderer:
         # (2) "wrapInPara" is forced to False.
         return self.importDocument(content=content, at=at, format=format,
           wrapInPara=False, size=size, sizeUnit=sizeUnit, maxWidth=maxWidth,
-          style=style, keepRatio=keepRatio, convertOptions=convertOptions)
+          maxHeight=maxHeight, style=style, keepRatio=keepRatio,
+          convertOptions=convertOptions)
 
     def getResolvedNamespaces(self):
         '''Gets a context where mainly used namespaces have been resolved'''

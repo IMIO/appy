@@ -556,8 +556,8 @@ class ImageImporter(DocImporter):
                 cmd = ['convert', path, '-auto-orient', path]
                 ImageMagick.run(cmd)
 
-    def init(self, anchor, wrapInPara, size, sizeUnit, maxWidth, cssAttrs,
-             keepRatio, convertOptions):
+    def init(self, anchor, wrapInPara, size, sizeUnit, maxWidth, maxHeight,
+             cssAttrs, keepRatio, convertOptions):
         '''ImageImporter-specific constructor'''
         # Initialise anchor
         if anchor not in self.anchorTypes:
@@ -566,9 +566,13 @@ class ImageImporter(DocImporter):
         self.wrapInPara = wrapInPara
         self.size = size
         self.sizeUnit = sizeUnit
+        pageLayout = self.renderer.stylesManager.pageLayout
         if maxWidth == 'page':
-            maxWidth = self.renderer.stylesManager.pageLayout.getWidth()
+            maxWidth = pageLayout.getWidth()
         self.maxWidth = maxWidth
+        if maxHeight == 'page':
+            maxHeight = pageLayout.getHeight()
+        self.maxHeight = maxHeight
         self.keepRatio = keepRatio
         self.convertOptions = convertOptions
         # CSS attributes
@@ -602,6 +606,27 @@ class ImageImporter(DocImporter):
         else:
             self.image = Image(self.importPath, self.format)
 
+    def applyMax(self, width, height):
+        '''Return a tuple (width, height), potentially modified w.r.t. p_width
+           and p_height, to take care of p_self.maxWidth & p_self.maxHeight.'''
+        # Apply max width
+        maxW = self.maxWidth
+        if maxW and width > maxW:
+            ratio = maxW / width
+            width = maxW
+            # Even if the width/height ratio must not be kept, in this case,
+            # nevertheless apply it.
+            height *= ratio
+        # Apply max height
+        maxH = self.maxHeight
+        if maxH and height > maxH:
+            ratio = maxH / height
+            height = maxH
+            # Even if keepRatio is False, in that case, nevertheless apply the
+            # ratio on height, too.
+            width *= ratio
+        return width, height
+
     def getImageSize(self):
         '''Get or compute the image size and returns the corresponding ODF
            attributes specifying image width and height expressed in cm.'''
@@ -609,7 +634,7 @@ class ImageImporter(DocImporter):
         width, height = self.image.width, self.image.height
         keepRatio = self.keepRatio
         if self.size:
-            # Apply a percentage when self.sizeUnit is 'pc'
+            # Apply a percentage when p_self.sizeUnit is 'pc'
             if self.sizeUnit == 'pc':
                 # If width or height could not be computed, it is impossible
                 if not width or not height: return ''
@@ -621,12 +646,17 @@ class ImageImporter(DocImporter):
                 width = width * ratioW
                 height = height * ratioH
             else:
-                # Get, from self.size, required width and height, and convert
+                # Get, from p_self.size, required width and height, and convert
                 # it to cm when relevant.
                 w, h = self.size
                 if self.sizeUnit == 'px':
-                    w = float(w) / px2cm
-                    h = float(h) / px2cm
+                    try:
+                        w = float(w) / px2cm
+                        h = float(h) / px2cm
+                    except ValueError:
+                        # Wrong values: use v_width and v_height
+                        w = width
+                        h = height
                 # Use (w, h) as is if we don't care about keeping image ratio or
                 # if we couldn't determine image's width or height.
                 if (not width or not height) or not keepRatio:
@@ -638,14 +668,8 @@ class ImageImporter(DocImporter):
                     width = width * ratio
                     height = height * ratio
         if not width or not height: return ''
-        # Take care of max width if specified
-        maxWidth = self.maxWidth
-        if maxWidth and (width > maxWidth):
-            ratio = maxWidth / width
-            width = maxWidth
-            # Even if keepRatio is False, in that case, nevertheless apply the
-            # ratio on heigth, too.
-            height = height * ratio
+        # Take care of max width & height if specified
+        width, height = self.applyMax(width, height)
         # Return the ODF attributes
         s = self.svgNs
         return ' %s:width="%fcm" %s:height="%fcm"' % (s, width, s, height)
