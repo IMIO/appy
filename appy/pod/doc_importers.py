@@ -296,7 +296,7 @@ class PdfImporter(DocImporter):
             if os.path.exists(nextImage):
                 # Use internally an Image importer for doing this job
                 imgImporter = ImageImporter(None, nextImage, ext, self.renderer)
-                imgImporter.init('as-char', True, None, None, 'page',
+                imgImporter.init('as-char', True, None, None, 'page', 'page',
                                  None, True, None)
                 self.res += imgImporter.run()
                 os.remove(nextImage)
