@@ -1230,7 +1230,8 @@ class XhtmlParser(XmlParser):
             if src: 
                 imgCode = e.renderer.importDocument(at=attrs['src'],
                   format='image', wrapInPara=False, style=current.cssStyles,
-                  maxWidth=conv.imagesMaxWidth, keepRatio=conv.keepImagesRatio)
+                  maxWidth=conv.imagesMaxWidth, maxHeight=conv.imagesMaxHeight,
+                  keepRatio=conv.keepImagesRatio)
                 dump(imgCode)
         elif elem == 'footnote':
             # An inexistent tag in HTML, nervertheless usable to produce ODF
@@ -1360,8 +1361,8 @@ class Xhtml2OdtConverter:
     verbose = False
 
     def __init__(self, s, encoding, stylesManager, localStylesMapping,
-                 keepWithNext, keepImagesRatio, imagesMaxWidth, renderer,
-                 html, unwrap):
+                 keepWithNext, keepImagesRatio, imagesMaxWidth, imagesMaxHeight,
+                 renderer, html, unwrap):
         self.renderer = renderer
         self.xhtmlString = XhtmlPreprocessor.preprocess(s, html=html)
         self.encoding = encoding # Todo: manage encoding that is not utf-8
@@ -1380,6 +1381,7 @@ class Xhtml2OdtConverter:
                 self.xhtmlString = self.applyKeepWithNext()
         self.keepImagesRatio = keepImagesRatio
         self.imagesMaxWidth = imagesMaxWidth
+        self.imagesMaxHeight = imagesMaxHeight
         self.unwrap = unwrap
         # In verbose mode, we dump a trace of the xhtml2odt algorithm
         self.xhtmlParser.verbose = self.xhtmlParser.env.verbose = self.verbose

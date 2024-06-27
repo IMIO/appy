@@ -486,23 +486,21 @@ class Renderer:
             setattr(self, '%sParser' % name, parser)
 
     def renderXhtml(self, s, encoding='utf-8', stylesMapping={}, keepWithNext=0,
-                    keepImagesRatio=False, imagesMaxWidth='page', html=None,
-                    unwrap=False):
-        '''Method that can be used (under the name 'xhtml') into a pod template
+                    keepImagesRatio=False, imagesMaxWidth='page',
+                    imagesMaxHeight='page', html=None, unwrap=False):
+        '''Method that can be used (under the name "xhtml") into a pod template
            for converting a chunk of XHTML content (p_s) into a chunk of ODT
-           content.
-
-           For this conversion, beyond the global styles mapping defined at the
-           renderer level, a specific p_stylesMapping can be given: any key in
-           it overrides its homonym in the global mapping.
-
-           If p_html is not None, it overrides renderer's homonym parameter.
-        '''
+           content.'''
+        # For this conversion, beyond the global styles mapping defined at the
+        # renderer level, a specific p_stylesMapping can be given: any key in
+        # it overrides its homonym in the global mapping.
+        # If p_html is not None, it overrides renderer's homonym parameter.
         stylesMapping = self.stylesManager.checkStylesMapping(stylesMapping)
         if html is None: html = self.html
         return Xhtml2OdtConverter(s, encoding, self.stylesManager,
                                   stylesMapping, keepWithNext, keepImagesRatio,
-                                  imagesMaxWidth, self, html, unwrap).run()
+                                  imagesMaxWidth, imagesMaxHeight, self, html,
+                                  unwrap).run()
 
     def renderText(self, s, prefix=None, tags=None, firstCss=None,
                    otherCss=None, lastCss=None, stylesMapping={}):

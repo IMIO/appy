@@ -19,4 +19,5 @@ xhtmlChunk = '''
  <tbody><tr><td><p><img alt="" src="./images/linux.jpg"/></p></td></tr></tbody>
 </table>
 <img/> <!-- This will be ignored because having no "src" attr -->
+<img src="./images/long.png" style="height:1453px; width:427px"/>
 '''
