@@ -818,7 +818,8 @@ class StylesParser(OdfParser):
             # I am parsing section "master-styles"
             if elem == e.tags['master-page']:
                 plnAttr = e.tags['page-layout-name']
-                if attrs.has_key(plnAttr):
+                # In case there are several master styles, keep the first one
+                if not e.masterLayoutName and attrs.has_key(plnAttr):
                     e.masterLayoutName = attrs[plnAttr]
                 # Add this page style
                 name = attrs['style:name']
