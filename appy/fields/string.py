@@ -1183,7 +1183,7 @@ class String(Field):
         '''Gets the base params to set on a rich text field'''
         tool = obj.getTool()
         base = tool.getSiteUrl()
-        ckAttrs = {'customConfig': '%s/ui/ckeditor/config.js' % base,
+        ckAttrs = {'customConfig': '%s/ui/ckeditor/config.js?2' % base,
                    'contentsCss': '%s/ui/ckeditor/contents.css' % base,
                    'stylesSet': '%s/ui/ckeditor/styles.js' % base,
                    'toolbar': self.toolbar, 'format_tags':';'.join(self.styles),

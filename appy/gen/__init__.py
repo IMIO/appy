@@ -313,7 +313,7 @@ class Config:
     # if you are sure that the customized configuration files config.js,
     # contents.css and styles.js stored in appy/gen/ui/ckeditor will be
     # compatible with the version you want to use.
-    ckVersion = '4.17.2'
+    ckVersion = '4.22.1'
     # ckDistribution can be "basic", "standard", "standard-all", "full" or
     # "full-all" (see doc in http://cdn.ckeditor.com).
     ckDistribution = 'standard'
