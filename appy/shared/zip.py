@@ -136,9 +136,9 @@ def zip(f, folder, odf=False, encode=False):
         if not dirnames and not filenames:
             # This is an empty leaf folder. We must create an entry in the
             # zip for him.
-            folderName = dir[len(folder):]
+            folderName = dir[len(folder)+1:]
             zInfo = zipfile.ZipInfo("%s/" % folderName, time.localtime()[:6])
-            zInfo.external_attr = 48
+            zInfo.external_attr = 0777 << 16L
             zipFile.writestr(zInfo, '')
     zipFile.close()
 # ------------------------------------------------------------------------------
