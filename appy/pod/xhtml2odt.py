@@ -80,8 +80,8 @@ class HtmlElement(Element):
     # Moreover, if the element is a table, it will be wrapped in a HtmlTable
     # element (see below).
 
-    elemTypes = {'p':'para', 'div':'para', 'blockquote': 'para',
-                 'li':'para', 'ol':'list', 'ul':'list'}
+    elemTypes = XHTML_META_TAGS.copy()
+    elemTypes.update({'li':'para', 'ol':'list', 'ul':'list'})
 
     # Prototypical instances
     protos = {}
