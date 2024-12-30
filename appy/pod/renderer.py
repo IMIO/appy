@@ -6,6 +6,7 @@ import zipfile, shutil, xml.sax, os, os.path, re, mimetypes, time
 
 import appy.pod
 from appy.pod.lo_pool import LoPool
+from appy.pod.graphic import Graphic
 from appy.shared.zip import unzip, zip
 from appy.pod.buffers import FileBuffer
 from appy.pod import PodError, Evaluator
@@ -453,6 +454,7 @@ class Renderer:
           'TableProperties': sm.TableProperties,
           'BulletedProperties': sm.BulletedProperties,
           'NumberedProperties': sm.NumberedProperties,
+          'GraphicProperties': Graphic.Properties,
           'pageBreak': self.insertPageBreak,
           'columnBreak': self.insertColumnBreak,
           '_eval_': self.evaluator or Evaluator,
@@ -926,6 +928,9 @@ class Renderer:
             # Rename the page styles
             if pageStyles:
                 content = pageStyles.renameIn(name, content)
+            # Patch pod graphics, when relevant
+            if not isStylesXml:
+                content = Graphic.patch(self, content)
             # Write the updated content to the file
             f = file(fn, 'w')
             f.write(content)

@@ -1,16 +1,19 @@
 # ~license~
 # ------------------------------------------------------------------------------
 import re
+
+from appy.pod.elements import *
+from appy.pod.graphic import Graphic
 from appy.shared.xml_parser import XmlElement
 from appy.pod.buffers import FileBuffer, MemoryBuffer
 from appy.pod.odf_parser import OdfEnvironment, OdfParser
-from appy.pod.elements import *
 
 # ------------------------------------------------------------------------------
 class OdTable:
     '''Informations about the currently parsed Open Document (Od)table'''
 
-    def __init__(self):
+    def __init__(self, name=None):
+        self.name = name
         self.nbOfColumns = 0
         self.nbOfRows = 0
         self.curColIndex = None
@@ -94,6 +97,11 @@ class PodEnvironment(OdfEnvironment):
         # Currently parsed expression within an ODS template
         self.currentOdsExpression = None
         self.currentOdsHook = None
+        # A Graphic object representing the currently parsed pod graphic
+        self.currentOdsGraphic = None
+        # A dict of Appy-controlled graphics ~{s_path: Graphic}~. s_path refers
+        # to the folder, within the pod result, where LO stores the graphic.
+        self.odsGraphics = None
         # Currently parsed expression from a database-display field
         self.currentDbExpression = None
         # Names of some tags, that we will compute after namespace propagation
@@ -142,7 +150,8 @@ class PodEnvironment(OdfEnvironment):
             self.propagateNamespaces()
         tableNs = self.ns(self.NS_TABLE)
         if elem == Table.OD.elem:
-            self.tableStack.append(OdTable())
+            name = attrs.get('table:name')
+            self.tableStack.append(OdTable(name=name))
             self.tableIndex += 1
         elif elem == Row.OD.elem:
             table = self.getTable()
@@ -162,6 +171,8 @@ class PodEnvironment(OdfEnvironment):
                 table.nbOfColumns += int(attrs[cols])
             else:
                 table.nbOfColumns += 1
+        elif elem == 'draw:object' and self.currentOdsGraphic:
+            self.currentOdsGraphic.register(self, attrs)
         return ns
 
     def onEndElement(self):
@@ -283,11 +294,20 @@ class PodParser(OdfParser):
             if e.state == e.IGNORING:
                 pass
             elif e.state == e.READING_CONTENT:
+                # Dump an Element object if the current tag is impactable
                 if elem in e.impactableElems:
                     if e.mode == e.ADD_IN_SUBBUFFER:
                         e.addSubBuffer()
                     e.currentBuffer.addElement(e.currentElem.name)
+                    graphic = Graphic.get(elem, attrs, e)
+                else:
+                    graphic = None
+                # Dump the start tag in the current buffer
                 e.currentBuffer.dumpStartElement(elem, attrs)
+                # If a pod graphic is encountered, get info allowing to
+                # complete it afterwards.
+                if graphic:
+                    e.currentOdsGraphic = graphic
             elif e.state == e.READING_STATEMENT:
                 pass
             elif e.state == e.READING_EXPRESSION:
