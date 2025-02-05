@@ -19,12 +19,14 @@ span = 'text:span'
 tlist = 'text:list'
 table = 'table:table'
 cell = table + '-cell'
+
 HTML_2_ODF = {
-  'h1':h, 'h2':h, 'h3':h, 'h4':h, 'h5':h, 'h6':h, 'p':p, 'div':p,
-  'blockquote':p, 'address':p, 'sub': span, 'sup': span, 'br':'text:line-break',
-  'table': table, 'thead': table + '-header-rows',
+  'p':p, 'div':p, 'blockquote':p, 'address':p, 'sub': span, 'sup': span,
+  'br':'text:line-break', 'table': table, 'thead': table + '-header-rows',
   'tr': table + '-row', 'td': cell, 'th': cell, 'a': 'text:a',
-  'ol': tlist, 'ul': tlist, 'li': 'text:list-item'}
+  'ol': tlist, 'ul': tlist, 'li': 'text:list-item'
+}
+for ht in XHTML_HEADINGS: HTML_2_ODF[ht] = h
 
 # Inner tags whose presence is only useful for specifying style information
 STYLE_ONLY_TAGS = ('b', 'strong', 'i', 'em', 'strike', 's', 'u', 'span', 'q',
@@ -32,8 +34,8 @@ STYLE_ONLY_TAGS = ('b', 'strong', 'i', 'em', 'strike', 's', 'u', 'span', 'q',
 for tag in STYLE_ONLY_TAGS: HTML_2_ODF[tag] = 'text:span'
 
 # Styles whose translation to ODF is simple
-SIMPLE_TAGS = ('h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'blockquote',
-               'address', 'sub', 'sup', 'br', 'th', 'td')
+SIMPLE_TAGS = XHTML_HEADINGS + ('p', 'div', 'blockquote', 'address', 'sub', \
+                                'sup', 'br', 'th', 'td')
 
 INNER_TAGS_NO_BR = STYLE_ONLY_TAGS + ('sub','sup','a','acronym','abbr','img')
 INNER_TAGS = INNER_TAGS_NO_BR + ('br',)
@@ -42,6 +44,7 @@ TABLE_COL_TAGS = TABLE_CELL_TAGS + ('col',)
 TABLE_ROW_TAGS = ('tr', 'colgroup')
 OUTER_TAGS = TABLE_CELL_TAGS + ('li',)
 PARA_TAGS = ('p', 'div', 'blockquote', 'address')
+
 # The following elements can't be rendered inside paragraphs
 NOT_INSIDE_P = XHTML_HEADINGS + XHTML_LISTS + ('table',)
 NOT_INSIDE_P_OR_P = NOT_INSIDE_P + PARA_TAGS + ('li',)

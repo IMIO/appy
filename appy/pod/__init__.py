@@ -10,7 +10,7 @@ except ImportError:
     uuid = None
 
 # Some POD-specific constants --------------------------------------------------
-XHTML_HEADINGS = ('h1', 'h2', 'h3', 'h4', 'h5', 'h6')
+XHTML_HEADINGS = tuple(['h%d' % i for i in range(1,11)])
 XHTML_LISTS    = ('ol', 'ul')
 
 # "para" is a meta-tag representing p, div, blockquote or address
