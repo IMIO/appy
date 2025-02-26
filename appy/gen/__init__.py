@@ -282,6 +282,16 @@ class Config:
     # of its content. If you want to enable this latter behaviour, set
     # the following attribute to False.
     marshallBinaries = True
+    # If v_marshallBinaries is False, as previously said, the target site will
+    # access binaries via the filesystem. If both the source and target sites
+    # are on the same machine, the base folder for binaries is simply the
+    # standard DB folder where actual source files are stored (typically,
+    # <instance>/var). But suppose the target site is on another machine, and
+    # may access the source machine's filesystem via a mountpoint. In that case,
+    # this base folder may be different, because seen via the mountpoint:
+    # specify it via the following attribute. Leaving this latter to None will
+    # be equivalent to specifying the standard DB folder.
+    marshallFolder = None
 
     @classmethod
     def getLdap(class_):

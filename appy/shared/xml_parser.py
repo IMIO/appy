@@ -920,9 +920,11 @@ class XmlMarshaller:
                 modified = getattr(instance, 'modified', instance.created)
                 self.dumpField(res, 'modified', modified)
                 appyi = instance.appy()
-                self.marshallBinaries = appyi.config.marshallBinaries
+                config = appyi.config
+                self.marshallBinaries = config.marshallBinaries
                 if not self.marshallBinaries:
-                    self.databaseFolder = appyi.tool.getDbFolder()
+                    self.databaseFolder = config.marshallFolder or \
+                                          appyi.tool.getDbFolder()
                 for field in instance.getAppyTypes('xml', None):
                     # Dump only needed fields
                     if field.name in self.fieldsToExclude: continue
