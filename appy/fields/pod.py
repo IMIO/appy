@@ -815,15 +815,24 @@ class Pod(Field):
            pod field, p_template and p_format.'''
         return '%s_%s%s%s' % (self.name,self.getBaseName(template),sep,format)
 
-    def isFrozen(self, obj, template=None, format='pdf'):
+    def isFrozen(self, obj, template=None, format='pdf', altDbFolder=None):
         '''Is there a frozen document for thid pod field, on p_obj, for
            p_template in p_format? If yes, it returns the absolute path to the
            frozen doc.'''
+        # If p_altDbFolder is True, when there is a frozen doc, instead of
+        # returning a single absolute path, it returns a 2-tuple of such paths,
+        # the second one being built with an alternate DB folder being
+        # p_altDbFolder.
         template = template or self.template[0]
         dbFolder, folder = obj.o.getFsFolder()
         fileName = self.getFreezeName(template, format)
-        res = os.path.join(dbFolder, folder, fileName)
-        if os.path.exists(res): return res
+        r = os.path.join(dbFolder, folder, fileName)
+        if not os.path.exists(r): return
+        if altDbFolder:
+            # In addition to v_r, recompute a variant of the frozen doc's
+            # absolute path with an alternate DB folder.
+            r = (r, os.path.join(altDbFolder, folder, fileName))
+        return r
 
     def freeze(self, obj, template=None, format='pdf', noSecurity=True,
                upload=None, freezeOdtOnError=True):
