@@ -510,37 +510,43 @@ class ImageImporter(DocImporter):
                 i = importPath.rfind(self.pictFolder) + 1
                 return importPath[:i] + imagePath
         # The image has not already been imported: copy it
+        r = None
         if not at.startswith('http'):
+            # A file on disk
             shutil.copy(at, importPath)
+            r = importPath
+        else:
+            # The image has (maybe) been retrieved from a HTTP GET
+            response = getattr(self, 'httpResponse', None)
+            if response:
+                # Retrieve the image format
+                format = response.headers['Content-Type']
+                if format in mimeTypesExts:
+                    # At last, I can get the file format
+                    self.format = mimeTypesExts[format]
+                    importPath += self.format
+                    f = file(importPath, 'wb')
+                    f.write(response.body)
+                    f.close()
+                    r = importPath
+            if not r:
+                # The image has (maybe) been retrieved from Zope
+                zopeImage = getattr(self, 'zopeImage', None)
+                if zopeImage:
+                    blobWrapper = zopeImage.getBlobWrapper()
+                    self.format = mimeTypesExts[blobWrapper.content_type]
+                    importPath += self.format
+                    blob = blobWrapper.getBlob()
+                    # If we do not check 'readers', the blob._p_blob_committed is
+                    # sometimes None.
+                    blob.readers
+                    blobPath = blob._p_blob_committed
+                    shutil.copy(blobPath, importPath)
+                    r = importPath
+        if r:
             # Ensure we can modify the image (with ImageMagick)
-            os.chmod(importPath, stat.S_IREAD | stat.S_IWRITE)
-            return importPath
-        # The image has (maybe) been retrieved from a HTTP GET
-        response = getattr(self, 'httpResponse', None)
-        if response:
-            # Retrieve the image format
-            format = response.headers['Content-Type']
-            if format in mimeTypesExts:
-                # At last, I can get the file format
-                self.format = mimeTypesExts[format]
-                importPath += self.format
-                f = file(importPath, 'wb')
-                f.write(response.body)
-                f.close()
-                return importPath
-        # The image has (maybe) been retrieved from Zope
-        zopeImage = getattr(self, 'zopeImage', None)
-        if zopeImage:
-            blobWrapper = zopeImage.getBlobWrapper()
-            self.format = mimeTypesExts[blobWrapper.content_type]
-            importPath += self.format
-            blob = blobWrapper.getBlob()
-            # If we do not check 'readers', the blob._p_blob_committed is
-            # sometimes None.
-            blob.readers
-            blobPath = blob._p_blob_committed
-            shutil.copy(blobPath, importPath)
-            return importPath
+            os.chmod(r, stat.S_IREAD | stat.S_IWRITE)
+            return r
 
     def manageExif(self):
         '''Read, with ImageMagick, EXIF metadata in the image, and apply a
