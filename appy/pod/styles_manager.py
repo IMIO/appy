@@ -428,12 +428,37 @@ class GraphicalStyle:
                (self.name, self.getOdfAttributes())
 
 # ------------------------------------------------------------------------------
+class PageBreakStyle:
+    '''Represents an ODF paragraph style defining a page break'''
+
+    template = '<style:style style:name="%s" style:family="paragraph" ' \
+               'style:parent-style-name="%s" style:master-page-name="%s">' \
+               '</style:style>'
+
+    def __init__(self, name, parent, pageStyle):
+        # The style name
+        self.name = name
+        # The name of the parent style, that must be one ogf the "page-break"
+        # styles as injected by Appy in any pod result from styles.xmlt.
+        self.parent = parent
+        # The name of the page style to use
+        self.pageStyle = pageStyle
+
+    def asOdf(self):
+        '''Returns p_self's representation as ODF code'''
+        return self.template % (self.name, self.parent, self.pageStyle)
+
+# ------------------------------------------------------------------------------
 class PageStyle:
     '''Represents a page style'''
+
     # Attributes storing the style name
-    nameAttributes = ('style:name', 'style:display-name')
+    nameAttr = 'style:name'
+    displayAttr = 'style:display-name'
+
     # Attributes storing references to other styles
     refAttributes = ('style:next-style-name',)
+
     # The attribute defining a page start number
     startAttr = 'style:page-number="%s"'
 
@@ -444,11 +469,16 @@ class PageStyle:
 
     def rename(self):
         '''Give to this style a new, unique name'''
-        self.uniqueName = getUuid(prefix='PS', removeDots=True)
+        self.uniqueName = unique = getUuid(prefix='PS', removeDots=True)
+        attrs = self.attrs
         # Update attributes
-        for name in PageStyle.nameAttributes:
-            if name in self.attrs:
-                self.attrs[name] = self.uniqueName
+        attrs[self.nameAttr] = unique
+        displayAttr = self.displayAttr
+        if displayAttr in attrs:
+            dname = attrs[displayAttr]
+        else:
+            dname = self.name
+        attrs[displayAttr] = '%s (%s)' % (dname, unique)
 
     def update(self, styles):
         '''If this style refers to other styles, update these references with
@@ -482,8 +512,10 @@ class PageStyle:
 # ------------------------------------------------------------------------------
 class PageStyles:
     '''Stores all page styles found in a document'''
+
     # Rex for parsing a page style definition in styles.xml
     STYLES_DEF = re.compile('<style:master-page\s+style:name="(.*?)"\s+.*?>')
+
     # Rex for parsing a tag, in content.xml, that refers to a page style
     CONTENT_USE = re.compile('<style:style([^<]+)style:master-page-name='\
                              '"([^"]+)"(.*?)</style:style>')
@@ -1066,10 +1098,20 @@ class StylesGenerator:
            generated styles.'''
         # Generate a name for this new style
         name = self.generateStyleName()
-        # Create a instance of GraphicalStyle
+        # Create a instance of class GraphicalStyle
         style = GraphicalStyle(name, **kwargs)
         # Add it among dynamically created styles
         self.addStyle(style.asOdf(), target)
+        return style
+
+    def addPageBreakStyle(self, parent, pageStyle):
+        '''Adds a paragraph style that includes a page break and inherits from
+           this p_parent style.'''
+        # Generate a name for this new style
+        name = self.generateStyleName()
+        # Create a instance of class PageBreakStyle
+        style = PageBreakStyle(name, parent, pageStyle)
+        self.addStyle(style.asOdf(), 'styles_base')
         return style
 
     def getStyleHash(self, xhtmlElem, odfAttrs, baseStyle):

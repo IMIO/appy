@@ -597,12 +597,33 @@ class Renderer:
         # external odt documents, and allows to insert a page break before/after
         # the inserted document. More precisely, each of these parameters can
         # have values:
-        # * True     insert a page break;
-        # * False    do no insert a page break;
-
-        # moreover, p_pageBreakAfter can have this additional parameter:
-        # * 'duplex' insert 2 page breaks if the sub-document has an odd number
-        #            of pages, 1 else (useful for duplex printing).
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # True          | insert a page break ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # False         | do no insert a page break.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # Moreover, p_pageBreakAfter can have those additional values :
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # 'duplex'      | insert 2 page breaks if the sub-document has an odd
+        #               | number of pages, 1 else (useful for duplex printing) ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # '<styleName>' | inserts a page break mentioning the name of a specific
+        #               | page style to apply to the remaining of the document.
+        #               | It can be an alternative to using 'duplex', if the
+        #               | page name forces LibreOffice to insert a virtual page,
+        #               | like, ie, 'Right_20_Page'.
+        #               | !! The referred page style must be used within the
+        #               |    main pod template: it must be applied to one of its
+        #               |    paragraphs. Else, LibreOffice will not include it
+        #               |    in the pod result. To ensure it is the case, you
+        #               |    may define an empty paragraph, with a pod statement
+        #               |    "do text if False", that will prevent him being
+        #               |    rendered in the pod result but will ensure its
+        #               |    related styles will be part of it. Then, for this
+        #               |    paragraph, go to "Paragraph > Text flow" tab,
+        #               |    define a break of type "Page", position "Before",
+        #               |    with a page style you choose in the list.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         # If p_convertOptions are given (for images only), ImageMagick will be
         # called with these options to perform some transformation on the image.

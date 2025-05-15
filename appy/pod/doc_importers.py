@@ -40,6 +40,7 @@ class ImageMagick:
 class DocImporter:
     '''Base class used for importing external content into a pod template (an
        image, another pod template, another odt document...'''
+
     def __init__(self, content, at, format, renderer):
         self.content = content
         self.renderer = renderer
@@ -128,6 +129,7 @@ class OdtImporter(DocImporter):
     # POD manages page breaks by inserting a paragraph whose style inserts a
     # page break before or after it.
     pageBreakTemplate = '<text:p text:style-name="podPageBreak%s"></text:p>'
+    pageBreakCustom = '<text:p text:style-name="%s"></text:p>'
     pageBreaks = O(before=pageBreakTemplate % 'Before',
                    after=pageBreakTemplate % 'After',
                    beforeDuplex=pageBreakTemplate % 'BeforeDuplex')
@@ -137,10 +139,11 @@ class OdtImporter(DocImporter):
         self.pageBreakBefore = pageBreakBefore
         self.pageBreakAfter = pageBreakAfter
 
-    def getPageBreakAfterType(self):
-        '''After sub-document insertion, must we insert a page break of type
-           "after" or "before"?'''
-        if self.pageBreakAfter == 'duplex':
+    def addPageBreakAfter(self):
+        '''After sub-document insertion, must we insert a page break ?'''
+        typE = None
+        breaK = self.pageBreakAfter
+        if breaK == 'duplex':
             # Read metadata about the sub-ODT, containing its number of pages
             metadata = MetadataReader(self.importPath).run()
             odd = (metadata.pagecount % 2) == 1
@@ -148,15 +151,26 @@ class OdtImporter(DocImporter):
             # page break, while inserting a page break of type "after" will only
             # insert a page break if additional content is found after the
             # paragraph onto which the page break style is applied.
-            r = odd and 'beforeDuplex' or 'after'
-        else:
-            r = 'after'
-        return r
+            typE = odd and 'beforeDuplex' or 'after'
+        elif breaK is True:
+            typE = 'after'
+        elif breaK:
+            # A specific style must be generated, that mentions a custom page
+            # style that inherits from style "podPageBreakBefore".
+            generator = self.renderer.stylesManager.stylesGenerator
+            style = generator.addPageBreakStyle('podPageBreakBefore', breaK)
+            styleDef = self.pageBreakCustom % style.name
+            self.res = '%s%s' % (self.res, styleDef)
+        if typE:
+            # One of the standard page breaks as defined in OdtImport.pageBreaks
+            # must be used.
+            self.res = '%s%s' % (self.res, getattr(self.pageBreaks, typE))
 
     def run(self):
         '''Import the content of a sub-ODT document'''
         # Insert a page break before importing the doc if needed
-        if self.pageBreakBefore: self.res += self.pageBreaks.before
+        if self.pageBreakBefore:
+            self.res += self.pageBreaks.before
         # Import the external odt document
         name = getUuid(removeDots=True, prefix='PodSect')
         self.res += '<%s:section %s:name="%s">' \
@@ -164,44 +178,15 @@ class OdtImporter(DocImporter):
                     '%s:filter-name="writer8"/></%s:section>' % (
                         self.textNs, self.textNs, name, self.textNs,
                         self.linkNs, self.importPath, self.textNs, self.textNs)
-        # Insert (a) page break(s) after importing the doc if needed
-        if self.pageBreakAfter:
-            type = self.getPageBreakAfterType()
-            self.res += getattr(self.pageBreaks, type)
-            # Note that if there is no more document content after the last page
-            # break, it will not be visible.
+        # Possibly insert (a) page break(s) after importing the doc if needed
+        self.addPageBreakAfter()
+        # Note that if there is no more document content after the last page
+        # break, it will not be visible.
         return self.res
 
 class PodImporter(DocImporter):
     '''This class allows to import the result of applying another POD template,
        into the current POD result.'''
-
-    def init(self, context, pageBreakBefore, pageBreakAfter,
-             managePageStyles, resolveFields, forceOoCall):
-        '''PodImporter-specific constructor'''
-        self.context = context
-        self.pageBreakBefore = pageBreakBefore
-        self.pageBreakAfter = pageBreakAfter
-        self.managePageStyles = managePageStyles
-        self.resolveFields = resolveFields
-        # Force LO call if fields must be resolved, or if we are inserting
-        # sub-documents in "duplex" mode. Indeed, in this latter case, we will
-        # need to know the exact number of pages for every sub-document. We will
-        # call LO for that purpose: it will produce correct document statistics
-        # within meta.xml, which is not the case for an ODT document produced by
-        # POD without forcing OO call (stats are those from the document
-        # template and not from the pod result).
-        if (pageBreakAfter == 'duplex') or resolveFields:
-            force = True
-        else:
-            # Inherit from the parent renderer's value or get a specific value
-            renderer = self.renderer
-            if forceOoCall == renderer.INHERIT:
-                force = renderer.forceOoCall
-            else:
-                # Else, keep the value as passed to p_self's constructor
-                force = forceOoCall
-        self.forceOoCall = force
 
     def mustStream(self):
         '''Returns True if communication with LibreOffice must be performed via
@@ -221,11 +206,46 @@ class PodImporter(DocImporter):
         # distant LO will be able to read it from is own disk.
         return mustStream and 'in' or default
 
+    def init(self, context, pageBreakBefore, pageBreakAfter,
+             managePageStyles, resolveFields, forceOoCall):
+        '''PodImporter-specific constructor'''
+        self.context = context
+        self.pageBreakBefore = pageBreakBefore
+        self.pageBreakAfter = pageBreakAfter
+        self.managePageStyles = managePageStyles
+        self.resolveFields = resolveFields
+        # Must we communicate with LO via streams ?
+        self.stream = self.mustStream()
+        # Force LO call if:
+        # (a) fields must be resolved ;
+        # (b) if we are inserting sub-documents in "duplex" mode (or, also, with
+        #     a custom page style). Indeed, in duplex mode, we will need to know
+        #     the exact number of pages for every sub-document. We will call LO
+        #     for that purpose: it will produce correct document statistics
+        #     within meta.xml, which is not the case for an ODT document
+        #     produced by POD without forcing OO call (stats are those from the
+        #     document template and not from the pod result) ;
+        # (c) LO is on a distant machine. In that case, forcing OO call allows
+        #     to transmit the sub-pod to the distant machine, ready to be
+        #     incorporated by the distant LO in the main pod.
+        if isinstance(pageBreakAfter, basestring) or resolveFields or \
+            self.stream == 'in':
+            force = True
+        else:
+            # Inherit from the parent renderer's value or get a specific value
+            renderer = self.renderer
+            if forceOoCall == renderer.INHERIT:
+                force = renderer.forceOoCall
+            else:
+                # Else, keep the value as passed to p_self's constructor
+                force = forceOoCall
+        self.forceOoCall = force
+
     def run(self):
         # This feature is only available in the open source version
         if commercial: raise CommercialError()
         r = self.renderer
-        stream = self.mustStream()
+        stream = self.stream
         # Define where to store the pod result in the temp folder. If we must
         # stream the result, the temp folder will be on a distant machine, so it
         # must be at the root of the OS temp folder.

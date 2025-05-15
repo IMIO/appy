@@ -1017,7 +1017,11 @@ class XhtmlEnvironment(XmlEnvironment):
         elif elem in TABLE_COL_TAGS:
             # Determine colspan
             colspan = 1
-            if attrs.has_key('colspan'): colspan = int(attrs['colspan'])
+            if attrs.has_key('colspan'):
+                try:
+                    colspan = int(attrs['colspan'])
+                except ValueError:
+                    colspan = 1
             table = self.currentTables[-1]
             table.inCell = colspan
             table.cellIndex += colspan
