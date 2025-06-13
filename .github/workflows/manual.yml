@@ -29,12 +29,27 @@ jobs:
         if_key_exists: replace # replace / ignore / fail; optional (defaults to fail)
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Update appy
+    - name: Update appy python2
       run: |
         rm -rf appy
         git clone ssh://git-appy@www.geezteem.com:3388/~/python2 appy
         rm -rf appy/.git*
-    - name: Commit update
+    - name: Commit update python2
+      run: |
+        git config --global user.name 'Git bot'
+        git config --global user.email 'bot@noreply.github.com'
+        git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+        git add .
+        git status
+        git commit -am "Auto updated submodule references" && git push || echo "No changes to commit"
+    - name: Update appy python3
+      run: |
+        git fetch
+        git checkout python3
+        rm -rf appy
+        git clone ssh://git-appy@www.geezteem.com:3388/~/appy appy
+        rm -rf appy/.git*
+    - name: Commit update python3
       run: |
         git config --global user.name 'Git bot'
         git config --global user.email 'bot@noreply.github.com'
