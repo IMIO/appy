@@ -260,6 +260,7 @@ class PdfImporter(DocImporter):
     '''This class allows to import the content of a PDF file into a pod
        template. It calls gs to split the PDF into images and calls the
        ImageImporter for importing it into the result.'''
+
     # Ghostscript devices that can be used for converting PDFs into images
     gsDevices = {'jpeg': 'jpg', 'jpeggray': 'jpg',
                  'png16m': 'png', 'pnggray': 'png'}

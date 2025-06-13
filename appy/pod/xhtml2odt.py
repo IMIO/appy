@@ -26,9 +26,9 @@ table = 'table:table'
 cell = table + '-cell'
 
 HTML_2_ODF = {
-  'p':p, 'div':p, 'blockquote':p, 'address':p, 'sub': span, 'sup': span,
-  'br':'text:line-break', 'table': table, 'thead': table + '-header-rows',
-  'tr': table + '-row', 'td': cell, 'th': cell, 'a': 'text:a',
+  'p':p, 'div':p, 'blockquote':p, 'address':p, 'caption':p, 'sub': span,
+  'sup': span, 'br':'text:line-break', 'table': table, 'tr': f'{table}-row',
+  'thead': f'{table}-header-rows', 'td': cell, 'th': cell, 'a': 'text:a',
   'ol': tlist, 'ul': tlist, 'li': 'text:list-item'}
 
 for ht in XHTML_HEADINGS: HTML_2_ODF[ht] = h
@@ -40,8 +40,8 @@ STYLE_ONLY_TAGS = ('b', 'strong', 'i', 'em', 'strike', 's', 'u', 'span', 'q',
 for tag in STYLE_ONLY_TAGS: HTML_2_ODF[tag] = 'text:span'
 
 # Styles whose translation to ODF is simple
-SIMPLE_TAGS = XHTML_HEADINGS + ('p', 'div', 'blockquote', 'address', 'sub', \
-                                'sup', 'br', 'th', 'td')
+SIMPLE_TAGS = XHTML_HEADINGS + ('p', 'div', 'blockquote', 'address', 'caption',
+                                'sub', 'sup', 'br', 'th', 'td')
 
 INNER_TAGS_NO_BR = STYLE_ONLY_TAGS + ('sub','sup','a','acronym','abbr','img')
 INNER_TAGS = INNER_TAGS_NO_BR + ('br',)
@@ -49,7 +49,7 @@ TABLE_CELL_TAGS = ('td', 'th')
 TABLE_COL_TAGS = TABLE_CELL_TAGS + ('col',)
 TABLE_ROW_TAGS = ('tr', 'colgroup')
 OUTER_TAGS = TABLE_CELL_TAGS + ('li',)
-PARA_TAGS = ('p', 'div', 'blockquote', 'address')
+PARA_TAGS = ('p', 'div', 'blockquote', 'address', 'caption')
 
 # The following elements can't be rendered inside paragraphs
 NOT_INSIDE_P = XHTML_HEADINGS + XHTML_LISTS + ('table',)
@@ -414,6 +414,8 @@ class HtmlTable(Element):
         self.originalStyles = None
         self.removeTag = False
         self.contentDumped = False
+        # Are we currently parsing the table caption ?
+        self.inCaption = False
         # A specific name can be forced by using attribute 'data-name'
         self.name = attrs.get('data-name') or env.getUniqueStyleName('table')
         # Suffix the table name with a post-processor command when needed
@@ -445,6 +447,10 @@ class HtmlTable(Element):
         # columns declarations into self.res and dump self.tempRes into
         # self.res.
         self.tempRes = ''
+        # If the table defines a caption, store its content in the following
+        # alternate buffer. Indeed, the caption, in ODF, must be dumped outside
+        # the table.
+        self.captionRes = ''
         # Was the first table row completely parsed ?
         self.firstRowParsed = False
         # The number of columns in the table
@@ -976,12 +982,14 @@ class XhtmlEnvironment(Environment):
            into the global buffer (self.res).'''
         if self.currentTables:
             currentTable = self.currentTables[-1]
-            if (not currentTable.res) or currentTable.firstRowParsed:
-                currentTable.res += s
+            if currentTable.inCaption:
+                currentTable.captionRes = f'{currentTable.captionRes}{s}'
+            elif not currentTable.res or currentTable.firstRowParsed:
+                currentTable.res = f'{currentTable.res}{s}'
             else:
-                currentTable.tempRes += s
+                currentTable.tempRes = f'{currentTable.tempRes}{s}'
         else:
-            self.res += s
+            self.res = f'{self.res}{s}'
 
     def getTagsToReopen(self, conflictElems):
         '''Normally, tags to reopen are equal to p_conflictElems. But we have a
@@ -1021,6 +1029,8 @@ class XhtmlEnvironment(Environment):
         elif elem == 'table':
             # Update stack of current tables
             self.currentTables.append(HtmlTable(self, current, attrs))
+        elif elem == 'caption':
+            self.currentTables[-1].inCaption = True
         elif elem in TABLE_COL_TAGS:
             # Determine colspan
             colspan = 1
@@ -1056,7 +1066,10 @@ class XhtmlEnvironment(Environment):
             if table.nbOfColumns:
                 # Computes the column styles required by the table
                 table.computeColumnStyles()
-            # Dumps the content of the last parsed table into the parent buffer
+            # Dumps the content of the last parsed table (together with a
+            # potential caption) into the parent buffer.
+            if table.captionRes:
+                self.dumpString(table.captionRes)
             self.dumpString(table.res)
         elif elem in TABLE_ROW_TAGS:
             table = self.currentTables[-1]
@@ -1068,9 +1081,10 @@ class XhtmlEnvironment(Environment):
                 # First row is parsed. The number of columns in the table is
                 # known: columns declarations can be dumped.
                 for i in range(1, table.nbOfColumns + 1):
-                    table.res += f'<{self.tableNs}:table-column {self.tableNs}'\
-                                 f':style-name="{table.name}.{i}"/>'
-                table.res += table.tempRes
+                    decl = f'<{self.tableNs}:table-column {self.tableNs}'\
+                           f':style-name="{table.name}.{i}"/>'
+                    table.res = f'{table.res}{decl}'
+                table.res = f'{table.res}{table.tempRes}'
                 table.tempRes = ''
         elif elem in TABLE_COL_TAGS:
             table = self.currentTables[-1]
@@ -1294,6 +1308,8 @@ class XhtmlParser(Parser):
             if endTag and not current.removeTag and \
                current.dumpStatus != 'waiting':
                 dump(endTag)
+                if elem == 'caption':
+                    e.currentTables[-1].inCaption = False
                 current.show(e, prefix='>')
             # Manage the end of a styled inner tag
             if elem in STYLE_ONLY_TAGS:
