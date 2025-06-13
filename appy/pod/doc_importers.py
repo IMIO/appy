@@ -193,8 +193,6 @@ class PodImporter(DocImporter):
            streams.'''
         # The default value is the one from the main renderer
         default = self.renderer.stream
-        # Return the default value if no communication with LO must occur
-        if not self.forceOoCall: return default
         # Must we communicate with LO via streams ?
         mustStream = (default in (True, 'in')) or \
                      ((default == 'auto') and \
