@@ -4,6 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.pod import PodError
 from appy.pod.elements import *
+from appy.xml.escape import Escape
 from appy.model.utils import Object as O
 from appy.utils import Traceback, commercial, CommercialError
 
@@ -531,7 +532,8 @@ class MetaIf(Action):
         # Use some fake buffer and dump the note in it. Reuse the code for
         # dumping an error, also dumped as a note.
         buf = self.buffer.clone()
-        PodError.dump(buf, '</text:p>\n<text:p>'.join(self.statements),
+        statements = [Escape.xml(st) for st in self.statements]
+        PodError.dump(buf, '</text:p>\n<text:p>'.join(statements),
                       dumpTb=False, escapeMessage=False)
         return buf
 

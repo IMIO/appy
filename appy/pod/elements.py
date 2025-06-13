@@ -7,6 +7,7 @@ from xml.sax.saxutils import quoteattr
 from appy.xml import Tag
 from appy.utils import asDict
 from appy.pod import PodError
+from appy.xml.escape import Escape
 from appy.pod.odf_parser import OdfEnvironment as ns
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -165,10 +166,10 @@ class Expression(PodElement):
         if not self.pod: return '' # Works just for pod
         wrap = self.metaWraps[self.metaWrap]
         cond = self.metaCondition
-        return f'<text:conditional-text text:condition="ooow:' \
-               f'{wrap}{cond}{wrap}" text:string-value-if-true="{self.expr}" ' \
-               f'text:string-value-if-false="">{self.expr}</text:conditional-' \
-               f'text>'
+        expr = Escape.xml(self.expr)
+        return f'<text:conditional-text text:condition="ooow:{wrap}{cond}' \
+               f'{wrap}" text:string-value-if-true="{expr}" text:string-' \
+               f'value-if-false="">{expr}</text:conditional-text>'
 
     def _eval(self, context):
         '''Evaluates self.expr with p_context. If self.errorExpr is defined,
