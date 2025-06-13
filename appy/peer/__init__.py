@@ -55,7 +55,7 @@ class Peer:
     # Constructor  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def __init__(self, url, login=None, password=None, id=None, name=None,
-                 myId=None, myName=None, folder=None, timeout=20):
+                 myId=None, myName=None, folder=None, timeout=20, emails=None):
         # The URL of the distant site
         self.url = url
         # An optional ID for this distant site
@@ -69,6 +69,10 @@ class Peer:
         # It may be important to know the absolute disk path to the distant site
         # (as a pathlib.Path instance).
         self.folder = folder
+        # When some errors occur, it may be appropriate to send mail to one or
+        # more recipients. Attribute p_emails can hold a list of email addresses
+        # ~[s_email]~.
+        self.emails = emails
         # Attribute "importers" below allows to define specific importer classes
         # for specific Appy classes. When importing some instance, if its local
         # class is mentioned in "importers", it is used. Else, the base importer
@@ -89,9 +93,9 @@ class Peer:
         # tricky case: an autoref being add=False,link=False,composite=True
         # will be considered addable but this could be wrong.
         self.addable = {} # ~{s_className: {s_refFieldName: b_addable}}~
-        # ~
+        #
         # The following attributes store run-time temporary data structures
-        # ~
+        #
         # Create the proxy instance representing the distant server. The passed
         # p_timeout, expressed in seconds, will be used for every HTTP request
         # sent to the peer.
@@ -125,6 +129,10 @@ class Peer:
         # considered to have the same name on both sites.
         self.classNames = {}
 
+    def __repr__(self):
+        '''p_self's short string representation'''
+        return f'‹Peer@{self.url}›'
+
     def getInfo(self, check=False):
         '''Info about a Peer instance is made from its self.url, self.id and
            self.name.'''
@@ -135,7 +143,7 @@ class Peer:
         return r[0] if len(r) == 1 else ('%s (%s)' % (r[0], ', '.join(r[1:])))
 
     def get(self, url=None, params=None, post=False, raiseIfString=True,
-            timeout=None):
+            timeout=None, raw=False):
         '''Sends a HTTP GET request (or POST if p_post is True) to p_url
            (or p_self.url if not given) with p_params.'''
         try:
@@ -144,12 +152,14 @@ class Peer:
             else:
                 r = self.server.get(path=url, params=params, timeout=timeout)
         except Resource.Error as re:
-            raise self.Error('%s: %s' % (url or self.url, str(re)))
+            raise self.Error(f'{url or self.url}: {str(re)}')
         if r.code == 404:
             raise self.NotFound(r)
         elif r.code != 200:
             raise self.Error(r)
-        r = r.data
+        # Get the response. Get extracted / unmarshalled data from v_r.data, or
+        # the complete response object (v_r) if p_raw is True.
+        if not raw: r = r.data
         if raiseIfString and isinstance(r, str):
             raise self.Error(RESP_KO % r)
         return r

@@ -8,6 +8,7 @@ from persistent.list import PersistentList
 from appy.px import Px
 from appy.model.fields import Field
 from appy.model.totals import Totals
+from appy.utils.string import Normalize
 from appy.model.utils import Object as O
 from appy.ui.layout import Layout, LayoutF, Layouts
 
@@ -27,14 +28,22 @@ class List(Field):
     # List is an "outer" field, made of inner fields
     outer = True
 
+    # An empty persistent list (or persistent mapping for a Dict) is not
+    # considered a null value: when such a value is stored, no default value
+    # will be computed for it.
+    nullValues = (None,)
+
     class Layouts(Layouts):
         '''List-specific layouts'''
         # No label on "edit" (*e*dit *m*inimalist)
         em = Layouts(edit=Layout('f;rv=', width=None))
         g = Layouts(edit=em['edit'], view='fl')
         gd = Layouts(edit=LayoutF('d100;frv=', wrap=True))
+        gdv = Layouts(edit=LayoutF('d100;frv=', wrap=True),
+                      view=LayoutF('d100;f=', wrap=True))
         # Default layouts for sub-fields
-        sub = Layouts(edit=Layout('frv', width=None))
+        sub = Layouts(edit=LayoutF('frv'))
+        subT = Layouts(edit=LayoutF('frv='))
 
         @classmethod
         def getDefault(class_, field):
@@ -52,10 +61,11 @@ class List(Field):
 
     # PX for rendering a single row
     pxRow = Px('''
-     <tr valign="top" style=":'display:none' if rowId == -1 else ''"
-         class=":'odd' if loop.row.odd else 'even'"
+     <tr valign=":field.contentAlign"
+         style=":'display:none' if rowId == -1 else ''"
          var2="x=totalsC.reset() | None">
       <x if="not isCell">:field.pxFirstCell</x>
+      <td if="numbered" class="_n_b_">:rowId+1</td>
       <td for="name, field in subFields" if="field"
           var2="minimal=isCell;
                 fieldName=outer.getEntryName(field, rowId)">:field.pxRender</td>
@@ -101,15 +111,18 @@ class List(Field):
             if="isEdit or value"
             id=":tableId" width=":field.width"
             class=":field.getTableCss(_ctx_)"
+            data-name=":field.getTableName(o)"
             var2="outer=field;
                   subFields=field.getSubFields(o, layout);
                   swidths=field.getWidths(subFields);
+                  numbered=field.getAttribute(o, 'numbered');
                   totals=field.getRunningTotals(subFields,isEdit);
                   totalsC=field.getRunningTotals(subFields,isEdit,rows=False)">
 
       <!-- Header -->
       <thead>
        <tr valign=":field.headerAlign">
+        <th if="numbered"></th>
         <th for="name, sub in subFields" if="sub"
             style=":field.getHeaderStyle(loop.name.nb, swidths)">
          <x var="field=sub">::field.getListHeader(_ctx_)</x></th>
@@ -135,9 +148,13 @@ class List(Field):
 
       <!-- Totals -->
       <x if="totals">:totals.px</x>
-     </table>''')
+     </table>
+
+     <!-- The text to show if the field is empty -->
+     <div if="not value and layout=='view'">::field.getValueIfEmpty(o)</div>''')
 
     view = cell = buttons = Px('''<x>:field.pxTable</x>''')
+
     edit = Px('''<x>
      <!-- This input makes Appy aware that this field is in the request -->
      <input type="hidden" name=":name" value=""/><x>:field.pxTable</x>
@@ -153,9 +170,9 @@ class List(Field):
             become [i] + p_rowIndex. */
 
          // Browse elements representing fields
-         let fields = row.querySelectorAll('[id^="'+tagId+'"]'),
+         let fields = row.querySelectorAll(`[id^="${tagId}"]`),
              newIndex = -1, id, old, elems, new_, val, w, oldIndex,
-             tagTypes = ['a', 'script'], widgets=null;
+             tagTypes = ['a','script','label'], widgets=null;
 
          // Patch fields
          for (let i=0; i<fields.length; i++) {
@@ -178,7 +195,7 @@ class List(Field):
            fields[i].id = fields[i].id.replace(old, new_);
            // Find widgets mentioning v_old and replace it with v_new_
            val = w = null;
-           widgets = fields[i].querySelectorAll('[id^="'+elems[0]+'\*"]');
+           widgets = fields[i].querySelectorAll('[id^="'+elems[0]+'\\*"]');
            for (let j=0; j<widgets.length; j++) {
              w = widgets[j];
              // Patch id
@@ -194,8 +211,11 @@ class List(Field):
              for (var l=0; l<widgets.length; l++) {
                w = widgets[l];
                // Patch href
-               if ((w.nodeName == 'A') && w.href)
-                 { w.href = w.href.replace(old, new_); }
+               if ((w.nodeName == 'A') && w.href) {
+                 w.href = w.href.replace(old, new_); }
+               // Patch label's "for" attribute
+               if ((w.nodeName == 'LABEL') && w.htmlFor) {
+                 w.htmlFor = w.htmlFor.replace(old, new_); }
                // Patch (and reeval) script
                if (w.nodeName == 'SCRIPT') {
                  w.text = w.text.replace(old, new_);
@@ -203,6 +223,39 @@ class List(Field):
                }
              }
            }
+         }
+         if (newIndex != -1) {
+           // Patch the row number if shown
+           const numbers = row.getElementsByClassName('_n_b_');
+           for (const nb of numbers) nb.innerHTML = (newIndex+1).toString();
+         }
+       }
+
+       cloneRow = function(node, setSelects) {
+         let r = node.cloneNode(true);
+         if (setSelects) {
+           /* Simply cloning p_node does not, within each "select" tag,
+              correctly set the selected value if the user has changed it. */
+           let selsR = r.querySelectorAll("select");
+           if (selsR.length == 0) return r;
+           let sels = node.querySelectorAll("select"),
+               i = sels.length - 1;
+           while (i !== -1) {
+             // Set the same value on the cloned "select" tag
+             selsR[i].value = sels[i].value;
+             i -= 1;
+           }
+         }
+         return r;
+       }
+
+       emptyReadOnly = function(row) {
+         /* When duplicating a row, it is not desirable to duplicate values for
+            read-only fields. Indeed, these automatically managed values often
+            represent IDs or similar values that should not be copied to the
+            cloned row. */
+         for (const node of row.querySelectorAll("input[readonly='readonly']")){
+           node.value = null;
          }
        }
 
@@ -215,7 +268,7 @@ class List(Field):
              rows = table.rows,
              prevRow = (prev)? prev.parentNode.parentNode.parentNode: null,
              base = (clone)? prevRow: rows[1],
-             newRow = base.cloneNode(true),
+             newRow = cloneRow(base, clone),
              next = (prev)? prevRow.nextElementSibling: null;
          newRow.style.display = 'table-row';
          if (next) {
@@ -235,6 +288,8 @@ class List(Field):
            // Within newRow, incorporate the row nb within field names and ids
            updateRowNumber(tagId, newRow, rows.length-3, 'set');
          }
+         // When duplicating a row, empty read-only fields on the cloned row
+         if (clone) emptyReadOnly(newRow);
        }
 
        deleteRow = function(tableId, tagId, deleteImg, ask, rowIndex) {
@@ -287,18 +342,19 @@ class List(Field):
       width='', height=None, maxChars=None, colspan=1, master=None,
       masterValue=None, focus=False, historized=False, mapping=None,
       generateLabel=None, label=None, subLayouts=Layouts.sub, widths=None,
-      view=None, cell=None, buttons=None, edit=None, xml=None,
+      view=None, cell=None, buttons=None, edit=None, custom=None, xml=None,
       translations=None, deleteConfirm=False, totalRows=None, totalCols=None,
-      rowClass=O, headerAlign='middle', listCss=None):
+      rowClass=O, headerAlign='middle', contentAlign='top', listCss=None,
+      valueIfEmpty='-', numbered=False):
         # Call the base constructor
-        Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
-         show, renderable, page, group, layouts, move, False, True, None, None,
-         False, None, readPermission, writePermission, width, height, None,
-         colspan, master, masterValue, focus, historized, mapping,
-         generateLabel, label, None, None, None, None, True, False, view, cell,
-         buttons, edit, xml, translations)
+        super().__init__(validator, multiplicity, default, defaultOnEdit, show,
+         renderable, page, group, layouts, move, False, True, None, None, False,
+         None, readPermission, writePermission, width, height, None, colspan,
+         master, masterValue, focus, historized, mapping, generateLabel, label,
+         None, None, None, None, True, False, view, cell, buttons, edit, custom,
+         xml, translations)
         self.validable = True
-        # Tuple of elements of the form (name, Field instance) determining the
+        # Tuple of elements of the form (name, Field object) determining the
         # format of every element in the list. It can also be a method returning
         # this tuple. In that case, however, no i18n label will be generated for
         # the sub-fields: these latters must be created with a value for
@@ -331,8 +387,9 @@ class List(Field):
         # look at class appy.model.utils.Object, because the way you define your
         # class could lead to Appy malfunctions.
         self.rowClass = rowClass
-        # Header row vertical alignment
+        # Header and content rows' vertical alignment
         self.headerAlign = headerAlign
+        self.contentAlign = contentAlign
         # CSS class to apply to the main table tag. If you let None, default
         # will be "grid" on layout "edit" and "small" on other layouts (those
         # CSS classes come from appy.css). In p_listCss, if you define a string,
@@ -343,6 +400,12 @@ class List(Field):
         #                   {'edit': 'grid', 'view':'small'}
         #
         self.listCss = listCss
+        # The value to show on non-edit layouts if the field is empty. Can be a
+        # string or a method producing it.
+        self.valueIfEmpty = valueIfEmpty
+        # If "numbered" is or returns True, the row number will be shown at the
+        # start of every row.
+        self.numbered = numbered
         # Check parameters
         self.checkParameters()
 
@@ -360,12 +423,15 @@ class List(Field):
         # everytime a List field is solicited, if sub-fields are dynamically
         # computed.
         for sub, field in subFields:
+            # Define first a composite v_fullName whose separator is an
+            # underscore, for producing correct i18n labels; then, set the name
+            # of the field with the star as separator.
+            fullName = f'{self.name}_{sub}'
             # Some fields cannot be defined as inner-fields for the moment
-            fullName = f'%s_%s' % (self.name, sub)
             if not field.isInnerable():
                 raise Exception(INNER_KO % fullName)
             field.init(class_, fullName)
-            field.name = '%s*%s' % (self.name, sub)
+            field.name = f'{self.name}*{sub}'
 
     def init(self, class_, name):
         '''List-specific lazy initialisation'''
@@ -390,6 +456,16 @@ class List(Field):
         elif not isinstance(r, str):
             r = r.get(c.layout) or default
         return r
+
+    def getTableName(self, o):
+        '''Returns the content of a "data-name" attribute that is defined in the
+           table tag corresponding to this field.'''
+        # This info will be used by some processors like pod's xhtml2odt
+        title = o.getShownValue()
+        if not title: return '' # Maybe the case for temp objects
+        title = Normalize.fileName(title)
+        name = Normalize.fileName(o.translate("label", field=self))
+        return f'{title} · {name}'
 
     def getHeaderStyle(self, i, widths):
         '''Return CSS properties for the p_i(th) header cell'''
@@ -429,16 +505,16 @@ class List(Field):
         '''Gets the name of the request entry corresponding to the value of
            this p_sub-field at this p_row.'''
         name = name or self.name
-        # p_sub can be a (sub)Field instance or a string. If it is a string, it
+        # p_sub can be a (sub)Field object or a string. If it is a string, it
         # must correspond to the unprefixed sub-field name.
-        prefix = '%s*%s' % (name, sub) if isinstance(sub, str) else sub.name
-        return '%s*%s%s' % (prefix, suffix, row)
+        prefix = f'{name}*{sub}' if isinstance(sub, str) else sub.name
+        return f'{prefix}*{suffix}{row}'
 
     def getRequestValue(self, o, requestName=None):
         '''Concatenates the list from distinct form elements in the request'''
         req = o.req
         name = requestName or self.name # A List may be into another List (?)
-        prefix = name + '*-row-*' # Allows to detect a row of data for this List
+        prefix = f'{name}*-row-*' # Allows to detect a row of data for this List
         r = {}
         isDict = False # We manage both List and Dict
         for key in req.keys():
@@ -471,12 +547,15 @@ class List(Field):
         # request keys contain row indexes that may be wrong after row deletions
         # by the user.
         if r: req[name] = r
+        else: r = None # An empty list or dict is not considered being empty, so
+                       # return a real empty value (=None) in case no value was
+                       # found in the request.
         return r
 
-    def setRequestValue(self, o):
+    def setRequestValue(self, o, force=None):
         '''Sets in the request, the field value on p_o in its "request-
            carriable" form.'''
-        value = self.getValue(o)
+        value = self.getValue(o) if force is None else force
         if value is not None:
             req = o.req
             name = self.name
@@ -493,15 +572,14 @@ class List(Field):
            from p_requestValue.'''
         r = self.rowClass()
         for name, field in self.getSubFields(o):
-            if not hasattr(requestValue, name) and \
-               not field.isShowable(o, 'edit'):
+            if name not in requestValue and not field.isShowable(o, 'edit'):
                 # Some fields, although present on "edit", may not be part of
                 # the p_requestValue (ie, a "select multiple" with no value at
                 # all will not be part of the POST HTTP request). If we want to
                 # know if the field was in the request or not, we must then
                 # check if it is showable on layout "edit".
                 continue
-            subValue = getattr(requestValue, name, None)
+            subValue = requestValue[name]
             try:
                 setattr(r, name, field.getStorableValue(o, subValue))
             except ValueError:
@@ -516,6 +594,7 @@ class List(Field):
 
     def getStorableValue(self, o, value, single=False):
         '''Gets p_value in a form that can be stored in the database'''
+        if value is None: return
         r = PersistentList()
         for v in value:
             r.append(self.getStorableRowValue(o, v))
@@ -525,6 +604,19 @@ class List(Field):
         '''Return a (deep) copy of field value on p_o''' 
         r = getattr(o, self.name, None)
         if r: return copy.deepcopy(r)
+
+    def getHistoryValue(self, o, value, i, language=None, empty='-'):
+        '''Render a nice previous p_value'''
+        # Return an empty value if the p_value is inexistent
+        if not value: return empty
+        # Create a fake object, for hosting this p_value
+        req = o.req
+        fake = self.getFakeObject(value, req)
+        # Simulate p_self rendering on this p_fake object, on the "cell" layout
+        ctx = O(name=self.name, o=fake, layout='cell', field=self, value=value,
+                _=o.translate, inRequest=False, requestValue=None,
+                showChanges=False, hostLayout=None, req=req)
+        return self.pxTable(ctx)
 
     def getCss(self, o, layout, r):
         '''Gets the CSS required by sub-fields if any'''
@@ -542,7 +634,7 @@ class List(Field):
         '''Gets the JS code to call when the user wants to delete a row'''
         confirm = 'true' if self.deleteConfirm else 'false'
         q = c.q
-        return "deleteRow(%s,%s,this,%s)" % (q(c.tableId), q(c.tagId), confirm)
+        return f"deleteRow({q(c.tableId)},{q(c.tagId)},this,{confirm})"
 
     def subValidate(self, o, value, errors):
         '''Validates inner fields'''
@@ -552,7 +644,7 @@ class List(Field):
             for name, subField in self.getSubFields(o):
                 message = subField.validate(o, getattr(row, name, None))
                 if message:
-                    setattr(errors, '%s*%d' % (subField.name, i), message)
+                    setattr(errors, f'{subField.name}*{i}', message)
 
     def iterValues(self, o):
         '''Returns an iterator over p_self's rows on p_o'''

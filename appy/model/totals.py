@@ -32,7 +32,7 @@ class Total:
         self.style = None
 
     def __repr__(self):
-        return f'-= Total {self.name}={str(self.value)} =-'
+        return f'‹Total {self.name}={str(self.value)}›'
 
     def getStyled(self, tag=None):
         '''If p_tag is passed ("th" or "td"), return the complete table cell
@@ -106,7 +106,12 @@ class Totals:
         # [* row  ]  [List/Dict only] The current "row", as an Object instance.
         #            For a Search, it is useless: the Appy object is already
         #            available via your method's p_self's attribute.
-        # * value    The value of the current field on this object or row/column
+        # * value    The value of the current field on this object or row/col.
+        #            WARNING: when displaying a diff value in the object's
+        #            history, it is possible that this value be a diff (as a
+        #            chunk of XHML code in a string) and not a value that
+        #            conforms to your field. Take this into account if you
+        #            enable history changes.
         # * total    The Total instance (see above) corresponding to the current
         #            total.
         # * last     A boolean that is True if we are walking the last row or

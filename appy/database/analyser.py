@@ -18,22 +18,26 @@ PH_KO      = '  DB-phantom file @%%s (%s).'
 PH_O_KO    = PH_KO % 'inexistent object'
 PH_F_KO    = PH_KO % 'unreferenced field'
 PH_F_MM    = PH_KO % 'mismatched field'
+PH_F_MP    = PH_KO % 'mismatched path · FileInfo path is %s'
 SANE_FILES = '  %d walked sane files (total size: %s).'
 PH_FOUND   = '  %s phantom file(s) found (total size: %s), moved to %s.'
 PH_NO      = '  No phantom file was found.'
 MISS_TEXT  = '  Missing files on disk = %d.'
-A_START    = 'Analysing database @%s...'
+A_START    = 'Analysing database @%s (%s)...'
 WALK       = '  Walking instances of class...'
 WALK_C     = '   %s...'
 WALKED     = '   > %d object(s) analysed.'
 WALKED_TOT = '  %d objects in the database.'
 WALK_FS    = '  Walking filesystem @%s...'
-DISK_KO    = '  Missing on disk for %s :: %s'
+DISK_KO    = '  Missing on disk for %s :: %s%s'
+RISHES     = '  ✅ "Rise file from the ashes" method :: File %s is back.'
+TMP_FOUND  = ' :: A copy exists in %s (%d bytes); the FileInfo-referred file ' \
+             'is %d bytes).'
 A_END      = 'Done.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Analyser:
-    '''Detect (and possibly repair) incoherences between FileInfo instances as
+    '''Detect (and possibly repair) incoherences between FileInfo objects as
        stored in the database and corresponding files stored on the
        DB-controlled filesystem.'''
 
@@ -41,7 +45,7 @@ class Analyser:
     # folders. A phantom file is a file being present on the DB-controlled
     # filesystem but not mentioned in any FileInfo instance in the database.
 
-    def __init__(self, handler, logger):
+    def __init__(self, handler, logger, method=None):
         self.handler = handler
         self.logger = logger
         self.tool = handler.dbConnection.root.objects.get('tool')
@@ -52,6 +56,10 @@ class Analyser:
         # Define a folder where to move potentially found phantom files
         now = DateTime()
         self.phantomFolder = cfg.phantomFolder / now.strftime('%Y%m%d_%H%M%S')
+        # p_method, if passed, is a "rise file from the ashes" method: it will
+        # allow to find or rebuild a file being mentioned in a FileInfo object
+        # but being missing on disk.
+        self.method = method
 
     def log(self, text, type='info'):
         '''Logs this p_text'''
@@ -77,14 +85,16 @@ class Analyser:
         '''Walks all database objects, checking presence of disk files for every
            FileInfo object.'''
         # Logs a text message explaining the number of files, mentioned in
-        # FileInfo instances, for which there is no corresponding file on the
+        # FileInfo objects, for which there is no corresponding file on the
         # filesystem.
-        # ~
-        # At present, for these missing files, no repair action is performed
+        #
+        # If a method is specified in p_self.method, it will be used to try to
+        # find or rebuild the missing file.
         r = total = 0
         tool = self.tool
         pre = len(str(self.binariesFolder))
         self.log(WALK)
+        method = getattr(tool, self.method) if self.method else None
         for className, fields in fileFields.items():
             self.log(WALK_C % className)
             count = 0 # Count the number of walked objects
@@ -98,7 +108,24 @@ class Analyser:
                     if not path.is_file():
                         r += 1
                         fpath = str(path)[pre:]
-                        self.log(DISK_KO % (className, fpath), type='error')
+                        # For this missing file, do we have a copy in the OS
+                        # temp folder ?
+                        tempPath = info.getTempFilePath(o)
+                        if tempPath.is_file():
+                            tempSize = os.stat(str(tempPath)).st_size
+                            suffix = TMP_FOUND % (tempPath, tempSize, info.size)
+                        else:
+                            suffix = ''
+                        self.log(DISK_KO % (className, fpath, suffix),
+                                 type='error')
+                        if method:
+                            # Call this v_method on the tool to try to find or
+                            # rebuild the file.
+                            success = method(o, field, info)
+                            # Uncount this file: it has been repaired
+                            if success:
+                                tool.log(RISHES % path)
+                                r -= 1
             self.log(WALKED % count)
             total += count
         self.log(WALKED_TOT % total)
@@ -132,6 +159,35 @@ class Analyser:
             os.makedirs(dest)
         os.rename(path, os.path.join(dest, os.path.basename(path)))
 
+    def isPhantom(self, o, path, name):
+        '''Is the file at this relative p_path, having this p_name, not referred
+           in the database, via a FileInfo object ?'''
+        # Get the name of the corresponding File field
+        i = name.find('.')
+        if i != -1:
+            name = name[:i]
+        # Try to get the corresponding FileInfo object
+        r = False
+        text = None
+        try:
+            info = getattr(o, name)
+        except AttributeError:
+            # v_name does not correspond to any File field on p_o
+            info = None
+            text = PH_F_MM
+        if info is None:
+            # This file is not mentioned in the DB for this existing object
+            r = True
+            self.log((text or PH_F_KO) % path, type='error')
+        else:
+            # There is a FileInfo object. But does it mention the file @p_path?
+            infoPath = os.path.join(info.fsPath, info.fsName)
+            if infoPath != path:
+                # No
+                self.log(PH_F_MP % (path, infoPath), type='error')
+                r = True
+        return r
+
     def walkFilesystem(self, fileFields):
         '''Walks all folders from the DB-controled filesystem, checking the
            presence of FileInfo objects for every file.'''
@@ -161,9 +217,8 @@ class Analyser:
                     filePath = folder / name
                     if not filePath.is_file(): continue
                     # I have a File-field-related file
-                    fpath = str(filePath)[pre:]
-                    # Ensure there is a corresponding object::FileInfo instance
-                    # in the database.
+                    fpath = str(filePath)[pre+1:]
+                    # Ensure there is a corresponding object in the database
                     if o is None:
                         # This object does not exist
                         self.log(PH_O_KO % fpath, type='error')
@@ -171,21 +226,8 @@ class Analyser:
                         phantomFound = True
                         self.removePhantomFolder(filePath.parent)
                         continue
-                    # Get the FileInfo
-                    fname = filePath.stem
-                    # Get the FileInfo system
-                    text = None
-                    try:
-                        info = getattr(o, fname)
-                    except AttributeError:
-                        # vp_filePath does not correspond to any File field on
-                        # p_o. Remove it.
-                        info = None
-                        text = PH_F_MM
-                    if info is None:
-                        # This file is not mentioned in the DB for this existing
-                        # object.
-                        self.log((text or PH_F_KO) % fpath, type='error')
+                    # Ensure a FileInfo object references this file
+                    if self.isPhantom(o, fpath, name):
                         phantomFound = True
                         # Move this file to the phantom folder
                         self.removePhantomFile(filePath)
@@ -214,7 +256,8 @@ class Analyser:
             return
         # Start the analysis
         tool = self.tool
-        self.log(A_START % self.config.database.filePath)
+        config = self.config.database
+        self.log(A_START % (config.filePath, config.getDatabaseSize(True)))
         # Step #1 - Collect all File fields per Appy class
         fileFields = self.collectFields()
         # Step #2 - Walk all objects

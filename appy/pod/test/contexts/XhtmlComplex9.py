@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''
 <p style="text-indent: 26px">Considérant qu’il y a lieu de fixer le traitement individuel de <strong><span style="background-color:Yellow">...</span>, né(e) le <span style="background-color:Yellow">...</span></strong> au grade <span style="background-color:Yellow">...</span>, niveau <span style="background-color:Yellow">...</span>, temps <span style="background-color:Yellow">...</span>, dont la carrière administrative est décrite à la fiche individuelle ci-après&nbsp;;</p>
 

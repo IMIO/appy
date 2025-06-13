@@ -26,7 +26,7 @@ class Injector:
 
     # Regular expression allowing to identify, within a Rich value, an injection
     # link.
-    injectLink = re.compile('<a href="(.*?)">p([xy]):\s*(.*?)\s*</a>')
+    injectLink = re.compile(r'<a href="(.*?)">p([xy]):\s*(.*?)\s*</a>')
 
     @classmethod
     def executePx(class_, specifier, o):

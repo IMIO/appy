@@ -47,7 +47,7 @@ class Portlet:
                 r = ' psel'
             else:
                 r = ''
-        return 'pzone%s' % r
+        return f'pzone{r}'
 
     @classmethod
     def getStyle(class_, c):
@@ -58,20 +58,20 @@ class Portlet:
             z = 12
             # Moreover, the portlet height must be computed to substract the
             # footer, being rendered in fixed position.
-            sub = ' - %s' % c.cfg.portletFHeight
+            sub = f' - {c.cfg.portletFHeight}'
             if c.showFooter:
-                sub += ' - %s' % c.cfg.footerHeight
-            height = ';height:calc(100%%%s)' % sub
+                sub = f'{sub} - {c.cfg.footerHeight}'
+            height = f';height:calc(100%{sub})'
         else:
             z = 4
             height = ''
-        return 'z-index:%d;%s%s' % (z, c.collapse.style, height)
+        return f'z-index:{z};{c.collapse.style}{height}'
 
     # A zone displaying user-related infos and controls
     pxUser = Px('''
      <div class=":ui.Portlet.getZoneCss(_ctx_, userZone=True)">
       <!-- The colored zone -->
-      <div class="colorZ" style=":'background-color:%s' % cfg.svg.flashyColor">
+      <div class="colorZ" style=":f'background-color:{cfg.svg.flashyColor}'">
       </div>
       <!-- Zone payload -->
       <div>
@@ -90,7 +90,8 @@ class Portlet:
        <x if="ui.Language.showSelector(cfg,layout)">:ui.Language.pxSelector</x>
 
        <!-- Connect link if discreet login -->
-       <x if="Template.showConnect(_ctx_)">:Template.pxLogin</x>
+       <x if="showLoginBox == 'discreet'"
+          var2="showLoginIcon=True">:guard.pxLoginLink</x>
 
        <!-- Authentication context selector -->
        <x var="ctx=config.security.authContext" if="ctx">:ctx.pxLogged</x>
@@ -103,7 +104,8 @@ class Portlet:
      <!-- First line: the portlet logo, app name an a minimal set of icons -->
      <div class="htp">
        <a href=":tool.computeHomePage()">
-        <img if="cfg.portletShowLogo" src=":url('portletLogo')"/>
+        <img if="cfg.portletShowLogo"
+             src=":url(cfg.cget('portletLogoName', _ctx_))"/>
        </a>
        <div>::_('app_name')</div>
        <!-- Icons -->
@@ -122,7 +124,7 @@ class Portlet:
 
      <!-- Pages and custom zone -->
      <div class="pzone">
-      <div class="colorZ" style=":'background-color:%s' % cfg.svg.lightColor">
+      <div class="colorZ" style=":f'background-color:{cfg.svg.lightColor}'">
       </div>
       <div class="vflex">
        <!-- Custom links (I & II) -->
@@ -164,7 +166,7 @@ class Portlet:
     px = Px('''
      <div var="collapse=ui.Collapsible.get('portlet', dleft, req);
            toolUrl=tool.url;
-           queryUrl='%s/Search/results' % toolUrl;
+           queryUrl=f'{toolUrl}/Search/results';
            cfg=config.ui;
            currentSearch=req.search;
            currentClass=req.className;
@@ -177,31 +179,32 @@ class Portlet:
 
       <!-- The portlet logo -->
       <div if="cfg.portletShowLogo and not inlaidHeader" class="pzone">
-       <img src=":url('portletLogo')" class="portletLogo"/>
+       <a href=":tool.computeHomePage()" class="portletLogo">
+        <img src=":url(cfg.cget('portletLogoName', _ctx_))"/></a>
       </div>
 
       <!-- One section for every searchable root class -->
       <x for="class_ in rootClasses" if="class_.maySearch(tool, layout)"
          var2="className=class_.name;
-               pside=class_.getCssFor(tool, 'pside')">
+               labelPlural=_(f'{className}_plural');
+               pside=class_.getCssFor(tool, 'pside');
+               indexable=class_.isIndexable();
+               enabled=class_.searchesAreEnabled(_ctx_);
+               viaPopup=None">
 
        <!-- The section content -->
        <div class=":ui.Portlet.getZoneCss(_ctx_)">
 
         <!-- The colored portlet side -->
-        <div if="pside" class=":'colorR %s' % pside"></div>
+        <div if="pside" class=":f'colorR {pside}'"></div>
 
         <!-- Section title (link triggers the default search) -->
         <div class="portletContent"
-             var="searches=class_.getGroupedSearches(tool, _ctx_);
-                  labelPlural=_(className + '_plural');
-                  indexable=class_.isIndexable();
-                  viaPopup=None">
-         <div class="portletTitle">
+             var="searches=class_.getGroupedSearches(tool, _ctx_)">
+         <div class="portletTitle" if="enabled">
           <a if="indexable"
              var="queryParam=searches.default.name if searches.default else ''"
-             href=":'%s?className=%s&amp;search=%s' % \
-                    (queryUrl, className, queryParam)"
+             href=":f'{queryUrl}?className={className}&amp;search={queryParam}'"
              onclick="clickOn(this)"
              class=":'current' if not currentSearch and
                      (currentClass == className) and
@@ -215,7 +218,7 @@ class Portlet:
                     label=None">:class_.pxAdd</div>
 
          <!-- Searches -->
-         <x if="indexable and class_.maySearchAdvanced(tool)">
+         <x if="enabled and indexable and class_.maySearchAdvanced(tool)">
 
           <!-- Live search -->
           <x var="pre=className; liveCss='lsSearch'">:tool.Search.live</x>
@@ -256,8 +259,8 @@ class Portlet:
                   width:|portletWidth|; min-width:|portletMinWidth|;
                   font-size:98%; background-color:|portletBgColor| }
        .portlet a, .portlet a:visited { color: |portletTextColor| }
-       .portletSearch a:hover { background-color:|brightColor|;
-                                color:|linkColor| }
+       .portletSearch a:hover { background-color:|portletHob|;
+                                color:|portletHoc| }
        .portletContent { padding-left: 18px; width: 100% }
        .portletTitle { padding:|portletTPadding|; text-transform:uppercase;
                        font-weight:|portletTWeight|; font-size:|portletTSize| }
@@ -280,7 +283,7 @@ class Portlet:
        input.buttonPortlet { border:0; background-position:|portletBgPos|;
           background-color:transparent; background-size:|portletISize|;
           width:100%; height:|portletAHeight|; color:|portletTextColor|;
-          border-radius:unset; text-align:left; font-size:100% }
+          border-radius:unset; text-align:left; font-size:100%; margin-left:0 }
        .pzone { display:flex; flex-wrap:nowrap; align-items:stretch;
                 border-bottom:|portletSep|; margin-bottom:|portletSepGap|;
                 padding-bottom:|portletSepGap| }

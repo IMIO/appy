@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''
 <ol><li>
 <p>Test du champ kupu<br />A la ligne

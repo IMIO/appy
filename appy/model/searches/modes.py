@@ -20,7 +20,7 @@ E_CUST   = 'This must be a sub-class from appy.model.searches.modes.Custom.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Mode:
-    '''Abstract base class for search modes. A concrete Mode instance is created
+    '''Abstract base class for search modes. A concrete Mode object is created
        every time search results must be computed.'''
 
     # The default mode(s) for displaying instances of any Appy class
@@ -29,11 +29,57 @@ class Mode:
     # All available predefined concrete modes
     concrete = ('list', 'grid', 'calendar')
 
+    # Objects actions
+    pxObjectActions = Px('''
+     <div class=":class_.getSubCss(o, uiSearch)"
+          var="layout='sub';
+               toPopup=target and target.target != '_self';
+               editable=guard.mayEdit(o) and not (popup and toPopup);
+               iconsOnly=class_.getIconsOnly();
+               editPage=o.getDefaultPage('edit');
+               locked=o.Lock.isSet(o, editPage)">
+
+      <!-- Fields on layout "sub" -->
+      <x if="not popup and uiSearch.showActions == 'all'"
+         var2="fields=o.getFields(layout)">
+       <!-- Call cell and not pxRender to avoid having a table -->
+       <x for="field in fields"
+          var2="name=field.name;
+                value=field.getValueIf(o, name, layout)">:field.cell</x>
+      </x>
+
+      <!-- Transitions -->
+      <x if="class_.showTransitions(o, 'result')"
+         var2="workflow=o.getWorkflow()">:workflow.pxTransitions</x>
+
+      <!-- Edit -->
+      <div if="editable" class="ibutton" var2="text=_('object_edit')">
+       <a if="not locked" class="iflex1" target=":target.target"
+          onclick=":target.getOnClick(backHook or ohook)"
+          href=":o.getUrl(sub='edit', page=editPage, nav=navInfo,
+                          popup=toPopup)">
+        <img src=":svg('edit')" class="iconS" title=":text"/>
+       </a>
+       <x if="locked" var2="lockStyle='iconS'; page='main'">::o.Lock.px</x>
+       <div if="not iconsOnly" class="ibutton"
+            onclick="clickPrev(event)">:text</div>
+      </div>
+
+      <!-- Delete -->
+      <div if="not locked and guard.mayDelete(o)" class="ibutton"
+           var2="text=_('object_delete')">
+       <img class="clickable iconS" src=":svg('deleteS')" title=":text"
+            onclick=":o.class_.getDeleteConfirm(o, q, mode.hook)"/>
+       <div if="not iconsOnly" class="ibutton"
+            onclick="this.previousSibling.click()">:text</div>
+      </div>
+     </div>''')
+
     # The list of custom actions that can be triggered on search results
     pxActions = Px('''
      <table>
       <tr><td for="action in actions"
-            var2="multi=action.getMulti('searchResults', mode.outerHook);
+            var2="multi=action.getMulti(mode.backHook, mode.outerHook);
                   field=action; fieldName=field.name;
                   layout='query'">:action.pxRender</td></tr>
      </table>''')
@@ -78,7 +124,7 @@ class Mode:
         '''Gets the i18n text corresponding to mode named p_name'''
         name = class_.__name__.lower()
         name = name.rsplit('_', 1)[0] if '_' in name else name
-        return _('result_mode_%s' % name) if name in Mode.concrete else _(name)
+        return _(f'result_mode_{name}') if name in Mode.concrete else _(name)
 
     @classmethod
     def isGrid(class_, o):
@@ -96,11 +142,10 @@ class Mode:
         # The tool
         self.tool = uiSearch.tool
         # The ID of the tag that will be ajax-filled with search results
-        self.hook = 'searchResults'
+        self.hook = self.backHook = 'searchResults'
         # Matched objects
         self.objects = None
-        # A Batch instance, when only a sub-set of the result set is shown at
-        # once.
+        # A Batch object, when only a sub-set of the result set is shown at once
         self.batch = None
         # Determine result's "emptiness". If a search produces results without
         # any filter, it is considered not being empty. Consequently, a search
@@ -130,7 +175,7 @@ class Mode:
         search = ui.search
         self.rootHook = ui.getRootHook()
         # The search may be triggered via a Ref field
-        io, ifield = search.getRefInfo(tool, nameOnly=False)
+        io, ifield = search.getRefInfo(tool)
         if io:
             self.refObject = io
             self.refField = ifield
@@ -138,9 +183,9 @@ class Mode:
             self.refObject, self.refField = None, None
         # Build the URL allowing to trigger a new search
         if search.name == 'customSearch':
-            part = '&ref=%s:%s' % (io.iid, ifield.name) if io else ''
-            self.newSearchUrl = '%s/Search/advanced?className=%s%s' % \
-                                (tool.url, search.container.name, part)
+            part = f'&ref={io.iid}:{ifield.name}' if io else ''
+            self.newSearchUrl = f'{tool.url}/Search/advanced?className=' \
+                                f'{search.container.name}{part}'
         self.fromRef = bool(ifield)
         # This search may lie within another field (a Ref or a Computed)
         self.inField = (ifield and ('search*' in req.search)) or \
@@ -149,7 +194,7 @@ class Mode:
             # The search is a simple view of objects from a Ref field: inner
             # elements (like checkboxes) must have IDs being similar to the
             # standard view of these objects via the Ref field.
-            self.outerHook = '%s_%s' % (self.refObject.iid, self.refField.name)
+            self.outerHook = f'{self.refObject.iid}_{self.refField.name}'
         else:
             self.outerHook = self.rootHook
 
@@ -159,7 +204,8 @@ class Mode:
         search = self.uiSearch
         name = search.name
         params = {'className': self.class_.name, 'search': name,
-                  'popup': self.popup}
+                  'resultMode': self.__class__.__name__.lower(),
+                  'popup': self.popup }
         # Add initiator-specific params
         if search.initiator:
             initatorParams = search.initiator.getAjaxParams()
@@ -168,9 +214,11 @@ class Mode:
         if self.criteria:
             params['criteria-'] = self.criteria
         # Add the "ref" key if present
-        ref = self.tool.req.ref
-        if ref:
-            params['ref'] = ref
+        req = self.tool.req
+        ref = req.ref
+        if ref: params['ref'] = ref
+        onav = req.onav
+        if onav: params['onav'] = onav
         # Concrete classes may add more parameters
         self.updateAjaxParameters(params)
         # Convert params into a JS dict
@@ -179,8 +227,8 @@ class Mode:
         # a field, this context object is the object containing the field. Else,
         # it is the tool.
         id = name.split(',',1)[0] if ',' in name else 'tool'
-        return "new AjaxData('%s/%s/Search/batchResults', 'POST', %s, '%s')" % \
-               (self.tool.siteUrl, id, params, self.hook)
+        return f"new AjaxData('{self.tool.siteUrl}/{id}/Search/batchResults'," \
+               f"'POST',{params},'{self.hook}')"
 
     def getFiltersEncoded(self):
         '''Gets p_self.filters, whose values are encoded in a form ready to be
@@ -199,7 +247,7 @@ class Mode:
         if not filters: return ''
         r = []
         for k, v in filters.items():
-            r.append('%s:%s' % (k, v))
+            r.append(f'{k}:{v}')
         return ','.join(r)
 
     def updateAjaxParameters(self, params):
@@ -220,8 +268,9 @@ class Mode:
     def getAjaxDataRow(self, o, rhook, **params):
         '''Initializes an AjaxData object on the DOM node corresponding to the
            row displaying info about p_o within the results.'''
-        return "new AjaxData('%s/pxResult','GET',%s,'%s','%s')" % \
-               (o.url, sutils.getStringFrom(params), rhook, self.hook)
+        paramsS = sutils.getStringFrom(params)
+        return f"new AjaxData('{o.url}/pxResult','GET',{paramsS},'{rhook}'," \
+               f"'{self.hook}')"
 
     def getRefUrl(self):
         '''When the search is triggered from a Ref field, this method returns
@@ -231,6 +280,18 @@ class Mode:
     def isSummable(self):
         '''May totals be computed on searh results using this mode ?'''
         return # To be overridden by child classes
+
+    def showActionsFor(self, o):
+        '''Must object actions be shown for this p_o(bject), appearing on search
+           results ?'''
+        return not self.popup and self.uiSearch.showActions and \
+               o.guard.mayAct(o)
+
+    def getObjectIndex(self, o):
+        '''When search results are build on top of a ref, we may want to get and
+           display the object index within the ref.'''
+        if not self.fromRef: return
+        return self.refField.getIndexOf(self.refObject, o, raiseError=False)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class List(Mode):
@@ -270,8 +331,8 @@ class List(Mode):
              var="label=_('object_link_many'); css=ui.Button.getCss(label)"
              value=":label" class=":css"
              style=":svg('linkMany', bg='18px 18px')"
-             onclick=":uiSearch.initiator.jsSelectMany(\
-                   q, mode.sortKey, mode.sortOrder, mode.getFiltersString())"/>
+             onclick=":uiSearch.initiator.jsSelectMany(q, mode.sortKey,
+                        mode.sortOrder, mode.getFiltersString(), req.onav)"/>
      </div>
 
      <!-- Custom actions -->
@@ -312,7 +373,7 @@ class List(Mode):
             self.showSubTitles = req.showSubTitles in ('True', None)
         # Every matched object may be selected via a checkbox
         self.checkboxes = ui.checkboxes
-        self.checkboxesId = self.outerHook + '_objs'
+        self.checkboxesId = f'{self.outerHook}_objs'
         self.cbShown = ui.showCheckboxes()
         self.cbClass = '' if self.cbShown else 'hide'
         self.cbChecked = eval(req.cbChecked or 'False')
@@ -331,8 +392,7 @@ class List(Mode):
           {'start': self.batch.start, 'filters': self.getFiltersEncoded(),
            'sortKey': self.sortKey or '', 'sortOrder': self.sortOrder,
            'checkboxes': self.checkboxes, 'checkboxesId': self.checkboxesId,
-           'total': self.batch.total,
-           'resultMode': self.__class__.__name__.lower()})
+           'total': self.batch.total})
 
     def getMainCss(self, c):
         '''Get the CSS class(es) to apply to the main tag'''
@@ -341,7 +401,7 @@ class List(Mode):
             # Use the CSS class(es) defined at the Search level, plus a
             # potential CSS class generated from column layouts.
             if c.genName:
-                r = '%s %s' % (r, c.genName)
+                r = f'{r} {c.genName}'
         else:
             # Use the CSS class(es) as defined on the tied class
             r = c.class_.getCssFor(c.tool, 'list', add=c.genName)
@@ -390,20 +450,19 @@ class List(Mode):
            p_number within the list of results.'''
         if mayAdd is None or mayAdd.io is None:
             # A standard search nav string
-            r = 'search.%s.%s.%d.%d' % (self.class_.name, self.uiSearch.name,
-                                        self.batch.start + number,
-                                        self.batch.total)
+            r = f'search.{self.class_.name}.{self.uiSearch.name}.' \
+                f'{self.batch.start + number}.{self.batch.total}'
         else:
             # We are in the context of creating an object from a search: the nav
             # string must be converted to a ref-based string.
             total = mayAdd.io.countRefs(mayAdd.ifield.name)
-            r = 'ref.%d.%s.0.%d' % (mayAdd.io.iid, mayAdd.ifield.name, total)
+            r = f'ref.{mayAdd.io.iid}.{mayAdd.ifield.name}.0.{total}'
         return r
 
     def getRefUrl(self):
         '''See Mode::getRefUrl's docstring'''
         o = self.refObject
-        return '%s/view?page=%s' % (o.url, self.refField.page.name)
+        return f'{o.url}/view?page={self.refField.page.name}'
 
     def isSummable(self):
         '''May totals be computed on searh results using this mode ?'''
@@ -422,7 +481,7 @@ class Grid(List):
     px = Px('''
      <!-- Filters -->
      <div var="search=uiSearch.search" if="search.showFilters" class="gfilters"
-          style=":'justify-content:%s' % search.gridFiltersAlign">
+          style=":f'justify-content:{search.gridFiltersAlign}'">
       <div for="field, filterPx in mode.columns.getFiltered()">
        <label>:_(field.labelId)</label><x>:filterPx</x>
       </div>
@@ -438,7 +497,7 @@ class Grid(List):
        <table class="thumbtable" if="showFields">
         <tr var="@currentNumber=currentNumber + 1" valign="top"
             for="column in mode.columns"
-            var2="field=column.field; backHook='searchResults'">
+            var2="field=column.field; backHook=mode.backHook">
          <td if="field.name == 'title'" colspan="2">:field.pxResult</td>
          <x if="field.name != 'title'">
           <td><label lfor=":field.name">::_('label', field=field)</label></td>
@@ -580,7 +639,7 @@ class Calendar(Mode):
         # If filters are defined from a list mode, get it
         self.filters = self.class_.getFilters(self.tool)
         # The name of the index to use to restrict the search to the currently
-        # shown month. If p_self.klass defines a Computed indexed TextIndex
+        # shown month. If p_self.class_ defines a Computed indexed TextIndex
         # field named "months", this index will be used. Else, index "date" will
         # be used. These 2 indexes are described hereafter.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -610,14 +669,14 @@ class Calendar(Mode):
         #          | (defined by field "date").
         #          |
         #          | Because this list of crossing months is relatively complex
-        #          | to produce, Appy provides a function that computes it:
+        #          | to produce, Appy provides a classmethod that computes it:
         #          |
-        #          |           appy.shared.dates.getCalendarMonths
+        #          |           appy.utils.dates.Month.getCrossedBy
         #          |
         #          | Here is a complete example of a Appy class using index
         #          | "months".
         #          |
-        #          | from appy.shared.dates import getCalendarMonths
+        #          | from appy.utils.dates import Month
         #          |
         #          | class Event:
         #          |     ...
@@ -629,11 +688,11 @@ class Calendar(Mode):
         #          |     def computeMonths(self):
         #          |         '''Compute the months crossed by p_self'''
         #          |         # p_self.endDate may be None
-        #          |         return ' '.join(getCalendarMonths(self.date,
-        #          |                                           self.endDate))
+        #          |         return ' '.join(Month.getCrossedby(self.date,
+        #          |                                            self.endDate))
         #          |
-        #          |     months  = Computed(method=computeMonths,
-        #          |                        indexed='TextIndex', show=False)
+        #          |     months  = Computed(method=computeMonths, indexed=True,
+        #          |                        indexType='TextIndex', show=False)
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.monthIndex = self.getMonthIndex()
 
@@ -680,21 +739,26 @@ class Calendar(Mode):
         #      key "19751211"  >  value ("start+", o)
         #      key "19751212"  >  value ("pass", o)
         #      key "19751213"  >  value ("end", o)
-        # ~
-        # Get p_o's start and end dates
-        fmt = Calendar.dayKey
+        #
         start = o.date
-        startKey = start.strftime(fmt)
         end = o.endDate
+        # As a preamble, ignore p_o if it does not crosses interval [gridFirst,
+        # gridLast], which may happen on a view whose timespan is shorter than a
+        # month.
+        if start > gridLast or (end and end < gridFirst): return
+        # Get p_o's start and end dates, formatted as strings
+        fmt = Calendar.dayKey
+        startKey = start.strftime(fmt)
         endKey = end.strftime(fmt) if end else None
         # Shorthand for self.objects
         r = self.objects
         if not endKey or endKey == startKey:
-            # A single entry must be added for p_obj, at the start date
+            # A single entry must be added for p_o, at the start date
             self.addEntry(startKey, ('start', o))
         else:
-            # Insert one event per day, provided the events are in the grid
-            # ~
+            # p_o spans several days. Insert one event per day, provided the
+            # events are in the grid.
+            #
             # Add one entry at the start day
             if start >= gridFirst:
                 self.addEntry(startKey, ('start+', o))
@@ -720,9 +784,15 @@ class Calendar(Mode):
            by p_grid.'''
         # # The first date in the p_grid, that may be earlier than the p_first
         # day of the month.
-        gridFirst = grid[0][0]
+        gridFirst = grid[0]
+        gridLast = grid[-1]
+        if isinstance(gridFirst, list):
+            # The grid may be linear (ie, a week view, or a list of lists (ie a
+            # month view).
+            gridFirst = gridFirst[0]
+            gridLast = gridLast[-1]
         # The last date in the grid, calibrated
-        gridLast = DateTime(grid[-1][-1].strftime('%Y/%m/%d 23:59:59'))
+        gridLast = DateTime(gridLast.strftime('%Y/%m/%d 23:59:59'))
         # Get the search parameters being specific to the range of dates
         params = {'sortBy':'date', 'sortOrder':'asc'}
         if self.monthIndex == 'date':
@@ -743,7 +813,7 @@ class Calendar(Mode):
         for o in r:
             self.addEntries(o, gridFirst, gridLast)
 
-    def dumpObjectsAt(self, date):
+    def dumpObjectsAt(self, date, hour, render):
         '''Returns info about the object(s) that must be shown in the cell
            corresponding to p_date.'''
         # There may be no object dump at this date
@@ -752,6 +822,7 @@ class Calendar(Mode):
         # Objects exist
         r = []
         types = self.entryTypes
+        houred = render != 'month'
         for entryType, o in self.objects[dateStr]:
             # Dump the event hour and title. The back hook allows to refresh the
             # whole calendar view when coming back from the popup.
@@ -759,15 +830,25 @@ class Calendar(Mode):
             # What CSS class(es) to apply ?
             css = f'calEvt {eType.css}' if eType.css else 'calEvt'
             # Show start and/or end hour ?
-            eHour = sHour = ''
+            sHour = eHour = ''
             if eType.start:
-                sDate = o.date.strftime(self.hourFormat)
+                start = o.date
+                # Bypass an houred entry if it is not the appropriate p_hour
+                if houred and (hour is None or start.hour() != hour): continue
+                sDate = start.strftime(self.hourFormat)
                 sHour = f'<td width="2em">{sDate}</td>'
             if eType.end:
-                endDate = o.endDate
-                if endDate:
-                    endS = endDate.strftime(self.hourFormat)
+                end = o.endDate
+                if end:
+                    # Bypass an houred entry if it is not the appropriate p_hour
+                    if houred and not sHour and \
+                       (hour is None or end.hour() != hour): continue
+                    endS = end.strftime(self.hourFormat)
                     eHour = f' <abbr title="{endS}">¬</abbr>'
+            # Bypass an unhoured entry if it is not the appropriate p_hour
+            if houred and not eType.start and not eType.end and \
+               hour is not None:
+                continue
             # Display indicators that the event spans more days
             past = '⇠ ' if eType.past else ''
             future = ' ⇢' if eType.future else ''
@@ -775,8 +856,8 @@ class Calendar(Mode):
             title = Title.get(o, target=self.target,
                               backHook=f'{self.tool.iid}calendar', maxChars=24)
             # Display a "repetition" icon if the object is part of a series
-            hasSuccessor = o.successor
-            hasPredecessor = o.predecessor
+            hasSuccessor = getattr(o, 'successor', None)
+            hasPredecessor = getattr(o, 'predecessor', None)
             if hasSuccessor or hasPredecessor:
                 # For the last event of a series, show a more stressful icon
                 name = 'repeated' if hasSuccessor else 'repeated_last'
@@ -784,9 +865,22 @@ class Calendar(Mode):
                        f'title="{o.translate(name)}"/>'
             else:
                 icon = ''
+            # Get object actions if they must be shown
+            if self.showActionsFor(o):
+                ctx = o.traversal.context
+                ctx.o = o
+                ctx.target = self.target
+                ctx.backHook = self.backHook
+                # Spare space: force transitions to be rendered as icons
+                ctx.forceIcons = True
+                ctx.navInfo = None
+                actions = self.pxObjectActions(ctx)
+            else:
+                actions = ''
             # Produce the complete entry
             r.append(f'<table class="{css}"><tr valign="top">{sHour}<td>' \
-                     f'{past}{title}{future}{eHour}{icon}</td></tr></table>')
+                     f'{past}{title}{future}{eHour}{icon}{actions}</td></tr>' \
+                     f'</table>')
         return '\n'.join(r)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

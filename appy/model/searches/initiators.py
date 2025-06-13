@@ -32,26 +32,28 @@ class RefInitiator(Initiator):
         # - "add"  if those objects will be added to the already tied ones.
         self.mode = mode
         # "hook" is the ID of the initiator field's XHTML tag
-        self.hook = '%d_%s' % (o.iid, fieldName)
+        self.hook = f'{o.iid}_{fieldName}'
         # The root Ajax hook ID in the popup
-        self.popupHook = '%s_popup' % self.hook
+        self.popupHook = f'{self.hook}_popup'
 
     def showCheckboxes(self):
         '''We must show object checkboxes if self.field is multivalued: indeed,
            in this case, several objects can be selected in the popup.'''
         return self.field.isMultiValued()
 
-    def jsSelectOne(self, q, cbId):
+    def jsSelectOne(self, q, cbId, onav):
         '''Generates the Javascript code to execute when a single object is
            selected in the popup.'''
-        return 'onSelectObject(%s,%s,%s)' % \
-               (q(cbId), q(self.hook), q(self.o.iid))
+        onav = q(onav) if onav else 'null'
+        return 'onSelectObject(%s,%s,%s,null,%s)' % \
+               (q(cbId), q(self.hook), q(self.o.iid), onav)
 
-    def jsSelectMany(self, q, sortKey, sortOrder, filters):
+    def jsSelectMany(self, q, sortKey, sortOrder, filters, onav):
         '''Generates the Javascript code to execute when several objects are
            selected in the popup.'''
-        return 'onSelectObjects(%s,%s,%s,%s,null,%s,%s,%s)' % \
-          (q(self.popupHook), q(self.hook), q(self.o.url), q(self.mode), \
+        onav = q(onav) if onav else 'null'
+        return 'onSelectObjects(%s,%s,%s,%s,%s,%s,%s,%s)' % \
+          (q(self.popupHook), q(self.hook), q(self.o.url), q(self.mode), onav,
            q(sortKey or ''), q(sortOrder), q(filters))
 
     def getAjaxParams(self):
@@ -84,13 +86,13 @@ class TemplateInitiator(Initiator):
            selected.'''
         return
 
-    def jsSelectOne(self, q, cbId):
+    def jsSelectOne(self, q, cbId, onav):
         '''Generates the Javascript code to execute when a single object is
            selected in the popup.'''
         return 'onSelectTemplateObject(%s,%s,%s)' % \
                (q(cbId), q(self.formName), q(self.insert))
 
-    def jsSelectMany(self, q, sortKey, sortOrder, filters):
+    def jsSelectMany(self, q, sortKey, sortOrder, filters, onav):
         raise Exception(self.MANY_ERROR)
 
     def getAjaxParams(self):

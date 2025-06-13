@@ -32,7 +32,7 @@ class Deploy(Program):
             longest = max(longest, len(command))
         # Dump help about every command
         for command, text in COMMANDS.items():
-            r.append('"%s" - %s' % (command.ljust(longest), text))
+            r.append(f'"{command.ljust(longest)}" - {text}')
         return ' -=- '.join(r)
 
     # Help messages (and message parts)
@@ -54,15 +54,17 @@ class Deploy(Program):
                    'separated list of targets containing no space, ie, ' \
                    '"dev,acc,prod". You can also specify term "ALL" to ' \
                    'denote all targets.'
-    HELP_OPTIONS = 'Some commands acccept options. Options must be ' \
-                   'specified as a comma-separated list of names. [Options ' \
+    HELP_OPTIONS = 'Some commands accept options. Options must be specified ' \
+                   'as a comma-separated list of names. [Options ' \
                    'for command "install"] "lo" (%s) - %s. ' \
                    '[Options for command "site"] "lo" (if not executed via ' \
                    'command "install", this option can still be applied when ' \
                    'launching command "site" on some target), "init" (%s) - ' \
                    '%s, "apache" (create an Apache virtual host). [Options ' \
                    'for command "update"] "init" & "apache" (see above), ' \
-                   'still available if not applied via the "site" command.' % \
+                   'still available if not applied via the "site" command, ' \
+                   'and "clean" - Remove, on the target site\'s lib folder ' \
+                   'and sub-folders, *.pyc files.' % \
                    (DEB_O, INIT_D % ('lo', LO_SV),
                     DEB_O, INIT_D % (SITE_NAME, SITE_SV))
     HELP_METHOD  = '["update" command only] When restarting a target after ' \
@@ -80,7 +82,7 @@ class Deploy(Program):
       'list'   : ('sync',),
       'install': ('lo',),
       'site'   : ('lo', 'init', 'apache'),
-      'update' : ('init', 'apache'),
+      'update' : ('init', 'apache', 'clean'),
     }
 
     # Error messages

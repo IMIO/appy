@@ -2,11 +2,11 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os, os.path, re, stat, shutil, struct, urllib.parse, imghdr, base64, io
+import os, os.path, re, stat, shutil, struct, urllib.parse, base64, io
 
 import appy.pod
 from appy import utils
-from appy.utils import css
+from appy.utils import css, imghdr
 from appy.pod import PodError, getUuid
 from appy.utils.client import Resource
 from appy.model.utils import Object as O
@@ -20,6 +20,9 @@ GS_KO    = 'A PDF file could not be converted into images. Please ensure ' \
            'Ghostscript (gs) is installed on your system and the "gs" ' \
            'program is in the path.'
 PDF_ERR  = 'ConvertImporter error while converting a doc to PDF: %s.'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+n = None
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DocImporter:
@@ -79,8 +82,8 @@ class DocImporter:
     def getImportPath(self):
         '''Gets the path name of the file to dump on disk (within the ODT for
            images, in a temp folder for docs).'''
-        format = self.format
-        if not format or format == 'image':
+        fmt = self.format
+        if not fmt or fmt == 'image':
             at = self.at
             if not at or at.startswith('http') or not os.path.exists(at):
                 # It is not possible yet to determine the format (will be done
@@ -88,8 +91,8 @@ class DocImporter:
                 self.format = ''
             else:
                 self.format = os.path.splitext(at)[1][1:]
-        fileName = '%s.%s' % (getUuid(), self.format)
-        return os.path.abspath('%s/%s' % (self.importFolder, fileName))
+        fileName = f'{getUuid()}.{self.format}'
+        return os.path.abspath(f'{self.importFolder}/{fileName}')
 
     def moveFile(self):
         '''In the case "self.at" was used, we may want to move the file at
@@ -107,6 +110,7 @@ class OdtImporter(DocImporter):
     # POD manages page breaks by inserting a paragraph whose style inserts a
     # page break before or after it.
     pageBreakTemplate = '<text:p text:style-name="podPageBreak%s"></text:p>'
+    pageBreakCustom = '<text:p text:style-name="%s"></text:p>'
     pageBreaks = O(before=pageBreakTemplate % 'Before',
                    after=pageBreakTemplate % 'After',
                    beforeDuplex=pageBreakTemplate % 'BeforeDuplex')
@@ -116,10 +120,11 @@ class OdtImporter(DocImporter):
         self.pageBreakBefore = pageBreakBefore
         self.pageBreakAfter = pageBreakAfter
 
-    def getPageBreakAfterType(self):
-        '''After sub-document insertion, must we insert a page break of type
-           "after" or "before"?'''
-        if self.pageBreakAfter == 'duplex':
+    def addPageBreakAfter(self):
+        '''After sub-document insertion, must we insert a page break ?'''
+        typE = None
+        breaK = self.pageBreakAfter
+        if breaK == 'duplex':
             # Read metadata about the sub-ODT, containing its number of pages
             metadata = MetadataReader(self.importPath).run()
             odd = (metadata.pagecount % 2) == 1
@@ -127,28 +132,37 @@ class OdtImporter(DocImporter):
             # page break, while inserting a page break of type "after" will only
             # insert a page break if additional content is found after the
             # paragraph onto which the page break style is applied.
-            r = odd and 'beforeDuplex' or 'after'
-        else:
-            r = 'after'
-        return r
+            typE = 'beforeDuplex' if odd else 'after'
+        elif breaK is True:
+            typE = 'after'
+        elif breaK:
+            # A specific style must be generated, that mentions a custom page
+            # style that inherits from style "podPageBreakBefore".
+            generator = self.renderer.stylesManager.stylesGenerator
+            style = generator.addPageBreakStyle('podPageBreakBefore', breaK)
+            styleDef = self.pageBreakCustom % style.name
+            self.res = f'{self.res}{styleDef}'
+        if typE:
+            # One of the standard page breaks as defined in OdtImport.pageBreaks
+            # must be used.
+            self.res = f'{self.res}{getattr(self.pageBreaks, typE)}'
 
     def run(self):
         '''Import the content of a sub-ODT document'''
         # Insert a page break before importing the doc if needed
-        if self.pageBreakBefore: self.res += self.pageBreaks.before
+        if self.pageBreakBefore:
+            self.res = f'{self.res}{self.pageBreaks.before}'
         # Import the external odt document
         name = getUuid(removeDots=True, prefix='PodSect')
-        self.res += '<%s:section %s:name="%s">' \
-                    '<%s:section-source %s:href="file://%s" ' \
-                    '%s:filter-name="writer8"/></%s:section>' % (
-                        self.textNs, self.textNs, name, self.textNs,
-                        self.linkNs, self.importPath, self.textNs, self.textNs)
-        # Insert (a) page break(s) after importing the doc if needed
-        if self.pageBreakAfter:
-            type = self.getPageBreakAfterType()
-            self.res += getattr(self.pageBreaks, type)
-            # Note that if there is no more document content after the last page
-            # break, it will not be visible.
+        t = self.textNs
+        self.res = f'{self.res}<{t}:section {t}:name="{name}">' \
+                   f'<{t}:section-source {self.linkNs}:href="file://' \
+                   f'{self.importPath}" {t}:filter-name="writer8"/>' \
+                   f'</{t}:section>'
+        # Possibly insert (a) page break(s) after importing the doc if needed
+        self.addPageBreakAfter()
+        # Note that if there is no more document content after the last page
+        # break, it will not be visible.
         return self.res
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -170,7 +184,7 @@ class PodImporter(DocImporter):
         # machine. Then, when we will, via the OdtImporter that will be called
         # just after this PodImporter, specify the sub-pod to include, the
         # distant LO will be able to read it from is own disk.
-        return stream and 'in' or default
+        return 'in' if stream else default
 
     def init(self, context, pageBreakBefore, pageBreakAfter,
              managePageStyles, resolveFields, forceOoCall):
@@ -184,17 +198,18 @@ class PodImporter(DocImporter):
         self.stream = self.mustStream()
         # Force LO call if:
         # (a) fields must be resolved ;
-        # (b) if we are inserting sub-documents in "duplex" mode. Indeed, in
-        #     this latter case, we will need to know the exact number of pages
-        #     for every sub-document. We will call LO for that purpose: it will
-        #     produce correct document statistics within meta.xml, which is not
-        #     the case for an ODT document produced by POD without forcing OO
-        #     call (stats are those from the document template and not from the
-        #     pod result) ;
+        # (b) if we are inserting sub-documents in "duplex" mode (or, also, with
+        #     a custom page style). Indeed, in duplex mode, we will need to know
+        #     the exact number of pages for every sub-document. We will call LO
+        #     for that purpose: it will produce correct document statistics
+        #     within meta.xml, which is not the case for an ODT document
+        #     produced by POD without forcing OO call (stats are those from the
+        #     document template and not from the pod result) ;
         # (c) LO is on a distant machine. In that case, forcing OO call allows
         #     to transmit the sub-pod to the distant machine, ready to be
-        #     incorpotared by the distant LO in the main pod.
-        if pageBreakAfter == 'duplex' or resolveFields or self.stream == 'in':
+        #     incorporated by the distant LO in the main pod.
+        if isinstance(pageBreakAfter, str) or resolveFields or \
+            self.stream == 'in':
             force = True
         else:
             # Inherit from the parent renderer's value or get a specific value
@@ -215,7 +230,7 @@ class PodImporter(DocImporter):
         # must be at the root of the OS temp folder.
         stream = self.stream
         base = getOsTempFolder() if stream == 'in' else self.getImportFolder()
-        resOdt = os.path.join(base, '%s.odt' % getUuid())
+        resOdt = os.path.join(base, f'{getUuid()}.odt')
         # The POD template is in self.importPath
         template = self.importPath
         # Re-use an existing renderer if we have one that has already generated
@@ -236,7 +251,7 @@ class PodImporter(DocImporter):
         renderer.run()
         # The POD result is in "resOdt". Import it into the main POD result
         # using an OdtImporter.
-        odtImporter = OdtImporter(None, resOdt, 'odt', self.renderer)
+        odtImporter = OdtImporter(n, resOdt, 'odt', self.renderer)
         odtImporter.init(self.pageBreakBefore, self.pageBreakAfter)
         return odtImporter.run()
 
@@ -259,14 +274,14 @@ class PdfImporter(DocImporter):
         device = 'png16m'
         ext = PdfImporter.gsDevices[device]
         dpi = '125'
-        cmd = ['gs', '-dSAFER', '-dNOPAUSE', '-dBATCH', '-sDEVICE=%s' % device,
-               '-r%s' % dpi, '-dTextAlphaBits=4', '-dGraphicsAlphaBits=4',
-               '-sOutputFile=%s/%s%%d.%s' % (imagesFolder, imagePrefix, ext),
+        cmd = ['gs', '-dSAFER', '-dNOPAUSE', '-dBATCH', f'-sDEVICE={device}',
+               f'-r{dpi}', '-dTextAlphaBits=4', '-dGraphicsAlphaBits=4',
+               f'-sOutputFile={imagesFolder}/{imagePrefix}%d.{ext}',
                self.importPath]
         utils.executeCommand(cmd)
         # Check that at least one image was generated
         succeeded = False
-        firstImage = '%s1.%s' % (imagePrefix, ext)
+        firstImage = f'{imagePrefix}1.{ext}'
         for fileName in os.listdir(imagesFolder):
             if fileName == firstImage:
                 succeeded = True
@@ -277,12 +292,11 @@ class PdfImporter(DocImporter):
         i = 0
         while not noMoreImages:
             i += 1
-            nextImage = '%s/%s%d.%s' % (imagesFolder, imagePrefix, i, ext)
+            nextImage = f'{imagesFolder}/{imagePrefix}{i}.{ext}'
             if os.path.exists(nextImage):
                 # Use internally an Image importer for doing this job
-                imgImporter = ImageImporter(None, nextImage, ext, self.renderer)
-                imgImporter.init('as-char', True, None, None, 'page',
-                                 None, True, None)
+                imgImporter = ImageImporter(n, nextImage, ext, self.renderer)
+                imgImporter.init('as-char',True,n,n,'page','page',n,True,n)
                 self.res += imgImporter.run()
                 os.remove(nextImage)
             else:
@@ -290,15 +304,20 @@ class PdfImporter(DocImporter):
         os.rmdir(imagesFolder)
         return self.res
 
-    # Other useful gs commands -------------------------------------------------
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                       Other useful gs commands
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     # Convert a PDF from colored to grayscale
     #gs -sOutputFile=grayscale.pdf -sDEVICE=pdfwrite
     #   -sColorConversionStrategy=Gray -dProcessColorModel=/DeviceGray
     #   -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH colored.pdf
+
     # Downsample inner images to produce a smaller PDF
     #gs -sOutputFile=smaller.pdf -sDEVICE=pdfwrite
     #   -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen
     #   -dNOPAUSE -dBATCH some.pdf
+
     # The "-dPDFSETTINGS=/screen is a shorthand for:
     #-dDownsampleColorImages=true \
     #-dDownsampleGrayImages=true \
@@ -390,14 +409,14 @@ class ImageImporter(DocImporter):
     WRONG_ANCHOR = 'Wrong anchor. Valid values for anchors are: %s.'
 
     # The folder, within an unzipped ODF file, containing images
-    pictFolder = '%sPictures%s' % (os.sep, os.sep)
+    pictFolder = f'{os.sep}Pictures{os.sep}'
 
     # Path of a replacement image, to use when the image to import is not found
     imageNotFound = os.path.join(os.path.dirname(appy.pod.__file__),
                                  'imageNotFound.jpg')
 
     # Regular expression for finding orientation within EXIF meta-data
-    orientationRex = re.compile('exif:Orientation\s*=\s*(\d+)')
+    orientationRex = re.compile(r'exif:Orientation\s*=\s*(\d+)')
 
     def isImage(self, response):
         '''Cheks that the p_response received after a HTTP GET supposed to
@@ -465,33 +484,37 @@ class ImageImporter(DocImporter):
         return os.path.join(self.tempFolder, 'unzip', 'Pictures')
 
     def moveFile(self):
-        '''Copies file at self.at into the ODT file at self.importPath'''
+        '''Copies file at p_self.at into the ODT file at p_self.importPath'''
         at = self.at
         importPath = self.importPath
         # Has this image already been imported ?
         for imagePath, imageAt in self.fileNames.items():
             if imageAt == at: # Yes
                 i = importPath.rfind(self.pictFolder) + 1
-                return importPath[:i] + imagePath
+                return f'{importPath[:i]}{imagePath}'
         # The image has not already been imported: copy it
+        r = None
         if not at.startswith('http'):
+            # A file on disk
             shutil.copy(at, importPath)
+            r = importPath
+        else:
+            # The image has (maybe) been retrieved from a HTTP GET
+            response = getattr(self, 'httpResponse', None)
+            if response:
+                # Retrieve the image format
+                fmt = response.headers['Content-Type']
+                if fmt in utils.mimeTypesExts:
+                    # At last, I can get the file format
+                    self.format = utils.mimeTypesExts[fmt]
+                    importPath = f'{importPath}{self.format}'
+                    with open(importPath, 'wb') as f:
+                        f.write(response.body)
+                    r = importPath
+        if r:
             # Ensure we can modify the image (with ImageMagick)
-            os.chmod(importPath, stat.S_IREAD | stat.S_IWRITE)
-            return importPath
-        # The image has (maybe) been retrieved from a HTTP GET
-        response = getattr(self, 'httpResponse', None)
-        if response:
-            # Retrieve the image format
-            format = response.headers['Content-Type']
-            if format in utils.mimeTypesExts:
-                # At last, I can get the file format
-                self.format = utils.mimeTypesExts[format]
-                importPath += self.format
-                f = open(importPath, 'wb')
-                f.write(response.body)
-                f.close()
-                return importPath
+            os.chmod(r, stat.S_IREAD | stat.S_IWRITE)
+            return r
 
     def manageExif(self):
         '''Read, with ImageMagick, EXIF metadata in the image, and apply a
@@ -506,8 +529,8 @@ class ImageImporter(DocImporter):
                 #code = int(match.group(1)) # "auto-orient" manages all codes
                 utils.ImageMagick.convert(path, '-auto-orient')
 
-    def init(self, anchor, wrapInPara, size, sizeUnit, maxWidth, cssAttrs,
-             keepRatio, convertOptions):
+    def init(self, anchor, wrapInPara, size, sizeUnit, maxWidth, maxHeight,
+             cssAttrs, keepRatio, convertOptions):
         '''ImageImporter-specific constructor'''
         # Initialise anchor
         if anchor not in self.anchorTypes:
@@ -516,9 +539,13 @@ class ImageImporter(DocImporter):
         self.wrapInPara = wrapInPara
         self.size = size
         self.sizeUnit = sizeUnit
+        pageLayout = self.renderer.stylesManager.pageLayout
         if maxWidth == 'page':
-            maxWidth = self.renderer.stylesManager.pageLayout.getWidth()
+            maxWidth = pageLayout.getWidth()
         self.maxWidth = maxWidth
+        if maxHeight == 'page':
+            maxHeight = pageLayout.getHeight()
+        self.maxHeight = maxHeight
         self.keepRatio = keepRatio
         self.convertOptions = convertOptions
         # CSS attributes
@@ -550,6 +577,27 @@ class ImageImporter(DocImporter):
         else:
             self.image = Image(self.importPath, self.format)
 
+    def applyMax(self, width, height):
+        '''Return a tuple (width, height), potentially modified w.r.t. p_width
+           and p_height, to take care of p_self.maxWidth & p_self.maxHeight.'''
+        # Apply max width
+        maxW = self.maxWidth
+        if maxW and width > maxW:
+            ratio = maxW / width
+            width = maxW
+            # Even if the width/height ratio must not be kept, in this case,
+            # nevertheless apply it.
+            height *= ratio
+        # Apply max height
+        maxH = self.maxHeight
+        if maxH and height > maxH:
+            ratio = maxH / height
+            height = maxH
+            # Even if keepRatio is False, in that case, nevertheless apply the
+            # ratio on height, too.
+            width *= ratio
+        return width, height
+
     def getImageSize(self):
         '''Get or compute the image size and returns the corresponding ODF
            attributes specifying image width and height expressed in cm.'''
@@ -557,7 +605,7 @@ class ImageImporter(DocImporter):
         width, height = self.image.width, self.image.height
         keepRatio = self.keepRatio
         if self.size:
-            # Apply a percentage when self.sizeUnit is 'pc'
+            # Apply a percentage when p_self.sizeUnit is 'pc'
             if self.sizeUnit == 'pc':
                 # If width or height could not be computed, it is impossible
                 if not width or not height: return ''
@@ -569,12 +617,17 @@ class ImageImporter(DocImporter):
                 width = width * ratioW
                 height = height * ratioH
             else:
-                # Get, from self.size, required width and height, and convert
+                # Get, from p_self.size, required width and height, and convert
                 # it to cm when relevant.
                 w, h = self.size
                 if self.sizeUnit == 'px':
-                    w = float(w) / css.px2cm
-                    h = float(h) / css.px2cm
+                    try:
+                        w = float(w) / css.px2cm
+                        h = float(h) / css.px2cm
+                    except ValueError:
+                        # Wrong values: use v_width and v_height
+                        w = width
+                        h = height
                 # Use (w, h) as is if we don't care about keeping image ratio or
                 # if we couldn't determine image's width or height.
                 if (not width or not height) or not keepRatio:
@@ -586,17 +639,11 @@ class ImageImporter(DocImporter):
                     width *= ratio
                     height *= ratio
         if not width or not height: return ''
-        # Take care of max width if specified
-        maxWidth = self.maxWidth
-        if maxWidth and (width > maxWidth):
-            ratio = maxWidth / width
-            width = maxWidth
-            # Even if keepRatio is False, in that case, nevertheless apply the
-            # ratio on heigth, too.
-            height *= ratio
+        # Take care of max width & height if specified
+        width, height = self.applyMax(width, height)
         # Return the ODF attributes
         s = self.svgNs
-        return ' %s:width="%fcm" %s:height="%fcm"' % (s, width, s, height)
+        return f' {s}:width="{width:.6f}cm" {s}:height="{height:.6f}cm"'
 
     def run(self):
         # Some shorcuts for the used xml namespaces
@@ -611,7 +658,7 @@ class ImageImporter(DocImporter):
         floatValue = getattr(self.cssAttrs, 'float', None)
         if floatValue:
             floatValue = floatValue.value.capitalize()
-            styleInfo = '%s:style-name="podImage%s" ' % (d, floatValue)
+            styleInfo = f'{d}:style-name="podImage{floatValue}" '
             self.anchor = 'char'
         else:
             styleInfo = ''
@@ -621,16 +668,15 @@ class ImageImporter(DocImporter):
         if self.renderer.templateType == 'ods':
             anchor = ''
         else:
-            anchor = ' %s:anchor-type="%s"' % (t, self.anchor)
-        image = '<%s:frame %s%s:name="%s" %s:z-index="0" %s%s>' \
-                '<%s:image %s:type="simple" %s:show="embed" %s:href="%s" ' \
-                '%s:actuate="onLoad"/></%s:frame>' % \
-                (d, styleInfo, d, name, d, anchor, self.getImageSize(), d, x, x,
-                 x, imagePath, x, d)
+            anchor = f' {t}:anchor-type="{self.anchor}"'
+        image = f'<{d}:frame {styleInfo}{d}:name="{name}" {d}:z-index="0" ' \
+                f'{anchor}{self.getImageSize()}><{d}:image {x}:type="simple" ' \
+                f'{x}:show="embed" {x}:href="{imagePath}" ' \
+                f'{x}:actuate="onLoad"/></{d}:frame>'
         if hasattr(self, 'wrapInPara') and self.wrapInPara:
-            style = isinstance(self.wrapInPara, str) and \
-                    (' text:style-name="%s"' % self.wrapInPara) or ''
-            image = '<%s:p%s>%s</%s:p>' % (t, style, image, t)
+            style = f' text:style-name="{self.wrapInPara}"' \
+                    if isinstance(self.wrapInPara, str) else ''
+            image = f'<{t}:p{style}>{image}</{t}:p>'
         self.res += image
         return self.res
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

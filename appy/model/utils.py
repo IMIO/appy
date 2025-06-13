@@ -2,7 +2,9 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import importlib.util
+import importlib.util, sys, copy
+
+from appy.utils import formatNumber
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def importModule(name, fileName):
@@ -48,7 +50,7 @@ class Object:
     def __repr__(self):
         '''A compact, string representation of this object for debugging
            purposes.'''
-        r = '<O '
+        r = '‹O '
         for name, value in self.__dict__.items():
             # Avoid infinite recursion if p_self it auto-referenced
             if value == self: continue
@@ -59,10 +61,10 @@ class Object:
                 except TypeError:
                     pass
             try:
-                r += '%s=%s ' % (name, v)
+                r = f'{r}{name}={v} '
             except UnicodeDecodeError:
-                r += '%s=<encoding problem> ' % name
-        return r.strip() + '>'
+                r = f'{r}{name}=--encoding problem-- '
+        return f'{r.strip()}›'
 
     def __bool__(self): return bool(self.__dict__)
     def d(self): return self.__dict__
@@ -90,27 +92,79 @@ class Object:
         return
 
     def __eq__(self, other):
-        '''Equality between objects is, like standard Python dicts, based on
-           equality of all their attributes and values.'''
+        '''Equality between Object instances is, like standard Python dicts,
+           based on equality of all their attributes and values.'''
         if isinstance(other, Object):
             return self.__dict__ == other.__dict__
         return False
 
-    def update(self, other):
+    def update(self, other, deeP=False):
         '''Set information from p_other (another Object instance or a dict) into
            p_self.'''
         other = other.__dict__ if isinstance(other, Object) else other
-        for k, v in other.items(): setattr(self, k, v)
+        for k, v in other.items():
+            if deeP:
+                # Make a deep copy of p_v
+                if isinstance(v, Object):
+                    val = v.clone(deeP=True)
+                else:
+                    val = copy.deepcopy(v)
+            else:
+                val = v
+            setattr(self, k, val)
 
-    def clone(self, **kwargs):
+    def clone(self, deeP=False, **kwargs):
         '''Creates a clone from p_self'''
+        # v_r will be a deep copy of p_self if p_deeP is True. deeP's last P is
+        # uppercased to avoid a potential name clash with something that would
+        # be passed in p_kwargs.
         r = self.__class__() # p_self's class may be an Object sub-class
-        r.update(self)
+        r.update(self, deeP=deeP)
         # Cloning can be altered by specifying values in p_kwargs, that will
         # override those from p_self.
         for k, v in kwargs.items():
             r[k] = v
         return r
+
+    def asTable(self, _, prefix='', suffix='', css='small', precision=2,
+                order=None, language=None):
+        '''Build a HTML table from p_self, having this p_css class'''
+        # There will be one row per attribute set on p_self. For each row:
+        # - the 1st column will be represented by a "th" tag and will contain a
+        #   translated text corresponding to the attribute name. This text will
+        #   be built using the translation function passed in the first arg, and
+        #   the i18n label built like this:
+        #
+        #                 <p_prefix><attribute_name><p_suffix>
+        #
+        # - the 2nd column will be represented by a "td" tag and will contain
+        #   the attribute value. If the value is a float, it will be rounded
+        #   with this p_precision (same arg as function "formatNumber" from
+        #   package appy.utils).
+        #
+        # If p_order is passed, it must be a list containing the names of
+        # p_self's attributes, in the order you want them to be dumped in the
+        # table. Every attribute that would not be in this list will be moved at
+        # the end of the table.
+        rows = []
+        # Manage p_order
+        if order is not None:
+            items = [(k, v) for k, v in self.items()]
+            items.sort(key=lambda e: order.index(e[0]) \
+                                     if e[0] in order else sys.maxsize)
+        else:
+            items = self.items()
+        # Dump one row for each attribute in p_self
+        for name, value in items:
+            text = _(f'{prefix}{name}{suffix}', language=language)
+            if isinstance(value, float):
+                val = formatNumber(value, precision=precision)
+            elif not isinstance(value, str):
+                val = str(value)
+            else:
+                val = value
+            rows.append(f'<tr><th>{text}</th><td align="right">{val}</td></tr>')
+        return f'<table class="{css}">{"".join(rows)}</table>'
 
     # Allow this highly manipulated Object class to be picklable
     def __getstate__(self): return self.__dict__
@@ -141,6 +195,17 @@ class Fake:
         '''If p_self.field is an outer field, method m_getField may be called to
            retrieve this outer field when rendering an inner field.'''
         return self.field
+
+    def getShownValue(self):
+        '''Fake variant for Base::getShownValue'''
+        # We don't have enough information for producing this
+        return 'Fake'
+
+    def translate(self, label, field=None):
+        '''Fake variant for Base::translate'''
+        return self.field.name
+
+    def allows(self, perm): return True
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Hack:
@@ -218,6 +283,42 @@ class Hack:
             print(Hack.H_PATCHED % (len(patched), pName, cName,
                                     ', '.join(patched)))
             print(Hack.H_ADDED % (len(added), pName, cName, ', '.join(added)))
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Cloner:
+    '''Creates Field objects as clones of Base Field objects'''
+
+    # By default, appy.model.base.Base fields are inherited by any other Appy
+    # class (Tool, Translation, etc) as well as any Appy class from any app.
+    # This may pose problems. Firstly, the container class as mentioned in such
+    # commmon Field objects will be wrong. Functionalities based on it, like
+    # recomputing an index from the Admin Zone > Model page will produce wrong
+    # results. Moreover, m_update methods from app classes may update Field
+    # objects: the develper may no realize that his changes will be propagated
+    # to all classes.
+
+    # Consequently, when generating the model for an app, Base fields must be
+    # cloned in every class.
+
+    @classmethod
+    def clone(class_, field, clonePage=True):
+        '''Create and return a clone for this Base p_field'''
+        # The Field and sub-classes' constructors have all different attributes;
+        # moreover, some of them process these attributes in some way. In order
+        # to avoid running these constructors, the approach implemented here for
+        # cloning a field is mechanical:
+        # (1) an instance class Object is created ;
+        # (2) this instance's __class__ is replaced with the class from the
+        #     field to clone ;
+        # (3) This instance's __dict__ is popuplated based on the field to
+        #     clone's __dict__ attribute.
+        r = Object()
+        r.__class__ = field.__class__
+        r.__dict__.update(field.__dict__)
+        # Clone the page as well (when a page is defined)
+        if clonePage and field.page:
+            r.page = field.page.clone()
+        return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def notFromPortlet(tool):

@@ -85,12 +85,12 @@ class Col:
         '''Renders p_c.field.pxResult, wrapped in a td with potential styles
            applied.'''
         style = c.col.getCssFor(c.o)
-        attr = ' style="%s"' % style if style else ''
-        return '<td%s>%s</td>' % (attr, c.field.pxResult(c))
+        attr = f' style="{style}"' if style else ''
+        return f'<td{attr}>{c.field.pxResult(c)}</td>'
 
     pxCell = Px(getCell)
 
-    # Cel content, in a table containing Ref objects
+    # Cell content, in a table containing Ref objects
     pxCellRef = Px('''<td>:field.pxTied</td>''')
 
     # Attributes storing CSS properties or rules
@@ -181,10 +181,10 @@ class Col:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         r = {}
         # Common to any cell: alignment
-        common = ['text-align:%s' % self.align]
+        common = [f'text-align:{self.align}']
         # Common to any cell: width
         if self.width:
-            common.append('width:%s' % self.width)
+            common.append(f'width:{self.width}')
         if common: r['common'] = ';'.join(common)
         # Add any other not-empty key/value
         for name in self.cssAttributes:
@@ -208,11 +208,14 @@ class Number(Col):
         return True
 
     # No header for a Number column
-    pxHeaderRef = Px('''<th></th>''')
+    pxHeaderRef = pxHeader = Px('''<th></th>''')
 
-    # Cel content, in a table containing Ref objects
+    # Cell content, in a table containing Ref objects
     pxCellRef = Px('''
      <td><x if="objectIndex is not None">:ifield.pxNumber</x></td>''')
+
+    # Cell content, in a list of search results
+    pxCell = Px('''<td>:objectIndex+1|''</td>''')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Checkbox(Col):
@@ -343,7 +346,7 @@ class Columns(list):
         # p_sub may contain a single sub-rule or several ones
         sub = (sub,) if isinstance(sub, str) else sub
         for rule in sub:
-            r.append(base % (type, ' %s' % rule))
+            r.append(base % (type, f' {rule}'))
 
     def getCss(self, hasHeader, rowAlign, width='100%'):
         '''Returns a set of CSS rules representing characteristics as defined
@@ -351,11 +354,11 @@ class Columns(list):
         # The name of the CSS class to apply to the whole list
         name = self.name
         # Start with global CSS rules: table width
-        r = ['.%s { width:%s }' % (name, width or 'auto')]
+        r = [f'.{name} {{ width:{width or "auto"} }}']
         # Rows' vertical alignment. Take care of not specifying row alignment
         # for the table header, when present.
         part = ':not(:first-child)' if hasHeader else ''
-        r.append('.%s>tbody>tr%s { vertical-align:%s }' % (name,part,rowAlign))
+        r.append(f'.{name}>tbody>tr{part} {{ vertical-align:{rowAlign} }}')
         # Add column-related CSS rules
         selector = self.colSelector
         for i in range(len(self)):
@@ -363,15 +366,15 @@ class Columns(list):
             if not cellCss: continue
             # The common part of CSS rules to generate
             add = r.append
-            rule = '.%s>tbody>tr>%%s:nth-child(%d)%%s' % (self.name, i+1)
+            rule = f'.{self.name}>tbody>tr>%s:nth-child({i+1})%s'
             if 'common' in cellCss:
-                add(rule % ('', ' { %s }' % cellCss['common']))
+                add(rule % ('', f' {{ {cellCss["common"]} }}'))
             if 'th' in cellCss:
-                add(rule % ('th', ' { %s }' % cellCss['th']))
+                add(rule % ('th', f' {{ {cellCss["th"]} }}'))
             if 'ths' in cellCss:
                 self.addSubCss(r, 'th', rule, cellCss['ths'])
             if 'td' in cellCss:
-                add(rule % ('td', ' { %s }' % cellCss['td']))
+                add(rule % ('td', f' {{ {cellCss["td"]} }}'))
             if 'tds' in cellCss:
                 self.addSubCss(r, 'td', rule, cellCss['tds'])
         return '\n'.join(r)

@@ -2,8 +2,68 @@ var lsTimeout,  // Timout for the live search
     podTimeout, // Timeout for checking status of pod downloads
     queryMobile = 'only screen and (hover:none) and (pointer:coarse)';
 
+class ClassState {
+  /* Used by UiState class below, a ClassState object represents UI-state data
+     being specific to a given Appy class. */
+  constructor(data) {
+    // If p_data is passed, initialise this from it
+    if (data) {
+      for (const key in data) this[key] = data[key];
+      return;
+    }
+    // Current sidebar visibility
+    this.sidebarDisplay = 'block';
+    // Current sidebar width
+    this.sidebarWidth = null;
+    /* Note that these sidebar-related attributes are ignored if the related
+       Appy class does not define a sidebar. */
+  }
+}
+
+class UiState {
+  /* This class stores the state of the UI. By "UI", we mean a specific browser
+     tab. A UiState object stores things like:
+     - sidebar or sub-titles visibility,
+     - group searches being expanded or collapsed,
+     - currently shown tabs in a tabbed-styled group of fields,
+     - ...
+     UiState attributes are marshalled and stored in the session storage, but
+     accessible via a UiState object set in a global variable named "ui".
+     This allows to avoid to repeatedly unmarshall session storage data. */
+
+  constructor() {
+    /* Most of the UI-related attributes are specific to each Appy class. Dict
+       v_perClass contains one entry per Appy class: keys are names of Appy
+       classes and values are ClassState objects. */
+    this.perClass = {};
+  }
+
+  get(cls) {
+    /* Get the ClassState object corresponding to the class having this p_cls.
+       Create it if it does not exist yet. */
+    // a. Get it if it already exists
+    if (cls in this.perClass) return this.perClass[cls];
+    // b. Get it from the session storage if it exists there
+    let cstate = sessionStorage.getItem(cls);
+    if (cstate) return new ClassState(JSON.parse(cstate));
+    // c. Create it, put it in this.perClass and add it in the session storage
+    cstate = new ClassState();
+    this.perClass[cls] = cstate;
+    sessionStorage.setItem(cls, JSON.stringify(cstate));
+    return cstate;
+  }
+
+  set(cls, name, value) {
+    /* Sets, on the ClassState object corresponding to p_cls, this new p_value
+       for the attribute having this p_name. */
+    let cstate = this.get(cls);
+    cstate[name] = value;
+    sessionStorage.setItem(cls, JSON.stringify(cstate));
+  }
+}
+
 // Builds the URL to a static resource named p_name
-function buildUrl(name) { return siteUrl + '/static/appy/' + name }
+function buildUrl(name) { return `${siteUrl}/static/appy/${name}` }
 
 // Chunk of XHTML code containing a "loading" animated icon
 function loading(icon) {
@@ -53,11 +113,10 @@ function form2dict(f, d) {
       if (elem.checked) value = elem.value;
       else continue;
     }
-    else {
-      value = elem.value;
-      // Escape it when relevant
-      if (name == 'popupComment') value = encodeURIComponent(value);
+    else if (elem.type == 'textarea') {
+      value = encodeURIComponent(elem.value);
     }
+    else value = elem.value;
     // Store the value on p_d
     d[name] = value;
   }
@@ -73,14 +132,15 @@ function html2text(v) {
 
 function toggleLoginBox(show) {
   // Hide/show the login icon
-  let loginIcon = document.getElementById('loginIcon');
+  const loginIcon = document.getElementById('loginIcon');
   loginIcon.style.display = (show)? 'none': 'flex';
   // Show/hide the login box
-  let loginBox = document.getElementsByClassName('loginBox')[0];
+  const loginBox = document.getElementsByClassName('loginBox')[0];
   loginBox.style.display = (show)? 'block': 'none';
+  if (show) document.getElementById('login').focus();
 }
 
-function goto(url, stay) {
+function goto(url, stay, params) {
   // Display this p_url in the current window
   let win = null;
   if (stay) {
@@ -88,6 +148,15 @@ function goto(url, stay) {
   }
   else { // Refresh the whole page if we are in the iframe
     win = (window.name == 'appyIFrame')? window.parent: window;
+  }
+  /* Add or update, in p_url, any parameter that would be present in dict
+     p_params. */
+  if (params) {
+    const o = new URL(url);
+    for (const key in params) {
+      o.searchParams.set(key, params[key]);
+    }
+    url = o.href;
   }
   win.location = url;
 }
@@ -259,12 +328,10 @@ function askAjaxChunk(url, mode, params, hook, beforeSend, onGet, waiting,
   rq.freed = 0;
     
   // Construct parameters
-  let allParams = ['ajax=True'], value = null;
+  let allParams = ['ajax=True'];
   if (params) {
-    for (let name in params) {
-      value = params[name];
-      if (typeof val == 'string') value = value.replace('+', '%2B');
-      allParams.push(name + '=' + value);
+    for (const name in params) {
+      allParams.push(`${name}=${params[name]}`);
     }
   }
   allParams = allParams.join('&');
@@ -276,7 +343,7 @@ function askAjaxChunk(url, mode, params, hook, beforeSend, onGet, waiting,
   // Build the URL to call
   let urlFull = url;
   if (mode == 'GET') {
-    urlFull = urlFull + '?' + allParams;
+    urlFull = `${urlFull}?${allParams}`;
   }
   // Display the pre-loader when appropriate
   if (!sync && !rq.append) showPreloader(rq.hook, waiting);
@@ -300,22 +367,54 @@ function askAjaxChunk(url, mode, params, hook, beforeSend, onGet, waiting,
 class AjaxData {
   // Represents all the data required to perform an Ajax request
 
-  constructor(url, mode, params, hook, parentHook, beforeSend, onGet, append) {
+  constructor(url, mode, params, hook, parentHook, beforeSend, onGet, append,
+              childToSync) {
     this.url = url;
     this.mode = (!mode)? 'GET': mode;
     this.params = params;
     this.hook = hook;
     /* If a parentHook is specified, this AjaxData must be completed with a
-       parent AjaxData instance. */
+       parent AjaxData object. */
     this.parentHook = parentHook;
+    /* If p_childToSync is true, p_this is a special child whose current
+       v_params must be integrated into the parent's data everytime the parent
+       is ajax-refreshed. */
+    this.syncedChild = null;
+    if (childToSync) {
+      const parent = getNode(parentHook, true)['ajax'];
+      if (parent) parent.syncedChild = this;
+    }
     this.beforeSend = beforeSend;
     this.onGet = onGet;
     this.append = append;
-    // Inject this AjaxData instance into p_hook
+    // Inject this AjaxData object into p_hook
     getNode(hook, true)['ajax'] = this;
     // If v_this corresponds to a search, copy its parameters in the session
     if (params && 'search' in params) {
       this.storeInSession();
+    }
+  }
+
+  // Merge p_other into p_this, attributes "params" and "syncedChild" excepted
+  merge(other) {
+    for (let name in other) {
+      // Ignore these attributes. Merging params is done by m_mergeParams below.
+      if ((name == 'params') || (name == 'syncedChild')) continue;
+      // Keep this' value if it exists
+      if (!this[name]) this[name] = other[name];
+    }
+  }
+
+  /* Merge p_this.params with p_other.params. If p_override is true, if both
+     AjaxData objects have an homonymous parameter, the kept one is the p_other
+     one. */
+
+  mergeParams(other, override) {
+    if (!other.params) return;
+    for (let key in other.params) {
+      // Don't override v_key when appropriate
+      if (!override && (key in this.params)) continue;
+      this.params[key] = other.params[key];
     }
   }
 
@@ -334,6 +433,14 @@ class AjaxData {
     }
     sessionStorage.setItem(key, JSON.stringify(params));
   }
+
+  // p_this, as a short string
+  asString() {
+    let sparams = (this.params)? stringFromDict(this.params): '-';
+    let schild = (this.syncedChild)? this.syncedChild.hook: '-';
+    return `AjaxData(hook=${this.hook},url=${this.url},params=${sparams},` +
+           `syncedChild=${schild})`;
+  }
 }
 
 function getSearchInfo(key, siblings) {
@@ -351,22 +458,17 @@ function askAjax(hook, form, params, waiting) {
       potential action from p_form and additional parameters from p_param. */
   let d = getNode(hook)['ajax'];
   // Complete data with a parent data if present
-  if (d['parentHook']) {
-    let parentHook = d['parentHook'];
-    if (hook[0] == ':') parentHook = ':' + parentHook;
-    let parent = getNode(parentHook)['ajax'];
-    for (let key in parent) {
-      if (key == 'params') continue; // Will get a specific treatment hereafter
-      if (!d[key]) d[key] = parent[key]; // Override if no value on child
-    }
+  if (d.parentHook) {
+    let parentHook = d.parentHook;
+    if (hook[0] == ':') parentHook = `:${parentHook}`;
+    const parent = getNode(parentHook)['ajax'];
+    d.merge(parent);
     // Merge parameters
-    if (parent.params) {
-      for (let key in parent.params) {
-        if (key in d.params) continue; // Override if not value on child
-        d.params[key] = parent.params[key];
-      }
-    }
+    d.mergeParams(parent, false);
   }
+  // Complete data with a synced child, if any
+  const schild = d.syncedChild;
+  if (schild) d.mergeParams(schild, true);
   // Resolve dynamic parameter "cbChecked" if present
   if ('cbChecked' in d.params) {
     let cb = getNode(d.params['cbChecked'], true);
@@ -411,7 +513,7 @@ function askAjax(hook, form, params, waiting) {
 }
 
 function askBunch(hook, start, maxPerPage, scrollTop) {
-  let params = {'start': start};
+  const params = {'start': start};
   if (maxPerPage) params['maxPerPage'] = maxPerPage;
   if (scrollTop) params['scrollTop'] = scrollTop;
   askAjax(hook, null, params);
@@ -430,7 +532,7 @@ function askBunchFiltered(hook, filterKey, filterValue) {
   let value = filterValue;
   if (value === undefined) {
     // The value must be retrieved from a text field
-    let filter = document.getElementById(hook + '_' + filterKey);
+    let filter = document.getElementById(`${hook}_${filterKey}`);
     // Get the filter value
     value = filter.value;
     if (value) {
@@ -443,10 +545,10 @@ function askBunchFiltered(hook, filterKey, filterValue) {
     }
   }
   // Add this (key,value) pair to filters
-  let adata = getNode(hook)['ajax'];
-  adata.params['filters'][filterKey] = value || '';
+  let data = getNode(hook)['ajax'];
+  data.params['filters'][filterKey] = value || '';
   // Refresh v_adata.params, being stored in the session storage
-  adata.storeInSession();
+  data.storeInSession();
   // Ajax-refresh the bunch
   askAjax(hook, null, {'start': '0'});
 }
@@ -506,9 +608,20 @@ function clickOn(node) {
   // Disable any click on p_node to be protected against double-click
   let cn = node.className,
       anim = (cn && (cn.search('buttonIcon') != -1))? 'waiting': 'blinkT',
-      acn = 'unclickable ' + anim,
-      ncn = (cn)? acn + ' ' + cn : acn;
+      acn = `unclickable ${anim}`,
+      ncn = (cn)? `${acn} ${cn}`: acn;
   node.className = ncn;
+}
+
+function clickPrev(event) {
+  /* Simulate a click on p_event.target's neightbour: p_event.target is just a
+     companion button. */
+  const prev = event.target.previousSibling;
+  // Don't do it if v_prev has already been protected against multi-clics
+  if (prev.className && prev.className.search('unclickable') != -1) return;
+  // Simulate the click
+  if (prev.onclick) prev.onclick(event);
+  prev.click();
 }
 
 function gotoTied(objectUrl, field, numberWidget, total, popup) {
@@ -533,7 +646,7 @@ function askField(hook, url, layout, customParams, showChanges, className,mode){
       params = {'layout': layouts[0], 'showChanges': showChanges || 'False'};
   if (layouts.length > 1) params['hostLayout'] = layouts[1];
   if (customParams){for (let key in customParams) params[key]=customParams[key]}
-  url = url + '/' + fieldName + '/pxRender';
+  url = `${url}/${fieldName}/pxRender`;
   mode = mode || 'GET';
   askAjaxChunk(url, mode, params, hook, null, evalInnerScripts);
 }
@@ -670,7 +783,7 @@ function toggleVisibility(node, nodeType, css){
   }
 }
 // Shorthand for toggling clickable images' visibility 
-function itoggle(img) {toggleVisibility(img, 'img', 'clickable');}
+function itoggle(img) {toggleVisibility(img, 'img', 'calicon');}
 
 // JS implementation of Python ''.rsplit
 function _rsplit(s, delimiter, limit) {
@@ -685,6 +798,18 @@ function _rsplit(s, delimiter, limit) {
            else r.push(elems[i]) }
   }
   return r;
+}
+
+function splitUnit(value) {
+  /* Returns a tuple that extracts, from p_value, the number and its unit;
+     ie: splitUnit("30em") returns [30, 'em']. */
+  if (Number.isInteger(value)) return [value, 'px']; // The implicit unit
+  let number = '', unit = '';
+  for (const c of value) {
+    if (!isNaN(c) || c == '.') number += c;
+    else unit += c;
+  }
+  return [parseFloat(number), unit];
 }
 
 function getCbDataFromCbName(name) {
@@ -879,7 +1004,7 @@ function getSlaves(master) {
   if (masterName.endsWith('_visible')) {
     masterName = masterName.replace('_visible', '_hidden');
   }
-  let cssClasses, slavePrefix = 'slave*' + masterName + '*';
+  let cssClasses, slavePrefix = `slave*${masterName}*`;
   for (let i=0; i < allSlaves.length; i++){
     cssClasses = allSlaves[i].className.split(' ');
     for (let j=0; j < cssClasses.length; j++) {
@@ -968,6 +1093,9 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
       let slaveId = slave.id,
           slaveName = slaveId.split('_')[1],
           params = getFormData();
+          masterName = master.id || master.name;
+          if (masterName.startsWith('w_')) masterName = masterName.substr(2);
+          params['_master_'] = masterName;
       if (className) params['className'] = className;
       askField(slaveId, objectUrl, layoutType, params, false, className,'POST');
     }
@@ -1029,9 +1157,9 @@ function backFromPopup(id) {
   else {
     /* Ajax-refresh, on the main page, the node as defined in the popup, or
        execute a custom JS code if specified. */
-    let nodeId = popup.backHook,
-        backCode = popup.backCode,
-        node = (nodeId)? getNode(':' + nodeId): null;
+    const nodeId = popup.backHook,
+          backCode = popup.backCode,
+          node = (nodeId)? getNode(`:${nodeId}`): null;
     if (node) {
       if (backCode) {
         /* Put p_id as parameter to pass to the back code, if it does not
@@ -1039,7 +1167,7 @@ function backFromPopup(id) {
         const params = (id < 1)? {}: {'selected':id, 'semantics':'checked'};
         eval(backCode);
       }
-      else askAjax(':' + nodeId);
+      else askAjax(`:${nodeId}`);
     }
     else window.parent.location = window.parent.location;
   }
@@ -1059,7 +1187,8 @@ function setChecked(f, checkHook) {
   }
 }
 
-function submitForm(formId, msg, showComment, back, checkHook, visible) {
+function submitForm(formId, msg, showComment, back, checkHook, visible,
+                    yesText, noText) {
   let f = document.getElementById(formId);
   // Initialise the status of checkboxes when appropriate
   if (checkHook) setChecked(f, checkHook);
@@ -1078,9 +1207,9 @@ function submitForm(formId, msg, showComment, back, checkHook, visible) {
     if (back) {
       let js = "askAjax('" + back + "', '" + formId + "');";
       askConfirm('form-script', formId + '+' + js, msg, showComment,
-                 null, null, null, null, visible); }
+                 null, null, null, null, visible, yesText, noText); }
     else askConfirm('form', formId, msg, showComment,
-                    null, null, null, null, visible);
+                    null, null, null, null, visible, yesText, noText);
   }
 }
 
@@ -1097,11 +1226,16 @@ function onDeleteObject(iid, back, text) {
   askConfirm(actionType, action, text);
 }
 
-function onLink(action, url, fieldName, targetId, hook, start, semantics) {
+function onLink(action, url, fieldName, targetId, hook, start, semantics,
+                linkList) {
   let params = {'linkAction': action, 'targetId': targetId};
-  if (hook) params[`${hook}_start}`] = start;
+  if (hook && !linkList) params[`${hook}_start`] = start;
   if (semantics) params['semantics'] = semantics;
-  post(`${url}/${fieldName}/onLink`, params);
+  if ((action == 'unlink') && !linkList) {
+    params['action'] = 'onLink';
+    askAjax(hook, null, params);
+  }
+  else post(`${url}/${fieldName}/onLink`, params);
 }
 
 function onLinkMany(action, url, id, start) {
@@ -1121,26 +1255,31 @@ function onLinkMany(action, url, id, start) {
     return;
   }
   // Ask for a confirmation
-  let sep = ',', elems=hook.split('_'), fieldName=elems.pop();
-  askConfirm('script', 'onLink(' + quote(action + '_many') + sep +
-             quote(url) + sep + quote(fieldName) + sep + quote(ids) + sep +
-             quote(id) + sep + quote(start) + sep + quote(semantics) + ')',
-             action_confirm);
+  const q=quote, elems=hook.split('_'), fieldName=elems.pop(),
+        act=`${action}_many`,
+        expr=`onLink(${q(act)},${q(url)},${q(fieldName)},${q(ids)},${q(id)},` +
+             `${q(start)},${q(semantics)})`;
+  askConfirm('script', expr, action_confirm);
 }
 
 function onAdd(direction, addForm, objectId) {
   // p_direction can be "before" or "after"
   let f = document.getElementById(addForm);
-  f.insert.value = direction + '.' + objectId;
+  f.insert.value = `${direction}.${objectId}`;
   f.submit();
 }
 
 function stringFromDict(d, keysOnly, sortByValue) {
   /* Gets a comma-separated string form dict p_d. If p_keysOnly is True, only
      keys are dumped. Else, "key:value" pairs are included. */
-  let elem, r = [];
-  for (let key in d) {
-    elem = (keysOnly)? key: key + ':' + d[key];
+  let elem, r = [], v;
+  for (let k in d) {
+    if (keysOnly) elem = k;
+    else {
+      v = d[k];
+      if (Array.isArray(v)) v = v.join('::');
+      elem = `${k}:${v}`;
+    }
     r.push(elem);
   }
   if (sortByValue) {
@@ -1163,7 +1302,7 @@ function updateFileNameStorer(field, storerId) {
 }
 
 function onUnlockPage(objectUrl, page) {
-  let code = "post('" + objectUrl + "/unlock', {'page': '" + page + "'})";
+  const code = `post('${objectUrl}/unlock', {'page':'${page}'})`;
   askConfirm('script', code, action_confirm);
 }
 
@@ -1172,10 +1311,10 @@ function createCookie(name, value, days) {
   if (days) {
     let date = new Date();
     date.setTime(date.getTime() + (days*24*60*60*1000));
-    expires = '; expires=' + date.toGMTString();
+    expires = `; expires=${date.toGMTString()}`;
   }
   let v = encodeURIComponent(value);
-  document.cookie = name + "=" + v + expires + "; path=/; SameSite=" + sameSite;
+  document.cookie = `${name}=${v}${expires}; path=/; SameSite=${sameSite}`;
 }
 
 function readCookie(name) {
@@ -1366,7 +1505,8 @@ function updateAppyMessage(message) {
 
 // Function triggered when an action needs to be confirmed by the user
 function askConfirm(actionType, action, msg, showComment, popupWidth,
-                    commentLabel, comment, commentRows, visible) {
+                    commentLabel, comment, commentRows, visible,
+                    yesText, noText) {
   /* Store the actionType (send a form, call an URL or call a script) and the
      related action, and shows the confirm popup. If the user confirms, we
      will perform the action. If p_showComment is true, an input field allowing
@@ -1387,6 +1527,9 @@ function askConfirm(actionType, action, msg, showComment, popupWidth,
   }
   else area.value = '';
   area.rows = (commentRows)? commentRows: 3;
+  // Change the texts for buttons "Yes" and "No", when requested
+  confirmForm.yesBtn.value = yesText || yes;
+  confirmForm.noBtn.value = noText || no;
   openPopup('confirmActionPopup', msg, popupWidth, null,null,null,commentLabel);
 }
 
@@ -1567,12 +1710,12 @@ function onSelectObjects(popupId, initiatorId, objectUrl, mode, onav,
   }
 }
 
-function onSelectObject(checkboxId, initiatorId, id, ckNum) {
+function onSelectObject(checkboxId, initiatorId, id, ckNum, onav) {
   // An object has been selected in a popup
   let checkbox = document.getElementById(checkboxId);
   if (ckNum) {
     // The object has been selected from a popup opened by ckeditor
-    let imageUrl = siteUrl + '/' + checkbox.value + '/file/download';
+    let imageUrl = `${siteUrl}/${checkbox.value}/file/download`;
     window.opener.CKEDITOR.tools.callFunction(ckNum, imageUrl);
     window.close();
   }
@@ -1591,7 +1734,8 @@ function onSelectObject(checkboxId, initiatorId, id, ckNum) {
          selected object. */
       closePopup('iframePopup');
       let params = {'selected': checkbox.value, 'semantics': 'checked'};
-      askField(':'+initiatorId, siteUrl + '/' + id, 'edit', params, false);
+      if (onav) params['nav'] = onav;
+      askField(`:${initiatorId}`, `${siteUrl}/${id}`, 'edit', params, false);
     }
   }
 }
@@ -1607,8 +1751,7 @@ function onSelectTemplateObject(checkboxId, formName, insert) {
 
 // Sets the focus on the correct element in some page
 function initFocus(pageId){
-  let id = pageId + '_title',
-      elem = document.getElementById(id);
+  const elem = document.getElementById(`${pageId}_title`);
   if (elem) elem.focus();
 }
 

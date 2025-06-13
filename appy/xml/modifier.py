@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -15,7 +13,7 @@ class Modifier(Parser):
 
     # Regular expression for replacing special markers (see "replacementFun"
     # attribute below).
-    replaceRex = re.compile('\*(.+?)\*')
+    replaceRex = re.compile(r'\*(.+?)\*')
 
     def __init__(self, env=None, caller=None, raiseOnError=False, p='p',
                  prefix='', replacements=None, tagReplacements=None,

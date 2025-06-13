@@ -3,26 +3,28 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import time, os, os.path
+from pathlib import Path
 from DateTime import DateTime
 
 import appy
 from appy.px import Px
+from ..fields import Field, Show
+from ..fields.file import FileInfo
+from appy.xml.escape import Escape
 from appy.utils import path as putils
 from appy.pod.renderer import Renderer
 from appy.model.searches import Search
+from ..fields.calendar import Calendar
 from appy.utils import string as sutils
 from appy.utils.string import Normalize
 from appy.model.utils import Object as O
-from appy.model.fields import Field, Show
-from appy.ui.layout import Layouts, Layout
-from appy.model.fields.file import FileInfo
+from appy.ui.layout import Layouts, Layout, LayoutF
 from appy.pod import PodError, styles_manager, formatsByTemplate, uiFormats
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 POD_ERROR = 'An error occurred while generating the document. Please contact ' \
             'the system administrator.'
 NO_TPL    = 'Please specify a pod template in field "template".'
-UNAUTH    = 'You are not allowed to perform this action.'
 TPL_INEX  = 'Template not found at %s.'
 FREEZ_ERR = 'Error while trying to freeze a "%s" file in pod field "%s" (%s).'
 FREEZ_FER = 'Server error. Please contact the administrator.'
@@ -42,6 +44,7 @@ UPLOAD_OK = 'Uploaded at %s.'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
     '''POD-specific configuration'''
+
     def __init__(self):
         # We suppose the Python interpreter running the Appy has library UNO
         # allowing to contact LibreOffice in server mode. If it is not the case,
@@ -54,6 +57,7 @@ class Config:
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Mailing:
     '''Represents a mailing list as can be used by a pod field (see below)'''
+
     def __init__(self, id, name=None, logins=None, subject=None, body=None):
         # The mailing list ID, an element among available mailings as defined in
         # Pod.mailing.
@@ -137,9 +141,9 @@ class ImageFinder:
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Pod(Field):
-    '''A pod is a field allowing to produce a (PDF, ODT, Word, RTF...) document
-       from data contained in Appy class and linked objects or anything you
-       want to put in it. It is the way gen uses pod.'''
+    '''A pod is a field allowing to produce a (PDF, ODT, ODS...) document from
+       data contained in Appy class and linked objects or anything you want to
+       put in it. It is the way Appy uses his own pod.'''
 
     # Some methods wil be traversable
     traverse = Field.traverse.copy()
@@ -159,23 +163,26 @@ class Pod(Field):
     # machinery for this.
     customGetValue = True
 
-    # Pod fields may be freezable
+    # Pod fields may be freezable. Consequently, frozen files may be stored in
+    # the object folder, within the database-controlled filesystem.
     freezable = True
+    disk = True
 
     class Layouts(Layouts):
         '''Pod-specific layouts'''
+
         # Right-aligned layouts, convenient for pod fields exporting search
         # results or multi-template pod fields. The label is never present,
         # because inlaid in a particular way into the field value.
-        r = Layouts(view=Layout('f!')) # "r"ight
+        r = Layouts(view=LayoutF('f!')) # "r"ight
         # Historically, the following variants  were different, but are all
         # equal,now.
         rf = r # *r*ight, no label (*f*ield value only)
         rm = r # *r*ight *m*ulti-template
         # Right-aligned layout, with *t*op space
-        rt = Layouts(view=Layout('f!', css='topSpace')) # "r"ight
+        rt = Layouts(view=LayoutF('f!', css='topSpace')) # "r"ight
         # "l"eft-align layout
-        l = Layouts(view= Layout('f;'))
+        l = Layouts(view=LayoutF('f;'))
         # Inline layout
         inline = Layouts(view=Layout('f', width=None, css='inline', align=''))
 
@@ -268,7 +275,7 @@ class Pod(Field):
      <div var="visible=visible|field.getVisibleTemplates(o);
                className=o.class_.name;
                merge=field.mergeTemplates;
-               onCell=layout == 'cell' or inPhase|False"
+               onCell=layout in field.cellLayouts or inPhase|False"
           if="visible" class=":'mpod tpod' if merge else 'pod'">
       <script if="field.confirm">::field.getJsConfirmVar(o)</script>
 
@@ -276,13 +283,13 @@ class Pod(Field):
       <div var="id=o.iid; gc=field.getCheckHook(o, req)" class="tpod"
            for="info in visible"
            var2="mailings=field.getVisibleMailings(o, info.template);
-                 confirm=field.getConfirm(o, info.template);
                  showSelector=not merge or loop.info.last">
 
        <!-- One icon per available format -->
        <x for="fmt in info.formats"
           var2="freezeAllowed=fmt in info.freezeFormats and
                               (field.show != 'result');
+                confirm=field.getConfirm(o, info.template, fmt);
                 hasMailings=mailings and fmt in mailings;
                 dropdownEnabled=freezeAllowed or hasMailings;
                 frozen=fmt in info.frozenFormats">
@@ -335,7 +342,7 @@ class Pod(Field):
       setPodIcon = function(icon, key, fmt, defaults, empty, merged) {
         // Set p_icon's visibility and update p_defaults when appropriate
         if (merged) {
-          let value = key + '_' + fmt;
+          let value = `${key}_${fmt}`;
           if (!('merged' in defaults)) { // No default value yet
             icon.style.display = 'block';
             defaults['merged'] = value;
@@ -504,11 +511,23 @@ class Pod(Field):
         }
       }
 
+      // Initialise data related to the check hook
+      initCheckHook = function(f, hook) {
+        // In any case, reset the checkboxes in the pod form
+        setChecked(f, hook);
+        /* For a Calendar field, get the parameters allowing to retrieve the
+           events currently shown in the calendar. */
+        if (hook && hook.indexOf('_') === -1) {
+          const data = getNode(hook)['ajax'].params;
+          f.calParams.value = JSON.stringify(data);
+        }
+      }
+
       // Generate a document from a POD template
       generatePod = function(node, url, fieldName, template, podFormat,
                        queryData, customParams, checkHook, mailing, mailText) {
         let f = document.getElementById('podForm');
-        f.action = url + '/' + fieldName + '/generate';
+        f.action = `${url}/${fieldName}/generate`;
         f.template.value = template;
         f.podFormat.value = podFormat;
         f.queryData.value = queryData;
@@ -520,8 +539,8 @@ class Pod(Field):
           if (mailText) f.mailText.value = mailText;
           
         }
-        // Initialise the status of checkboxes
-        setChecked(f, checkHook);
+        // Initialise the check hook
+        initCheckHook(f, checkHook);
         // Disable the link to prevent double-clicks
         if (!mailing) {
           let data = {'class': node.className,
@@ -540,7 +559,7 @@ class Pod(Field):
       // (Un-)freeze a document from a pod template
       freezePod = function(url, fieldName, template, podFormat, action) {
         let f = document.getElementById('podForm');
-        f.action = url + '/' + fieldName + '/onFreeze';
+        f.action = `${url}/${fieldName}/onFreeze`;
         f.template.value = template;
         f.podFormat.value = podFormat;
         f.freezeAction.value = action;
@@ -550,7 +569,7 @@ class Pod(Field):
       // Upload a file for freezing it in a pod field
       uploadPod = function(url, fieldName, template, podFormat) {
         let f = document.getElementById('uploadForm');
-        f.action = url + '/' + fieldName + '/upload';
+        f.action = `${url}/${fieldName}/upload`;
         f.template.value = template;
         f.podFormat.value = podFormat;
         f.uploadedFile.value = null;
@@ -569,7 +588,7 @@ class Pod(Field):
       maxPerRow=5, context=None, stylesMapping={}, stylesOutlineDeltas=None,
       formats=None, getChecked=None, mailing=None, mailingName=None,
       showMailing=None, mailingInfo=None, view=None, cell=None, buttons=None,
-      edit=None, xml=None, translations=None, downloadName=None,
+      edit=None, custom=None, xml=None, translations=None, downloadName=None,
       downloadDisposition='attachment', forceOoCall=False,
       optimalColumnWidths=False, distributeColumns=None, script=None,
       pdfOptions='ExportNotes=True', tabbedCR=False, fonts=None, confirm=False,
@@ -666,7 +685,8 @@ class Pod(Field):
         # much templates must appear side by side.
         self.maxPerRow = maxPerRow
         # The context is a dict containing a specific pod context, or a method
-        # that returns such a dict.
+        # that returns such a dict. If you place a method here, it must accept
+        # the current template as single arg.
         self.context = context
         # A global styles mapping that would apply to the whole template(s)
         self.stylesMapping = stylesMapping
@@ -679,11 +699,15 @@ class Pod(Field):
         # to the same Appy class, or the term "search". If getChecked is...
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # the name of | The context of the pod template will contain an
-        # a Ref field | additional object, named "_checked". On this object, an
-        #             | attribute will be set, whose name is the name of the Ref
-        #             | field, and whose value will be the list of the objects
-        #             | linked via the Ref field that are currently selected in
-        #             | the user interface.
+        # a Ref or    | additional object, named "_checked". On this object, an
+        # Calendar    | attribute will be set, whose name is the name of the
+        # field       | field in question, and whose value will be:
+        #             | [for a Ref] the list of the objects linked via this
+        #             |             field, that are currently selected in the
+        #             |             the user interface ;
+        #             | [for a Cal] the list of events currently shown in the
+        #             |             calendar field, with potential filters
+        #             |             applied.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #   "search"  | The pod context variable "objects", normally containing
         #             | all search results, will only contain objects being
@@ -733,7 +757,7 @@ class Pod(Field):
         # method, you have the responsibility to produce a valid,
         # any-OS-and-any-browser-proof file name. For inspiration, see the
         # default m_getDownloadName method hereafter. If you have several
-        # templates in self.template, for some of them where you are satisfied
+        # templates in p_self.template, for those for which you are satisfied
         # with the default download name, return None.
         self.downloadName = downloadName
         # The field below allow to determine the "disposition" when downloading
@@ -774,10 +798,12 @@ class Pod(Field):
         # will accept the current template (one among self.template) as unique
         # arg and return the name of the font to inject in it.
         self.fonts = fonts
-        # If "confirm" is True, a popup will be shown before generating the
-        # pod result. "confirm" may also hold a method, that must accept, as
-        # single arg, the name of the current template (indeed, self.template
-        # may hold several templates), and must return a boolean value.
+        # If p_confirm is True, a popup will be shown before generating the
+        # pod result. p_confirm may also hold a method, that must accept 2 args:
+        # 1. the absolute path, as a string, to the current template (indeed,
+        #    self.template may hold several templates) ;
+        # 2. the result format.
+        # The method must return a boolean value.
         self.confirm = confirm
         # If "raiseOnError" is False (the default), no error is raised:
         # traceback(s) is (are) dumped into the pod result within note(s). If
@@ -789,9 +815,15 @@ class Pod(Field):
         # generated, set a method in parameter "action". This must be a method
         # accepting parameters:
         # * template     the name of the current template (important when
-        #                multiple templates are in use);
-        # * context      the context given to the pod template;
-        # * format       the output format.
+        #                multiple templates are in use) ;
+        # * context      the context given to the pod template ;
+        # * format       the output format ;
+        # * result       the absolute path to the result file on disk.
+        # Note that, if your action requires a database commmit, your method
+        # must explicitly ask it via:
+        #
+        #                        self.H().commit = True
+        #
         self.action = action
         # If you want some action to be executed just before the pod result is
         # generated, set a method in parameter "beforeAction". This method's
@@ -826,11 +858,11 @@ class Pod(Field):
         # be available in the POD context, as request attribute req.crumb.
         self.crumb = crumb
         # Call the base constructor
-        Field.__init__(self, None, (0,1), None, None, show, renderable, page,
-          group, layouts, move, False, True, None, None, False, None,
-          readPermission, writePermission, width, height, None, colspan, master,
-          masterValue, focus, historized, mapping, generateLabel, label, None,
-          None, None, None, False, False, view, cell, buttons, edit, xml,
+        super().__init__(None, (0,1), None, None, show, renderable, page, group,
+          layouts, move, False, True, None, None, False, None, readPermission,
+          writePermission, width, height, None, colspan, master, masterValue,
+          focus, historized, mapping, generateLabel, label, None, None, None,
+          None, False, False, view, cell, buttons, edit, custom, xml,
           translations)
         # Param "persist" is False, but actual persistence for this field is
         # determined by freezing.
@@ -904,15 +936,18 @@ class Pod(Field):
         '''Return the absolute path to some pod p_template, by prefixing it with
            the application path. p_template can be a pointer to another
            template.'''
-        # Compute the base path
         if template.startswith('/'):
-            # An absolute path: search for it in Appy itself
-            baseFolder = os.path.dirname(appy.__file__)
-            template = template[1:]
+            # We already have an absolute path
+            r = template
         else:
-            baseFolder = diskFolder
-        # Compute the absolute path
-        r = putils.resolvePath(os.path.join(baseFolder, template))
+            # An absolute path must be formed
+            if template.startswith('*'):
+                # p_template comes from the Appy standard model
+                folder = os.path.dirname(appy.__file__)
+                template = template[1:]
+            else:
+                folder = diskFolder
+            r = putils.resolvePath(os.path.join(folder, template))
         if not os.path.isfile(r):
             raise Exception(TPL_INEX % template)
         # Unwrap the path if the file is simply a pointer to another one
@@ -931,7 +966,7 @@ class Pod(Field):
         if not bypassMethod and self.downloadName:
             name = self.downloadName(o, template)
             if name:
-                return '%s.%s' % (name, format) if format else name
+                return f'{name}.{format}' if format else name
         # Compute the default download name
         fileName = Normalize.fileName(self.getTemplateName(o, template))[:40]
         if not queryRelated:
@@ -943,9 +978,9 @@ class Pod(Field):
                 title = getattr(o, titleMethod)()
             else:
                 title = o.getShownValue('title')
-            title = '%s-' % Normalize.fileName(title)[:40] if title else ''
-            fileName = '%s%s' % (title, fileName)
-        return '%s.%s' % (fileName, format) if format else fileName
+            title = f'{Normalize.fileName(title)[:40]}-' if title else ''
+            fileName = f'{title}{fileName}'
+        return f'{fileName}.{format}' if format else fileName
 
     def getVisibleFormats(self, o, template):
         '''Returns the list of formats for which this p_template can be
@@ -1018,7 +1053,7 @@ class Pod(Field):
             part = Normalize.fileName(c.info.template)
         else:
             part = 'merged'
-        return '%s_%s_%s_%s' % (c.id, self.name, part, suffix)
+        return f'{c.id}_{self.name}_{part}_{suffix}'
 
     def getNameFor(self, o, template, fmt):
         '''Gets the name to use for this p_template in this p_fmt'''
@@ -1028,7 +1063,7 @@ class Pod(Field):
         else:
             # Get the main field label
             r = o.translate('label', field=self)
-        return '%s · %s' % (fmt.upper(), r)
+        return f'{fmt.upper()} · {r}'
 
     def selectorIsSingle(self, c):
         '''Is there a single entry in the current POD selector ?'''
@@ -1050,7 +1085,7 @@ class Pod(Field):
             for info in c.visible:
                 prefix = Normalize.fileName(info.template)
                 for fmt in info.formats:
-                    id = '%s_%s' % (prefix, fmt)
+                    id = f'{prefix}_{fmt}'
                     r.append((id, self.getNameFor(c.o, info.template, fmt)))
         else:
             # One entry per format for the current template
@@ -1059,11 +1094,11 @@ class Pod(Field):
                 r.append((fmt, self.getNameFor(c.o, info.template, fmt)))
         return r
 
-    def getConfirm(self, o, template):
+    def getConfirm(self, o, template, fmt):
         '''When producing a result from p_template for p_obj, must we ask a
            confirmation to the user ?'''
         confirm = self.confirm
-        return confirm(o, template) if callable(confirm) else confirm
+        return confirm(o, template, fmt) if callable(confirm) else confirm
 
     def getCheckHook(self, o, req):
         '''If p_self.getChecked is in use, return the ID of the DOM node
@@ -1073,10 +1108,19 @@ class Pod(Field):
             r = 'null'
         elif gc == 'search':
             r = req.search
-            r = '"%s"' % r if r else 'null'
+            if 'search' in req and not r: # Search "all"
+                r = '"allSearch"'
+            elif r:
+                r = f'"{r}"'
+            else:
+                r = 'null'
         else:
-            if o.allows(o.getField(gc).readPermission):
-                r = '"%d_%s"' % (o.iid, gc)
+            field = o.getField(gc)
+            if o.allows(field.readPermission):
+                # The field can be a Ref or a Calendar. In this latter case, the
+                # tag ID does not include any underscore.
+                sep = '' if isinstance(field, Calendar) else '_'
+                r = f'"{o.iid}{sep}{gc}"'
             else:
                 r = 'null'
         return r
@@ -1119,9 +1163,27 @@ class Pod(Field):
             msg = 'action_done'
         return msg
 
+    def getContext(self, o, template):
+        '''Returns the specific context potentially defined in self.context'''
+        r = self.context
+        if callable(r):
+            r = r(o, template)
+        return r
+
+    def checkAllowed(self, o, template, queryData):
+        '''Performs security checks when relevant'''
+        # Check beyond-traversal security
+        o.guard.mayView(o, permission=None, raiseError=True)
+        # Check p_self.showTemplate when relevant
+        if not queryData:
+            show = self.showTemplate
+            if show and not show(o, template):
+                o.raiseUnauthorized()
+
     def getValue(self, o, name=None, layout=None, template=None, format=None,
                  result=None, queryData=None, computeCustomContext=None,
-                 secure=True, executeAction=True, single=None, crumb=None):
+                 secure=True, executeAction=True, single=None, crumb=None,
+                 at=None):
         '''For a pod field, getting its value means computing a pod document or
            returning a frozen one.'''
         # A pod field differs from other field types because there can be
@@ -1144,34 +1206,32 @@ class Pod(Field):
         #   context.
         start = time.time()
         template = template or self.template[0]
-        format = format or 'pdf'
-        # Security check
-        if secure and not queryData:
-            if self.showTemplate and not self.showTemplate(o, template):
-                raise Exception(UNAUTH)
+        fmt = format or 'pdf'
+        # Security checks
+        if secure: self.checkAllowed(o, template, queryData)
         # Return the possibly frozen document (not applicable for query-related
         # pods).
         if not queryData:
-            frozen = self.isFrozen(o, template, format)
+            frozen = self.isFrozen(o, template, fmt)
             if frozen:
-                fileName = self.getDownloadName(o, template, format)
+                fileName = self.getDownloadName(o, template, fmt)
                 return FileInfo(frozen, inDb=False, uploadName=fileName)
         # We must call pod to compute a pod document from "template"
         appPath = o.appPath
         # Get the path to the pod template
         templatePath = self.getTemplatePath(str(appPath), template)
         # Get or compute the specific POD context
-        specificContext = self.getAttribute(o, 'context')
+        specificContext = self.getContext(o, template)
         # Compute the name of the result file
         if not result:
-            result = '%s/%d_%f.%s' % (putils.getOsTempFolder(), o.iid,
-                                      time.time(), format)
+            result=f'{putils.getOsTempFolder()}/{o.iid}_{time.time():.2f}.{fmt}'
         # Define parameters to give to the appy.pod renderer
         req = o.req
         tool = o.tool
         podContext = {'tool': tool, 'user': o.user, 'self': o, 'field': self,
                       'now': DateTime(), '_': o.translate, 'appPath': appPath,
-                      'template': template, 'req': req, 'config': tool.config}
+                      'template': template, 'req': req, 'config': tool.config,
+                      'ext': Path(template).suffix.strip('.'), 'Escape': Escape}
         # If the pod document is related to a search, replay it and put the
         # result in the pod context.
         if queryData:
@@ -1179,7 +1239,7 @@ class Pod(Field):
             podContext['search'] = search
             podContext['objects'] = objects
             podContext['queryData'] = queryData.split(':')
-            podContext['_ref'] = Search.getRefInfo(tool, nameOnly=False)
+            podContext['_ref'] = Search.getRefInfo(tool)
         # Add the field-specific context if present
         if specificContext: podContext.update(specificContext)
         # Add the custom context when required
@@ -1193,7 +1253,7 @@ class Pod(Field):
         smap = self.callMethod(o, smap) if callable(smap) else smap
         # Execute the "before" action when relevant
         if executeAction and self.beforeAction:
-            self.beforeAction(o, template, podContext, format)
+            self.beforeAction(o, template, podContext, fmt)
         # Get the optional script to give to the renderer
         script = self.script
         script = script(o, template, podContext) if callable(script) else script
@@ -1221,24 +1281,24 @@ class Pod(Field):
         if config.libreOfficePort:
             rendererParams['ooPort'] = config.libreOfficePort
         # Launch the renderer
-        o.log(RENDERING % (o.id, template, format))
+        o.log(RENDERING % (o.id, template, fmt))
         try:
             renderer = Renderer(**rendererParams)
             renderer.run()
         except PodError as pe:
             if not os.path.exists(result):
-                # In some (most?) cases, when OO returns an error, the result is
+                # In some cases, when OO returns an error, the result is
                 # nevertheless generated.
                 o.log(str(pe).strip(), type='error')
                 return POD_ERROR
         # Give a friendly name for this file
-        fileName = self.getDownloadName(o, template, format, queryData)
+        fileName = self.getDownloadName(o, template, fmt, queryData)
         # Execute the tied action when relevant
         if executeAction and self.action:
-            self.action(o, template, podContext, format)
+            self.action(o, template, podContext, fmt, result)
         # Log the successfull rendering
         o.log(RENDERED % (o.id, self.name, fileName, time.time()-start))
-        # Get a FileInfo instance to manipulate the file on the filesystem
+        # Get a FileInfo object to manipulate the file on the filesystem
         return FileInfo(result, inDb=False, uploadName=fileName)
 
     def getBaseName(self, template=None):
@@ -1259,17 +1319,28 @@ class Pod(Field):
     def getFreezeName(self, template=None, format='pdf', sep='.'):
         '''Gets the name on disk on the frozen document corresponding to this
            pod field, p_template and p_format.'''
-        return '%s_%s%s%s' % (self.name,self.getBaseName(template),sep,format)
+        return f'{self.name}_{self.getBaseName(template)}{sep}{format}'
 
-    def isFrozen(self, o, template=None, format='pdf'):
+    def isFrozen(self, o, template=None, format='pdf', altDbFolder=None):
         '''Is there a frozen document for thid pod field, on p_o, for p_template
            in p_format? If yes, it returns the absolute path to the frozen
            doc.'''
+        # If p_altDbFolder is True, when there is a frozen doc, instead of
+        # returning a single absolute path, it returns a 2-tuple of such paths,
+        # the second one being built with an alternate DB folder being
+        # p_altDbFolder (as a string). It is useful when the frozen doc must be
+        # exposed via a mountpoint.
         template = template or self.template[0]
-        folder = o.getFolder()
+        folder, relative = o.getFolder(withRelative=True)
         fileName = self.getFreezeName(template, format)
         r = folder / fileName
-        if r.is_file(): return str(r)
+        if not r.is_file(): return
+        r = str(r)
+        if altDbFolder:
+            # In addition to v_r, recompute a variant of the frozen doc's
+            # absolute path with an alternate DB folder.
+            r = r, os.path.join(altDbFolder, relative, fileName)
+        return r
 
     def freeze(self, o, template=None, format='pdf', secure=False, upload=None,
                freezeOdtOnError=True):
@@ -1287,7 +1358,7 @@ class Pod(Field):
 
         # Security check
         if secure and (format not in self.getFreezeFormats(o, template)):
-            raise Exception(UNAUTH)
+            o.raiseUnauthorized()
         # Compute the absolute path where to store the frozen document in the
         # database.
         folder = o.getFolder(create=True)
@@ -1335,7 +1406,7 @@ class Pod(Field):
            in p_format.'''
         # Security check
         if secure and (format not in self.getFreezeFormats(o, template)):
-            raise Exception(UNAUTH)
+            o.raiseUnauthorized()
         # Compute the absolute path to the frozen doc
         folder = o.getFolder()
         fileName = self.getFreezeName(template, format)
@@ -1362,18 +1433,42 @@ class Pod(Field):
         else:
             return r
 
+    def getFrozenFiles(self, o):
+        '''Returns, as a list of Path objects, all files frozen on this
+           p_o(bject) from this field (p_self).'''
+        # Return None (and not an empty list) if no frozen file was found
+        r = None
+        folder = o.getFolder()
+        if not folder.is_dir(): return
+        for template in self.template:
+            # Get the prefix for all frozen files one may generate from this
+            # v_template.
+            prefix = self.getFreezeName(template, format='')
+            for path in folder.glob(f'{prefix}*'):
+                if r is None: r = []
+                r.append(path)
+        return r
+
+    def deleteFiles(self, o):
+        '''Deletes the possibly frozen files related to this field on this
+           p_o(bject).'''
+        frozen = self.getFrozenFiles(o)
+        if frozen is None: return
+        for path in frozen:
+            path.unlink()
+
     def getIconText(self, format, frozen, onCell):
         '''Returns the companion text for a pod icon'''
         # No text on all layouts, "cell" excepted
         suffix = '●' if frozen else ''
         if not onCell: return suffix
-        return '%s%s' % (uiFormats.get(format), suffix)
+        return f'{uiFormats.get(format)}{suffix}'
 
     def getIconTitle(self, o, format, frozen):
         '''Get the title of the format icon'''
         r = o.translate(format)
         if frozen:
-            r += ' (%s)' % r.translate('frozen')
+            r = f'{r} ({r.translate("frozen")})'
         return r
 
     def setCustomContext(self, context, o, req, queryData):
@@ -1389,20 +1484,24 @@ class Pod(Field):
         # Compute the checked objects when relevant
         gc = self.getChecked
         if not gc: return
-        # Manage a Ref field
+        # Manage p_self.getChecked
         if gc == 'search':
             # Manage a search. All search results are in p_context['objects'].
             Search.keepCheckedResults(req, context['objects'])
         else:
-            # Manage a Ref field
+            # Manage a Ref or Calendar field
             if queryData:
                 # We are in the presence of results from one of the searches
-                # defined in Ref.searches. Search results are already in
-                # p_context['objects'].
+                # defined in a Ref field, in attribute Ref.searches. Search
+                # results are already in p_context['objects'].
                 Search.keepCheckedResults(req, context['objects'])
                 objects = context['objects']
+            elif req.calParams:
+                # We have parameters allowing to retrieve Calendar events
+                objects = Calendar.Event.getFromRequest(o, gc, req.calParams)
             else:
-                # The IDs of the tied objects are specified in the request
+                # The IDs of the tied objects of a Ref field are specified in
+                # the request.
                 ids, unchecked = Search.getCheckedInfo(req)
                 objects = []
                 tool = o.tool
@@ -1427,17 +1526,18 @@ class Pod(Field):
         '''Gets the Javascript variable definition for storing the specific
            confirmation message to show when self.confirm is not False.'''
         prefix = self.labelId
-        return 'var %s="%s";' % (prefix, o.translate('%s_confirm' % prefix))
+        text = o.translate(f'{prefix}_confirm')
+        return f'var {prefix}="{text}";'
 
     traverse['generate'] = 'perm:read'
     def generate(self, o):
         '''Called from the ui for generating a POD result'''
         req = o.req
         template = req.template
-        format = req.podFormat
+        fmt = req.podFormat
         mailing = req.mailing
         # Generate a (or get a frozen) document
-        r = self.getValue(o, template=template, format=format, crumb=req.crumb,
+        r = self.getValue(o, template=template, format=fmt, crumb=req.crumb,
                           queryData=req.queryData, computeCustomContext=True)
         if isinstance(r, str):
             # An error has occurred, and "r" contains the error message
@@ -1472,14 +1572,14 @@ class Pod(Field):
            this POD field.'''
         # Ensure a file from the correct type has been uploaded
         req = o.req
-        format = req.podFormat
+        fmt = req.podFormat
         upload = req.uploadedFile
-        if not upload or not upload.name.endswith('.%s' % format):
+        if not upload or not upload.name.endswith(f'.{fmt}'):
             # A wrong file has been uploaded (or no file at all)
             msg = 'upload_invalid'
         else:
             # Store the uploaded file in the database
-            self.freeze(o, req.template, format, secure=True, upload=upload)
+            self.freeze(o, req.template, fmt, secure=True, upload=upload)
             msg = 'action_done'
         return o.goto(o.referer, message=o.translate(msg))
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

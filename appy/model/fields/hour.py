@@ -46,7 +46,7 @@ class Hour(Field):
       maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
       historized=False, mapping=None, generateLabel=None, label=None,
       sdefault=None, scolspan=1, swidth=None, sheight=None, persist=True,
-      view=None, cell=None, buttons=None, edit=None, xml=None,
+      view=None, cell=None, buttons=None, edit=None, custom=None, xml=None,
       translations=None, editSep=defaultSep):
         # If no p_hourFormat is specified, the application-wide tool.hourFormat
         # is used instead.
@@ -63,12 +63,12 @@ class Hour(Field):
         # "edit" layout.
         self.editSep = editSep
         # Call the base constructor
-        Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
-          show, renderable, page, group, layouts, move, False, True, None, None,
+        super().__init__(validator, multiplicity, default, defaultOnEdit, show,
+          renderable, page, group, layouts, move, False, True, None, None,
           False, None, readPermission, writePermission, width, height, None,
           colspan, master, masterValue, focus, historized, mapping,
           generateLabel, label, sdefault, scolspan, swidth, sheight, persist,
-          False, view, cell, buttons, edit, xml, translations)
+          False, view, cell, buttons, edit, custom, xml, translations)
 
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
                           language=None):
@@ -181,6 +181,13 @@ class Hour(Field):
         return -r if negate else r
 
     @classmethod
+    def toString(class_, hour, sep=':'):
+        '''Returns the string version of this Hour-compliant p_hour tuple'''
+        h = str(hour[0]).zfill(2)
+        m = str(hour[1]).zfill(2)
+        return f'{h}{sep}{m}'
+
+    @classmethod
     def getDuration(class_, start, end):
         '''Returns the duration, in minutes, of the interval [start, end],
            "start" and "end" each being of the form ~(i_hours, i_minutes)~.'''
@@ -205,7 +212,7 @@ class Hour(Field):
             prefix = ''
         modulo = int(minutes % 60)
         hours = int(minutes / 60.0)
-        return '%s%d%s%s' % (prefix, hours, sep, str(modulo).zfill(2))
+        return f'{prefix}{hours}{sep}{str(modulo).zfill(2)}'
 
     @classmethod
     def getRanges(class_, start, end):

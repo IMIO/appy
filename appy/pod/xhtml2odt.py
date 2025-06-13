@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -26,21 +24,24 @@ span = 'text:span'
 tlist = 'text:list'
 table = 'table:table'
 cell = table + '-cell'
+
 HTML_2_ODF = {
-  'h1':h, 'h2':h, 'h3':h, 'h4':h, 'h5':h, 'h6':h, 'p':p, 'div':p,
-  'blockquote':p, 'address':p, 'sub': span, 'sup': span, 'br':'text:line-break',
-  'table': table, 'thead': table + '-header-rows',
+  'p':p, 'div':p, 'blockquote':p, 'address':p, 'sub': span, 'sup': span,
+  'br':'text:line-break', 'table': table, 'thead': table + '-header-rows',
   'tr': table + '-row', 'td': cell, 'th': cell, 'a': 'text:a',
   'ol': tlist, 'ul': tlist, 'li': 'text:list-item'}
+
+for ht in XHTML_HEADINGS: HTML_2_ODF[ht] = h
 
 # Inner tags whose presence is only useful for specifying style information
 STYLE_ONLY_TAGS = ('b', 'strong', 'i', 'em', 'strike', 's', 'u', 'span', 'q',
                    'code', 'font', 'samp', 'kbd', 'var', 'label', 'abbr')
+
 for tag in STYLE_ONLY_TAGS: HTML_2_ODF[tag] = 'text:span'
 
 # Styles whose translation to ODF is simple
-SIMPLE_TAGS = ('h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'blockquote',
-               'address', 'sub', 'sup', 'br', 'th', 'td')
+SIMPLE_TAGS = XHTML_HEADINGS + ('p', 'div', 'blockquote', 'address', 'sub', \
+                                'sup', 'br', 'th', 'td')
 
 INNER_TAGS_NO_BR = STYLE_ONLY_TAGS + ('sub','sup','a','acronym','abbr','img')
 INNER_TAGS = INNER_TAGS_NO_BR + ('br',)
@@ -49,6 +50,7 @@ TABLE_COL_TAGS = TABLE_CELL_TAGS + ('col',)
 TABLE_ROW_TAGS = ('tr', 'colgroup')
 OUTER_TAGS = TABLE_CELL_TAGS + ('li',)
 PARA_TAGS = ('p', 'div', 'blockquote', 'address')
+
 # The following elements can't be rendered inside paragraphs
 NOT_INSIDE_P = XHTML_HEADINGS + XHTML_LISTS + ('table',)
 NOT_INSIDE_P_OR_P = NOT_INSIDE_P + PARA_TAGS + ('li',)
@@ -84,11 +86,11 @@ class Element:
 class HtmlElement(Element):
     '''Represents any HTML element'''
 
-    # Moreover, if the element is a table, it will be wrapped in a HtmlTable
-    # element (see below).
+    # If the element is a table, it will be wrapped in a HtmlTable object (see
+    # below).
 
-    elemTypes = {'p':'para', 'div':'para', 'blockquote': 'para',
-                 'li':'para', 'ol':'list', 'ul':'list'}
+    elemTypes = XHTML_META_TAGS.copy()
+    elemTypes.update({'li':'para', 'ol':'list', 'ul':'list'})
 
     # Prototypical instances
     protos = {}
@@ -287,6 +289,12 @@ class HtmlElement(Element):
                     p.cssStyles.addClass(innerStyle)
                 dump(env.getOdfAttributes(p))
         else:
+            # If a CSS class is defined on the parent cell, transfer it to this
+            # paragraph.
+            if self.elem in ('td', 'th'):
+                css = self.getClass()
+                if css:
+                    p.cssStyles.addClass(css)
             dump(env.getOdfAttributes(p))
         dump('>')
         if not self.tagsToClose: self.tagsToClose = []
@@ -406,7 +414,8 @@ class HtmlTable(Element):
         self.originalStyles = None
         self.removeTag = False
         self.contentDumped = False
-        self.name = env.getUniqueStyleName('table')
+        # A specific name can be forced by using attribute 'data-name'
+        self.name = attrs.get('data-name') or env.getUniqueStyleName('table')
         # Suffix the table name with a post-processor command when needed
         if attrs and 'keeprows' in attrs:
             # This command tells the post-processor to remove some rows from
@@ -489,6 +498,8 @@ class HtmlTable(Element):
         width = tableProps.getWidth(cssStyles)
         originalWidth = tableProps.getWidth(cssStyles, original=True)
         align = getattr(cssStyles, 'textalign', 'left')
+        # Get margins if defined
+        margins, marginWidth = tableProps.getMargins(cssStyles, getWidth=True)
         # Get the page width, in cm, and the ratio css.px2cm
         pageWidth, px2cmRatio = tableProps.pageWidth, tableProps.px2cm
         pageWidth = pageWidth or self.env.pageWidth
@@ -511,8 +522,6 @@ class HtmlTable(Element):
             originalTableWidthPx = int(originalWidth.value)
         else:
             originalTableWidthPx = None
-        # Get margins if defined
-        margins = tableProps.getMargins(cssStyles)
         # Apply attribute "keep-with-next" ?
         kwn = ' fo:keep-with-next="always"' \
               if cssStyles.hasClass('TableKWN') else ''
@@ -524,12 +533,17 @@ class HtmlTable(Element):
            align == 'left':
             return 'podTable', tableWidthPx, originalTableWidthPx
         # Define a specific style for this table and return its name
+        if marginWidth:
+            # Do not dump relative width
+            rel = ''
+            tableWidth -= marginWidth
+        else:
+            rel = f'{s}:rel-width="{percentage}%" '
         decl = f'<{s}:style {s}:name="{self.name}" {s}:family="table" ' \
                f'{s}:parent-style-name="podTable"><{s}:table-properties ' \
-               f'{s}:width="{formatNumber(tableWidth, sep=".")}cm" ' \
-               f'{s}:rel-width="{percentage}%" {self.tableNs}:table-align="' \
-               f'{align}" {self.tableNs}:align="{align}"{margins}{kwn}' \
-               f'{unbreak}/></{s}:style>'
+               f'{s}:width="{formatNumber(tableWidth, sep=".")}cm" {rel}' \
+               f'{self.tableNs}:table-align="{align}" {self.tableNs}:align=' \
+               f'"{align}"{margins}{kwn}{unbreak}/></{s}:style>'
         self.env.stylesManager.dynamicStyles.add('content', decl)
         return self.name, tableWidthPx, originalTableWidthPx
 
@@ -1010,7 +1024,11 @@ class XhtmlEnvironment(Environment):
         elif elem in TABLE_COL_TAGS:
             # Determine colspan
             colspan = 1
-            if 'colspan' in attrs: colspan = int(attrs['colspan'])
+            if 'colspan' in attrs:
+                try:
+                    colspan = int(attrs['colspan'])
+                except ValueError:
+                    colspan = 1
             table = self.currentTables[-1]
             table.inCell = colspan
             table.cellIndex += colspan
@@ -1085,9 +1103,11 @@ class XhtmlEnvironment(Environment):
         return current, res
 
     def findStyle(self, elem):
-        converter = self.parser.caller
-        localStylesMapping = converter.localStylesMapping
-        return converter.stylesManager.findStyle(elem, localStylesMapping)
+        '''Retrieve or create the style to apply to tag p_elem'''
+        # Retrieve the Xhtml2OdtConverter object
+        x2o = self.parser.caller
+        return x2o.stylesManager.findStyle(elem, x2o.localStylesMapping,
+                                           x2o.stylesStore)
 
     def updateMergedStyles(self, action, xhtmlElem):
         '''Updates the current set of applicable inner styles after inner tag
@@ -1110,8 +1130,29 @@ class XhtmlEnvironment(Environment):
             xhtmlElem.originalStyles = None
             self.mergedCount -= 1
 
+    def removeEmptyList(self, endTag):
+        '''We are about to dump this list-related p_endTag. If the list to dump
+           is empty, remove it from p_self.res.'''
+        # Find the last list tag
+        res = self.res
+        i = res.rfind('<text:list ')
+        if i == -1: return endTag # Should never occur
+        # Get the part of v_res being after this start tag
+        j = res.find('>', i+11)
+        if j == -1: return endTag # Should never occur
+        part = res[j+1:]
+        if not part:
+            # The last dumped list is empty. Remove it.
+            self.res = self.res[:i]
+            r = None
+        else:
+            r = endTag
+        return r
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class XhtmlParser(Parser):
+    '''XHTML parser'''
+
     def lowerizeInput(self, elem, attrs=None):
         '''Because (X)HTML is case insensitive, we may receive input p_elem and
            p_attrs in lower-, upper- or mixed-case. So here we produce lowercase
@@ -1143,7 +1184,7 @@ class XhtmlParser(Parser):
             return
         odfTag = current.getOdfTag()
         if elem in SIMPLE_TAGS:
-            dump('<' + odfTag)
+            dump(f'<{odfTag}')
             dump(e.getOdfAttributes(current))
             dump('>')
         elif elem in STYLE_ONLY_TAGS:
@@ -1202,10 +1243,11 @@ class XhtmlParser(Parser):
             if src: 
                 imgCode = e.renderer.importDocument(at=attrs['src'],
                   format='image', wrapInPara=False, style=current.cssStyles,
-                  maxWidth=conv.imagesMaxWidth, keepRatio=conv.keepImagesRatio)
+                  maxWidth=conv.imagesMaxWidth, maxHeight=conv.imagesMaxHeight,
+                  keepRatio=conv.keepImagesRatio)
                 dump(imgCode)
         elif elem == 'footnote':
-            # An inexistent tag in HTML, nervertheless usable to produce ODF
+            # An inexistent tag in HTML, nevertheless usable to produce ODF
             # footnotes.
             nb = attrs['nb']
             dump(f'<text:note text:id="ftn{nb}" text:note-class="footnote">' \
@@ -1240,10 +1282,15 @@ class XhtmlParser(Parser):
             if elem == 'footnote':
                 dump('</text:note-body></text:note>')
             elif elem in XHTML_LISTS:
-                if current.parent and (current.parent.elem in XHTML_LISTS):
+                if current.parent and current.parent.elem in XHTML_LISTS:
                     # We were in an inner list. So we must close the list-item
                     # tag that surrounds it.
                     endTag = f'{endTag}</text:list-item>'
+                else:
+                    # Avoid dumping a list having no bullet. If such an empty
+                    # list is detected, m_removeEmptyList returns an empty
+                    # v_endTag, preventing to dump it.
+                    endTag = e.removeEmptyList(endTag)
             if endTag and not current.removeTag and \
                current.dumpStatus != 'waiting':
                 dump(endTag)
@@ -1253,7 +1300,7 @@ class XhtmlParser(Parser):
                 # Unmix styles corresponding to this end tag
                 e.updateMergedStyles('delete', current)
                 parent = current.parent
-                if e.mergedCount and (parent.elem in STYLE_ONLY_TAGS):
+                if e.mergedCount and parent.elem in STYLE_ONLY_TAGS:
                     # Possibly reopen a tag. The parent is already loaded with
                     # merged styles.
                     parent.dumpStatus = 'waiting'
@@ -1293,7 +1340,7 @@ class XhtmlPreprocessor:
     # Regular expression representing an HTML void tag
     voidTags = ('area', 'base', 'br', 'col', 'hr', 'img', 'input', 'link',
                 'meta', 'param', 'command', 'keygen', 'source')
-    voidTag = re.compile('<(%s)([^>]*?)(/)?\s*>' % '|'.join(voidTags), re.S)
+    voidTag = re.compile(r'<(%s)([^>]*?)(/)?\s*>' % '|'.join(voidTags), re.S)
 
     # Regular expression representing a "pre" tag
     preTag = re.compile('<pre.*?>(.*?)</pre>', re.S)
@@ -1363,7 +1410,7 @@ class XhtmlPreprocessor:
         if s is None: s = ''
 
         # If a p_paraTag is specified (typically, "div" or "p"), if p_s is raw
-        # text, every line of it will eb surrounded by this p_paraTag.
+        # text, every line of it will be surrounded by this p_paraTag.
         if paraTag: s = class_.taggify(s, tag=paraTag)
 
         # Surround p_s with a tag in order to get a XML-compliant file (we need
@@ -1386,12 +1433,13 @@ class Xhtml2OdtConverter:
     verbose = False
 
     def __init__(self, s, stylesManager, localStylesMapping, keepWithNext,
-                 keepImagesRatio, imagesMaxWidth, renderer, html, inject,
-                 unwrap):
+                 keepImagesRatio, imagesMaxWidth, imagesMaxHeight, renderer,
+                 html, inject, unwrap, stylesStore):
         self.renderer = renderer
         self.xhtmlString = XhtmlPreprocessor.preprocess(s, html=html,
                                                         inject=inject)
         self.stylesManager = stylesManager
+        self.stylesStore = stylesStore
         self.localStylesMapping = localStylesMapping
         self.odtChunk = None
         self.xhtmlParser = XhtmlParser(XhtmlEnvironment(renderer), self)
@@ -1406,6 +1454,7 @@ class Xhtml2OdtConverter:
                 self.xhtmlString = self.applyKeepWithNext()
         self.keepImagesRatio = keepImagesRatio
         self.imagesMaxWidth = imagesMaxWidth
+        self.imagesMaxHeight = imagesMaxHeight
         self.unwrap = unwrap
         # In verbose mode, we dump a trace of the xhtml2odt algorithm
         self.xhtmlParser.verbose = self.xhtmlParser.env.verbose = self.verbose

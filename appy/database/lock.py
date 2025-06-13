@@ -9,20 +9,83 @@ from persistent.mapping import PersistentMapping
 
 from appy.px import Px
 
-# Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-LOCKED_OTHER = 'This page was locked by someone else.'
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+LOCKED_O = 'This page was locked by someone else.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Lock:
     '''A lock is a database structure remembering which user (login) has locked
-      which page on which object. Locks on a given database object is
-      implemented as a dict object.locks of the form
-                  ~{s_page: (s_userId, DateTime_lockDate)}~
-    '''
+      which page on which object.'''
+
+    # Locks on a given database object are implemented as a dict object.locks of
+    # the form
+    #
+    #              ~{s_page: (s_userLogin, DateTime_lockDate)}~
+    #
 
     @classmethod
-    def set(class_, o, user, page=None, field=None):
-        '''A p_user edits a given p_page on p_o: we will set a lock, to prevent
+    def hasOn(class_, o, page=None, ignoreMine=True, lockInfo=False,
+              formatted=True):
+        '''Is a lock currently set on p_o ?'''
+        # If a p_page is passed, the method returns True if this specific page
+        # is locked. Else, it returns True if at least one lock is found on at
+        # least one page on p_o.
+        #
+        # If p_ignoreMine is True, the locks belonging to the current user are
+        # ignored. While this may seem to have sense from the UI point of view
+        # (if the page is locked by myself, I don't care about the lock), this
+        # is also a technical requirement, because auto-locks may pose problems
+        # when transitions are triggered programmatically. Let's take an
+        # example. Suppose some object is created from the UI, and, in its
+        # "onEdit" method, a transition is automatically triggered. At this
+        # time, the lock on the object has not been cleaned yet by the framework
+        # and an error is raised.
+        #
+        # If p_lockInfo is True, when the method should return True, it returns,
+        # instead, the locker login and date, for the first encountered relevant
+        # lock, as a string if p_formatted is True, as a tuple else, of the form
+        #
+        #                   (s_login, DateTime_lockDate)
+        #
+        locks = getattr(o, 'locks', None)
+        if not locks: return
+        # Return True if at least one not expired lock is found
+        userLogin = o.user.login
+        now = DateTime()
+        expires = o.config.database.lockExpires
+        for aPage, info in locks.items():
+            # Ignore inappropriate locks
+            if page and aPage != page: continue
+            # Unwrap lock info
+            login, date = info
+            # Ignore my own locks if requested
+            if ignoreMine and login == userLogin:
+                continue
+            # Ignore the lock if he has expired
+            if (now - date) >= expires:
+                continue
+            # If we are here, a relevant lock has been found
+            if not lockInfo:
+                r = True
+            elif formatted:
+                r = f'{login}::{o.tool.formatDate(date)}'
+            else:
+                r = (login, date)
+            return r
+
+    @classmethod
+    def isSet(class_, o, page):
+        '''Is this p_page locked on p_o ?'''
+        # If the page is locked by the current user or if the lock has expired,
+        # we don't mind and consider the page as unlocked. If the page is
+        # locked, this method returns the tuple (login, lockDate).
+        #
+        # m_isSet is a shorthand for m_hasOn with a specific set of attributes.
+        return class_.hasOn(o, page=page, lockInfo=True, formatted=False)
+
+    @classmethod
+    def set(class_, o, page=None, field=None):
+        '''The current user edits a given p_page on p_o: set a lock, to prevent
            other users to edit this page at the same time.'''
         # When setting a lock from a field being inline-edited, p_page is not
         # given and p_field is given instead. In that case, the page will be
@@ -33,30 +96,23 @@ class Lock:
         o.H().commit = True
         # If it does not exist yet, create, on p_o, the persistent mapping that
         # will store the lock.
+        page = page or field.page.name
         if not hasattr(o, 'locks'):
             # ~{s_page: (s_userLogin, DateTime_lockDate)}~
             o.locks = PersistentMapping()
-        # Raise an error is the page is already locked by someone else. If the
-        # page is already locked by the same user, we don't mind: he could have
-        # used its browser's back / forward buttons...
-        login = user.login
-        locks = o.locks
-        page = page or field.page.name
-        if (page in locks) and (login != locks[page][0]):
-            login, date = locks[page]
-            locker = o.search1('User', secure=False, login=login)
-            map = {'user': locker.getTitle(), 'date': o.tool.formatDate(date)}
-            o.raiseUnauthorized(o.translate('page_locked', mapping=map))
+        else:
+            # Raise an error is the page is already locked by someone else. If
+            # the page is already locked by the same user, we don't mind: he
+            # could have used its browser's back / forward buttons...
+            info = class_.isSet(o, page)
+            if info:
+                login, date = info
+                locker = o.search1('User', login=login)
+                maP = {'user': locker.getTitle(),
+                       'date': o.tool.formatDate(date)}
+                o.raiseUnauthorized(o.translate('page_locked', mapping=maP))
         # Set the lock
-        locks[page] = (login, DateTime())
-
-    @classmethod
-    def isSet(class_, o, user, page):
-        '''Is p_page locked on p_o? If the page is locked by the p_user, we
-           don't mind and consider the page as unlocked. If the page is locked,
-           this method returns the tuple (login, lockDate).'''
-        if hasattr(o, 'locks') and (page in o.locks):
-            if (user.login != o.locks[page][0]): return o.locks[page]
+        o.locks[page] = (o.user.login, DateTime())
 
     @classmethod
     def remove(class_, o, page=None, field=None, force=False):
@@ -77,7 +133,7 @@ class Lock:
         if not force:
             login = o.user.login
             if locks[page][0] != login:
-                o.raiseUnauthorized(LOCKED_OTHER)
+                o.raiseUnauthorized(LOCKED_O)
         # Remove the lock
         del(locks[page])
         # This requires a database commit

@@ -8,10 +8,11 @@ h2        { font-size:13pt; margin:6px 0 6px 0; font-style:italic;
 h3        { font-size:12pt; margin:4px 0 4px 0; font-weight:bold }
 h4        { font-size:11pt; margin:4px 0 4px 0 }
 h5        { font-size:9pt; margin:0; font-style:italic; font-weight:normal;
-            background-color:#d7dee4 }
+            background-color:#f2f2f2 }
 h6        { font-size:9pt; margin:0; font-weight:bold }
 a         { text-decoration:none; color:|linkColor| }
 a:visited { color:|visitedColor| }
+a:focus   { outline-width:0 }
 a > img   { display:inline-block }
 table     { font-size:100%; border-collapse:collapse }
 td        { padding:0 }
@@ -21,16 +22,15 @@ form      { margin:0; padding:0 }
 acronym   { cursor:help }
 input     { font:100% |fonts| }
 textarea  { width:99%; font:100% |fonts|; border:1px solid #d0d0d0;
-            background-color:white; margin-bottom:0.5em }
-label     { color:|linkColor|; padding:0.2em 0.6em 0 0;
+            background-color:white; margin-bottom:0.5em; transition:0.5s }
+label,
+.asLabel  { color:|linkColor|; padding:0.2em 0.6em 0 0;
             text-transform:uppercase; font-size:95% }
 .subLabel { text-transform:none; padding-left:5px }
 legend    { padding-bottom:2px; padding-right:3px; color:black }
-ul        { line-height:1.2em; margin:0 0 0.2em 0.6em;  padding:0;
-            list-style:none outside none }
-ul li     { margin:0; background-image:url("../appy/li.gif");
-            padding:0 0 5px 20px; background-repeat:no-repeat;
-            background-position:0 6px }
+ul        { line-height:1.2em; margin:0 0 0.2em 0.6em; padding:0;
+            list-style-type:"»" }
+li        { margin:0; padding:2px 0.5em }
 img       { border:0; vertical-align:middle }
 audio     { margin:2px 0 }
 select    { border:none; border-bottom:1px solid |itextBottomColor|;
@@ -44,20 +44,22 @@ input[type=checkbox] { border:0; background:none; cursor:pointer }
 input[type=radio]    { border:0; background:none; cursor:pointer }
 input[type=file]     { border:0px solid #d0d0d0; cursor:pointer; font-size:80%;
                        margin-bottom:|fieldBottom| }
-input[type=button]   { border:1px solid |altColor|; margin:0 5px;
+input[type=button],
+input[type=submit]   { border:1px solid |altColor|; margin:0 5px;
                        padding:3px 10px; background-color:transparent;
                        color:|buttonColor|; cursor:pointer;
                        text-transform:|buttonCase| }
-input[type=submit]   { border:1px solid #d0d0d0; background-color:#f8f8f8;
-                       cursor:pointer; color:|buttonColor| }
 input[type=text],
 input[type=password] { outline:none; cursor:text;
                        border:none; padding:3px 0; margin:0 2px |fieldBottom| 0;
                        border-bottom:|itextBottom| |itextBottomColor|;
                        line-height:1.4em; font-family:|fonts|;
                        background-color:transparent }
-input[type=date]     { width:9em }
-input[type=datetime-local] { width:12.1em }
+input[type=date]     { width:9em; margin-bottom:0.2em;
+                       margin-bottom:|fieldBottom| }
+input[type=datetime-local] { width:12em; margin-bottom:0.4em;
+                       margin-bottom:|fieldBottom| }
+input::placeholder   { color:#666666 }
 select[multiple]     { border:1px solid |itextBottomColor|; margin:0;
                        background-image:none; padding:0.1em 0.3em }
 form[name=search] input[type=button] { margin:0 }
@@ -80,8 +82,11 @@ form[name=search] input[type=button] { margin:0 }
 .pageTitleP { text-align:|bcTitleAlignP| }
 .breadTitle { padding:0 0 30px 0; align-items:flex-start; gap:0.4em }
 .pageIcons { text-transform:uppercase; font-weight:bold; font-size:96% }
+.prePods { display:flex; gap:1em; margin-left:auto }
 .required { color:|warnColor|; font-weight:bold }
 .hourSel::before { content:':'; margin-right:1px; }
+.auto { width:auto }
+.mono { font-family:monospace; font-size:120% }
 
 /* Buttons */
 input.button {
@@ -124,15 +129,18 @@ div.rbutton { float:right }
 .xhtml table td, .xhtml table th { border:1px solid grey; padding:3px }
 .xhtml table th { background-color:|lightColor| }
 .xhtmlE { border:1px solid lightgrey; background-color:white; padding:5px 10px;
-          font-size:90% }
+          font-size:90%; transition:0.5s }
+.xhtmlE:focus, textarea:focus { border:1px solid grey }
+[contenteditable]:focus, textarea:focus { outline: 0px solid transparent }
 .xhtmlV { padding:5px; font-size:105% }
+.list .xhtmlV { padding:0 }
 .xhtmlE div, .xhtmlV div { padding-bottom:0.3em }
 .xhtmlE code, .xhtmlV code { background-color:lightgrey }
 .xhtmlE table td, .xhtmlE table th,
 .xhtmlV table td, .xhtmlV table th {
   border:1px solid |darkColor| !important; padding: 4px !important;
   color:|darkColor| }
-.clickable { cursor:pointer !important }
+.clickable, .calicon { cursor:pointer !important }
 .disabled { opacity:0.3 }
 .unclickable { pointer-events:none; cursor:default }
 .editable { cursor:crosshair !important }
@@ -140,33 +148,34 @@ div.rbutton { float:right }
 .unallowed { cursor:not-allowed }
 .refLink { font-style:italic; padding-left:5px; font-size:90%; color:#555555 }
 .refSel { font-size:95%; padding:2px 20px; margin:0 10px;
-          border-bottom:1px dashed #afb8d4 }
+          border-bottom:1px dashed |itextBottomColor| }
 .nbref { text-align:center }
 .buttons { margin-left:4px }
 .rel { position:relative }
 .focus { margin:7px 0; padding:7px; background-color:|focusColorBg|;
          border-radius:2px 2px 2px 2px; box-shadow:0 2px 4px #A9A9A9;
-         font-weight:bold; color:|darkColor| }
+         font-weight:bold; color:|darkColor|; text-transform:none }
 .focus td { padding:4px 0px 4px 4px }
 .test { font-weight:bold; color:|linkColor|; text-transform:uppercase;
         padding:0.5em 0 }
-.discreet { font-size:95%; color:#555555; margin:0 }
+.discreet { font-size:95%; color:#555555; margin:0; text-transform:none }
 .discreet table td, .discreet table th { border:1px solid grey; padding:3px }
 .titlet { vertical-align:top }
 .subTitle { font-size:90%; color:|darkColor| }
 .subTitle table { margin: 1em 0 }
+.subTitle table table { margin: 0 }
 .subTitle table>tbody>tr>th,
 .subTitle table>thead>tr>th { background-color:|thBgColor|; color:|thColor|}
 .subTitle table>tbody>tr>td { background-color:|brightColor| }
 .subTitle table>tbody>tr>th,
 .subTitle table>thead>tr>th,
-.subTitle table>tbody>tr>td { padding:0.3em; border:1px solid |thBdColor| }
+.subTitle table>tbody>tr>td { padding:0.3em; border:1px solid darkgrey }
 .flext>tbody>tr>td { display:flex; gap:0.3em }
 
 .current { font-weight:bold }
 .inputSearch { height:15px; width:120px; margin:0 0 5px 5px !important }
 .content { padding:30px; width:100% }
-.contentP { width:98% }
+.contentP { width:100% }
 .public { width:100% }
 .subbed { width:100% }
 .subbed .topBase { position:static }
@@ -200,7 +209,6 @@ div.rbutton { float:right }
 .iconST { width:18px; margin:0 2px }
 .iconXS { width:15px }
 .iconXXS { width:10px }
-.iconERR { width:24px; margin:0 10px 10px 0 }
 .iconSEL { width:21px; cursor:pointer }
 .fdrop { display:inline-flex }
 .fdrop > img { width: 16px }
@@ -219,7 +227,7 @@ div.rbutton { float:right }
 .list>tbody>tr>th,
 .list>thead>tr>th { font-weight:bold; background-color:rgba(255,255,255,0.8);
                     position:sticky; top:-30px; height:3em;
-                    border-bottom:2px solid |darkColor|; z-index:1 }
+                    border-bottom:2px solid |darkColor|; z-index:2 }
 .list a { font-weight:bold }
 .list a.pop { font-weight:normal; float:right; font-size:150%; color:lightgrey;
               margin:-6px 0 0 6px }
@@ -233,32 +241,47 @@ div.rbutton { float:right }
 .grid>tbody>tr>th,
 .grid>thead>tr>th,
 .grid>tbody>tr>td { padding:|gridPadding| }
+.grid input { margin-bottom:0 }
 .small { text-align:left; margin:8px 0 }
 .small th { background-color:|darkColor|; padding:1px 5px; height:unset;
-            border:1px solid grey; color:|brightColor|; position:inherit }
+            border:1px solid grey; color:|brightColor|; position:sticky;
+            top:-25px; z-index:1 }
 .small td { border:1px solid darkgrey; padding:1px 5px }
+.small th, .small td { vertical-align:top }
 .small label { font-size:80% }
-.small ul { margin:0 0 0.1em 0.1em }
+.small ul { margin:0 0 0.1em 0.5em }
 .small li { padding:0 2px 0 10px; text-align:left }
 .popup .grid th, .popup .grid td { border:1px solid grey }
 .calTable { font-size:95% }
-.calTable td { border:5px solid white; color:#555555; padding:10px }
+.calTable>tbody>tr>td { border:5px solid white; color:#555555; padding:10px }
 .calEvt { width:100% }
 .calEvt td { border:0; padding:0 3px 0 1px; margin:0 }
 .calMany { background-color:#c1c5c7 }
+.calSlot { border:1px dashed grey; margin:2px 0; padding:2px; color:grey;
+           font-size:90%; text-align:center }
 
 #summary { margin:8px }
 #commentArea { margin:5px 0 }
 #commentArea > div { font-style:italic; font-size:90%; padding-bottom:5px }
-.timeline { font-size:85%; color:#555555 }
-.timeline>tbody>tr { height:18px }
+.timeline { font-family:Abel,monospace; color:#555555; font-size:|calTFS| }
+.timeline>tbody>tr { height:22px }
 .timeline>tbody>tr>th { background-color:|brightColor|; text-align:center;
                         border:none; height:auto; padding:0 1px !important }
-.timeline>tbody>tr>td { text-align:center; padding:0 1px;
-                        border:2px solid #f7f7f7 }
+.timeline>tbody>tr>td { text-align:center; padding:0 1px; border:|calTTB| }
 .timeline a { font-size:100% !important }
 .tlLeft { text-align:left !important; padding-left:1px !important }
 .tlRight { text-align:right !important; padding-right:1px !important }
+/* For a calendar displaying events hour after hour */
+.houred td, .houred th { padding:0.2em 0.6em }
+.houred>thead>tr:first-child { background-color:#f7f8fb; position:sticky;
+                               top:0.4em; z-index:1 }
+.houred>tbody>tr { vertical-align:top }
+.houred>tbody>tr>td:not(:last-child) { border-right:1px solid grey }
+.houred>tbody>tr:not(:last-child)>td { border-bottom:1px solid lightgrey }
+.houred>thead>tr>th:first-child, .houred>thead>tr>th:last-child { width:2em }
+.houred>tbody>tr>td:first-child,
+.houred>tbody>tr>td:last-child { text-align:center }
+.houred .current { background-color:#eeeeee}
 .msgTable { margin:6px 0; width:100%; font-size:93% }
 .msgTable tr { vertical-align:top }
 .msgTable td, .msgTable th { border:1px solid grey; color:#555555;
@@ -275,10 +298,11 @@ div.rbutton { float:right }
 /* One-line flex-box CSS classes */
 .flex1 { display:flex; align-items:baseline }
 .iflex1 { display:inline-flex; position:relative }
+.flexg { display:flex; gap:0.2em; align-items:center }
 .ghead { display:inline-flex; align-items:center; gap:0.2em }
 .ghead > :nth-child(2) { padding-left:0.7em }
-.thead { display:inline-flex; font-size:89%; gap:0.3em;
-         align-items:center }
+.rhead { display:inline-flex; align-items:flex-start; gap:0.4em }
+.thead { display:inline-flex; font-size:89%; gap:0.3em; align-items:center }
 .fhead { display:inline-flex; flex-direction:|sfDirection| }
 .shead { font-size:90%; margin:0; color:|darkColor| }
 th input { margin:0 !important}
@@ -310,6 +334,9 @@ th input { margin:0 !important}
 .topSpaceN { margin-top:-15px }
 .bottomSpace { margin-bottom:30px }
 .bottomSpaceS { margin-bottom:15px }
+.bottomSpaceXS { margin-bottom:5px }
+.groupD { padding:0.5em 0 1em 0 }
+.placE { margin-bottom:15px; font-size:80% }
 .tbSpace { margin:15px 0 }
 .paraSpace { margin:3px 0 }
 .code { font-family:"Lucida Console","Courier New" }
@@ -322,6 +349,7 @@ th input { margin:0 !important}
 .first { margin-top:0px }
 .error { margin:5px }
 .smaller, .smaller select { font-size:95% }
+.pure select { margin:0 }
 .phase .pod { display:block; padding:10px 0 0 0 }
 .phase .smaller { font-size:100% }
 .phase .iconS { width:55px }
@@ -385,7 +413,8 @@ th input { margin:0 !important}
 /* Searches */
 .sTop    { display:flex; align-items:center; gap:1em; font-size:|sTopFSize|;
            padding:|sTopPadding|; margin:|sTopMargin|;
-           border-bottom:|sTopBorderB| }
+           border-bottom:|sTopBorderB|; background-color:|sTopBgColor| }
+.contentP .sTop { margin-right:0; padding-right:0 }
 .sdetail { cursor:help; width:16px; padding-left:1em }
 .smodes  { display:flex; flex-wrap:wrap; grid-gap:15px }
 .snav    { display: flex; align-items:center; justify-content:center }

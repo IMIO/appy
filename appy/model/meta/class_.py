@@ -5,7 +5,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import collections
-import persistent
+from persistent import Persistent
 from persistent.mapping import PersistentMapping
 
 from appy.px import Px
@@ -17,8 +17,10 @@ from appy.model.user import User
 from appy.model.tool import Tool
 from appy.model.root import Model
 from appy.model.group import Group
+from appy.model.place import Place
 from appy.ui.layout import Layouts
-from appy.model.fields import Field
+from appy.utils import asDict, exeC
+from appy.model.utils import Cloner
 from appy.model.workflow import Role
 from appy.model.fields.ref import Ref
 from appy.model.fields.pod import Pod
@@ -27,6 +29,7 @@ from appy.utils import string as sutils
 from appy.model.fields.text import Text
 from appy.model.document import Document
 from appy.model.utils import Object as O
+from appy.model.fields import Field, Show
 from appy.model.fields.phase import Phase
 from appy.model.fields.string import String
 from appy.model.fields.select import Select
@@ -49,6 +52,9 @@ CUS_ID_KO   = 'The custom ID produced by method "generaeId" must be a string.'
 S_FIELD_KO  = 'Field "%s", mentioned as search field on class "%s", not found.'
 FILT_KO     = '%s :: Unparsable filter :: %s.'
 FILT_ERR    = '%s::%s - Filter error :: %s. %s'
+IDX_FL_KO   = 'Indexed field "%s" cannot be defined on class "%s" having no ' \
+              'catalog.'
+FIL_KO      = 'Wrong filter "%s" on class "%s".'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Class(Meta):
@@ -112,10 +118,11 @@ class Class(Meta):
         # True.
         if not appOnly:
             # The name of the generated class (tribute to appy.gen)
-            genName = 'Gen_%s' % self.name
+            genName = f'Gen_{self.name}'
             if self.type == 'base':
                 # The class must only inherit from p_class_ and Persistent
-                exec('class %s(class_, persistent.Persistent): pass' % genName)
+                ctx = {'class_': class_, 'Persistent': Persistent}
+                classDef = f'class {genName}(class_, Persistent): pass'
             else:
                 # It must also inherit from a base class or one of its
                 # sub-classes.
@@ -123,15 +130,19 @@ class Class(Meta):
                 if base != 'Base':
                     # This is an "over" class
                     self.type = 'over'
-                exec('class %s(class_, %s, persistent.Persistent): pass' % \
-                     (genName, base))
-            # This concrete class will have a full name being
+                ctx = globals()
+                ctx['class_'] = class_
+                classDef = f'class {genName}(class_, {base}, Persistent): pass'
+            # Generate the class
+            genClass = exeC(classDef, genName, ctx)
+            # This concrete class must have a full name being
             #                appy.model.meta.class_.<genName>
-            exec('self.concrete = %s' % genName)
+            genClass.__module__ = 'appy.model.meta.class_'
+            self.concrete = genClass
             # Add the class in the namespace of the current package
             # (appy.model.meta.class_). Else, pickle, used by the ZODB to store
             # instances of this class, will not find it.
-            setattr(appy.model.meta.class_, genName, self.concrete)
+            setattr(appy.model.meta.class_, genName, genClass)
         else:
             self.type = 'over' if self.name in Model.baseClasses else 'app'
         # Fields are grouped into pages, themselves grouped into "phases"
@@ -164,10 +175,12 @@ class Class(Meta):
         if hasattr(self.python, 'update'):
             self.python.update(self)
 
-    def getBaseClass(self):
-        '''Returns the name of the class being p_self's base class'''
+    def getBaseClass(self, python=False):
+        '''Returns the name of the class being p_self's base class, or the
+           Python class in ititself if p_python is True.'''
         name = self.name
-        return name if name in Model.baseClasses else 'Base'
+        r = name if name in Model.baseClasses else 'Base'
+        return eval(r) if python else r
 
     def injectProperties(self, fields=None):
         '''Injects, on p_self.concrete, a property for every field defined on
@@ -184,13 +197,12 @@ class Class(Meta):
             useClassFields = False
         for name, field in fields.items():
             # To get a field value is done via method Field::getValue
-            getter = lambda self, field=field: field.getValue(self)    
+            getter = lambda o, field=field: field.getValue(o)
             # To set a value is done via method Field::store
             if isinstance(field, Ref):
-                setter = lambda self, v, field=field: \
-                                field.store(self, v, secure=False)
+                setter = lambda o,v, field=field: field.store(o,v, secure=False)
             else:
-                setter = lambda self, v, field=field: field.store(self, v)
+                setter = lambda o,v, field=field: field.store(o,v)
             setattr(class_, name, property(getter, setter))
         # Inject one property for every potential switch field
         if useClassFields and self.switchFields:
@@ -232,55 +244,66 @@ class Class(Meta):
            Meta.unallowedName(name):
             raise Model.Error(NAME_KO % (name, self.name))
 
+    def cloneField(self, name, field, ts):
+        '''Create a clone from the base field named p_name (see Cloner doc)'''
+        r = Cloner.clone(field)
+        if name == 'searchable':
+            ts.searchable = r
+        elif name == 'title':
+            ts.title = r
+        return r
+
     def readFields(self):
         '''Create attributes "fields" and "switchFields", as ordered dicts
            storing all fields defined on this class and parent classes.'''
         class_ = self.python
-        r = collections.OrderedDict() # Will become p_self.fields
-        sr = None # Will become p_self.switchFields, collecting sub-fields found
-                  # within Switch fields. Sub-fields found within Switch fields
-                  # must be considered, in some aspects, as first-class fields:
-                  # they must have a read/write property (as produced by
-                  # m_injectProperties) and they must be retrievable via method
-                  # o.getField. But their rendering is specific and is managed
-                  # internally by their switch.
+        # v_r Will become p_self.fields
+        r = collections.OrderedDict()
+        # v_sr will become p_self.switchFields, collecting sub-fields found
+        # within Switch fields. Sub-fields found within Switch fields must be
+        # considered, in some aspects, as first-class fields: they must have a
+        # read/write property (as produced by m_injectProperties) and they must
+        # be retrievable via method o.getField. But their rendering is specific
+        # and is managed internally by their switch.
+        sr = None
         # Find field in p_class_ and base classes
+        indexable = self.isIndexable() # Is p_self indexable ?
         for aClass in self.getFieldClasses(class_):
-            tfield = sfield = None
+            isBase = aClass == Base
+            # Remember fields *t*itle and *s*earchable, if met
+            if isBase: ts = O(title=None, searchable=None)
+            # Browse v_aClass fields
             for name, field in aClass.__dict__.items():
-                if name.startswith('__'): continue
-                if isinstance(field, Field):
-                    # Ensure the field name is acceptable
-                    self.checkFieldName(aClass, name)
-                    # A field was found.
-                    #
-                    # Special fields "title", "record", "searchable" and "state"
-                    # must be duplicated. Else, all app classes will get the
-                    # modifications that the developer can apply to it via
-                    # "update" methods.
-                    if name == 'searchable':
-                        field = sfield = Text(**Base.searchableAttributes)
-                    elif name == 'title':
-                        field = tfield = String(**Base.titleAttributes)
-                    elif name == 'record':
-                        field = Computed(**Base.recordAttributes)
-                        field.page = field.page.clone()
-                    elif name == 'state':
-                        field = Select(**Base.stateAttributes)
-                    # Late-initialize it
-                    field.init(self, name)
-                    r[name] = field
-                    if field.page:
-                        self.readPage(field.page)
-                    # Manage Switch sub-fields
-                    if isinstance(field, Switch) and field.fields:
-                        # Store any found sub-field within v_sr
-                        if sr is None:
-                            sr = collections.OrderedDict()
-                        field.injectFields(self, aClass, sr)
+                # Ignore inappropriate attributes
+                if name.startswith('__') or not isinstance(field, Field):
+                    continue
+                # Ensure the field name is acceptable
+                self.checkFieldName(aClass, name)
+                # A field was found
+                if isBase:
+                    # Base fields have to be cloned
+                    field = self.cloneField(name, field, ts)
+                # Late-initialize it
+                field.init(self, name)
+                r[name] = field
+                if field.page:
+                    self.readPage(field.page)
+                # Manage Switch sub-fields
+                if isinstance(field, Switch) and field.fields:
+                    # Store any found sub-field within v_sr
+                    if sr is None:
+                        sr = collections.OrderedDict()
+                    field.injectFields(self, aClass, sr)
+                # Ensure no indexed field is set on an unindexable class.
+                # Indexed fields from class "Base" are tolerated on not
+                # indexable classes because they have no effect on these
+                # classes.
+                if field.indexed and not indexable and not isBase:
+                    raise Model.Error(IDX_FL_KO % (field.name, self.name))
             # Reify the link between fields "title" and "searchable" on their
             # duplicates for this v_aClass.
-            if tfield and sfield: tfield.filterField = sfield
+            if isBase and ts.title and ts.searchable:
+                ts.title.filterField = ts.searchable
         self.fields = r
         self.switchFields = sr
 
@@ -298,7 +321,8 @@ class Class(Meta):
         # Indeed, by default, object histories are not "open" to object viewers
         # (from the UI): they are viewable by Managers only.
         record = self.fields['record']
-        record.show = record.page.show = 'view'
+        record.show = Show.VX
+        record.page.show = 'view'
 
     def readSearches(self):
         '''Create attribute "searches" as an ordered dict storing all static
@@ -429,7 +453,10 @@ class Class(Meta):
     defaultCssClasses = {
       'list' : 'list', # [class level] The table tag containing a list of this
                        # class' objects (tied objects from a Ref field, results
-                       # from a search, etc.)
+                       # from a search, etc.).
+      'row'  : None,   # [object level] A CSS class to apply to the row
+                       # containing an object of this class in these lists
+                       # (typically defining a background color).
       'title': None,   # [object level] The "title" "a" tag (or span if
                        # unclickable) referring to an instance of this class,
                        # shown within lists of objects.
@@ -464,7 +491,7 @@ class Class(Meta):
         r = r or Class.defaultCssClasses.get(zone)
         # There may be some CSS class to p_add
         if add:
-            r = add if not r else ('%s %s' % (r, add))
+            r = add if not r else f'{r} {add}'
         return r
 
     def getSubCss(self, o, context, index=None, inPickList=False):
@@ -486,7 +513,7 @@ class Class(Meta):
         else:
             r = 'inline'
         # Complete this standard CSS class with a custom one, if any
-        return self.getCssFor(o, 'sub', add='%sActions' % r)
+        return self.getCssFor(o, 'sub', add=f'{r}Actions')
 
     # Default i18n labels, per zone
     defaultLabels = {
@@ -522,19 +549,25 @@ class Class(Meta):
         r = getattr(self.python, 'createVia', 'form')
         return r if not callable(r) else r(tool)
 
+    def updateViaCalendarDefaults(self, tool, attributes):
+        '''When creating instances of p_self via a Calendar field, get default
+           attributes for the "edit" form, if defined on the Python class.'''
+        method = getattr(self.python, 'viaCalendarDefaults', None)
+        if method: method(tool, attributes)
+
     def getCreateLink(self, tool, createVia, formName, sourceField=None,
                       insert=None):
         '''When instances of p_self must be created from a template (from the
            UI), this method returns the link allowing to search such templates
            from a popup.'''
-        r = '%s/Search/results?className=%s&search=fromSearch&popup=True&' \
-            'fromClass=%s&formName=%s' % \
-            (tool.url, createVia.container.name, self.name, formName)
+        r = f'{tool.url}/Search/results?className={createVia.container.name}&' \
+            f'search=fromSearch&popup=True&fromClass={self.name}&' \
+            f'formName={formName}'
         # When object creation occurs via a Ref field, its coordinates are given
         # in p_sourceField as a string: "sourceObjectId:fieldName".
-        if sourceField: r += '&sourceField=%s' % sourceField
+        if sourceField: r = f'{r}&sourceField={sourceField}'
         # p_insert is filled when the object must be inserted at a given place
-        if insert: r += '&insert=%s' % insert
+        if insert: r = f'{r}&insert={insert}'
         return r
 
     def getCreateExclude(self, o):
@@ -555,11 +588,20 @@ class Class(Meta):
         return self.python.maySearch(tool) \
                if hasattr(self.python, 'maySearch') else True
 
+    def searchesAreEnabled(self, c):
+        '''Although m_maySearch may be True, p_self's searches are not available
+           from public pages, when the site is configured in not-discreet-login
+           mode.'''
+        # Indeed, in that case, the login box would show up on any page (search
+        # results, advanced search form, etc).
+        if not c.config.ui.discreetLogin and c._px_.name == 'public':
+            return
+        return True
+
     def getSearchAdvanced(self, tool):
         '''Gets the "advanced" search defined on this class if present'''
-        # This Search instance, when present, is used to define search
-        # parameters for this class' special searches: advanced, all and live
-        # searches.
+        # This Search object, when present, is used to define search parameters
+        # for this class' special searches: advanced, all and live searches.
         r = getattr(self.python, 'searchAdvanced', None)
         return r if not callable(r) else r(tool)
 
@@ -569,14 +611,25 @@ class Class(Meta):
         advanced = self.getSearchAdvanced(tool)
         # By default, advanced search is enabled
         if not advanced: return True
-        # Evaluate attribute "show" on this Search instance representing the
+        # Evaluate attribute "show" on this Search object representing the
         # advanced search.
         return advanced.isShowable(tool)
 
     def isIndexable(self):
         '''Is p_self "indexable" ? In other words: do we need to have a Catalog
            storing index values for instances of this class ?'''
-        return getattr(self.concrete, 'indexable', True)
+        try:
+            return getattr(self.concrete, 'indexable', True)
+        except AttributeError:
+            # At generation time, p_self.concrete does not exist
+            if hasattr(self.python, 'indexable'):
+                r = self.python.indexable
+            elif self.type == 'over':
+                # Determine it from the overridden base class
+                r = getattr(eval(self.name), 'indexable', True)
+            else:
+                r = True
+            return r
 
     def getCatalog(self, o):
         '''Returns the catalog tied to p_self, if it exists'''
@@ -603,6 +656,27 @@ class Class(Meta):
                     if visible:
                         r[field] = visible
         return r
+
+    def getFields(self, expr, names=False):
+        '''Returns, among p_self.fields, those matching p_expr: a Python
+           expression receiving variable "field" in its context.'''
+        r = []
+        for field in self.fields.values():
+            match = eval(expr)
+            if match:
+                elem = field.name if names else field
+                r.append(elem)
+        return r
+
+    def getFieldSets(self, o, fields=None):
+        '''Beyond p_self.fields, p_self.python may define additional, dynamic
+           fields.'''
+        # If p_fields are passed, return these fields and nothing else
+        if fields: return (fields,)
+        # Complete standard fields with dynamic fields if found
+        fields = self.fields
+        if not hasattr(self.python, 'getDynamicFields'): return (fields,)
+        return (fields, self.python.getDynamicFields(o))
 
     def getDynamicSearches(self, tool):
         '''Gets the dynamic searches potentially defined on this class'''
@@ -634,14 +708,17 @@ class Class(Meta):
                 if search.name == name:
                     return search
 
-    def getGroupedSearches(self, tool, ctx):
-        '''Returns an object with 2 attributes:
-           * "searches" stores the searches defined for this class, as instances
-             of the run-time-specific class appy.model.searches.ui.UiSearch;
-           * "default" stores the search being the default one.
-        '''
+    def getGroupedSearches(self, tool, c):
+        '''Returns self's available searches, grouped'''
+        # The result is an object ~O(all=[UiSearch],default=UiSearch)~:
+        #  - "all" stores the searches defined for this class, as instances of
+        #    the run-time-specific class appy.model.searches.ui.UiSearch ;
+        # - "default" stores the search being the default one.
+        r = O(all=[], default=None)
+        # Do not compute searches if searches are disabled
+        if not c.enabled: return r
+        # Get first the Search objects
         searches = []
-        default = None # Also retrieve the default one here
         groups = {} # The already encountered groups
         page = FieldPage('searches') # A dummy page required by class UiGroup
         # Get the statically defined searches from class's "searches" attribute
@@ -653,20 +730,37 @@ class Class(Meta):
         dyn = self.getDynamicSearches(tool)
         if dyn: searches += dyn
         # Return the grouped list of UiSearch instances
-        r = []
+        uis = r.all
         for search in searches:
-            # Create the search descriptor
-            ui = search.ui(tool, ctx)
+            # Create the UiSearch object
+            ui = search.ui(tool, c)
             if not search.group:
                 # Insert the search at the highest level, not in any group
-                r.append(ui)
+                uis.append(ui)
             else:
-                uiGroup = search.group.insertInto(r, groups, page, self.name,
+                uiGroup = search.group.insertInto(uis, groups, page, self.name,
                                                   content='searches')
                 uiGroup.addElement(ui)
-            # Is this search the default search?
-            if search.default: default = ui
-        return O(all=r, default=default)
+            # Is this search the default search ?
+            if search.default: r.default = ui
+        return r
+
+    def getField(self, name, o=None):
+        '''Gets p_self's field having thie p_name. Return None if the field is
+           not found.'''
+        r = self.fields.get(name)
+        if r is None and self.switchFields:
+            # p_name could be a switch sub-field
+            r = self.switchFields.get(name)
+        if r is None and o and hasattr(self.python, 'getDynamicFields'):
+            r = self.python.getDynamicFields(o).get(name)
+        return r
+
+    def getClassSearchFields(self, tool):
+        '''Get the search fields as possibly defined on the Python class, in
+           static attribute "searchFields".'''
+        names = getattr(self.python, 'searchFields', None)
+        return names(tool) if callable(names) else names
 
     def getSearchFields(self, tool, refInfo=None):
         '''Returns, as 2-tuple:
@@ -678,19 +772,18 @@ class Class(Meta):
         fields = []; css = []; js = []
         if refInfo:
             # The search is triggered from a Ref field
-            o, ref = Search.getRefInfo(tool, refInfo, nameOnly=False)
-            names = ref.queryFields or ()
+            o, ref = Search.getRefInfo(tool, refInfo)
+            names = ref.queryFields or self.getClassSearchFields(tool)
             cols = ref.queryNbCols
         else:
             # The search is triggered from an app-wide search
-            names = getattr(self.python, 'searchFields', None)
-            names = names(tool) if callable(names) else names
+            names = self.getClassSearchFields(tool)
             cols = getattr(self.python, 'numberOfSearchColumns', 1)
         # Get fields from names
         if names:
             fields = []
             for name in names:
-                field = self.fields.get(name)
+                field = self.getField(name)
                 if field is None:
                     tool.log(S_FIELD_KO % (name, self.name), type='warning')
                 else:
@@ -741,10 +834,10 @@ class Class(Meta):
         '''Must the mechanism for toggling sub-titles be enabled on p_self ?'''
         # Sub-titles may appear, within lists or grids of p_self's instances,
         # under the title of every instance.
-        # ~
+        #
         # p_from may hold a Ref field. In that case, toggling sub-titles occurs
         # in the context of a list of objects being tied via this field.
-        # ~
+        #
         # Check first if the mechanism is explicitly disabled
         if from_ and from_.toggleSubTitles is not None:
             toggle = from_.toggleSubTitles
@@ -768,19 +861,24 @@ class Class(Meta):
         r = getattr(self.python, 'listColumns', ('title',))
         return r if not callable(r) else r(tool)
 
-    def getFilters(self, tool, filters=None):
+    def getFilters(self, tool, filters=None, fields=None):
         '''Extracts, from the request (or from p_filters if passed), filters
            defined on fields belonging to this class.'''
         try:
             filters = filters or tool.req.filters
-            r = sutils.getDictFrom(filters)
+            # v_filters may already be a dict
+            if isinstance(filters, dict):
+                r = filters
+            else:
+                r = sutils.getDictFrom(filters)
         except ValueError:
             tool.log(FILT_KO % (self.name, str(filters)), type='error')
             return {}
         # Apply a potential transform on every filter value
+        fields = fields or self.fields
         for name in list(r.keys()):
             # Get the corresponding field
-            field = self.fields.get(name)
+            field = fields.get(name)
             if field:
                 try:
                     r[name] = field.getFilterValue(r[name])
@@ -789,7 +887,21 @@ class Class(Meta):
                     tool.log(FILT_ERR % (self.name, name, str(r[name]),
                                          str(err)), type='warning')
                     del(r[name])
+            else:
+                # The filter entry is wrong
+                tool.log(FIL_KO % (name, self.name), type='warning')
+                del(r[name])
         return r
+
+    def filtersToParams(self, filters, params):
+        '''Convert every filter value from dict p_filters to a search parameters
+           and add this latter to this dict of p_params.'''
+        if not filters: return
+        for name, value in filters.items():
+            if not value: continue
+            field = self.fields[name]
+            value = field.getSearchValue(None, value=value)
+            if value is not None: params[name] = value
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                  PXs
@@ -799,17 +911,17 @@ class Class(Meta):
     pxAddFrom = Px('''
      <!-- The image outside the button, if "iconOut" -->
      <img if="iconOut" src=":field.getIconUrl(url)"
-          class=":'clickable %s' % field.iconCss"
+          class=":f'clickable {field.iconCss}'"
           onclick="this.nextSibling.click()"/>
 
      <!-- The button in itself -->
-     <a target="appyIFrame" id=":addFormName + '_from'"
+     <a target="appyIFrame" id=":f'{addFormName}_from'"
         href=":class_.getCreateLink(tool, createVia, addFormName, sourceField)">
       <input var="css='Small' if fromRef else 'Portlet';
                   cssOut='noIcon ' if iconOut else '';
                   label=_(field.addFromLabel if field else 'object_add_from')"
          type="button" value=":label" onclick="openPopup('iframePopup')"
-         class=":'%sbutton%s button' % (cssOut, css)"
+         class=":f'{cssOut}button{css} button'"
          style=":'' if iconOut else svg('add', bg=True)"/>
      </a>''')
 
@@ -836,12 +948,12 @@ class Class(Meta):
 
     pxAdd = Px('''
      <form var="createVia=class_.getCreateVia(tool); className=class_.name"
-           if="createVia" class="addForm" name=":'%s_add' % className"
+           if="createVia" class="addForm" name=":f'{className}_add'"
            var2="styles=class_.addStyles[buttonType];
                  target=ui.LinkTarget(class_.python, popup=viaPopup);
                  text=_(label or 'object_add');
                  onClick=onClick|None"
-           action=":'%s/new' % tool.url" target=":target.target">
+           action=":f'{tool.url}/new'" target=":target.target" method="post">
       <input type="hidden" name="className" value=":className"/>
       <input type="hidden" name="template_" value=""/>
       <input type="hidden" name="insert" value=""/>
@@ -858,7 +970,7 @@ class Class(Meta):
       <!-- Create from a pre-filled form when relevant -->
       <div if="createVia != 'form'" class="addFrom"
          var2="fromRef=False; sourceField=None; iconOut=False;
-               addFormName='%s_add' % className">:class_.pxAddFrom</div>
+               addFormName=f'{className}_add'">:class_.pxAddFrom</div>
      </form>''',
 
      css='''.addFrom input { margin-left:0 }''')
@@ -866,7 +978,7 @@ class Class(Meta):
     # PX representing a class-diagram-like box for this class
     pxBox = Px('''
      <table class="small mbox">
-      <tr><th>:class_.name</th><th></th></tr>
+      <tr><th>:class_.name</th><td></td></tr>
       <!-- Fields -->
       <x for="field in class_.fields.values()">:field.pxBox</x>
      </table>''')

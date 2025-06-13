@@ -58,7 +58,8 @@ OPT_INF   = {
   'init'   : '%s the distant site - %s' % (INIT_D, INIT_DET),
   'apache' : 'Create or update an Apache virtual host for this site, and ' \
              'restart Apache',
-  'sync'   : 'Create or update local copies of config.py target files'
+  'sync'   : 'Create or update local copies of config.py target files',
+  'clean'  : "Recursively delete *.pyc files in the target site's lib folder"
 }
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -68,7 +69,7 @@ class Target:
     def __init__(self, sshHost, sshPort=22, sshLogin='root', sshKey=None,
                  sitePath=None, sitePort=8000, siteApp=None, siteExt=None,
                  siteOwner='appy:appy', siteDependencies=None, default=False,
-                 apache=None):
+                 apache=None, venv=None):
         # The name of the distant host, for establishing a SSH connection
         self.sshHost = sshHost
         # The port for the SSH connection
@@ -111,12 +112,16 @@ class Target:
         # use Apache as a reverse proxy in front of your Appy site. Place here,
         # if applicable, an instance of class appy.deploy.apache::Config.
         self.apache = apache
+        # If a Python virtualenv is used in the target, specify its absolute
+        # path here (typically, '/home/appy/.venv'): it will be activated before
+        # distantly executing any Python command.
+        self.venv = venv
 
     def __repr__(self):
         '''p_self's string representation'''
-        return f'<Target {self.sshHost}:{self.sshPort}@{self.sitePath}>'
+        return f'‹Target {self.sshHost}:{self.sshPort}@{self.sitePath}›'
 
-    def execute(self, command, exe='ssh', forceExit=False):
+    def execute(self, command, exe='ssh', forceExit=False, verbose=False):
         '''Executes p_command on this target'''
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If p_exe is...
@@ -129,12 +134,14 @@ class Target:
         #        | paths.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         r = [exe]
-        # If p_forceExit is True, add the "-t" ootion to ensure the distant
+        # If p_forceExit is True, add the "-t" option to ensure the distant
         # terminal will be shut down.
         if forceExit:
             r.append('-t')
         host = f'{self.sshLogin}@{self.sshHost}'
         if exe == 'ssh':
+            if verbose: r.append('-v')
+            r.append('-A')
             r.append(host)
             r.append(f'"{command}"')
             # Option for port is '-p'
@@ -185,6 +192,17 @@ class Config:
         # <key> is the key at which the Target object can be found within
         # p_self.targets.
         self.configFiles = None
+        # When updating a target, must ownership of distant files be updated ?
+        # We talk about files retrieved from code repositories.
+        self.chownTargetFiles = True
+        # Set this attribute to True if you want ssh commands between your
+        # development PC and your target server to be run with more verbosity
+        # (-v).
+        self.sshVerbose = False
+        # Set this attribute to True if you want potential ssh-related commands
+        # exchanged between the target server and code repositories to be run
+        # with more verbosity (-v).
+        self.sshRepoVerbose = False
 
     def warnFiles(self, collectOnly=False):
         '''Issue warnings if config files are in use but not complete, or
@@ -309,10 +327,13 @@ class Deployer:
         r = arg if isinstance(arg, str) else str(arg)
         return f"'{r}'"
 
-    def buildPython(self, statements):
+    def buildPython(self, statements, target):
         '''Builds a p_command made of these Python p_statements'''
         statements = ';'.join(statements)
-        return f"python3 -c \\\"{statements}\\\""
+        # As a preamble, activate a Python virtualenv if defined
+        venv = target.venv
+        pre = f'source {venv}/bin/activate;' if venv else ''
+        return f"{pre}python3 -c \\\"{statements}\\\""
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                              Commands
@@ -381,6 +402,10 @@ class Deployer:
         from appy.deploy.apache import Apache
         Apache(target).deploy()
 
+    def clean(self, target):
+        '''Recursively clean any .pyc file in the p_target's lib folder'''
+        target.execute(f'find {target.sitePath}/lib -name "*.pyc" -delete')
+
     def applyOptions(self, arg=None):
         '''Apply the options as defined in p_self.options'''
         # Apply options
@@ -436,7 +461,7 @@ class Deployer:
           f"sys.argv=['make.py','site',{argsS}]",
           'Make().run()'
         ]
-        command = self.buildPython(statements)
+        command = self.buildPython(statements, t)
         # Execute it
         t.execute(command)
         # Execute the config commands if any
@@ -452,6 +477,7 @@ class Deployer:
            the site and coming from external sources (app and dependencies), and
            (re)starts the site.'''
         targets = self.targets
+        config = self.config.deploy
         # After updating a given target, the last lines of its log file will be
         # shown via a command like:
         #
@@ -469,6 +495,7 @@ class Deployer:
         tailNb = 100 if total == 1 else 30
         i = 0
         # Browse targets
+        mustChown = config.chownTargetFiles
         for targetName, target in self.targets.items():
             i += 1
             print(TG_ACT % (TP_UPDATE, termColorize(targetName), i, total))
@@ -477,25 +504,26 @@ class Deployer:
             # (1) Build and run the set of commands to update the app, ext and
             #     dependencies.
             commands = []
+            env = Repository.getEnvironment(verbose=config.sshRepoVerbose)
             siteOwner = target.siteOwner
             lib = Path(target.sitePath) / 'lib'
             for name in ('App', 'Ext'):
                 repo = getattr(target, f'site{name}')
                 if repo:
                     command, folder = repo.getUpdateCommand(lib)
-                    commands.append(command)
-                    commands.append(f'chown -R {siteOwner} {folder}')
+                    commands.append(f'{env} {command}')
+                    if mustChown:
+                        commands.append(f'chown -R {siteOwner} {folder}')
             # Update dependencies
             for repo in target.siteDependencies:
                 command, folder = repo.getUpdateCommand(lib)
-                commands.append(command)
-                commands.append(f'chown -R {siteOwner} {folder}')
+                commands.append(f'{env} {command}')
+                if mustChown:
+                    commands.append(f'chown -R {siteOwner} {folder}')
             # Run those commands as the main SSH user: else, agent forwarding
             # will not be allowed and will prevent to update repositories using
             # public key authentication.
-            commandS = ';'.join(commands)
-            command = f'{Repository.getEnvironment()} {commandS}'
-            target.execute(command)
+            target.execute(';'.join(commands), verbose=config.sshVerbose)
             # (2) Copy the config.py file if applicable
             self.config.deploy.pushFile(targetName, target)
             # (3) Apply potential options
@@ -513,8 +541,11 @@ class Deployer:
             # These commands will be ran with target.siteOwner
             command = ';'.join(commands)
             owner = siteOwner.split(':')[0]
-            if owner != target.sshLogin:
-                command = f"su {owner} -c '{command}'"
+            # Even if v_owner is the v_target.sshLogin, launch the command via
+            # "su - ": that way, a virtualenv could be sourced when needed,
+            # because the distant user's .bashrc or .profile file is sourced via
+            # this technique.
+            command = f"su - {owner} -c '{command}'"
             target.execute(command, forceExit=self.blind)
 
     def view(self):

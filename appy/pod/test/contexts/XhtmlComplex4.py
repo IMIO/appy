@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''
 <p>Champ FCK</p>
 <ol>

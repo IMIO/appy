@@ -52,4 +52,5 @@ CKEDITOR.editorConfig = function(config) {
   config.scayt_sLang = 'fr_BE';
   config.scayt_uiTabs = '0,1,0';
   config.removeDialogTabs = 'image:advanced;link:advanced';
+  config.versionCheck = false;
 };

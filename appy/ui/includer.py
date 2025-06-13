@@ -17,21 +17,21 @@ class Includer:
     @classmethod
     def css(class_, url, version=None):
         '''Produces a chunk of XHTML for including CSS file with this p_url'''
-        v = '?%d' % version if version else ''
-        return '<link rel="stylesheet" type="text/css" href="%s%s"/>' % (url, v)
+        v = f'?{version}' if version else ''
+        return f'<link rel="stylesheet" type="text/css" href="{url}{v}"/>'
 
     @classmethod
     def js(class_, url, version=None):
         '''Produces a chunk of XHTML for including JS file with this p_url'''
-        v = '?%d' % version if version else ''
-        return '<script src="%s%s"></script>' % (url, v)
+        v = f'?{version}' if version else ''
+        return f'<script src="{url}{v}"></script>'
 
     @classmethod
     def vars(class_, tool):
         '''Defines the global Javascript variables being declared in every Appy
            page.'''
-        return '<script>var siteUrl="%s", sameSite="%s"</script>' % \
-               (tool.siteUrl, tool.config.server.sameSite)
+        return f'<script>var siteUrl="{tool.siteUrl}", sameSite="' \
+               f'{tool.config.server.sameSite}"</script>'
 
     @classmethod
     def getFontFaces(class_, tool, fonts):
@@ -42,10 +42,10 @@ class Includer:
             if not fontFile:
                 tool.log(F_FILE_KO % font, type='warning')
                 continue
-            url = '%s/static/%s' % (tool.siteUrl, fontFile)
-            r += '@font-face {font-family:"%s"; src:url("%s") ' \
-                 'format("opentype")}' % (font, url)
-        return '<style>%s</style>' % r
+            url = f'{tool.siteUrl}/static/{fontFile}'
+            r = f'{r}@font-face {{font-family:"{font}"; src:url("{url}") ' \
+                f'format("opentype")}}'
+        return f'<style>{r}</style>'
 
     @classmethod
     def getGlobal(class_, handler, config, dir):
@@ -87,8 +87,7 @@ class Includer:
     def getUrl(class_, url, tool):
         '''Gets an absolute URL based on p_url, that can already be absolute or
            not.'''
-        if url.startswith('http'): return url
-        return tool.buildUrl(url)
+        return url if url.startswith('http') else tool.buildUrl(url)
 
     @classmethod
     def getSpecific(class_, tool, css, js):

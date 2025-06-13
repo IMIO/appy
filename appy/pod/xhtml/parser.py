@@ -10,9 +10,11 @@ CHUNK_NOT_WITH_FILE = 'Cannot parse a file when chunk=True, only a string.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class XhtmlEnvironment(Environment):
+    '''Environment for the Xhtml parser'''
+
     def __init__(self):
         # Call the base constructor
-        Environment.__init__(self)
+        super().__init__()
         # The parsing result will store a root Tag instance
         self.r = None
         # The currently walked tag (a tags.Tag or sub-class' instance)
@@ -55,7 +57,7 @@ class XhtmlParser(Parser):
         # Define a default environment if p_env is None
         env = env or XhtmlEnvironment()
         # Call the base constructor
-        Parser.__init__(self, env, caller)
+        super().__init__(env, caller)
         # If the XHTML to parse is not a complete, single-root-tag XML, but,
         # instead, a chunk of XHTML potentially containing several tags at the
         # root level, p_chunk is True and the XHTML chunk will be surrounded by
@@ -88,11 +90,11 @@ class XhtmlParser(Parser):
         chunk = self.chunk
         if chunk:
             if source == 'string':
-                xml = '<x>%s</x>' % xml
+                xml = f'<x>{xml}</x>'
             else:
                 raise Exception(CHUNK_NOT_WITH_FILE)
         # Call the base method
-        return Parser.parse(self, xml, source=source)
+        return super().parse(xml, source=source)
 
     def startElement(self, elem, attrs):
         '''Manages the start of a tag'''

@@ -53,7 +53,7 @@ class Batch:
     # Input field for going to element number x
     pxGotoNumber = Px('''
      <x var2="label=_('goto_number');
-              gotoName='%d_%s_goto' % (o.iid, field.name)">
+              gotoName=f'{o.iid}_{field.name}_goto'">
       <span class="gotoLab">:label</span>
       <input type="text" id=":gotoName" name=":gotoName" class="gotoNum"
              size=":max(len(str(total))-1, 1)" onclick="this.select()"

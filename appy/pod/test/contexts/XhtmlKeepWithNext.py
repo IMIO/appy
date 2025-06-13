@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# I need a class.
+# I need a class
 class D:
     def getAt1(self):
         return '''

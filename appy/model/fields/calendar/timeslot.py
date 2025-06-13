@@ -5,8 +5,9 @@
 from persistent.list import PersistentList
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TS_NO       = 'At least one timeslot must be defined.'
-TS_MAIN     = 'The "main" timeslot must have a day part of 1.0.'
+TS_NO      = 'At least one timeslot must be defined.'
+TS_MAIN    = 'The "main" timeslot must have a day part of 1.0.'
+FREE_ERR   = '%s :: Getting free timeslots @%s: storage problem with %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Timeslot:
@@ -35,13 +36,21 @@ class Timeslot:
         # field, a single one must be set as being the default one.
         self.default = default
 
+    def getName(self, withCode=False):
+        '''Return p_self.name, potentially prefixed with the ID of p_withCode is
+           True and p_self.id is different from p_self.name.'''
+        r = self.name or self.id
+        if withCode and self.name != self.id:
+            r = f'[{self.id}] {self.name}'
+        return r
+
     def __repr__(self):
         '''p_self's string representation'''
-        return '<Slot %s:%d>' % (self.id, self.dayPart)
+        return f'‹Slot {self.id}:{self.dayPart}›'
 
     def allows(self, eventType):
         '''It is allowed to have an event of p_eventType in this timeslot ?'''
-        # self.eventTypes being None means that no restriction applies
+        # p_self.eventTypes being None means that no restriction applies
         if not self.eventTypes: return True
         return eventType in self.eventTypes
 
@@ -50,11 +59,11 @@ class Timeslot:
         '''Checks that p_timeslots (or p_cal.timeslots if p_timeslots is
            None) are correctly defined.'''
         if timeslots is None:
-            timeslots = cal.timeslots
+            timeslots = {slot.id: slot for slot in cal.timeslots}
         if not timeslots:
             raise Exception(TS_NO)
-        for slot in timeslots:
-            if slot.id == 'main' and slot.dayPart != 1.0:
+        for id, slot in timeslots.items():
+            if id == 'main' and slot.dayPart != 1.0:
                 # The "main" timeslot must take the whole day. When getting the
                 # "dayPart" for an event, for performance reasons, when the
                 # timeslot is "main", the timeslot object is not retrieved and
@@ -72,16 +81,27 @@ class Timeslot:
                 class_.check(cal)
 
     @classmethod
-    def getAll(class_, o, cal):
-        '''Gets all timeslots for this p_cal(endar) field on this p_o(bject)'''
+    def asDict(class_, slots):
+        '''Return a dict of Timeslot objects, keyed by their id, from this list
+           of p_(time)slot objects.'''
+        return {slot.id: slot for slot in slots}
+
+    @classmethod
+    def getAll(class_, o, cal, asDict=False):
+        '''Gets all timeslots for this p_cal(endar) as a dict of Timeslot
+           objects, keyed by their id.'''
         r = cal.timeslots
         if callable(r):
             r = r(o)
             if not r:
                 # No timeslot at all is returned by the app method. Return a
                 # default timeslot.
-                r = [Timeslot('main')]
+                r = {'main': Timeslot('main')}
+            else:
+                r = class_.asDict(r)
             class_.check(cal, r)
+        else:
+            r = class_.asDict(r)
         return r
 
     @classmethod
@@ -91,15 +111,14 @@ class Timeslot:
         if timeslots is None:
             timeslots = class_.getAll(o, cal)
         # Get the one having this p_id
-        for slot in timeslots:
-            if slot.id == id: return slot
+        return timeslots.get(id)
 
     @classmethod
     def getAllNamed(class_, o, timeslots):
         '''Returns tuple (name, slot) for all defined p_timeslots. Position the
            default one as the first one in the list.'''
         r = []
-        for slot in timeslots:
+        for slot in timeslots.values():
             name = o.translate('timeslot_main') if slot.id == 'main' \
                                                 else slot.name
             if slot.default:
@@ -109,20 +128,26 @@ class Timeslot:
         return r
 
     @classmethod
-    def getFreeAt(class_, date, events, slotIds, slotIdsStr, forBrowser=False):
+    def getFreeAt(class_, o, date, events, slots, slotIdsStr, forBrowser=False):
         '''Gets the free timeslots in the current calendar for some p_date'''
         # As a precondition, we know that the day is not full (so timeslot
         # "main" cannot be taken). p_events are those already defined at p_date.
-        # p_slotIds is the precomputed list of timeslot ids.
+        # p_slots is the dict of Timeslot objects keyed by their id.
         if not events:
-            return slotIdsStr if forBrowser else slotIds
+            return slotIdsStr if forBrowser else slots
         # Remove any taken slot
-        r = slotIds[:]
+        r = list(slots)
         try:
             r.remove('main') # "main" cannot be chosen: p_events is not empty
         except ValueError:
             pass # The "main" slot may be absent
-        for event in events: r.remove(event.timeslot)
+        for event in events:
+            try:
+                r.remove(event.timeslot)
+            except ValueError:
+                o.log(FREE_ERR % (o.strinG(), date.strftime('%Y-%m-%d'),
+                                  str(event)), type='error')
+                pass # This should not occur
         # Return the result
         return ','.join(r) if forBrowser else r
 
@@ -154,8 +179,7 @@ class Timeslot:
             # Turn v_events as a dict, keyed by timeslot
             events = {e.timeslot:e for e in events} if events else class_.emptyD
             # Add one entry per timeslot
-            for slot in class_.getAll(o, cal):
-                id = slot.id
+            for id, slot in class_.getAll(o, cal).items():
                 if id in events:
                     event = events[id]
                     e = eval(expr) if expr else event

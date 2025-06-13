@@ -31,6 +31,9 @@ class Carousel(Base):
     listColumns = ('title', 'maxWidth', 'autoSwitch', 'switchInterval')
     pageListColumns = ('title', 'state')
 
+    # Managers and Publishers may create carrousels
+    creators = ['Manager', 'Publisher']
+
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                            Main parameters
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -154,20 +157,26 @@ class Carousel(Base):
         return '\n'.join(r)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                           Inner images
+    #                           Inner documents
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    # The documents being part of this carousel
-    del(pc['group'])
-    documents = Ref(Document, add=True, link=False, multiplicity=(0,None),
-      composite=True, back=Ref(attribute='carousel', show=False),
-      showHeaders=True, shownInfo=Document.listColumns, actionsDisplay='inline',
-      page=Page('documents',
-                show=lambda o:'view' if o.allows('write') else None),
-      viaPopup=False, rowAlign='middle', **pc)
+    # The documents being part of this carousel, stored in 2 refs: published and
+    # unpublished documents.
+
+    pdoc = Page('documents',show=lambda o:'view' if o.allows('write') else None)
+
+    da = {'label': 'Carousel', 'add': True, 'link': False, 'composite': True,
+          'multiplicity': (0,None), 'showHeaders': True, 'viaPopup': False,
+          'shownInfo': Document.listColumns, 'actionsDisplay': 'inline',
+          'page': pdoc, 'rowAlign': 'middle'}
+
+    documents = Ref(Document, back=Ref(attribute='carousel', show=False), **da)
+
+    unpublished = Ref(Document, back=Ref(attribute='ucarousel', show=False),
+                      layouts=Ref.Layouts.t, **da)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                          PX rendering
+    #                             PX rendering
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     pxView = Px('''
@@ -286,5 +295,5 @@ class Carousel(Base):
 
     # A field allowing to preview the carousel in one of its pages
     preview = Computed(method=pxView, page=Page('preview', show='view'),
-                       layouts=Layouts.w, **pc)
+                       layouts=Layouts.w, label='Carousel')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

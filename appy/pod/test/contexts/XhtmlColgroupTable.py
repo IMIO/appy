@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput='''
 <table id="configabsences_cal" class="list timeline" width="90%">
       <colgroup>
@@ -31,7 +30,7 @@ xhtmlInput='''
            <td style="background-color: #13751F"></td>
            <td></td>
            <td></td>
-           <td title="Congé (AM), Congrès (PM)" style="background-image: url(http://localhost:8080/ui/angled.png)"></td>
+           <td title="Congé (AM), Congrès (PM)" style="background-image: url(http://localhost:8080/ui/changes.png)"></td>
            <td></td>
            <td></td>
            <td style="background-color: #d08181"></td>

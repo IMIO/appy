@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -102,8 +100,12 @@ class Marshaller:
                 pre = f'xmlns:{prefix}'
             r.write(f' {pre}="{url}"')
         # Dumps Appy-specific attributes
-        if typed and self.isAppy(o):
-            r.write(f' id="{o.id}" iid="{o.iid}" className="{o.class_.name}"')
+        if typed:
+            if self.isAppy(o):
+                attrs= f' id="{o.id}" iid="{o.iid}" className="{o.class_.name}"'
+            else:
+                attrs= f' className="{o.__class__.__name__}"'
+            r.write(attrs)
         r.write('>')
         return tagName
 
@@ -123,7 +125,7 @@ class Marshaller:
         '''Dumps a file into the result'''
         if not v or not self.marshallBinaries: return
         w = r.write
-        # p_value contains an instance of class appy.model.fields.file.FileInfo.
+        # p_v contains an instance of class appy.model.fields.file.FileInfo.
         # Encode it in Base64, in one or several parts.
         partTag = self.getTagName('part')
         r.write(f'<{partTag} type="base64" number="1">')
@@ -182,8 +184,8 @@ class Marshaller:
             else:
                 r.write(str(value))
 
-    def dumpField(self, r, name, value):
-        '''Dumps in p_r, the p_value of field named p_name'''
+    def dumpField(self, r, name, value, o=None, field=None):
+        '''Dumps in p_r, the p_value of field or attribute named p_name'''
         # As a preamble, manage special case of p_name being "_any". In that
         # case, p_value corresponds to a previously marshalled string that must
         # be included as is here, without dumping the tag name.
@@ -230,7 +232,12 @@ class Marshaller:
                 if value.fsName:
                     # This is a DB-controlled file
                     fsName = Escape.xml(value.fsName)
-                    location = f'{self.databaseFolder}/{value.fsPath}/{fsName}'
+                    # Get its location
+                    if o and field and field.xmlLocation:
+                        location = field.xmlLocation(o)
+                    else:
+                        location = f'{self.databaseFolder}/{value.fsPath}/' \
+                                   f'{fsName}'
                 else:
                     # A not-in-db file
                     location = value.fsPath
@@ -263,16 +270,18 @@ class Marshaller:
             if complete:
                 className = o.class_.name
                 # Preamble: configure marshalling of File fields
-                self.marshallBinaries = o.config.model.marshallBinaries
+                config = o.config
+                self.marshallBinaries = config.model.marshallBinaries
                 if not self.marshallBinaries:
-                    self.databaseFolder = o.config.database.binariesFolder
+                    self.databaseFolder = config.model.marshallFolder or \
+                                          config.database.binariesFolder
                 # Browse p_o's fields that must appear on the XML layout
                 for field in o.getFields('xml'):
                     # Dump only needed fields
                     if not self.mustDump(field.name, className): continue
                     val = field.getValue(o, single=False)
                     v = field.getXmlValue(o, val)
-                    self.dumpField(r, field.name, v)
+                    self.dumpField(r, field.name, v, o=o, field=field)
             else:
                 # Dump its URL
                 r.write(f'{o.url}/xml')

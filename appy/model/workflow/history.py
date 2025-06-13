@@ -37,7 +37,7 @@ class EventIterator:
         # its context) that will dismiss the event if evaluated to False.
         self.condition = condition
         # A context that will be given to the condition
-        self.context = context
+        self.context = {} if context is None else context
         # If chronological is True, events are walked in chronological order.
         # Else, they are walked in their standard, anti-chronological order.
         self.chronological = chronological
@@ -65,10 +65,9 @@ class EventIterator:
         '''Does p_event matches p_self.condition ?'''
         # If no condition is defined, p_event matches
         if self.condition is None: return True
-        # Update the evaluation context when appropriate
-        if self.context:
-            locals().update(self.context)
-        return eval(self.condition)
+        # Update the evaluation context with the current p_event
+        self.context['event'] = event
+        return eval(self.condition, None, self.context)
 
     def __iter__(self): return self
     def __next__(self):
@@ -136,7 +135,7 @@ class Event(persistent.Persistent):
         if not self.comment:
             self.comment = comment
         else:
-            self.comment =  '%s%s%s' % (self.comment, sep, comment)
+            self.comment = f'{self.comment}{sep}{comment}'
 
     def getTypeName(self, short=False):
         '''Return the class name, possibly completed with sub-class-specific
@@ -156,7 +155,7 @@ class Event(persistent.Persistent):
         return Escape.xhtml(r) if escaped else r
 
     def getId(self):
-        '''Return an ID for this history p_event, based on its date.'''
+        '''Return an ID for this history p_event, based on its date'''
         return str(self.date.millis())
 
     def getUser(self, o, title=True, expression=None):
@@ -175,10 +174,10 @@ class Event(persistent.Persistent):
         return r
 
     def __repr__(self):
-        '''String representation'''
+        '''p_self's string representation'''
         date = self.date.strftime(Event.dateFormat)
-        return '<%s by %s on %s, state %s>' % \
-               (self.getTypeName(), self.login, date, self.state)
+        return f'‹{self.getTypeName()} by {self.login} on {date}, ' \
+               f'state {self.state}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Trigger(Event):
@@ -187,12 +186,12 @@ class Trigger(Event):
     def __init__(self, login, state, date, **params):
         # Extract the name of the transition from p_params
         self.transition = params.pop('transition')
-        Event.__init__(self, login, state, date, **params)
+        super().__init__(login, state, date, **params)
 
     def getTypeName(self, short=False):
         '''Return the class name and the transition name'''
         r = self.transition
-        return r if short else 'Trigger %s' % r
+        return r if short else f'Trigger {r}'
 
     def getLabel(self, o):
         '''Returns the label for the corresponding transition'''
@@ -210,12 +209,12 @@ class Action(Event):
     def __init__(self, login, state, date, **params):
         # Extract the name of the action from p_params
         self.action = params.pop('action')
-        Event.__init__(self, login, state, date, **params)
+        super().__init__(login, state, date, **params)
 
     def getTypeName(self, short=False):
         '''Return the class name and the transition name.'''
         r = self.action
-        return r if short else 'Action %s' % r
+        return r if short else f'Action {r}'
 
     def getLabel(self, o):
         '''Returns the label for the corresponding action'''
@@ -246,16 +245,16 @@ class Change(Event):
                 lg=None if isinstance(name, str) else name[1];
                 field=o.getField(fname)">
        <td><x>::_(field.labelId) if field else fname</x>
-           <x if="lg">:' (%s)' % ui.Language.getName(lg)</x></td>
+           <x if="lg">:f' ({ui.Language.getName(lg)})'</x></td>
        <td>
         <x>::field.getHistoryValue(o, value, history.data.index(event), lg) \
              if field else value</x>
-        <!-- A comment may coexist with the change in itself -->
-        <x var="comment=event.getComment(empty='', escaped=False)"
-           if="comment">::comment</x>
        </td>
       </tr>
-     </table>''')
+     </table>
+     <!-- A comment may coexist with the change in itself -->
+     <div var="comment=event.getComment(empty='', escaped=False)"
+          if="comment">::comment</div>''')
 
     def __init__(self, login, state, date, **params):
         '''Extract changed fields from p_params'''
@@ -268,7 +267,8 @@ class Change(Event):
         #       | part of a multilingual field corresponding to s_language.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.changes = PersistentMapping(params.pop('changes'))
-        Event.__init__(self, login, state, date, **params)
+        # Call the base constructor
+        super().__init__(login, state, date, **params)
 
     def hasField(self, name, language=None):
         '''Is there, within p_self's changes, a change related to a field whose
@@ -298,9 +298,9 @@ class Change(Event):
         r = []
         tool = o.tool
         for type in self.diffEntries:
-            msg = o.translate('history_%s' % type, mapping=mapping)
+            msg = o.translate(f'history_{type}', mapping=mapping)
             date = tool.Date.format(tool, self.date, withHour=True)
-            r.append('%s: %s' % (date, msg))
+            r.append(f'{date}: {msg}')
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -311,11 +311,15 @@ class Custom(Event):
     def __init__(self, login, state, date, **params):
         # Extract the label to use to name the event
         self.label = params.pop('label')
-        Event.__init__(self, login, state, date, **params)
+        super().__init__(login, state, date, **params)
 
     def getLabel(self, o):
         '''Returns the i18n label for a data change'''
         return self.label
+
+    def getTypeName(self, short=False):
+        '''Return the class name, completed with p_self.label'''
+        return self.label if short else f'Custom::{self.label}'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Link(Event):
@@ -348,15 +352,16 @@ class Link(Event):
         field = getattr(self, 'field', None) # May be absent from old DBs
         cname = self.__class__.__name__
         if short:
-            r = '%s%s' % (cname.lower(), r)
+            r = f'{cname.lower()}{r}'
         else:
-            suffix = ' (%s)' % field if field else ''
-            r = '%s%s%s' % (cname, r.capitalize(), suffix)
+            suffix = f' ({field})' if field else ''
+            r = f'{cname}{r.capitalize()}{suffix}'
         return r
 
     def getLabel(self, o):
         '''Returns the i18n label for a link'''
-        return 'event_%s' % ('Addition' if self.addition else 'Link')
+        type = 'Addition' if self.addition else 'Link'
+        return f'event_{type}'
 
 class Unlink(Link):
     '''Represents an object being unlinked from another one via a Ref field'''
@@ -368,7 +373,8 @@ class Unlink(Link):
 
     def getLabel(self, o):
         '''Returns the i18n label for an unlink'''
-        return 'event_%s' % ('Deletion' if self.deletion else 'Unlink')
+        type = 'Deletion' if self.deletion else 'Unlink'
+        return f'event_{type}'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class History(PersistentList):
@@ -397,8 +403,7 @@ class History(PersistentList):
         <th align=":dleft">:_('action_date')</th>
         <th align=":dleft">:_('action_comment')</th>
        </tr>
-       <tr for="event in batch.objects"
-           class=":'even' if loop.event.odd else 'odd'" valign="top">
+       <tr for="event in batch.objects" valign="top">
         <td><x>:_(event.getLabel(o))</x>
          <img if="isManager and event.deletable" class="clickable iconS"
               src=":svg('deleteS')"
@@ -440,8 +445,9 @@ class History(PersistentList):
          <x>:_('date_on')</x>
          <x var="created=o.created; modified=o.modified">
           <x>:tool.Date.format(tool, created, withHour=True)</x>
-          <x if="modified != created">&mdash;
-           <x>:_('Base_modified')</x>
+          <x if="modified and modified != created">&mdash;
+           <x>:_('Base_modifier')</x> <x>:o.getModifier()</x> 
+           <x>:_('date_on')</x> 
            <x>:tool.Date.format(tool, modified, withHour=True)</x>
           </x>
          </x>
@@ -465,6 +471,8 @@ class History(PersistentList):
                 border:3px solid white }
       .by { padding:7px }
       .history>tbody>tr>td { padding:8px }
+      .history>tbody>tr:nth-child(odd) { background-color:|oddColor| }
+      .history>tbody>tr:nth-child(even) { background-color:|evenColor| }
       .history>tbody>tr>th { font-style:italic; text-align:left;
                              padding:10px 5px; background-color:white }
       .changes { margin: 4px 0 }
@@ -473,11 +481,18 @@ class History(PersistentList):
      ''')
 
     def __init__(self, o):
-        PersistentList.__init__(self)
+        super().__init__()
         # A reference to the object for which p_self is the history
         self.o = o
         # The last time the object has been modified
         self.modified = None
+        # The login og the last user having modified the object
+        self.modifier = None
+
+    def noteUpdate(self):
+        '''p_self.o has just been updated: note it'''
+        self.modified = DateTime()
+        self.modifier = self.o.user.login
 
     def add(self, type, state=None, **params):
         ''''Adds a new event of p_type (=the name of an Event sub-class) into
@@ -510,8 +525,10 @@ class History(PersistentList):
         event = eval(type)(login, state, date, **params)
         # Insert it at the first place within the anti-chronological list
         self.insert(0, event)
-        # Initialise self.modified if still None
-        if self.modified is None: self.modified = event.date
+        # Initialise self.modifie[d|r] if still None
+        if self.modified is None:
+            self.modified = event.date
+            self.modifier = login
         return event
 
     def iter(self, **kwargs):
@@ -529,7 +546,7 @@ class History(PersistentList):
         # Check if history is available for field named p_name
         empty = True
         for event in self.iter(eventType='Change', \
-                               condition="event.hasField('%s')" % name):
+                               condition=f"event.hasField('{name}')"):
             # If we are here, at least one change concerns the field
             empty = False
             break
@@ -587,11 +604,14 @@ class History(PersistentList):
         if previous:
             self.add('Change', changes=previous, comment=comment)
 
-    def getEvents(self, type, notBefore=None):
+    def getEvents(self, type, notBefore=None, condition=None):
         '''Gets a subset of history events of some p_type. If specified, p_type
            must be the name of a concrete Event class or a list/tuple of such
            names.'''
         cond = 'not notBefore or (event.date >= notBefore)'
+        if condition:
+            # Add this custom p_condition to v_cond
+            cond = f'({cond}) and ({condition})'
         return [event for event in self.iter(eventType=type, condition=cond, \
                                              context={'notBefore':notBefore})]
 
@@ -600,6 +620,26 @@ class History(PersistentList):
         for event in self:
             if event.getId() == id:
                 return event
+
+    def deleteEvents(self, typE):
+        '''Delete, from p_self, all events of this p_typE. Returns the number of
+           deleted events. typE can be a string or a regex.'''
+        r = 0
+        # Walk p_self in reverse order
+        i = len(self) - 1
+        isRex = not isinstance(typE, str)
+        while i >= 0:
+            # Get the event type
+            eventType = self[i].getTypeName(short=True)
+            if isRex:
+                match = typE.match(eventType)
+            else:
+                match = eventType == typE
+            if match:
+                r += 1
+                del self[i]
+            i -= 1
+        return r
 
     def getLast(self, name, notBefore=None, history=None, eventType='Trigger'):
         '''Return the last event that occurred in p_self (or in p_history if
@@ -669,8 +709,8 @@ class History(PersistentList):
         # Convert params into a JS dict
         params = sutils.getStringFrom(params)
         hook = batch.hook
-        return "new AjaxData('%s/history/events','GET',%s,'%s')" % \
-               (self.o.url, params, hook)
+        return f"new AjaxData('{self.o.url}/history/events','GET',{params}," \
+               f"'{hook}')"
 
     def replaceLogin(self, old, new):
         '''Replace, in all events, login p_old with login p_new. Returns the
@@ -682,13 +722,13 @@ class History(PersistentList):
                 r += 1
         return r
 
-    # The list of evvent types being, by default, excluded from the XHTML
+    # The list of event types being, by default, excluded from the XHTML
     # version of the history, as produced by m_asXhtml below.
     xhtmlDefaultExclude = ('change', '_init_')
 
     def asXhtml(self, exclude=xhtmlDefaultExclude, userExpression=None,
                 noLabelFor=('comment',), escapeComments=True,
-                chronological=False):
+                chronological=False, css='sahist'):
         '''Produce a XHTML version of this history, in the form of a discussion
            thread, suitable to be injected as various places: in methods
            getSubTitle, in PODs, etc.'''
@@ -717,18 +757,20 @@ class History(PersistentList):
             if noLabelFor and type in noLabelFor:
                 prefix = ''
             else:
-                prefix = ' – <b>%s</b> ' % esc(o.translate(event.getLabel(o)))
+                suffix = esc(o.translate(event.getLabel(o)))
+                prefix = f' – <b>{suffix}</b> '
             # Get the comment when present
             comment = event.comment or ''
             if comment and escapeComments: comment = esc(comment)
             # Create the message line
-            msg = '<i>%s</i>%s – %s' % \
-                  (fmt(tool, event.date, withHour=True), prefix,
-                   esc(event.getUser(o, expression=userExpression)))
+            dateText = fmt(tool, event.date, withHour=True)
+            userText = esc(event.getUser(o, expression=userExpression))
+            msg = f'<i>{dateText}</i>{prefix} – {userText}'
             if comment:
-                msg += ' – « %s »' % comment
+                msg = f'{msg} – « {comment} »'
             r.append(msg)
-        return '<div class="sahist">%s</div>' % '<br/>'.join(r)
+        css = f' class="{css}"' if css else ''
+        return f'<div{css}>{"<br/>".join(r)}</div>'
 
     traverse['delete'] = 'Manager'
     def delete(self, o):

@@ -37,6 +37,9 @@ class Page(Base):
     # By default, web pages are public
     workflow = Anonymous
 
+    # Managers and Publishers may create pages
+    creators = ['Manager', 'Publisher']
+
     pa = {'label': 'Page'}
 
     @staticmethod
@@ -52,7 +55,7 @@ class Page(Base):
     listColumnsShort = 'title', 'expression', 'next', 'state'
 
     # The POD ouput
-    doc = Pod(template='/model/pod/Page.odt', formats=('pdf',), show=False,
+    doc = Pod(template='*model/pod/Page.odt', formats=('pdf',), show=False,
               layouts=Pod.Layouts.inline, freezeTemplate=lambda o,tpl: ('pdf',))
 
     @staticmethod
@@ -146,8 +149,9 @@ class Page(Base):
     selectable = Boolean(default=True, show=forRootOnEdit,
                          layouts=Boolean.Layouts.d, **pa)
 
-    # Is PDF POD export enabled for this page ? Sub-pages can't be exported.
-    podable = Boolean(layouts=Boolean.Layouts.d, show=forRootOnEdit, **pa)
+    # Is PDF POD export enabled for this page ? Sub-pages can be individually
+    # exported.
+    podable = Boolean(layouts=Boolean.Layouts.d, show=Show.V_, **pa)
 
     # Maximum width for images uploaded and rendered within the XHTML content
     maxWidth = Integer(default=700, show=False)
@@ -322,9 +326,10 @@ class Page(Base):
         return 'view' if self.parent and self.inPublic() else None
 
     def getToParent(self):
-        '''Get a link allowing to navigate to p_selg's parent page'''
+        '''Get a link allowing to navigate to p_self's parent page'''
         text = self.getLabel('toParent')
-        return '<a href="%s">↥ %s</a>' % (self.parent.getPublicUrl(), text)
+        url = self.parent.getAccessUrl()
+        return f'<a href="{url}">↥ {text}</a>'
 
     toParent = Computed(show=showToParent, method=getToParent, layouts='f')
 
@@ -363,12 +368,20 @@ class Page(Base):
       **pa)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Main methods
+    #                               Main methods
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
-    def getPublicUrl(self):
-        '''Return the URL for this page, when shown via the tool's public PX'''
-        return '%s/public?rp=%s' % (self.tool.url, self.iid)
+    # The URL path to the public PX
+    publicPath = ['tool', 'public']
+
+    def getAccessUrl(self, forcePublic=False):
+        '''Return the URL being appropriate to access p_self, one of p_self.url
+           and the one shown via the tool's public PX.'''
+        if self.config.ui.discreetLogin:
+            public = forcePublic
+        else:
+            public = self.user.isAnon()
+        return f'{self.tool.url}/public?rp={self.iid}' if public else self.url
 
     def inPortlet(self, selected, level=0):
         '''Returns a chunk of XHTML code for representing this page in the
@@ -379,9 +392,10 @@ class Page(Base):
         # A specific CSS class wil be applied for a selected page
         css = ' class="current"' if isSelected else ''
         # If p_self has parents, we must render it with a margin-right
-        style = ' style="margin-left:%dpx"' % (level * 8) if level else ''
-        r = ['<div%s><a href="%s"%s>%s</a></div>' % \
-             (style, self.url, css, Escape.xhtml(self.getShownValue()))]
+        style = f' style="margin-left:{level*8}px"' if level else ''
+        url = self.getAccessUrl()
+        title = Escape.xhtml(self.getShownValue())
+        r = [f'<div{style}><a href="{url}"{css}>{title}</a></div>']
         if isSelected and not self.isEmpty('pages'):
             for sub in self.pages:
                 r.append(sub.inPortlet(selected, level+1))
@@ -392,7 +406,7 @@ class Page(Base):
         # A page created from the portlet (if class Page is declared as root)
         # has no container when under creation.
         container = self.container
-        return not container or container.class_.name == 'Tool'
+        return not container or container.class_.name != 'Page'
 
     def inPublic(self, orParent=False):
         '''Is p_self (or one of its parents if p_orParent is True) currently
@@ -427,14 +441,14 @@ class Page(Base):
     # This selector allows to choose one root page among published tool.pages
     pxSelector = Px('''
       <a for="page in pagesL" title=":page.getShownValue()"
-         href=":page.url if inlaidHeader else page.getPublicUrl()">
+         href=":page.url if inlaidHeader else page.getAccessUrl(True)">
        <span class=":'upage' if page.inPublic() else
          ('current' if o==page else '')">:page.getTitle(nbsp=True)</span>
       </a>
       <select onchange="gotoURL(this)" if="pagesO">
        <option value="">:_('goto_link')</option>
        <option for="page in pagesO"
-               value=":page.url if inlaidHeader else page.getPublicUrl()"
+               value=":page.url if inlaidHeader else page.getAccessUrl(True)"
                selected=":o == page if inlaidHeader else page.inPublic()"
                title=":page.getShownValue()">:page.getTitle(
                  maxChars=config.ui.pageCharsS)</option>

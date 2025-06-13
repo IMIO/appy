@@ -15,6 +15,9 @@ from appy.database.operators import in_
 from appy.database.indexes.date import DateIndex
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+DEF_DAY_KO  = 'Wrong value for Date::defaultDay.'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Date(Field):
 
     # Required CSS and Javascript files for this type
@@ -22,6 +25,9 @@ class Date(Field):
     jsFiles = {'edit': ('jscalendar/calendar.js',
                         'jscalendar/lang/calendar-en.js',
                         'jscalendar/calendar-setup.js')}
+
+    # Make class DateTime available here
+    DateTime = DateTime
 
     # Possible values for "format"
     WITH_HOUR    = 0
@@ -60,15 +66,19 @@ class Date(Field):
     edit = Px('''
      <!-- Native variant -->
      <input if="field.native" name=":name" id=":name"
+            style=":field.getDateStyle(o)"
             type=":field.nativeWidgets[field.format]"
             value=":field.getNativeValue(
              field.getInputValue(inRequest, requestValue, rawValue))"/>
 
      <!-- Variant with one select widget for every part of the date/time -->
-     <x if="not field.native" var="years=field.getSelectableYears(o)">
+     <x if="not field.native"
+        var="years=field.getSelectableYears(o);
+             disabled=field.getDisabled(o)">
+
       <!-- Day -->
-      <select if="field.showDay" var2="days=range(1,32); part='%s_day' % name"
-              name=":part" id=":part">
+      <select if="field.showDay" var2="days=range(1,32); part=f'{name}_day'"
+              name=":part" id=":part" disabled=":disabled">
        <option value="">-</option>
        <option for="day in days" var2="zDay=str(day).zfill(2)" value=":zDay"
          selected=":field.isSelected(o, part, 'day', \
@@ -76,8 +86,8 @@ class Date(Field):
       </select> 
 
       <!-- Month -->
-      <select var="months=range(1,13); part='%s_month' % name"
-              name=":part" id=":part">
+      <select var="months=range(1,13); part=f'{name}_month'"
+              name=":part" id=":part" disabled=":disabled">
        <option value="">-</option>
        <option for="month in months"
          var2="zMonth=str(month).zfill(2)" value=":zMonth"
@@ -86,17 +96,21 @@ class Date(Field):
       </select> 
 
       <!-- Year -->
-      <select var="part='%s_year' % name" name=":part" id=":part">
-       <option value="">-</option>
-       <option for="year in years" value=":year"
-         selected=":field.isSelected(o, part, 'year', \
-                                     year, rawValue)">:year</option>
-      </select>
+      <x var="part=f'{name}_year'">
+       <select if="field.showYear" name=":part" id=":part" disabled=":disabled">
+        <option value="">-</option>
+        <option for="year in years" value=":year"
+          selected=":field.isSelected(o, part, 'year', \
+                                      year, rawValue)">:year</option>
+       </select>
+       <input if="not field.showYear" type="hidden" name=":part"
+              value=":field.DateTime().year()"/>
+      </x>
 
       <!-- The icon for displaying the calendar popup -->
-      <x if="field.calendar">
+      <x if="field.calendar and field.showYear and not disabled">
        <input type="hidden" id=":name" name=":name"/>
-       <img id=":'%s_img' % name" src=":svg('calendar')" class="iconS"/>
+       <img id=":f'{name}_img'" src=":svg('calendar')" class="iconS"/>
        <script>::field.getJsInit(name, years)</script>
       </x>
 
@@ -108,9 +122,9 @@ class Date(Field):
      <table var="years=field.getSelectableYears(o);
                  dstart,dend=field.getDefaultSearchValues(o)">
        <!-- From -->
-       <tr var="fromName='%s_from' % name;
-                dayFromName='%s_from_day' % name;
-                monthFromName='%s_from_month' % name">
+       <tr var="fromName=f'{name}_from';
+                dayFromName=f'{name}_from_day';
+                monthFromName=f'{name}_from_month'">
         <td><label>:_('date_from')</label></td>
         <td>
          <select id=":dayFromName" name=":dayFromName">
@@ -131,22 +145,21 @@ class Date(Field):
          <!-- The icon for displaying the calendar popup -->
          <x if="field.calendar">
           <input type="hidden" id=":fromName" name=":fromName"/>
-          <img id=":'%s_img' % fromName" src=":svg('calendar')"
-               class="iconS"/>
+          <img id=":f'{fromName}_img'" src=":svg('calendar')" class="iconS"/>
           <script>::field.getJsInit(fromName, years)</script>
          </x>
          <!-- Hour and minutes when relevant -->
-         <x if="(field.format == 0) and field.searchHour"
-            var2="hPart='%s_from_hour' % name;
-                  mPart='%s_from_minute' % name">:field.pxHour</x>
+         <x if="field.format == 0 and field.searchHour"
+            var2="hPart=f'{name}_from_hour';
+                  mPart=f'{name}_from_minute'">:field.pxHour</x>
         </td>
        </tr>
 
        <!-- To -->
-       <tr var="toName='%s_to' % name;
-                dayToName='%s_to_day' % name;
-                monthToName='%s_to_month' % name;
-                yearToName='%s_to_year' % name">
+       <tr var="toName=f'{name}_to';
+                dayToName=f'{name}_to_day';
+                monthToName=f'{name}_to_month';
+                yearToName=f'{name}_to_year'">
         <td><label>:_('date_to')</label></td>
         <td height="20px">
          <select id=":dayToName" name=":dayToName">
@@ -167,13 +180,13 @@ class Date(Field):
          <!-- The icon for displaying the calendar popup -->
          <x if="field.calendar">
           <input type="hidden" id=":toName" name=":toName"/>
-          <img id=":'%s_img' % toName" src=":svg('calendar')" class="iconS"/>
+          <img id=":f'{toName}_img'" src=":svg('calendar')" class="iconS"/>
           <script>::field.getJsInit(toName, years)</script>
          </x>
          <!-- Hour and minutes when relevant -->
-         <x if="(field.format == 0) and field.searchHour"
-            var2="hPart='%s_to_hour' % name;
-                  mPart='%s_to_minute' % name">:field.pxHour</x>
+         <x if="field.format == 0 and field.searchHour"
+            var2="hPart=f'{name}_to_hour';
+                  mPart=f'{name}_to_minute'">:field.pxHour</x>
         </td>
        </tr>
       </table>''')
@@ -191,7 +204,7 @@ class Date(Field):
             var="js='on%%sDate(this,%%s,%s,%s)' % (q(mode.hook),q(field.name))">
         <!-- Precise / until / from -->
         <div for="match in field.match" class="matchD">
-         <label lfor=":match">:_('date_match_%s' % match)</label>
+         <label lfor=":match">:_(f'date_match_{match}')</label>
          <input type="radio" id=":match" name="match" value=":match"
                 checked=":match == matchF"/>
         </div>
@@ -223,7 +236,7 @@ class Date(Field):
           // Do nothing if no v_date has been entered
           if (!date || date === 'undefined') return;
           let match = filter.querySelector('input[name="match"]:checked').value;
-          date = date + '*' + match;
+          date = `${date}*${match}`;
         }
         else date = '';  // Reinitialize the filter: empty the date
         askBunchFiltered(hook, name, date);
@@ -264,8 +277,9 @@ class Date(Field):
       colspan=1, master=None, masterValue=None, focus=False, historized=False,
       mapping=None, generateLabel=None, label=None, sdefault=None, scolspan=1,
       swidth=None, sheight=None, persist=True, view=None, cell=None,
-      buttons=None, edit=None, xml=None, translations=None, showDay=True,
-      searchHour=False, native=False, empty='-', matchDefault='precise'):
+      buttons=None, edit=None, custom=None, xml=None, translations=None,
+      showDay=True, defaultDay=1, showYear=True, searchHour=False, native=False,
+      empty='-', matchDefault='precise', disabled=False):
         self.format = format
         self.calendar = calendar
         self.startYear = startYear
@@ -273,8 +287,16 @@ class Date(Field):
         # If reverseYears is True, in the selection box, available years, from
         # self.startYear to self.endYear will be listed in reverse order.
         self.reverseYears = reverseYears
-        # If p_showDay is False, the list for choosing a day will be hidden
+        # If p_showDay is False, the list for choosing a day will be hidden.
+        # The stored DateTime object will get "1" as day part.
         self.showDay = showDay
+        # When the day is not shown, what will be the value set for it ? The
+        # following attribute allows to define it: it must hold an integer value
+        # or string "last", that will converted to the last day of the month.
+        self.defaultDay = defaultDay
+        # If p_showYear is False, the list for choosing a year will not be
+        # shown. The stored DateTime object will get the current year as year.
+        self.showYear = showYear
         # If no p_dateFormat/p_hourFormat is specified, the application-wide
         # tool.dateFormat/tool.hourFormat is used instead.
         self.dateFormat = dateFormat
@@ -304,17 +326,22 @@ class Date(Field):
         # stored in the following attribute. For more info about match
         # strategies, check static attribute Date.match defined hereabove.
         self.matchDefault = matchDefault
+        # Must p_self be shown, on "edit", in "disabled" mode? It works only if
+        # p_self is rendered as a non-native widget.
+        self.disabled = disabled
         # Call the base constructor
-        Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
-          show, renderable, page, group, layouts, move, indexed, mustIndex,
+        super().__init__(validator, multiplicity, default, defaultOnEdit, show,
+          renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, filterField, readPermission,
           writePermission, width, height, None, colspan, master, masterValue,
           focus, historized, mapping, generateLabel, label, sdefault, scolspan,
-          swidth, sheight, persist, False, view, cell, buttons, edit, xml,
-          translations)
+          swidth, sheight, persist, False, view, cell, buttons, edit, custom,
+          xml, translations)
         # Define the filter PX when appropriate
         if self.indexed:
             self.filterPx = 'pxFilter'
+        # This field stores DateTime values
+        self.pythonType = DateTime
 
     def getCss(self, o, layout, r):
         '''CSS files are only required if the calendar must be shown'''
@@ -342,15 +369,38 @@ class Date(Field):
         if self.isEmptyValue(o, value): return ''
         # Get the applicable date format
         ui = o.config.ui
-        dateFormat = self.dateFormat or ui.dateFormat
+        formaT = self.dateFormat or ui.dateFormat
         # A problem may occur with some extreme year values. Replace the "year"
         # part "by hand".
-        if '%Y' in dateFormat:
-            dateFormat = dateFormat.replace('%Y', str(value.year()))
-        r = dates.Date.format(o.tool, value, dateFormat, withHour=False)
+        if '%Y' in formaT:
+            # Moreover, do not show the year at all when appropriate
+            showYear = self.showYear
+            repl = str(value.year()) if showYear else ''
+            formaT = formaT.replace('%Y', repl)
+            if not showYear:
+                # Ensure there is no remaining year separator
+                formaT = formaT.strip('-/')
+        if not self.showDay and '%d' in formaT:
+            formaT = formaT.replace('%d', '').strip('-/')
+        r = dates.Date.format(o.tool, value, formaT, withHour=False)
         if self.format == Date.WITH_HOUR:
-            r += ' %s' % value.strftime(self.hourFormat or ui.hourFormat)
+            houR = value.strftime(self.hourFormat or ui.hourFormat)
+            r = f'{r} {houR}'
         return r
+
+    def getRequestDay(self, value):
+        '''Get the day to use when the day is not part of the request, due to
+           p_self.showDay being False.'''
+        day = self.defaultDay
+        if isinstance(day, int):
+            r = day
+        elif day == 'last':
+            # Compute the last day of the month. The year and month are already
+            # available in p_value.
+            r = dates.Month.getLastDay(DateTime(f'{value}01')).day()
+        else:
+            raise Exception(DEF_DAY_KO)
+        return str(r).zfill(2)
 
     def getRequestValue(self, o, requestName=None):
         req = o.req
@@ -362,19 +412,19 @@ class Date(Field):
         for part in self.dateParts:
             # The "day" part may be hidden. Use "1" by default.
             if part == 'day' and not self.showDay:
-                valuePart = '01'
+                valuePart = self.getRequestDay(value)
             else:
-                valuePart = req['%s_%s' % (name, part)]
+                valuePart = req[f'{name}_{part}']
             if not valuePart: return
-            value += valuePart + '/'
+            value = f'{value}{valuePart}/'
         value = value[:-1]
         # Manage the "hour" part
         if self.format == self.WITH_HOUR:
-            value += ' '
+            value = f'{value} '
             for part in self.hourParts:
-                valuePart = req['%s_%s' % (name, part)]
+                valuePart = req[f'{name}_{part}']
                 if not valuePart: return
-                value += valuePart + ':'
+                value = f'{value}{valuePart}:'
             value = value[:-1]
         return value
 
@@ -384,6 +434,12 @@ class Date(Field):
         return value.strftime(Date.nativeFormats[self.format]) \
                if isinstance(value, DateTime) else value
 
+    def getDateStyle(self, o):
+        '''Gets the content of the "style" attribute for the input date widget
+           on the "edit" layout.'''
+        width = self.width
+        return f'width:{width}' if width else ''
+
     def searchValueIsEmpty(self, req):
         '''We consider a search value being empty if both "from" and "to" values
            are empty. At an individual level, a "from" or "to" value is
@@ -391,13 +447,13 @@ class Date(Field):
         # The base method determines if the "from" year is empty
         isEmpty = Field.searchValueIsEmpty
         return isEmpty(self, req) and \
-               isEmpty(self, req, widgetName='%s_to_year' % self.name)
+               isEmpty(self, req, widgetName=f'{self.name}_to_year')
 
     def getRequestSuffix(self, o):
         return '' if self.native else '_year'
 
     def getStorableValue(self, o, value, single=False):
-        '''Converts this string p_value to a DateTime instance'''
+        '''Converts this string p_value to a DateTime object'''
         if not self.isEmptyValue(o, value):
             if self.native:
                 # Standardise this value: else, timezone may be wrong
@@ -473,10 +529,10 @@ class Date(Field):
         # The specified date may be invalid (ie, 2018/02/31): ensure to produce
         # a valid date in all cases.
         try:
-            r = DateTime('%s/%s/%s %s' % (year, month, day, hour))
+            r = DateTime(f'{year}/{month}/{day} {hour}')
         except:
-            base = DateTime('%s/%s/01' % (year, month))
-            r = dates.getLastDayOfMonth(base, hour=hour)
+            base = DateTime(f'{year}/{month}/01')
+            r = dates.Month.getLastDay(base, hour=hour)
         return r
 
     @classmethod
@@ -489,13 +545,14 @@ class Date(Field):
         if value is None:
             # Get the year. For the "from" part, it corresponds to the name of
             # field. For the "to" part, there is a specific key in the request.
-            year = req['%s_to_year' % name] \
+            year = req[f'{name}_to_year'] \
                    if to else Field.getSearchValue(field, req, value=value)
-            month = req['%s_%s_month' % (name, part)]
-            day = req['%s_%s_day' % (name, part)]
+            month = req[f'{name}_{part}_month']
+            day = req[f'{name}_{part}_day']
             if searchHour:
-                hour = '%s:%s' % (req['%s_%s_hour'   % (name, part)] or '00',
-                                  req['%s_%s_minute' % (name, part)] or '00')
+                H = req[f'{name}_{part}_hour'] or '00'
+                M = req[f'{name}_{part}_minute'] or '00'
+                hour = f'{H}:{M}'
         else:
             # p_value is there, as a DateTime object
             year, month, day = value.year(), value.month(), value.day()
@@ -565,7 +622,6 @@ class Date(Field):
         # Always express the range of years in chronological order.
         years = [years[0], years[-1]]
         years.sort()
-        return 'Calendar.setup({inputField: "%s", button: "%s_img", ' \
-               'onSelect: onSelectDate, range:%s, firstDay: 1})' % \
-               (name, name, str(years))
+        return f'Calendar.setup({{inputField: "{name}", button: "{name}_img",' \
+               f' onSelect: onSelectDate, range:{str(years)}, firstDay: 1}})'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

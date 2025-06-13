@@ -20,10 +20,12 @@ class Query(Base):
     '''Persistent and editable parameters for a Search'''
 
     workflow = Owner
-    # Queries are not indexed by default
-    indexable = False
+    indexable = False # Queries are not indexed by default
     listColumns = ('title', 'className', 'states', 'sortBy', 'sortOrder','mode')
     pageListColumns = ('title', 'state')
+
+    # Managers and Publishers may create queries
+    creators = ['Manager', 'Publisher']
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                            Main parameters

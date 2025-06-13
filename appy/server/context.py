@@ -58,7 +58,8 @@ class AuthenticationContext:
       <x if="showSwitchOptions"
          var2="options,present=ctx._getSwitchOptions(tool);
                selected=guard.authContext or ''">
-       <select if="options" class="discreet" onchange="switchContext(this)">
+       <select id="contextSwitcher" if="options" class="discreet"
+               onchange="switchContext(this)">
         <!-- Set this option only to be able to select a single option -->
         <option if="not present and (len(options) == 1)"></option>
         <option for="opt in options" value=":opt[0]"

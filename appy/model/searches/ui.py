@@ -126,7 +126,7 @@ class UiSearch:
         <x>::uiSearch.translated</x>
         <x if="mode.batch and not empty">
          <span var="css=class_.getCssFor(tool, 'sep')"
-               class=":'navSep %s' % css if css else 'navSep'">//</span>
+               class=":f'navSep {css}' if css else 'navSep'">//</span>
          <span class="btot">:mode.batch.total</span>
         </x>
         <!-- Search description -->
@@ -134,7 +134,7 @@ class UiSearch:
 
         <!-- Class-specific colored border (*t*itle *bot*tom) -->
         <div var="css=class_.getCssFor(tool, 'tbot')"
-             if="css" class=":'tbot %s' % css"></div>
+             if="css" class=":f'tbot {css}'"></div>
        </div>
 
        <!-- Search description in the popup -->
@@ -249,6 +249,14 @@ class UiSearch:
         '''When must checkboxes be shown ?'''
         init = self.initiator
         return init.showCheckboxes() if init else self.checkboxes
+
+    def useCbJs(self, mode):
+        '''Do not use (and, consequently, include) checkboxes-related JS data
+           structures if p_self is in front of a Ref that already defines it.'''
+        # One exception: if we are on custom search results, JS data structures
+        # must be computed because the Ref wrapper is not part of the result.
+        if not mode.fromRef: return True
+        return self.name == 'customSearch'
 
     def getCbJsInit(self, hook):
         '''Returns the code that creates JS data structures for storing the

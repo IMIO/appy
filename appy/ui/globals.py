@@ -7,21 +7,24 @@
 from appy.ui.iframe import Iframe
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Globals:
     '''Global elements to inject in most or all pages'''
 
     # Translated messages computed in Javascript variables in most pages
     variables = ('no_elem_selected', 'action_confirm', 'save_confirm',
-                 'warn_leave_form', 'workflow_comment')
+                 'warn_leave_form', 'workflow_comment', 'yes', 'no')
 
     @classmethod
     def getVariables(class_, tool):
         '''Returns Javascript variables storing translated texts used in forms
            and popups.'''
-        r = ['var wrongTextInput="%s none";' % tool.config.ui.wrongTextColor]
+        r = [f'var wrongTextInput="{tool.config.ui.wrongTextColor} none";']
         for label in class_.variables:
-            r.append('var %s="%s";' % (label, tool.translate(label)))
-        return '<script>%s</script>' % '\n'.join(r)
+            r.append(f'var {label}="{tool.translate(label)}";')
+        return f'<script>{bn.join(r)}</script>'
 
     # Popups must be present in every page
     popups = '''%s
@@ -40,8 +43,8 @@ class Globals:
                    cols="30" rows="3"></textarea>
         </div>
         <div class="topSpace">
-         <input type="button" onclick="doConfirm()" value="%s"/>
-         <input type="button" value="%s"
+         <input type="button" name="yesBtn" onclick="doConfirm()" value=""/>
+         <input type="button" name="noBtn" value=""
                 onclick="closePopup('confirmActionPopup', 'comment')"/>
         </div>
        </div>
@@ -83,7 +86,7 @@ class Globals:
          # Global Javascript variables
          class_.getVariables(tool),
          # confirmActionPopup
-         svg('arrows'), dleft, _('yes'), _('no'),
+         svg('arrows'), dleft,
          # uploadPopup
          _('object_save'), _('object_cancel'),
          # alertPopup
@@ -105,6 +108,7 @@ class Globals:
       <input type="hidden" name="crumb"/>
       <input type="hidden" name="checkedIds"/>
       <input type="hidden" name="checkedSem"/>
+      <input type="hidden" name="calParams"/>
       <input type="hidden" name="freezeAction"/>
       <input type="hidden" name="mailing"/>
       <input type="hidden" name="mailText"/>

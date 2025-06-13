@@ -13,20 +13,26 @@
 import persistent
 from BTrees.OOBTree import OOBTree
 from BTrees.IOBTree import IOBTree
+from ZODB.POSException import POSKeyError
 from BTrees.IIBTree import IITreeSet, intersection
 
 from appy.model.utils import Object as O
 from appy.database.operators import Operator
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-VAL_KO     = 'Index "%s" in catalog "%s": wrong %s "%s".'
-INDEX_ERR  = 'Error while indexing %s::%s.'
+CI_PRE     = 'Catalog "%s" :: Index "%s" ::'
+VAL_KO     = f'{CI_PRE} Wrong %s "%s".'
+INDEX_ERR  = 'Object %d (%s) :: Error while indexing %s::%s :: Value is:'
 INDEX_REC  = 'Recomputing index %s:%s...'
-REC_CONF   = 'You are about to completely recompute index %s::%s.<br/><br/>' \
-             'It currently contains %d value(s) for %d object(s).<br/><br/>' \
-             'Do it ?'
+REC_BASE   = 'You are about to completely recompute index %s::%s.'
+REC_CONF   = f'{REC_BASE}<br/><br/>It currently contains %d value(s) for %d ' \
+             f'object(s).<br/><br/>Do it ?'
+REC_CONF_S = f'{REC_BASE}<br/><br/>Do it ?'
 RECOMP_OK  = 'Index %s::%s successfully recomputed.<br/><br/>' \
-             '#Values went from %d to %d.<br/>#Objects went from %d to %d.'
+             '#Values went from %s to %d.<br/>#Objects went from %s to %d.'
+IISET_ERR  = f'{CI_PRE} IITreeSet at value "%s" was corrupted and deleted.'
+IBV_KO     = f'{CI_PRE} Error while getting value "%s" from "byValue" ' \
+             f'OOBTree :: Index is corrupted and must be completely recomputed (%s).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Index(persistent.Persistent):
@@ -78,7 +84,7 @@ class Index(persistent.Persistent):
 
     def __repr__(self):
         '''p_self's string representation'''
-        return '<index %s::%s>' % (self.catalog.name, self.name)
+        return f'‹Index {self.catalog.name}::{self.name}›'
 
     def init(self):
         '''Initialisation (or cleaning) of the index main data structures'''
@@ -162,9 +168,14 @@ class Index(persistent.Persistent):
                     i += 1
         return r
 
-    def removeByValueEntry(self, value, id):
+    def removeByValueEntry(self, value, id, o=None):
         '''Removes (non-multiple) p_value from p_self.byValue, for this p_id'''
-        ids = self.byValue.get(value)
+        try:
+            ids = self.byValue.get(value)
+        except (TypeError, SystemError) as err:
+            if o: o.log(IBV_KO % (self.catalog.name, self.name, str(value),
+                                  str(err)), type='error')
+            return
         if ids is None: return
         # Remove reference to p_id for this p_value
         try:
@@ -172,10 +183,19 @@ class Index(persistent.Persistent):
         except (ValueError, KeyError):
             pass
         # If no object uses p_value anymore, remove the whole entry
-        if not ids:
+        try:
+            # Testing "not ids" can raise an error if IITreeSet v_ids is
+            # corrupted.
+            if not ids:
+                del(self.byValue[value])
+        except POSKeyError as err:
+            # In that case, even if other, not-to-remove values are in p_ids,
+            # completely remove the corrupted IITreeSet.
             del(self.byValue[value])
+            if o: o.log(IISET_ERR % (self.catalog.name, self.name, str(value)),
+                        type='warning')
 
-    def removeEntry(self, id):
+    def removeEntry(self, id, o=None):
         '''Remove the currently indexed value for this p_id'''
         # Remove the entry in dict "byObject"
         value = self.byObject[id]
@@ -184,9 +204,9 @@ class Index(persistent.Persistent):
         if self.isMultiple(value, inIndex=True):
             # A multi-value
             for v in value:
-                self.removeByValueEntry(v, id)
+                self.removeByValueEntry(v, id, o)
         else:
-            self.removeByValueEntry(value, id)
+            self.removeByValueEntry(value, id, o)
 
     def addEntry(self, id, value, byValueOnly=False):
         '''Add, in this index, an entry with this p_id and p_value.
@@ -222,7 +242,7 @@ class Index(persistent.Persistent):
             # There is nothing to index for this object
             if id not in self.byObject: return
             # The object is yet indexed: remove the entry
-            self.removeEntry(id)
+            self.removeEntry(id, o)
         else:
             try:
                 # This value must be indexed
@@ -236,19 +256,21 @@ class Index(persistent.Persistent):
                     # Do nothing if the current value is the right one
                     if self.valueEquals(value, current): return
                     # Remove the current entry and replace it with the new one
-                    self.removeEntry(id)
+                    self.removeEntry(id, o)
                     self.addEntry(id, value)
             except Exception as err:
-                o.log(INDEX_ERR % (o.class_.name, self.name))
+                o.log(INDEX_ERR % (o.iid, o.getShownValue(), o.class_.name,
+                                   self.name), type='error')
+                o.log(str(value), type='error')
                 raise err
         return True
 
-    def unindexObject(self, iid):
-        '''Unindex object whose IID is p_iid. Returns True if an entry has
+    def unindexObject(self, iid, o=None):
+        '''Unindex object having this p_iid. Returns True if an entry has
            actually been removed from the index.'''
         # Do nothing if there is no trace from this object in this index
         if iid not in self.byObject: return
-        self.removeEntry(iid)
+        self.removeEntry(iid, o)
         return True
 
     def search(self, value, field, rs):
@@ -274,7 +296,7 @@ class Index(persistent.Persistent):
             # p_value (or one of the value operators if p_value is an operator)
             # is not a valid value for this index.
             term = 'operator' if isOperator else 'index value'
-            raise self.Error(VAL_KO % (self.name, self.catalog.name,
+            raise self.Error(VAL_KO % (self.catalog.name, self.name,
                                        term, str(value)))
 
     def recompute(self, o):
@@ -297,9 +319,17 @@ class Index(persistent.Persistent):
         req = tool.req
         class_ = tool.model.classes.get(req.catalog)
         index = tool.getCatalog(class_)[req.index]
-        # Remember the index metrics before recomputation
-        stats = O(valuesBefore=len(index.byValue),
-                  objectsBefore=len(index.byObject))
+        # Remember the index metrics before recomputation (if available: it may
+        # not be the case if the index is corrupted).
+        try:
+            countV = len(index.byValue)
+        except SystemError:
+            countV = '?'
+        try:
+            countO = len(index.byObject)
+        except SystemError:
+            countO = '?'
+        stats = O(valuesBefore=countV, objectsBefore=countO)
         index.recompute(tool)
         # Compute index metrics after recomputation
         stats.valuesAfter = len(index.byValue)
@@ -312,19 +342,25 @@ class Index(persistent.Persistent):
         tool.goto() # the referer page
 
     # The CSS class to use when rendering the "recompute" icon. May be
-    # overridden by Index sub-classes;
+    # overridden by Index sub-classes.
     boxIconCss = 'boxIcon'
 
     def getAction(self, o):
         '''Returns the icon allowing to entirely reindex this index'''
         name = self.name
         cname = self.catalog.name
-        msg = REC_CONF % (cname, name, len(self.byValue), len(self.byObject))
-        js = "askConfirm('url','%s/Database/Catalog/Index/reload?" \
-             "catalog=%s&index=%s','%s')" % (o.tool.url, cname, name, msg)
-        return '<img class="clickable %s" src="%s" onclick="%s" ' \
-               'title="Recompute the tied index"/>' % \
-               (self.boxIconCss, o.buildSvg('refresh'), js)
+        try:
+            msg = REC_CONF % (cname, name, len(self.byValue),
+                              len(self.byObject))
+        except SystemError:
+            # This exception may be raised while checking p_self.byValue or
+            # p_self.byObject's lengths, if the index is corrupted.
+            msg = REC_CONF_S % (cname, name)
+        js = f"askConfirm('url','{o.tool.url}/Database/Catalog/Index/reload?" \
+             f"catalog={cname}&index={name}','{msg}')"
+        imgUrl = o.buildSvg('refresh')
+        return f'<img class="clickable {self.boxIconCss}" src="{imgUrl}" ' \
+               f'onclick="{js}" title="Recompute the tied index"/>'
 
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                            Conversion methods

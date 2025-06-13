@@ -7,15 +7,18 @@ from appy.ui.layout import Layout, LayoutF, Layouts
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Info(Field):
-    '''An info is a field whose purpose is to present information
-       (text, html...) to the user.'''
+    '''An info is a field whose purpose is to present information (text,
+       html...) to the user.'''
 
     class Layouts(Layouts):
         '''Info-specific layouts'''
+
+        singleLine = LayoutF('ld=') # Label and description on a single line
         b   = Layouts(edit='l')
         d   = Layouts(edit=Layout('l-d', width=None))
-        ds  = Layouts(edit=LayoutF('ld')) # *S*ingle line
-        dsv = Layouts(view=LayoutF('ld')) # *S*ingle line on view
+        ds  = Layouts(edit=singleLine) # *S*ingle line
+        dsv = Layouts(edit=singleLine,
+                      view=singleLine) # *S*ingle line on *v*iew
         c   = Layouts(edit='l|')
         dc  = Layouts(edit='l|-d|')
         do  = Layouts(edit='f', view='d') # Description only
@@ -35,13 +38,14 @@ class Info(Field):
       readPermission='read', writePermission='write', width=None, height=None,
       maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
       historized=False, mapping=None, generateLabel=None, label=None, view=None,
-      cell=None, buttons=None, edit=None, xml=None, translations=None):
+      cell=None, buttons=None, edit=None, custom=None, xml=None,
+      translations=None):
         # Call the base constructor
-        Field.__init__(self, None, (0,1), None, None, show, renderable, page,
-          group, layouts, move, False, True, None, None, False, None,
-          readPermission, writePermission, width, height, None, colspan, master,
-          masterValue, focus, historized, mapping, generateLabel, label, None,
-          None, None, None, False, False, view, cell, buttons, edit, xml,
+        super().__init__(None, (0,1), None, None, show, renderable, page, group,
+          layouts, move, False, True, None, None, False, None, readPermission,
+          writePermission, width, height, None, colspan, master, masterValue,
+          focus, historized, mapping, generateLabel, label, None, None, None,
+          None, False, False, view, cell, buttons, edit, custom, xml,
           translations)
         self.validable = False
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

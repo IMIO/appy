@@ -17,9 +17,14 @@ class Model:
     # Names of base classes forming the base Appy model, in package appy.model,
     # and standard workflows defined in package appy.model.workflows.standard.
     # These classes and workflows are injected into any app's model.
+
     baseClasses = ('Page', 'User', 'Group', 'Tool', 'Translation', 'Carousel',
-                   'Document', 'Query', 'Mover')
-    baseWorkflows = ('Anonymous', 'Authenticated', 'Owner', 'TooPermissive')
+                   'Document', 'Query', 'Mover', 'Place')
+
+    baseWorkflows = ('Anonymous','Authenticated','Owner','User','TooPermissive')
+
+    # Appy standard global roles
+    globalRoles = ('Manager', 'Publisher')
 
     def __init__(self, config, classes, workflows):
         '''The unique Model instance is created by the
@@ -107,17 +112,28 @@ class Model:
                 role = Role(role)
             r[role.name] = role
         # Filter the result according to parameters and return a list
-        r = [role for role in r.values() if role.match(base,local,grantable)]
+        r = [role for role in r.values() if role.match(base, local, grantable)]
         if sorted:
             r.sort(key= lambda r:r.name.lower())
         return r
 
-    def getGrantableRoles(self, o, namesOnly=False):
+    def getGrantableRoles(self, o, namesOnly=False, checkManager=False,
+                          forced=None):
         '''Returns the list of global roles that can be granted to a user'''
+        # If p_checkManager is True, role "Manager", if among the result, is
+        # removed from it if the logged user is not a manager itself.
+        #
+        # By default, these roles are retrieved from p_self.grantableRoles,
+        # excepted if another list of roles is passed in p_forced.
+        roles = self.grantableRoles if forced is None else forced
         r = []
-        for role in self.grantableRoles:
-            name = role.name
-            info = name if namesOnly else (name, o.translate('role_%s' % name))
+        for role in roles:
+            name = role if isinstance(role, str) else role.name
+            # Ignore role "Manager" when appropriate
+            if checkManager and name == 'Manager' and \
+               not o.user.hasRole('Manager'): continue
+            # Add the role to v_r, in the appropriate format
+            info = name if namesOnly else (name, o.translate(f'role_{name}'))
             r.append(info)
         return r
 
@@ -130,7 +146,7 @@ class Model:
       <h2>Root classes (+tool)</h2>
 
       <!-- Class selector -->
-      <select name="classes" var="murl='%s/view?page=model' % tool.url"
+      <select name="classes" var="murl=f'{tool.url}/view?page=model'"
         onchange=":'goto(&quot;%s&amp;className=&quot; + this.value)' % murl">
        <option value="">-</option>
        <option for="class_ in model.getRootClasses()" var2="name=class_.name"
@@ -149,7 +165,8 @@ class Model:
       .mbox>tbody>tr>th { text-transform:none; font-size:100%;
                           text-align:center }
       .mbox>tbody>tr>td { border-bottom:none; border-top:none }
-      .mbox>tbody>tr:last-child>td:first-child { border-bottom:1px solid black }
+      .mbox>tbody>tr:last-child>td:first-child
+        { border-bottom:1px solid darkgrey }
       a.bref, a.bref:visited {
         padding:0 0.4em; border: 1px solid black; font-weight:bold;
         background-color:|darkColor|; color:|brightColor| }

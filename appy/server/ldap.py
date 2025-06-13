@@ -245,7 +245,7 @@ class Config:
     def applyLoginTransform(self, login):
         '''Applies, when relevant, a transform to p_login'''
         if self.loginTransform:
-            r = eval('login.%s()' % self.loginTransform)
+            r = getattr(login, self.loginTransform)()
         else:
             r = login
         return r
@@ -302,13 +302,13 @@ class Config:
             if user.state == 'active':
                 local += 1
                 if user.login not in ldapUsers:
-                    deactivated.append('%s (%s)' % (user.login,user.getTitle()))
+                    deactivated.append(f'{user.login} ({user.getTitle()})')
                     user.do('deactivate')
                     counts.deactivated += 1
             # Reactivate appropriate users
-            elif mustReactivate and (user.state == 'inactive'):
+            elif mustReactivate and user.state == 'inactive':
                 if user.login in ldapUsers:
-                    reactivated.append('%s (%s)' % (user.login,user.getTitle()))
+                    reactivated.append(f'{user.login} ({user.getTitle()})')
                     user.do('reactivate')
                     counts.reactivated += 1
         log = tool.log

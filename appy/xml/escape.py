@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -13,22 +11,28 @@ class Escape:
     # Escaping consists in replacing special chars used by the XML language by
     # replacement entities that can be used in the content of XML tags and
     # attributes. This class does it for various XML flavours:
-    # --------------------------------------------------------------------------
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #   "odf"    | Open Document Format - The XML format for LibreOffice files
     #  "xhtml"   | The XML-compliant version of HTML
     #   "xml"    | Any other XML flavour
-    # --------------------------------------------------------------------------
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     # Base chars to escape
     chars = '<>&"'
+
     # For some XML flavours we escape "blanks" as well
     blanks = '\n\t\r'
+
     # Base regular expression matching these chars
-    rex = re.compile('[%s]' % chars)
+    rex = re.compile(f'[{chars}]')
+
     # Regular expression also matching the single quote (less used)
-    rexApos = re.compile("[%s']" % chars)
+    rexApos = re.compile(f"[{chars}']")
+
     # Regular expression also matching carriage returns and tabs (= "blanks")
-    rexBlanks = re.compile('[%s%s]' % (chars, blanks))
-    rexBlanksApos = re.compile("[%s'%s]" % (chars, blanks))
+    rexBlanks = re.compile(f'[{chars}{blanks}]')
+    rexBlanksApos = re.compile(f"[{chars}'{blanks}]")
+
     # All regular expressions, grouped by flavour and 'apos' escaping or not
     nonXmlRex = { False: rexBlanks, True: rexBlanksApos }
     rexAll = {'xml'   : { False: rex, True: rexApos },
@@ -36,8 +40,10 @@ class Escape:
               'odf*'  : nonXmlRex,
               'xhtml' : nonXmlRex,
               'xhtml*': nonXmlRex}
+
     # Entities to use to escape base chars
     entities = {'<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;', "'":'&apos;'}
+
     # For "odf" and "xhtml" flavours, we replace "blank" chars with their
     # counterparts in these flavours as well.
     values = {
@@ -51,18 +57,21 @@ class Escape:
      'xhtml*': {'\n':'</p><p>', '\t':'', '\r':''},
      'xml': {} # We do not escape blanks by default
     }
+
     # Complete "values" with entities
     for value in values.values(): value.update(entities)
 
     @staticmethod
     def xml(s, flavour='xml', escapeApos=False):
         '''Returns p_s, whose XML special chars have been replaced with XML
-           entities. You can perform escaping for a specific XML flavour: "odf"
-           or "xhtml" (see doc in class Escape) or use the default flavour
-           "xml".
+           entities.'''
 
-           Most of the time, we do not escape 'apos' (there is no particular
-           need for that), excepted if p_escapeApos is True.'''
+        # You can perform escaping for a specific XML flavour: "odf" or "xhtml"
+        # (see doc in class Escape) or use the default flavour "xml".
+
+        # Most of the time, we do not escape 'apos' (there is no particular need
+        # for that), excepted if p_escapeApos is True.
+
         # Choose the regular expression to use depending on parameters
         rex = Escape.rexAll[flavour][escapeApos]
         # Define the function to use to choose the replacement value depending
@@ -78,6 +87,6 @@ class Escape:
         # encountered \n leads to the creation of a new paragraph, surrounded by
         # <p></p>.
         suffix = '*' if p else ''
-        r = Escape.xml(s, flavour='xhtml%s' % suffix)
-        return '<p>%s</p>' % r if p else r
+        r = Escape.xml(s, flavour=f'xhtml{suffix}')
+        return f'<p>{r}</p>' if p else r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

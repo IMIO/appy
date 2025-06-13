@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''
 <p>This para should get style Signature.</p>
 <ul>

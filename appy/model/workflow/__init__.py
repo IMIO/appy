@@ -24,6 +24,9 @@ class Role:
     # These roles are the base roles shipped with Appy
     baseRoles = (
      'Manager',      # The most permissive role. A Manager can do everything.
+     'Publisher',    # A Publisher manages the CMS-related objects of a Appy
+                     # site: pages, carousels, queries. CMS stands for "Content
+                     # Management System".
      'Owner',        # Automatically granted to an object's creator
      'Anonymous',    # Automatically granted to any unlogged hit to the site
      'Authenticated' # Automatically granted to any logged user
@@ -31,6 +34,7 @@ class Role:
 
     # The following roles are all global, "Owner" excepted
     baseLocalRoles = ('Owner',)
+
     # The following roles are "ungrantable": Appy grants them automatically
     baseUngrantableRoles = ('Anonymous', 'Authenticated')
 
@@ -51,19 +55,19 @@ class Role:
     def match(self, base, local, grantable):
         '''Does this role match parameters ?'''
         # Every parameter can be True, False or None
-        if (base is not None) and (base != self.base): return
-        if (local is not None) and (local != self.local): return
-        if (grantable is not None) and (grantable != self.grantable): return
+        if base is not None and base != self.base: return
+        if local is not None and local != self.local: return
+        if grantable is not None and grantable != self.grantable: return
         return True
 
     def getLabel(self, withDefault=False):
         '''Returns the i18n label corresponding to this role. If p_withDefault
            is True, it also returns the default value for the label. In this
            case the r_esult is a tuple (s_label, s_defaultValue).'''
-        r = 'role_%s' % self.name
+        r = f'role_{self.name}'
         return r if not withDefault else r, self.name
 
     def __repr__(self):
         local = self.local and ' (local)' or ''
-        return '<role %s%s>' % (self.name, local)
+        return f'‹role {self.name}{local}›'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''
 <p>Hello.</p>
 <h2>Heading One</h2>

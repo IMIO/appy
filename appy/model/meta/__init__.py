@@ -11,19 +11,21 @@ from appy.model.root import Model
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ATTR       = 'Attribute "%s" in %s "%s"'
 UNDERS     = 'contains at least one underscore, which is not allowed'
-
 US_IN_ATTR = '%s %s. Please consider naming your fields, searches, states ' \
              'and transitions in camelCase style, the first letter being a ' \
              'lowercase letter. For example: "myField", instead of ' \
              '"my_field". Furthermore, there is no need to define "private" ' \
              'fields starting with an underscore.' % (ATTR, UNDERS)
-US_IN_CLS = 'ClassS or workflow "%%s" %s. Please consider naming your classes ' \
-            'and workflows in CamelCase style, the first letter being an ' \
-            'uppercase letter. For example: "MyClass", instead of ' \
-            '"my_class".' % UNDERS
+US_IN_CLS  = 'Class or workflow "%%s" %s. Please consider naming your ' \
+             'classes and workflows in CamelCase style, the first letter ' \
+             'being an uppercase letter. For example: "MyClass", instead of ' \
+             '"my_class".' % UNDERS
 UP_NAME    = '%s must start with a lowercase letter. This rule holds for any ' \
              'field, search, state or transition.' % ATTR
 LOW_NAME   = 'Name of %s "%s" must start with an uppercase letter.'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Meta:
@@ -33,13 +35,14 @@ class Meta:
     # attribute, like a field, search, state, transition...
 
     unallowedNames = {
-      'id':         None, # The object's identifier
-      'iid':        None, # The object's integer identifier
-      'values':     None, # Dict storing all field values
-      'container':  None, # Info about the objet's container
-      'history':    None, # The object's history
+      'id'        : None, # The object's identifier
+      'iid'       : None, # The object's integer identifier
+      'values'    : None, # Dict storing all field values
+      'container' : None, # Info about the objet's container
+      'history'   : None, # The object's history
       'localRoles': None, # The object's local roles
-      'locks':      None, # Locks on object pages
+      'locks'     : None, # Locks on object pages
+      'default'   : None, # Default page name for object traversal
     }
 
     @classmethod
@@ -65,12 +68,12 @@ class Meta:
         self.appOnly = appOnly
 
     def asString(self):
-        r = '<class %s.%s' % (self.__module__, self.name)
+        r = f'‹class {self.python.__module__}.{self.name}'
         for attribute in self.attributes.keys():
-            r += '\n %s:' % attribute
+            r = f'{r}{bn} {attribute}:'
             for name, field in getattr(self, attribute).items():
-                r += '\n  %s : %s' % (name, str(field))
-        return r
+                r = f'{r}{bn} {name} : {str(field)}'
+        return f'{r}›'
 
     def checkClassName(self, class_):
         '''The name of a class or workflow must start with an uppercase letter
@@ -97,6 +100,7 @@ class Meta:
 
     def __repr__(self):
         '''p_self's string representation'''
-        return '<meta%s %s from module %s>' % (self.__class__.__name__.lower(),
-                                              self.name, self.python.__module__)
+        prefix = self.__class__.__name__.lower()
+        module = self.python.__module__
+        return f'‹meta{prefix} {self.name} from module {module}›'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

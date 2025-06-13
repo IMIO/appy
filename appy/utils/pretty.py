@@ -26,7 +26,7 @@ class PrettyPrinter:
 
     # Regular expressions and their components, for extracting parts of code
     # (classes, methods...)
-    # ~~~
+    #
     # A group representing blanks at the start of the found class or method.
     # Counting blanks is important to find the place where the method or class
     # will end.
@@ -34,11 +34,11 @@ class PrettyPrinter:
     blanksR = '(?P=blanks)' # A reference to this group
     # The regex part allowing to detect "detentation" at the end of the class or
     # method definition.
-    dedent = '(?:^%s[\w#]|^[\w#]|\Z)' % blanksR
+    dedent = r'(?:^%s[\w#]|^[\w#]|\Z)' % blanksR
     # A template regular expression matching a class declaration
-    classDecl = 'class +%s *(?:\(|\:).*?'
+    classDecl = r'class +%s *(?:\(|\:).*?'
     # A template regular expression matching a complete method definition
-    methodDef = '%s^%s(def +%%s *\(.*?)%s' % (classDecl, blanks, dedent)
+    methodDef = r'%s^%s(def +%%s *\(.*?)%s' % (classDecl, blanks, dedent)
     # A template regular expression matching a complete class definition
     classDef = '^%s(%s)%s' % (blanks, classDecl, dedent)
 
@@ -62,13 +62,14 @@ class PrettyPrinter:
 
     # Regular expression identifying, in Python comments, Appy names: p_param1,
     # m_method2...
-    commentNames = re.compile('(?<=\W)(p|m|r|c)_(\w+)')
+    commentNames = re.compile(r'(?<=\W)(p|m|r|c)_(\w+)')
 
     # Styles to apply to names matched by regular expression "commentNames"
     commentStyles = {'p': 'u', 'm': 'i', 'r': 'ui', 'c': 'bi'}
 
     # Regular expression matching Python keywords
-    pythonKeywords = re.compile('(?<=\W)(%s)(?![\w-])'%'|'.join(keyword.kwlist))
+    pythonKeywords = re.compile(r'(?<=\W)(%s)(?![\w-])' % \
+                                '|'.join(keyword.kwlist))
     
     def __init__(self, code, part, url=None, o=None):
         # The content of the Python file to pretty-print

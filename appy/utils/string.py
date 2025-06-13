@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 '''Utility module related to string manipulation'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -9,6 +7,19 @@
 import re, string, random
 
 from appy.utils import flipDict, asDict
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# All whitespace chars
+whitespace = f'{string.whitespace}\xa0\x1c\x1d\x1e\x1f\x85\u1680\u2000\u2001' \
+             f'\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028' \
+             f'\u2029\u202f\u205f\u3000'
+
+# All whitespace chars, the *n*on-*b*reaking one excepted
+whitespaceNB_ = whitespace.replace('\xa0', '')
+
+# All whitespace chars, the non-breaking and standard *b*lank chars excepted
+whitespaceB_ = whitespaceNB_.replace(' ', '')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Normalize:
@@ -93,6 +104,7 @@ class Normalize:
     nonAlphanumBD = re.compile('[^a-zA-Z0-9 -]') # + blanks and dashes
     nonAlphanum_  = re.compile('[^a-zA-Z0-9_]')  # Alphanums + the underscore
     nonDigit      = re.compile('[^0-9]')
+    anyDigit      = re.compile('[0-9]')
 
     # Access some of the previously defined regular expressions, depending on
     # the fact that blanks (1) and/or dashes (2) must be matched or not.
@@ -155,7 +167,7 @@ class Normalize:
         '''Normalizes string p_s'''
         # Any char matched by p_rex in p_s will be replaced with a blank,
         # ignored, replaced or kept as-is, depending on its presence as a key in
-        # dicts p_blank, p_ignore or p_replace and of boolan arg p_keep.
+        # dicts p_blank, p_ignore or p_replace and of boolean arg p_keep.
         fun = lambda match: Normalize.char(match.group(0),
                                            blankify, ignore, replace, keep)
         return rex.sub(fun, s)
@@ -232,76 +244,112 @@ class Normalize:
         '''Returns a version of p_s whose non-digit chars have been removed'''
         return Normalize.string(s, class_.nonDigit)
 
+    @classmethod
+    def noDigit(class_, s):
+        '''Returns a version of p_s whose digits have been removed'''
+        return Normalize.string(s, class_.anyDigit)
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Variables:
     '''Replaces, in some text, variables defined with syntax |name| with content
        as found on the homonym attribute of a passed object.'''
 
     # Regular expression defining a variable (with pipes as delimiters)
-    withPipes = re.compile('\|(\w+?)\|', re.S)
+    withPipes = re.compile(r'\|(\w+?)\|', re.S)
+
     # A variant with asteriscs as delimiters
-    withStars = re.compile('\*(\w+?)\*', re.S)
+    withStars = re.compile(r'\*(\w+?)\*', re.S)
+
+    # Possible delimiters
+    seps = {True: '*', False: '|'} # True means: delimiters are stars
+
+    MISSING = 'Missing attribute "%s".'
 
     @classmethod
-    def getValue(class_, o, name, o2=None):
+    def getMissingValue(class_, name, stars, raiseIfMissing):
+        '''If p_raiseIfMissing is True, an error must be raised. Else, the
+           variable p_name must be left as-s in the result, surrounded by the
+           appropriate delimiter (depending on p_stars).'''
+        if raiseIfMissing:
+            raise AttributeError(class_.MISSING % name)
+        # Reify the value
+        sep = class_.seps[stars]
+        return f'{sep}{name}{sep}'
+
+    @classmethod
+    def getValue(class_, o, name, stars=False, raiseIfMissing=True, o2=None):
         '''Get the value of the attribute having this p_name on this
            p_o(bject).'''
-        # If the attribute does not exist on p_o, and p_o2 is passed, try to get
-        # its value on p_o2.
-        try:
-            return getattr(o, name)
-        except AttributeError as err:
-            if o2 is None:
-                raise err
-            return class_.getValue(o2, name)
+        # If p_name is found on p_o, return its value
+        if name in o.__dict__: return getattr(o, name)
+        # Else, try to get its value on p_o2
+        if o2 is None:
+            # Reify the var or raise an error, depending on p_raiseIfMissing
+            return class_.getMissingValue(name, stars, raiseIfMissing)
+        # Get the value on p_o2
+        return class_.getValue(o2, name, stars, raiseIfMissing)
 
     @classmethod
-    def replace(class_, s, o, stars=False, o2=None):
+    def replace(class_, s, o, stars=False, raiseIfMissing=True, o2=None):
         '''Replaces, in string p_s, any variable matching class_.withStars (if
            p_stars is True) or class_.withPipes (if p_stars if False) with a
-           value as found on the homonym attribute stored on this p_o(bject).'''
-        fun = lambda match: class_.getValue(o, match.group(1), o2)
+           value as found on the homonym attribute stored on this p_o(bject), or
+           a potential second object p_o2.'''
+        # If raiseIfMissing is True, if a term to replace does not correspond to
+        # any attribute, neither on p_o nor on p_o2, an error is raised. If
+        # raiseIfMissing is False, if such a term is not found, it is left as-is
+        # in the result. This can be practical when several rounds of variables
+        # replacements must be performed: some variables may be left as-is in
+        # the first round, then known and replaced in a second round.
+        fun = lambda match: class_.getValue(o, match.group(1), stars, \
+                                            raiseIfMissing, o2)
         rex = class_.withStars if stars else class_.withPipes
         return rex.sub(fun, s)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def getStringFrom(o, stringify=True, c="'"):
     '''Returns a string representation for p_o that can be transported over
-       HTTP and manipulated in Javascript.
-
-       If p_stringify is True, non-string literals (None, integers, floats...)
-       are surrounded by this p_c(har). String literals are always surrounded by
-       p_c(hars).
-    '''
+       HTTP and manipulated in Javascript.'''
+    # If p_stringify is True, non-string literals (None, integers, floats...)
+    # are surrounded by this p_c(har). String literals are always surrounded by
+    # p_c(hars).
     if isinstance(o, dict):
-        res = []
+        r = []
         for k, v in o.items():
-            res.append("%s:%s" % (getStringFrom(k, stringify, c),
-                                  getStringFrom(v, stringify, c)))
-        return '{%s}' % ','.join(res)
+            ks = getStringFrom(k, stringify, c)
+            vs = getStringFrom(v, stringify, c)
+            r.append(f'{ks}:{vs}')
+        r = ','.join(r)
+        r = f'{{{r}}}'
     elif isinstance(o, list) or isinstance(o, tuple):
-        return '[%s]' % ','.join([getStringFrom(v, stringify, c) for v in o])
+        r = ','.join([getStringFrom(v, stringify, c) for v in o])
+        r = f'[{r}]'
     else:
         # Convert the value to a string
         isString = isinstance(o, str)
-        isDate = not isString and (o.__class__.__name__ == 'DateTime')
-        if not isString: o = str(o)
+        isDate = not isString and o.__class__.__name__ == 'DateTime'
+        r = o if isString else str(o)
         # Manage the special case of dates
-        if isDate and not stringify: o = "DateTime('%s')" % o
+        if isDate and not stringify: r = f"DateTime('{r}')"
         # Surround the value by quotes when appropriate
         if isString or stringify:
-            o = "%s%s%s" % (c, o.replace(c, "\\%s" % c), c)
-        return o
+            r = r.replace(c, f'\\{c}')
+            r = f'{c}{r}{c}'
+    return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def getDictFrom(s):
+def getDictFrom(s, pairSep=',', kvSep=':', valSep='::'):
     '''Returns a dict from string representation p_s of the form
-       "key1:value1,key2:value2".'''
+       "key1:value1,key2:value2*value3".'''
+    # Separators at various levels may be changed via parameters
     r = {}
     if s:
-        for part in s.split(','):
-            key, value = part.split(':', 1)
+        for part in s.split(pairSep):
+            key, value = part.split(kvSep, 1)
             if value:
+                # Value may be a list
+                if valSep in value:
+                    value = value.split(valSep)
                 r[key] = value
     return r
 
@@ -420,13 +468,13 @@ class WhitespaceCruncher:
     '''Takes care of removing unnecessary whitespace in several contexts'''
 
     # Base chars considered as whitespace
-    baseChars = ' \r\t\n'
+    baseChars = string.whitespace
 
     # Whitechars, as a dict
     whiteChars = asDict(baseChars)
 
-    # Whitechars, including the non-blocking space (nbsp)
-    allChars = asDict(baseChars + ' ')
+    # Whitechars, including the not-breakable space (nbsp)
+    allChars = asDict(f'{baseChars} ')
 
     @classmethod
     def crunch(class_, s, previous=None):
@@ -447,8 +495,8 @@ class WhitespaceCruncher:
                 # Include the current whitechar in the result if the previous
                 # char is not a whitespace or nbsp.
                 if not previousChar or (previousChar not in class_.allChars):
-                    r += ' '
-            else: r += char
+                    r = f'{r} '
+            else: r = f'{r}{char}'
             previousChar = char
         # "r" can be a single whitespace. It is up to the caller method to
         # identify when this single whitespace must be kept or crunched.

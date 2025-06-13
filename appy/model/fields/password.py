@@ -47,14 +47,37 @@ class Password(Field):
      <x for="confirm in (False, True)"
         var2="placeholder=field.getPlaceholder(o, confirm);
               inputId=f'{name}_confirm' if confirm else name">
-      <input type="password" id=":inputId" name=":inputId"
+      <input type="password" id=":inputId" name=":inputId" data-state="hidden"
+             data-showIcon="👀" data-hideIcon="🫣"
+             data-showTitle=":_('password_show')"
+             data-hideTitle=":_('password_hide')"
              size=":field.getInputSize()" style=":field.getInputSize(False)"
-             maxlength=":field.maxChars" placeholder=":placeholder"/>
+             maxlength=":field.maxChars" placeholder=":placeholder"
+             autofocus=":field.autofocus"/>
+      <span class="clickable" title=":_('password_show')"
+            onClick="switchPasswordView(this)">👀</span>
       <br if="not confirm"/>
-     </x>''')
+     </x>''',
+
+     js='''
+      function switchPasswordView(span) {
+        const widget = span.previousSibling;
+        if (widget.dataset.state === 'hidden') {
+          widget.type = 'text'; // Show the password
+          widget.dataset.state = 'shown';
+          span.title = widget.dataset.hidetitle;
+          span.innerText = widget.dataset.hideicon;
+        }
+        else {
+          widget.type = 'password'; // Hide the password
+          widget.dataset.state = 'hidden';
+          span.title = widget.dataset.showtitle;
+          span.innerText = widget.dataset.showicon;
+        }
+      }''')
 
     # Special chars
-    specialChars = '&`|@"\'!°$*%€·£+~/\#=()[]{}§µ'
+    specialChars = '&`|@"\'!°$*%€·£+~/\\#=()[]{}§µ'
 
     # Default minimum occurrences for every group of chars within a password
     defaultOccurrences = {
@@ -76,19 +99,22 @@ class Password(Field):
       maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
       historized=False, mapping=None, generateLabel=None, label=None,
       sdefault='', scolspan=1, swidth=None, sheight=None, persist=True,
-      placeholder=None, view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None, minLength=8, occurrences=None):
+      placeholder=None, view=None, cell=None, buttons=None, edit=None,
+      custom=None, xml=None, translations=None, minLength=8, occurrences=None,
+      autofocus=False):
         # The minimum length for this password
         self.minLength = minLength
         # The minimum number of occurrences for each group of chars
         self.occurrences = occurrences or Password.defaultOccurrences
+        # Must the first input field automatically receive focus on edit ?
+        self.autofocus = autofocus
         # Call the base constructor
-        Field.__init__(self, validator, multiplicity, None, None, show,
-          renderable, page, group, layouts, move, False, True, None, None,
-          False, None, readPermission, writePermission, width, height, maxChars,
-          colspan, master, masterValue, focus, historized, mapping,
-          generateLabel, label, sdefault, scolspan, swidth, sheight, persist,
-          False, view, cell, buttons, edit, xml, translations)
+        super().__init__(validator, multiplicity, None, None, show, renderable,
+          page, group, layouts, move, False, True, None, None, False, None,
+          readPermission, writePermission, width, height, maxChars, colspan,
+          master, masterValue, focus, historized, mapping, generateLabel, label,
+          sdefault, scolspan, swidth, sheight, persist, False, view, cell,
+          buttons, edit, custom, xml, translations)
         # A potential placeholder (see homonym attribute in string.py)
         self.placeholder = placeholder
 

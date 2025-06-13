@@ -11,6 +11,7 @@ from appy import ui, utils
 from appy.ui import LinkTarget
 from appy.ui.colset import ColSet
 from appy.model.batch import Batch
+from appy.xml.escape import Escape
 from appy.ui.columns import Columns
 from appy.model.searches import Search
 from appy.utils import string as sutils
@@ -44,6 +45,9 @@ CBS_KO      = "This field can't be rendered as checkboxes because it can " \
 DDOWN_KO    = 'A Ref with link="dropdown" must have a max multiplicity being 1.'
 E_VAL_KO    = 'With "indexAttribute" being "%s", "emptyIndexValue" can only ' \
               'hold one of these values: %s.'
+HIST_O_KO   = '%s :: Ref "%s" :: Tied object %d (%s) mentioned in object ' \
+              'history was not found.'
+BDI_KO      = 'A disabled back ref cannot be indexed: it stores no value.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def setAttribute(class_, name, value):
@@ -57,9 +61,10 @@ def setAttribute(class_, name, value):
 class Position:
     '''When inserting some object among a list of tied objects, this class gives
        information about where to insert it.'''
+
     def __init__(self, place, o):
-        # p_o is an object (or among tied objects that will be the reference
-        # point for the insertion.
+        # p_o is an object among tied objects that will be the reference point
+        # for the insertion.
         self.insertObject = o
         # p_place can be "before" or "after" and indicates where to insert the
         # new object relative to p_o.
@@ -117,14 +122,15 @@ class RefInitiator(Initiator):
         '''The p_new object must be linked with the initiator object and the
            action must potentially be historized.'''
         o = self.o
-        # Link the new object to the initiator
-        self.field.linkObject(o, new, at=self.position, secure=True)
+        # Link the new object to the initiator. p_new will be reindexed, with
+        # all its fields, so it is useless to reindex the back reference in the
+        # call hereafter.
+        self.field.linkObject(o, new, at=self.position, secure=True,
+                              reindex=True, reindexBack=False)
         # Record this change into the initiator's history when relevant
         if self.field.getAttribute(o, 'historized'):
-            title = new.getShownValue()
-            msg = '%s: %s' % (new.translate(new.class_.name), title)
             o.history.add('Link', addition=True, field=self.field.name,
-                          comment=msg)
+                          comment=new.strinG(translated=True, path=False))
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Separator:
@@ -164,8 +170,11 @@ class Ref(Field):
         t = Layouts(Layout(base, css='topSpace'))
         a = Layouts(edit=Layout(base), view=Layout(base))
         # "d" stands for "description": a description label is added, on view
-        wd = Layouts(view=Layout('l-d-f'))
-        wdt = Layouts(view=Layout('l-d-f', css='topSpace'))
+        baseW = 'l-d-f'
+        wd = Layouts(view=Layout(baseW))
+        wdt = Layouts(view=Layout(baseW, css='topSpace')) # *t*op
+        wdb = Layouts(view=Layout(baseW, css='bottomSpace')) # *b*ottom
+        wdtb = Layouts(view=Layout(baseW, css='tbSpace')) # *t*op + *b*ottom
         # Wide, but not on edit
         w_e = Layouts(edit=Layout(base, width=None), view=Layout(base))
 
@@ -204,6 +213,10 @@ class Ref(Field):
 
     # Every type of "PV" corresponds to an attribute used to retrieve objects
     pvMap = {PV_EDIT: 'select', PV_SEARCH: 'sselect', PV_FILTER: 'fselect'}
+
+    # Constant for defining a self-reference (see doc in Ref constructor,
+    # attribute "back").
+    SELF = 1
 
     # This PX displays the title of a referenced object, with a link on it to
     # reach the consult view for this object. If we are on a back reference, the
@@ -312,19 +325,21 @@ class Ref(Field):
     # Icons for triggering actions on some tied object (edit, delete, etc)
 
     pxObjectActions = Px('''
-     <div if="ifield.showActions"
-          var2="layout='sub';
+     <div var="showActions=ifield.getAttribute(io, 'showActions')"
+          if="showActions"
+          var2="inCell=layout=='cell';
+                layout='sub';
                 toPopup=target and target.target != '_self';
                 editable=guard.mayEdit(o) and not (popup and toPopup);
                 class_=field.container;
                 iconsOnly=tiedClass.getIconsOnly();
-                locked=o.Lock.isSet(o, user, 'main')"
+                locked=o.Lock.isSet(o, 'main')"
           class=":class_.getSubCss(o, ifield, objectIndex, inPickList)">
 
       <!-- Fields on layout "sub" -->
-      <x if="not popup and ifield.showActions == 'all'"
+      <x if="not popup and showActions == 'all'"
          var2="fields=o.getFields(layout);
-               layout='cell'; ajaxSingle=False">
+               ajaxSingle=False">
        <!-- Call px "cell" and not "render" to avoid having a table -->
        <x for="field in fields"
           var2="name=field.name;
@@ -336,7 +351,8 @@ class Ref(Field):
          var2="workflow=o.getWorkflow()">:workflow.pxTransitions</x>
 
       <!-- Edit -->
-      <div if="editable" class="ibutton" var2="text=_('object_edit')">
+      <div if="editable and not popup and not inCell" class="ibutton"
+           var2="text=_('object_edit')">
        <a if="not locked"
           var2="navInfo=ifield.getNavInfo(io, batch.start + currentNumber,
                                           batch.total) if not inMenu else 'no'"
@@ -346,7 +362,7 @@ class Ref(Field):
        </a>
        <x if="locked" var2="lockStyle='iconS'; page='main'">::o.Lock.px</x>
        <div if="not iconsOnly" class="ibutton"
-            onclick="this.previousSibling.click()">:text</div>
+            onclick="clickPrev(event)">:text</div>
       </div>
 
       <!-- Delete -->
@@ -364,11 +380,11 @@ class Ref(Field):
       </div>
 
       <!-- Unlink -->
-      <div if="mayUnlink and not popup and ifield.mayUnlinkElement(io, o)"
+      <div if="mayUnlink and ifield.mayUnlinkElement(io, o)"
            class="ibutton" var2="text=_('object_unlink')">
        <img var="iname='unlinkUp' if linkList else 'unlink'"
             class="clickable iconS" title=":text" src=":svg(iname)"
-            onClick=":ifield.getOnUnlink(q, _, io, id, batch)"/>
+            onClick=":ifield.getOnUnlink(_ctx_)"/>
        <div if="not iconsOnly" class="ibutton"
             onclick="this.previousSibling.click()">:text</div>
       </div>
@@ -425,7 +441,7 @@ class Ref(Field):
        <!-- The button, prefixed by, or containing, its icon -->
        <x if="not createFromSearch">
         <img if="field.iconOut" src=":field.getIconUrl(url)"
-             class=":'clickable %s' % field.iconCss"
+             class=":f'clickable {field.iconCss}'"
              onclick="this.nextSibling.click()"/>
         <input type=":field.getAddButtonType(createVia)"
                var="addLabel=_(field.addLabel);
@@ -451,13 +467,14 @@ class Ref(Field):
         var="repl=popupMode == 'repl';
              labelId='search_button' if repl else field.addLabel;
              icon='search.svg' if repl else field.addIcon;
+             isInner=field.isInner();
              label=_(labelId)">
       <img if="field.iconOut" src=":o.buildUrl(icon, ram=True)"
-           class=":'clickable %s' % field.iconCss"
+           class=":f'clickable {field.iconCss}'"
            onclick="this.nextSibling.click()"/>
       <a target="appyIFrame" href=":field.getPopupLink(o, popupMode, name)"
-         onclick="openPopup('iframePopup')">
-       <div var="css=field.getLinkClass(_ctx_)"
+         onclick="openPopup('iframePopup')"><x if="isInner">🔍</x>
+       <div if="not isInner" var="css=field.getLinkClass(_ctx_)"
             style=":field.getLinkStyle(_ctx_)" class=":css">:label</div>
       </a>
      </x>''')
@@ -475,7 +492,7 @@ class Ref(Field):
                                                q(sortConfirm))"/>
       <img src=":svg('asc')" class="clickable iconST"
            style="transform:rotate(180deg)"
-           var="js='askBunchSortRef(%s, %s, %s, %s)' %
+           var="js='askBunchSortRef(%s,%s,%s,%s)' %
                   (q(hook), q(batch.start), q(refField.name), q('True'))"
            onclick=":'askConfirm(%s,%s,%s)' % (q('script'), q(js,False),
                                                q(sortConfirm))"/>
@@ -511,7 +528,7 @@ class Ref(Field):
      <div align=":dright" if="batch.showNav()">:batch.pxNavigate</div>
 
      <!-- No object is present -->
-     <p class="discreet" if="not objects">:_(field.noObjectLabel)</p>
+     <p class="discreet" if="not objects">::_(field.noObjectLabel)</p>
 
      <!-- Linked objects -->
      <x if="objects"
@@ -533,7 +550,7 @@ class Ref(Field):
        <x for="o in objects"
           var2="@currentNumber=currentNumber + 1">
         <x if="field.separator">::field.dumpSeparator(initiator.o,
-                                  loop.o.previous, tied, columns)</x>
+                                  loop.o.previous, o, columns)</x>
         <x>:o.pxTied</x></x>
       </table>
      </x>
@@ -616,8 +633,8 @@ class Ref(Field):
     # PX that displays referred objects as dropdown menus
 
     pxMenu = Px('''
-     <img if="menu.icon" src=":menu.icon" title=":menu.text"/><x
-          if="not menu.icon">:menu.text</x>
+     <!-- The menu head, containing an icon or text -->
+     <x>::menu.head</x>
      <!-- Nb of objects in the menu -->
      <b class=":mcss">:len(menu.objects)</b>''')
 
@@ -678,9 +695,9 @@ class Ref(Field):
     pxMinimal = Px('''
      <x><x>::field.renderMinimal(o, objects, popup)</x>
       <!-- If this field is a master field -->
-      <input type="hidden" if="layout == 'view' and masterCss|False"
+      <input type="hidden" if="masterCss and layout == 'view'|False"
              name=":name" id=":name" class=":masterCss"
-             value=":[o.iid for o in objects]" /></x>''')
+             value=":[str(o.iid) for o in objects] if objects else ''"/></x>''')
 
     # Simplified widget for fields with render="links"
 
@@ -715,51 +732,79 @@ class Ref(Field):
     pxEditSelect = Px('''
      <select var="objects=field.getPossibleValues(o);
              ids=[str(po.iid) for po in field.getValue(o, name, single=False,
-                                                       layout=layout)];
-             charsWidth=field.getWidthInChars(False)"
+                                                       layout=layout) if po];
+             charsWidth=field.getWidthInChars(False);
+             noLabel=None if isMultiple else _(field.noValueLabel);
+             noSelected=None if isMultiple else field.valueIsSelected('',
+                                                  inRequest, ids, requestValue);
+             noFirst=field.noValueFirst"
         name=":name" id=":name" multiple=":isMultiple"
         size=":field.getSelectSize(False, isMultiple)"
         style=":field.getSelectStyle(False, isMultiple)"
         onchange=":field.getOnChange(o, layout)">
-      <option value="" if="not isMultiple">:_(field.noValueLabel)</option>
-      <option for="tied in objects"
+      <option value="" if="not isMultiple and noFirst"
+              selected=":noSelected">:noLabel</option>
+      <option for="tied in objects" if="tied"
        var2="id=str(tied.iid);
              title=field.getReferenceLabel(o, tied, unlimited=True)"
        selected=":field.valueIsSelected(id,inRequest,ids,requestValue)"
        value=":id" title=":title">:Px.truncateValue(title, charsWidth)</option>
+      <option value="" if="not isMultiple and not noFirst"
+              selected=":noSelected">:noLabel</option>
      </select>''')
 
     # Edit widget, for Refs with links being 'radio' (R) or 'checkbox' (C)
 
     pxEditRC = Px('''
      <div var="objects=field.getPossibleValues(o);
+               radios=field.link == 'radio';
                ids=[str(o.iid) for o in field.getValue(o, name, single=False,
                                                        layout=layout)]"
           style=":field.getWidgetStyle()">
 
       <!-- (Un)check all -->
-      <div if="field.checkAll and field.link=='checkbox' and len(objects) &gt;1"
-           class="divAll" var="allId='%s_all' % name">
+      <div if="field.checkAll and not radios and len(objects) &gt;1"
+           class="divAll" var="allId=f'{name}_all'">
        <input type="checkbox" class="checkAll" id=":allId" name=":allId"
               onclick="toggleCheckboxes(this)"/>
        <label lfor=":allId">:_('check_uncheck')</label>
       </div>
 
       <!-- Radios or checkboxes -->
-      <div for="tied in objects" class="flex1"
+      <div for="tied in objects" class="flex1" if="tied"
            var2="id=str(tied.iid);
-                 vid='%s_%s' % (name, id);
-                 text=field.getReferenceLabel(o, tied, unlimited=True)">
+                 vid=f'{name}_{id}';
+                 text=field.getReferenceLabel(o, tied, unlimited=True);
+                 selected=field.valueIsSelected(id,inRequest,ids,requestValue)">
        <input type=":field.link" name=":name" id=":vid" value=":id"
               class=":masterCss" onchange=":field.getOnChange(o, layout)"
-              checked=":field.valueIsSelected(id,inRequest,ids,requestValue)"/>
-       <label lfor=":vid" class="subLabel">:text</label>
+              onClick=":'refShowClearRadio(this)' if radios else ''"
+              checked=":selected"/>
+       <label lfor=":vid" class="subLabel">::text</label>
+       <span if="radios" class="clickable discreet" title=":_('clean_all')"
+             style=":'display:%s' % ('block' if selected else 'none')"
+             onclick="refClearRadio(this)">✖</span>
       </div>
 
       <!-- If there is no selectable element -->
       <div if="not objects and field.noSelectableLabel"
            class="discreet">:_(field.noSelectableLabel)</div>
-     </div>''')
+     </div>''',
+
+     js='''
+       refShowClearRadio = function(input) {
+         // Ensure first all "clean" icons are hidden
+         const widget = input.parentNode.parentNode;
+         for (const radio of widget.getElementsByTagName('INPUT')) {
+           radio.nextSibling.nextSibling.style.display = 'none';
+         }
+         input.nextSibling.nextSibling.style.display = 'block';
+       }
+
+       refClearRadio = function(span) {
+         span.previousSibling.previousSibling.checked = false;
+         span.style.display = 'none';
+       }''')
 
     # Edit widget, for Refs with link starting with "popup" or "dropdown"
 
@@ -767,23 +812,29 @@ class Ref(Field):
      <div var="objects=field.getPopupObjects(o, name, req, requestValue);
                onChangeJs=field.getOnChange(o, layout);
                charsWidth=field.getWidthInChars(False);
-               dropdown=field.link == 'dropdown'" class="ghead">
+               dropdown=field.link == 'dropdown'" class="rhead">
 
       <!-- The dropdown showing results when typing keywords -->
       <x if="dropdown"
-         var2="pre=f'{o.iid}_{field.name}';
+         var2="pre=f'{o.iid}_{name}';
                className=field.class_.meta.name;
                liveCss='lsRef'">:tool.Search.live</x>
 
       <!-- The select field allowing to store the selected objects -->
-      <select if="objects" name=":name" id=":name" multiple="multiple"
-              size=":field.getSelectSize(False, isMultiple)"
-              style=":field.getSelectStyle(False, isMultiple)"
-              onchange=":onChangeJs">
-       <option for="tied in objects" value=":tied.iid" selected="selected"
-               var2="title=field.getReferenceLabel(o, tied, unlimited=True)"
-               title=":title">:Px.truncateValue(title, charsWidth)</option>
-      </select>
+      <x if="objects">
+       <select name=":name" id=":name" multiple="multiple"
+               size=":field.getSelectSize(False, isMultiple)"
+               style=":field.getSelectStyle(False, isMultiple)"
+               onchange=":onChangeJs">
+        <option for="tied in objects" if="tied" value=":tied.iid"
+                var2="title=field.getReferenceLabel(o, tied, unlimited=True)"
+                selected="selected"
+                title=":title">:Px.truncateValue(title, charsWidth)</option>
+       </select>
+       <!-- Clean the selection -->
+       <span class="clickable" onclick="refClearSelect(this)"
+             title=":_('clean_all')">✖</span>
+      </x>
 
       <!-- The button for opening the popup -->
       <x if="not dropdown" var="popupMode='repl'">:field.pxLink</x>
@@ -795,7 +846,13 @@ class Ref(Field):
       <span if="not objects">-</span>
      </div>''',
 
-     css='''.inputRef { vertical-align: top; margin-left: 10px !important} ''')
+     css='''.inputRef { vertical-align: top; margin-left: 10px !important} ''',
+
+     js='''
+       refClearSelect = function(span) {
+         span.previousSibling.remove();
+         span.innerText = '-';
+       }''')
 
     edit = Px('''<x>:field.editPx</x>''')
 
@@ -869,35 +926,40 @@ class Ref(Field):
       add=False, addConfirm=False, delete=None, createVia='form', viaPopup=None,
       creators=None, link=True, unlink=None, linkMethod=None,
       unlinkElement=None, unlinkConfirm=True, insert=None, beforeLink=None,
-      afterLink=None, afterUnlink=None, back=None, backSecurity=True, show=True,
-      renderable=None, page='main', group=None, layouts=None, showHeaders=False,
-      shownInfo=None, fshownInfo=None, select=None, maxPerPage=30, move=0,
-      indexed=False, mustIndex=True, indexValue=None, emptyIndexValue=0,
-      indexAttribute='iid', searchable=False, filterField=None,
-      readPermission='read', writePermission='write', width=None, height=5,
-      maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
-      historized=False, mapping=None, generateLabel=None, label=None,
-      queryable=False, queryFields=None, queryNbCols=1, searches=None,
-      navigable=False, changeOrder=True, numbered=False, checkboxes=True,
+      afterLink=None, afterUnlink=None, back=None, backSecurity=True,
+      disabled=False, show=True, renderable=None, page='main', group=None,
+      layouts=None, showHeaders=False, shownInfo=None, fshownInfo=None,
+      select=None, maxPerPage=30, move=0, indexed=False, mustIndex=True,
+      indexValue=None, emptyIndexValue=0, indexAttribute='iid',
+      searchable=False, filterField=None, readPermission='read',
+      writePermission='write', width=None, height=5, maxChars=None, colspan=1,
+      master=None, masterValue=None, focus=False, historized=False,
+      mapping=None, generateLabel=None, label=None, queryable=False,
+      queryFields=None, queryNbCols=1, searches=None, navigable=False,
+      changeOrder=True, numbered=False, checkboxes=True,
       checkboxesDefault=False, sdefault='', scolspan=1, swidth=None,
       sheight=None, fwidth='7em', fheight='14em', sselect=None, fselect=None,
-      persist=True, render='list', renderMinimalSep=', ', listCss=None,
-      menuIdMethod=None, menuInfoMethod=None, menuUrlMethod=None, menuCss=None,
-      dropdownCss=None, menuItemWrap=False, view=None, cell=None, buttons=None,
-      edit=None, xml=None, translations=None, showActions='all',
-      actionsDisplay='block', showGlobalActions=True, collapsible=False,
-      titleMode='link', viewAdded=True, noValueLabel='choose_a_value',
-      noObjectLabel='no_ref', noSelectableLabel='no_selectable',
-      addLabel='object_add', addFromLabel='object_add_from', addIcon='add.svg',
-      iconOut=False, iconCss='iconS', filterable=True, supTitle=None,
-      subTitle=None, toggleSubTitles=None, separator=None, rowAlign='top',
-      showControls=True, actions=None, checkAll=True):
+      persist=True, render='list', renderMinimalSep=', ', target=None,
+      listCss=None, menuIdMethod=None, menuInfoMethod=None, menuUrlMethod=None,
+      menuCss=None, dropdownCss=None, menuItemWrap=False, view=None, cell=None,
+      buttons=None, edit=None, custom=None, xml=None, translations=None,
+      showActions='all', actionsDisplay='block', showGlobalActions=True,
+      collapsible=False, titleMode='link', viewAdded=True,
+      noValueLabel='choose_a_value', noValueFirst=True, noObjectLabel='no_ref',
+      noSelectableLabel='no_selectable', addLabel='object_add',
+      addFromLabel='object_add_from', addIcon='add.svg', iconOut=False,
+      iconCss='iconS', filterable=True, supTitle=None, subTitle=None,
+      toggleSubTitles=None, separator=None, rowAlign='top', showControls=True,
+      actions=None, checkAll=True):
+
         # The class whose tied objects will be instances of
         self.class_ = class_
+
         # Specify "attribute" only for a back reference: it will be the name
         # (a string) of the attribute that will be defined on self's class and
         # will allow, from a linked object, to access the source object.
         self.attribute = attribute
+
         # If this Ref is "composite", it means that the source object will be
         # a composite object and tied object(s) will be its components.
         self.composite = composite
@@ -915,8 +977,9 @@ class Ref(Field):
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.add = add
 
-        # When the user adds a new object, must a confirmation popup be shown?
+        # When the user adds a new object, must a confirmation popup be shown ?
         self.addConfirm = addConfirm
+
         # May the user delete objects via this Ref?
         self.delete = delete
         if delete is None:
@@ -929,11 +992,11 @@ class Ref(Field):
         # is ...        | object through this ref ...
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #    "form"     | (the default) an empty form will be shown to the user
-        #               | (p_self.klass' "edit" layout);
+        #               | (p_self.class_' "edit" layout);
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #   "noForm"    | the object will be created automatically, and no
         #               | creation form will be presented to the user. Code
-        #               | p_self.klass' m_onEdit to initialise the object
+        #               | p_self.class_' m_onEdit to initialise the object
         #               | according to your needs;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #   a Search    | the user will get a popup and will choose some object
@@ -1018,7 +1081,7 @@ class Ref(Field):
         # "checkbox" | the user will, on "edit", choose objects from checkboxes.
         #            | This mode is valid for fields with a max multiplicity
         #            | being higher than 1.
-        #            | ~
+        #            |
         #            | Note that choosing "radio"/"checkbox" instead of boolean
         #            | value "True" is appropriate if the number of objects from
         #            | which to choose is low ;
@@ -1028,7 +1091,7 @@ class Ref(Field):
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  "popup"   | the user will, on "view" or "edit", choose objects from a
         #            | popup window. In this case, parameter "select" can hold a
-        #            | Search instance or a method ;
+        #            | Search object or a method returning it ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "dropdown" | the user will, on "edit", choose objects by typing some
         #            | chars in an input text field: in a dropdown, the first
@@ -1037,16 +1100,17 @@ class Ref(Field):
         #            | defined by a Search instance in attribute "select". On
         #            | this search instance, you can use attribute "maxPerLive"
         #            | to configure the maximum number of matched objects
-        #            | appearing in the dropdown.
+        #            | appearing in the dropdown ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "popupRef" | the user will choose objects from a popup window, that
         #            | will display objects tied via a Ref field. In this case,
         #            | parameter "select" must hold a method returning a tuple
-        #            | (obj, name), "obj" being the source object of the Ref
-        #            | field whose name is in "name".
+        #            | (o, name), v_o being the source object of the Ref field
+        #            | whose name is in v_name.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.link = link
         self.linkInPopup = False
+
         # Determine the PX to use when editing a Ref, based on attribute "link"
         if link is True:
             px = Ref.pxEditSelect
@@ -1062,17 +1126,20 @@ class Ref(Field):
         # If you place a method in the following attribute, the user will be
         # able to link or unlink objects only if the method returns True.
         self.linkMethod = linkMethod
+
         # May the user unlink existing objects?
         self.unlink = unlink
         if unlink is None:
             # By default, one may unlink objects via a Ref for which one can
             # link objects.
             self.unlink = bool(self.link)
+
         # "unlink" above is a global flag. If it is True, you can go further and
         # determine, for every linked object, if it can be unlinked or not by
         # defining a method in parameter "unlinkElement" below. This method
         # accepts the linked object as unique arg.
         self.unlinkElement = unlinkElement
+
         # If "unlinkConfirm" is True (the default), when unlinking an object,
         # the user will get a confirm popup.
         self.unlinkConfirm = unlinkConfirm
@@ -1116,45 +1183,62 @@ class Ref(Field):
         # take the object to link as single parameter. If the method returns
         # False, the object will not be linked.
         self.beforeLink = beforeLink
+
         # Immediately after an object has been linked via this Ref field, method
         # potentially specified in "afterLink" will be executed and will take
         # the linked object as single parameter.
         self.afterLink = afterLink
+
         # Immediately after an object as been unlinked from this Ref field,
         # method potentially specified in "afterUnlink" will be executed and
         # will take the unlinked object as single parameter.
         self.afterUnlink = afterUnlink
-        self.back = None
-        if not attribute:
-            # It is a forward reference
-            self.isBack = False
-            # Initialise the backward reference (if found)
-            if back:
-                self.back = back
-                back.back = self
-            # class_ may be None in the case we are defining an auto-Ref to the
-            # same class as the class where this field is defined. In this case,
-            # when defining the field within the class, write
-            # myField = Ref(None, ...)
-            # and, at the end of the class definition (name it K), write:
-            # K.myField.class_ = K
-            # setattr(K, K.myField.back.attribute, K.myField.back)
-            if class_ and back: setAttribute(class_, back.attribute, back)
-            # A composite ref must have a back ref having an upper
-            # multiplicity = 1
-            if self.composite and back and back.multiplicity[1] != 1:
-                raise Exception(BACK_1_COMP)
-        else:
-            self.isBack = True
-            if self.composite: raise Exception(BACK_COMP)
+
+        # Manage the p_back reference
+        self.initBack(attribute, back, class_)
+
         # When (un)linking a tied object from the UI, by defaut, security is
         # checked. But it could be useful to disable it for back Refs. In this
         # case, set "backSecurity" to False. This parameter has only sense for
         # forward Refs and is ignored for back Refs.
         self.backSecurity = backSecurity
+
+        # [Back ref only]
+        #
+        # If p_disabled is True, p_self's back ref, if it exists, will not be
+        # updated and will stay empty. This is useful for Refs representing some
+        # "category" or other concept being used, via a forward Ref, by a huge
+        # number of objects. Indeed, in such cases, the back ref would contain a
+        # large number of objects, but being a persistent list, this could lead
+        # to performance problems.
+        #
+        # On the other hand, be conscious that having no back Ref, or a disabled
+        # one, prevents Appy from deleting all references to a given object,
+        # when this latter is deleted. When this situation occurs, the deleted
+        # object becomes a "ghost object": it is still referenced by other
+        # objects, but is not stored anymore in the main database data
+        # structures (nor among indexed data). Consequently, disabling or not
+        # defining a back ref must be a well balanced choice and implies a
+        # potential management (or avoidance) of ghost objects by the app
+        # developer.
+        #
+        # Note that, if you define Refs within outer fields (like List or Dict
+        # fields), it is not legal to define a back ref for such Refs. So in
+        # such cases, management (or avoidance) of ghost objects is already in
+        # the hands of the app developer.
+        #
+        # Finally, note that, for non-inner Ref fields, it is probably better to
+        # have a disabled back ref than no back ref at all, because, via a
+        # disabled ref, it could still be possible (although not performant,
+        # using the corresponding forward ref) to perform deletion of tied
+        # objects' refs when a given object is deleted from the database. But
+        # Appy won't do it for you.
+        self.disabled = disabled
+
         # When displaying a tabular list of referenced objects, must we show
         # the table headers?
         self.showHeaders = showHeaders
+
         # "shownInfo" is a tuple or list (or a method producing it) containing
         # the names of the fields that will be shown when displaying tables of
         # tied objects. Field "title" should be present: by default, it is a
@@ -1189,21 +1273,25 @@ class Ref(Field):
         # class "Field"), it will be used instead of select (or sselect below).
         self.select = select
         if not select and self.link == 'popup':
-            # Create a query for getting all objects
+            # Create a search for getting all objects
             max = maxPerPage if isinstance(maxPerPage, int) else 30
             self.select = Search(sortBy='title', maxPerPage=max)
+
         # If you want to specify, on the search form, a list of objects being
         # different from the one produced by self.select, define an alternative
         # (method or Search instance) in attribute "sselect" below.
         self.sselect = sselect or self.select
+
         # If you want to define, in a search filter, a list of objects being
         # different than p_self.sselect, define an alternative in attribute
         # "fselect" below.
         self.fselect = fselect or self.sselect
+
         # Maximum number of referenced objects shown at once. It can be directly
         # expressed as an integer value, or by a method accepting the source Ref
         # object as unique arg and returning this integer value.
         self.maxPerPage = maxPerPage
+
         # If param p_queryable is True, the user will be able to perform
         # searches from the UI within referenced objects. A Ref being queryable
         # requires an index. Two possibilities exist:
@@ -1215,10 +1303,13 @@ class Ref(Field):
         # If none of these conditions is met, the performed searches will
         # produce wrong results or errors.
         self.queryable = queryable
+
         # Here is the list of fields that will appear on the search screen.
-        # If None is specified, by default we take every indexed field
-        # defined on referenced objects' class.
+        # If None is specified, attribute "searchFields" on the tied class will
+        # be used. If also None, every indexed field defined on the tied class
+        # will be returned.
         self.queryFields = queryFields
+
         # The search screen will have this number of columns
         self.queryNbCols = queryNbCols
 
@@ -1226,9 +1317,9 @@ class Ref(Field):
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # 1 | a dict of Search instances, or a method producing it. Keys must be
         #   | names (following Python variable naming conventions) and values
-        #   | must be Search instances;
+        #   | must be Search objects;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # 2 | a single Search instance, or a method producing it.
+        # 2 | a single Search object, or a method producing it.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # When displaying the Ref on the "view" layout, if we are in case:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1247,7 +1338,7 @@ class Ref(Field):
         #   | the single specified Search becomes the unique way to display tied
         #   | objects.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # On every specified Search instance (the unique one of case 2, or any
+        # On every specified Search object (the unique one of case 2, or any
         # dict value from case 1), it is useless to specify a name, or the
         # attribute corresponding to the index allowing to restrict the search
         # to this Ref's tied objects: it will be added automatically. On the
@@ -1258,10 +1349,12 @@ class Ref(Field):
 
         # Within the portlet, will referred elements appear ?
         self.navigable = navigable
+
         # If "changeOrder" is or returns False, it even if the user has the
         # right to modify the field, it will not be possible to move objects or
         # sort them.
         self.changeOrder = changeOrder
+
         # If "numbered" is or returns True, a leading column will show the
         # number of every tied object. Moreover, if the user can change order of
         # tied objects, an input field will allow him to enter a new number for
@@ -1269,10 +1362,12 @@ class Ref(Field):
         # as width for the column containing the number. Else, a default width
         # will be used.
         self.numbered = numbered
+
         # If "checkboxes" is or returns True, every linked object will be
         # "selectable" via a checkbox. Global actions will be activated and will
         # act on the subset of selected objects: delete, unlink, etc.
         self.checkboxes = checkboxes
+
         # Default value for checkboxes, if enabled
         self.checkboxesDefault = checkboxesDefault
 
@@ -1298,23 +1393,50 @@ class Ref(Field):
         # When render is "minimal" or "links", the separator used between linked
         # objects is defined here.
         self.renderMinimalSep = renderMinimalSep
+
+        # If render is "links", where must the link lead us to ? If p_target is:
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # None      | [The default] if we are not in the popup, the target will
+        #           |               be the same browser tab. If we are in the
+        #           |               popup, the target will be the parent window:
+        #           |               we'll leave the popup and go back to the
+        #           |               main page, in the current browser tab ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # _self     | we will stay in the same place: if we are in the popup, we
+        #           | will stay it it.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        self.target = target
+
         # If render is "list", you may specify, in p_listCss, a default CSS
         # class to apply to the xhtml table tag that will hold the list of
         # object. If no CSS class is defined, the one declared by the tied
         # class, in its "styles" static attribute, will be used.
         self.listCss = listCss
+
         # If render is "menus", 2 methods must be provided.
         # "menuIdMethod" will be called, with every linked object as single arg,
         # and must return an ID that identifies the menu into which the object
         # will be inserted.
         self.menuIdMethod = menuIdMethod
+
         # "menuInfoMethod" will be called with every collected menu ID (from
         # calls to the previous method) to get info about this menu. This info
-        # must be a tuple (text, icon):
-        # - "text" is the menu name;
-        # - "icon" (can be None) gives the URL of an icon, if you want to render
-        #   the menu as an icon instead of a text.
+        # must be a chunk of XHTML code, as a string, that must contain the name
+        # of the menu. Here are some examples of such a name:
+        # - a "span" tag containing a short text;
+        # - a "src" tag containing an icon, whose "title" attribute contains a
+        #   short text;
+        # - a "span" tag containing an utf8 sumbol, whose "title" attribute
+        #   contains short text.
+        #
+        # Take care of xhtml-escaping your texts, using this method:
+        # appy.xml.escape.Escape::xhtml. This can be used that way
+        #
+        #     from appy.xml.escape import Escape
+        #     escaped = Escape.xhtml(yourText)
+        #
         self.menuInfoMethod = menuInfoMethod
+
         # "menuUrlMethod" is an optional method that allows to compute an
         # alternative URL for the tied object that is shown within the menu
         # (when render is "menus"). It can also be used with render being "list"
@@ -1322,6 +1444,7 @@ class Ref(Field):
         # tuple (url, target), "target" being a string that will be used for
         # the "target" attribute of the corresponding XHTML "a" tag.
         self.menuUrlMethod = menuUrlMethod
+
         # "menuCss" is an optional CSS (list of) class(es) (or a method
         # producing it) that will be applied to menu titles (when p_render is
         # "menus") for menus containing more than 1 object. If the menu contains
@@ -1329,9 +1452,11 @@ class Ref(Field):
         # object's title. If p_menuCss is a method, it must accept a single arg,
         # being the list of objects being shown in the current menu.
         self.menuCss = menuCss
+
         # Similar to p_menuCss, p_dropdownCss allows to define a CSS class for
         # each dropdown menu.
         self.dropdownCss = dropdownCss
+
         # Every menu entry corresponds to an object. Its standard parts will be
         # shown (when relevant): title, sub-title, actions, etc. All those parts
         # will be rendered in a flex layout. You may choose if this flex will
@@ -1341,7 +1466,7 @@ class Ref(Field):
         # produce better results.
         self.menuItemWrap = menuItemWrap
 
-        # "showActions" determines if we must show or not actions on every tied
+        # p_showActions determines if we must show or not actions on every tied
         # object. Values can be:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #    'all'    | All actions are shown: standard ones (move up/down,
@@ -1354,6 +1479,7 @@ class Ref(Field):
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #    False    | No action is shown.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # p_showActions can also be a method producing one of these values
         self.showActions = showActions
 
         # When actions are shown (see p_showActions hereabove), p_actionsDisplay
@@ -1375,9 +1501,11 @@ class Ref(Field):
         # It may be inappropriate to show global actions. "showGlobalActions"
         # can be a boolean or a method computing and returning it.
         self.showGlobalActions = showGlobalActions
+
         # If "collapsible" is True, a "+/-" icon will allow to expand/collapse
         # the tied or available objects.
         self.collapsible = collapsible
+
         # Normally, tied objects' titles are clickable and lead to tied object's
         # view pages: this behaviour corresponds to arg p_titleMode being
         # "link". All possible values are described below.
@@ -1392,27 +1520,39 @@ class Ref(Field):
         # Note that p_titleMode can also be a method, accepting the tied object
         # as unique arg, that must return one of the above-mentioned values.
         self.titleMode = titleMode
+
         # When creating a new tied object from this ref, we will redirect the
         # user to the initiator's view page, excepted if this parameter is True.
         self.viewAdded = viewAdded
+
         # When selecting a value from a "select" widget, the entry representing
         # no value is translated according to this label. The default one is
         # something like "[ choose ]", but if you prefer a less verbose version,
         # you can use "no_value" that simply displays a dash, or your own label.
         self.noValueLabel = noValueLabel
+
+        # In "edit" mode, when, in a select widget, value "no value" must be
+        # selected, must this choice be positioned as the first or last
+        # selectable element ?
+        self.noValueFirst = noValueFirst
+
         # When displaying tied objects, if there is no object, the following
         # label is used to produce a message (which can be as short as a simple
         # dash or an empty string).
         self.noObjectLabel = noObjectLabel
+
         # When displaying lists of objects to link, if there is no object, the
         # following label will be used to display a message. Set this attribute
         # to None if you don't want anything to appear in that case.
         self.noSelectableLabel = noSelectableLabel
+
         # Labels for the "add" and "add from" buttons
         self.addLabel = addLabel
         self.addFromLabel = addFromLabel
+
         # Icon for the "add" button (SVG please)
         self.addIcon = addIcon
+
         # If p_iconOut is False, the icon within the "add" button will be
         # integrated as a background-image inside it. Else, it will be
         # positioned outside the button.
@@ -1488,13 +1628,13 @@ class Ref(Field):
         self.checkAll = checkAll
 
         # Call the base constructor
-        Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
-          show, renderable, page, group, layouts, move, indexed, mustIndex,
+        super().__init__(validator, multiplicity, default, defaultOnEdit, show,
+          renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, filterField, readPermission,
           writePermission, width, height, None, colspan, master, masterValue,
           focus, historized, mapping, generateLabel, label, sdefault, scolspan,
-          swidth, sheight, persist, False, view, cell, buttons, edit, xml,
-          translations)
+          swidth, sheight, persist, False, view, cell, buttons, edit, custom,
+          xml, translations)
         self.validable = bool(self.link)
 
         # Initialise filterPx when relevant. If you want to disable filtering
@@ -1514,6 +1654,40 @@ class Ref(Field):
             # Set the class for the back reference
             self.back.class_ = class_.python
 
+    def initBack(self, attribute, back, class_):
+        '''Initialise the back reference'''
+        self.back = None
+        if not attribute:
+            # It is a forward reference
+            self.isBack = False
+            # Initialise the backward reference (if found)
+            if not back: return
+            elif back is Ref.SELF:
+                # This is a self-reference: the back reference is the forward
+                # reference itself.
+                self.back = self
+                return
+            # Manage a standard back reference
+            self.back = back
+            back.back = self
+            # p_class_ may be None in the case we are defining an auto-Ref to
+            # the same class as the class where this field is defined. In this
+            # case, when defining the field within the class, write
+            #
+            # myField = Ref(None, ...)
+            #
+            # and, at the end of the class definition (name it K), write:
+            # autoref(K, K.myField)
+            #
+            if class_: setAttribute(class_, back.attribute, back)
+            # A composite ref must have a back ref having an upper
+            # multiplicity = 1
+            if self.composite and back.multiplicity[1] != 1:
+                raise Exception(BACK_1_COMP)
+        else:
+            self.isBack = True
+            if self.composite: raise Exception(BACK_COMP)
+
     def initPx(self, o, req, c):
         '''Create context variables in v_r for layout "view"'''
         r = O()
@@ -1522,7 +1696,7 @@ class Ref(Field):
         r.colset = c.colset or 'main'
         r.render = self.getRenderMode(r.layout)
         r.name = c.name or self.name
-        r.prefixedName = '%s:%s' % (r.iid, r.name)
+        r.prefixedName = f'{r.iid}:{r.name}'
         r.selector = self.getSelector(o, req)
         r.selectable = bool(r.selector) and c.popup
         r.linkList = self.link == 'list'
@@ -1532,10 +1706,11 @@ class Ref(Field):
         r.createVia = self.getAttribute(o, 'createVia')
         r.createFromSearch = not isinstance(r.createVia, str)
         r.ajaxSuffix = 'poss' if r.inPickList else 'objs'
-        r.hook = '%s_%s_%s' % (r.iid, r.name, r.ajaxSuffix)
+        r.hook = f'{r.iid}_{r.name}_{r.ajaxSuffix}'
         r.inMenu = False
+        onCell = c.layout in Layouts.cellLayouts
         batch = self.getBatch(o, r.render, req, r.hook)
-        r.batch = batch if c.ajaxSingle else \
+        r.batch = batch if (c.ajaxSingle and not onCell) else \
                   self.getViewValues(o, r.name, r.scope, batch, r.hook)
         r.objects = r.batch.objects
         total = r.batch.total
@@ -1545,25 +1720,25 @@ class Ref(Field):
         if not c.ajaxSingle:
             # If we are rendering a cell, we are within search or Ref results:
             # a back hook can be defined.
-            r.backHook = c.ohook if r.layout == 'cell' else None
+            r.backHook = c.ohook if onCell else None
             r.target = ui.LinkTarget(self.class_, r.backHook, self.viaPopup)
         # else: ohook, backHook and target are specific to each tied object
         r.mayEdit = r.layout != 'edit' and \
                     c.guard.mayEdit(o, self.writePermission)
         r.mayEd = not r.inPickList and r.mayEdit
         r.mayAdd = r.mayEd and self.mayAdd(o, checkMayEdit=False)
-        r.addFormName = '%s_%s_add' % (r.iid, self.name) if r.mayAdd else ''
+        r.addFormName = f'{r.iid}_{self.name}_add' if r.mayAdd else ''
         r.mayLink = r.mayEd and self.mayAdd(o, mode='link', checkMayEdit=False)
         r.mayUnlink = r.mayLink and self.getAttribute(o, 'unlink')
-        r.addConfirmMsg = self.addConfirm and \
-                          c._('%s_addConfirm' % self.labelId) or ''
+        r.addConfirmMsg = c._(f'{self.labelId}_addConfirm') \
+                          if self.addConfirm else ''
         r.addIcon = True # Set an icon on button "add"
         r.changeOrder = r.mayEd and self.getAttribute(o, 'changeOrder')
         r.sortConfirm = c._('sort_confirm') if r.changeOrder else ''
         r.numbered = not r.inPickList and bool(self.isNumbered(o))
-        r.gotoNumber = r.numbered and total > 1
-        r.changeNumber = not r.inPickList and r.numbered and r.changeOrder and \
-                         total > 3
+        r.gotoNumber = r.numbered and not r.selectable and total > 1
+        r.changeNumber = not r.inPickList and not r.selectable and r.numbered \
+                         and r.changeOrder and total > 3
         r.checkboxesEnabled = self.getAttribute(o, 'checkboxes')
         r.checkboxes = r.checkboxesEnabled and total
         r.collapse = self.getCollapseInfo(o, r.inPickList)
@@ -1671,7 +1846,7 @@ class Ref(Field):
             # CSS class generated from column layouts.
             r = self.listCss
             if c.genName:
-                r = '%s %s' % (r, c.genName)
+                r = f'{r} {c.genName}'
         else:
             # Use the CSS class(es) as defined on the tied class
             r = c.tiedClass.getCssFor(c.tool, 'list', add=c.genName)
@@ -1704,6 +1879,9 @@ class Ref(Field):
         if iempty not in ivalid:
             raise Exception(E_VAL_KO % (self.indexAttribute,
                                         ', '.join([str(v) for v in ivalid])))
+        # A disabled back ref cannot be indexed
+        if self.isBack and self.disabled and self.indexed:
+            raise Exception(BDI_KO)
 
     def isShowable(self, o, layout):
         '''Showability for a Ref adds more rules w.r.t base field rules'''
@@ -1711,12 +1889,8 @@ class Ref(Field):
         if not r: return r
         # Ther are specific Ref rules for preventing to show the field under
         # inappropriate circumstances.
-        isEdit = layout == 'edit'
-        if isEdit:
-            if not self.editPx: return
-        if self.isBack:
-            if isEdit: return
-            else: return getattr(o, self.name, None)
+        if layout == 'edit':
+            if not self.editPx or self.isBack: return
         return r
 
     def isRenderableOn(self, layout):
@@ -1733,29 +1907,31 @@ class Ref(Field):
             r = (id in requestValue) if isinstance(requestValue, list) \
                                      else (id == requestValue)
         else:
-            r = id in dbValue
+            # Empty values on both sides match (even if materialized by
+            # different data structures, ie, an empty string and an empty list).
+            if id == '' and not dbValue:
+                r = True
+            else:
+                r = id in dbValue
         return r
 
     def getValue(self, o, name=None, layout=None, single=True, start=None,
-                 batch=False, maxPerPage=None):
-        '''Returns the objects linked to p_o through this Ref field.
+                 batch=False, maxPerPage=None, at=None):
+        '''Returns the objects linked to p_o through this Ref field'''
+        # * If p_start is None, it returns all referred objects;
+        # * if p_start is a number, it returns p_maxPerPage objects (or
+        #   self.maxPerPage if p_maxPerPage is None), starting at p_start.
 
-           * If p_start is None, it returns all referred objects;
-           * if p_start is a number, it returns p_maxPerPage objects (or
-             self.maxPerPage if p_maxPerPage is None), starting at p_start.
+        # If p_single is True, it returns the single reference as an object and
+        # not as a list.
 
-           If p_single is True, it returns the single reference as an object and
-           not as a list.
+        # If p_batch is True, it returns an instance of appy.model.utils.Batch
+        # instead of a list of references. When single is True, p_batch is
+        # ignored.
 
-           If p_batch is True, it returns an instance of appy.model.utils.Batch
-           instead of a list of references. When single is True, p_batch is
-           ignored.
-        '''
-        # Get the value from the database. It is more performant to try to get
-        # first the value via o.values. Calling Field.getValue then retrieves a
-        # potential default value.
-        r = o.values.get(self.name) or Field.getValue(self, o, name, layout)
-        # Return an empty tuple or Batch instance if there is no object
+        # Get the value from the database
+        r = super().getValue(o, name, layout, at=at)
+        # Return an empty tuple or Batch object if there is no object
         if not r: return Ref.empty if not batch else Batch()
         # The defaut value may not be a list. Ensure v_r is a list.
         if not isinstance(r, utils.sequenceTypes): r = [r]
@@ -1796,11 +1972,17 @@ class Ref(Field):
         # the comparable value must be a copy of the stored value.
         return self.getCopyValue(o)
 
+    def getFormattedValue(self, o, value, layout='view', showChanges=False,
+                          language=None):
+        '''Return p_value's string representation'''
+        # Use m_renderMinimal to achieve the result
+        return self.renderMinimal(o, value, False)
+
     def getXmlValue(self, o, value):
         '''The default XML value for a Ref is the list of tied object URLs'''
         # Bypass the default behaviour if a custom method is given
         return self.xml(o, value) if self.xml \
-                                  else ['%s/xml' % tied.url for tied in value]
+                                  else [f'{tied.url}/xml' for tied in value]
 
     def normalizeSearchValue(self, val):
         '''Converts this individual search p_val(ue) to an int if it is a
@@ -1824,10 +2006,55 @@ class Ref(Field):
         return r
 
     def updateHistoryValue(self, o, values):
-        '''Store, in p_values, tied object's titles instead of the objects
-           themselves.'''
+        '''Store, in p_values, tied object's iids and titles instead of the
+           objects themselves.'''
         objects = values[self.name]
-        values[self.name] = [tied.getShownValue() for tied in objects]
+        val = PersistentList()
+        for tied in objects:
+            val.append((tied.iid, tied.getShownValue()))
+        values[self.name] = val
+
+    def getHistoryValue(self, o, value, i, language=None, empty='-'):
+        '''Returns p_self's p_value, as stored in p_o's history at index p_i, as
+           must be shown in the UI.'''
+        # Return p_empty if p_value is empty
+        if not value: return empty
+        # p_value is a persistent list of object IIDs and titles, as produced
+        # by m_updateHistoryValue hereabove. This method also manages the
+        # deprecated format, where p_value is a list of object titles.
+        if isinstance(value[0], str):
+            # The old format
+            lis = ''.join([f'<li>{title}</li>' for title in value])
+        else:
+            lis = ''.join([f'<li>{title}</li>' for iid, title in value])
+        return f'<ul>{lis}</ul>'
+
+    def getValueAt(self, o, at):
+        '''Gets p_self's value on this p_o(bject) p_at this date'''
+        r = super().getValueAt(o, at)
+        if not r: return r
+        i = len(r) - 1
+        while i >= 0:
+            # If p_r comes from p_o's history, p_r items may need conversion
+            item = r[i]
+            if isinstance(item, str):
+                # [Deprecated] v_item is a string. leave it as is: we have no
+                # way to find the corresponding object.
+                pass
+            elif isinstance(item, tuple):
+                # The standard (i_iid, s_text) format from an object history, as
+                # produced by m_updateHistoryValue hereabove. Convert it to an
+                # object.
+                iid, text = item
+                tied = o.getObject(iid)
+                if tied:
+                    r[i] = tied
+                else:
+                    o.log(HIST_O_KO % (o.strinG(), self.name, iid, text))
+                    del r[i]
+            # Else, it is a Appy object: leave it untouched
+            i -= 1
+        return r
 
     def getSelect(self, o, usage=PV_EDIT):
         '''p_self.select can hold a Search instance or a method. In this latter
@@ -1886,14 +2113,16 @@ class Ref(Field):
                 objects = objects or []
             else:
                 # Usage is PV_EDIT or PV_SEARCH. Get the master value...
-                if master.valueIsInRequest(o, req):
+                inReq = self.getMasterInRequest(master, o, req)
+                if inReq:
                     # ... from the request if available
-                    requestValue = master.getRequestValue(o)
-                    masterValues = master.getStorableValue(o, requestValue,
-                                                           single=True)
+                    requestValue = inReq.getRequestValue(o)
+                    masterValues = inReq.getStorableValue(o, requestValue,
+                                                          single=True)
                 elif usage == Ref.PV_EDIT:
                     # ... or from the database if we are editing an object
-                    masterValues = master.getValue(o, layout='edit')
+                    inDb = master if isinstance(master, Field) else master[0]
+                    masterValues = inDb.getValue(o, layout='edit')
                 else: # usage is PV_SEARCH and we don't have any master value
                     masterValues = None
                 # Get the possible values by calling self.masterValue
@@ -1969,7 +2198,10 @@ class Ref(Field):
         menuIds = {}
         # Browse every object from p_objects and put them in their menu
         # (within "r").
+        guard = o.guard
         for tied in objects:
+            # Ignore v_tied if not viewable
+            if not guard.mayView(tied): continue
             menuId = self.menuIdMethod(o, tied)
             if menuId in menuIds:
                 # We have already encountered this menu
@@ -1982,9 +2214,7 @@ class Ref(Field):
                 menuIds[menuId] = len(r) - 1
         # Complete information about every menu by calling self.menuInfoMethod
         for menu in r:
-            text, icon = self.menuInfoMethod(o, menu.id)
-            menu.text = text
-            menu.icon = icon
+            menu.head = self.menuInfoMethod(o, menu.id) or '?'
         return r
 
     def getLinkStyle(self, c):
@@ -2010,7 +2240,7 @@ class Ref(Field):
             css = 'rbutton'
         else:
             css = 'rbutton' if self.multiplicity[1] == 1 else 'lbutton'
-        return '%s %s' % (css, r)
+        return f'{css} {r}'
 
     def getAddButtonType(self, createVia):
         '''Returns the type of the input tag representing the "add" button'''
@@ -2090,7 +2320,7 @@ class Ref(Field):
     def getMenuCss(self, zone, o, menu, base=None):
         '''Gets the CSS class that will be applied to this p_zone'''
         # Return only this p_base CSS class if no custom CSS is specified
-        css = getattr(self, '%sCss' % zone)
+        css = getattr(self, f'{zone}Css')
         if not css: return base or ''
         # Return the base + custom CSS
         r = css(o, menu.objects) if callable(css) else css
@@ -2106,7 +2336,9 @@ class Ref(Field):
         total = req.total
         if total: r.total = int(total)
         # When using any render mode, "list" excepted, all objects must be shown
-        if render != 'list': return r
+        if render != 'list':
+            r.size = r.start = None
+            return r
         # Get the index of the first object to show
         r.start = int(req[f'{hook}_start'] or req.start or 0)
         # Get batch size
@@ -2117,13 +2349,9 @@ class Ref(Field):
         '''Return a Batch instance for a p_total number of objects'''
         return Batch(objects, size=None, hook=hook, total=len(objects))
 
-    def getFormattedValue(self, o, value, layout='view', showChanges=False,
-                          language=None):
-        return value
-
     def hasSortIndex(self):
-        '''An indexed Ref field is of type "ListIndex", which is not sortable.
-           So an additional FieldIndex is required.'''
+        '''An indexed Ref field is not sortable. So an additional index is
+           required.'''
         return True
 
     def validateValue(self, o, value):
@@ -2147,21 +2375,22 @@ class Ref(Field):
         elif nbOfRefs > maxRef:
             return o.translate('max_ref_violated')
 
-    def linkObject(self, o, p, back=False, secure=False,
-                   executeMethods=True, at=None):
-        '''This method links object p_p (which can be a list of objects) to
-           object p_o through this Ref field. When linking 2 objects via a Ref,
-           m_linkObject must be called twice: once on the forward Ref and once
-           on the backward Ref. p_back indicates if we are calling it on the
-           forward or backward Ref. If p_secure is False, we bypass security
-           checks (has the logged user the right to modify this Ref field ?).
-           If p_executeMethods is False, we do not execute methods that
-           customize the object insertion (parameters insert, beforeLink,
-           afterLink...). This can be useful while migrating data or duplicating
-           an object. If p_at is specified, it is a Position instance indicating
-           where to insert the object: it then overrides self.insert.
-
-           The method returns the effective number of linked objects.'''
+    def linkObject(self, o, p, back=False, secure=False, executeMethods=True,
+                   at=None, reindex=False, reindexBack=None):
+        '''Links object p_p (which can be a list of objects) to object p_o
+           through this Ref field.'''
+        # When linking 2 objects via a Ref, m_linkObject must be called twice:
+        # once on the forward Ref and once on the backward Ref. p_back indicates
+        # if we are calling it on the forward or backward Ref. If p_secure is
+        # False, we bypass security checks (has the logged user the right to
+        # modify this Ref field ?). If p_executeMethods is False, we do not
+        # execute methods that customize the object insertion (parameters
+        # insert, beforeLink, afterLink...). This can be useful while migrating
+        # data or duplicating an object. If p_at is specified, it is a Position
+        # object or an integer index indicating where to insert the object: it
+        # then overrides self.insert. The method returns the effective number
+        # of linked objects.
+        #
         # Security check
         if secure: o.guard.mayEdit(o, self.writePermission, raiseError=True,
                                    info=self)
@@ -2169,7 +2398,14 @@ class Ref(Field):
         if isinstance(p, utils.sequenceTypes):
             count = 0
             for q in p:
-                count += self.linkObject(o, q, back, secure, executeMethods, at)
+                # Here, m_linkObject is called with "reindex" being False, even
+                # if p_reindex is True, in order to avoid reindexing the Ref for
+                # each new value being inserted. But the back reference for
+                # these objects, if indexed, must be reindexed.
+                count += self.linkObject(o, q, back, secure, executeMethods, at,
+                                         reindex=False, reindexBack=reindex)
+            # Reindex p_self on p_o if indexed
+            if reindex and self.indexed: o.reindex(fields=(self.name,))
             return count
         # Get or create the list of tied objects
         if self.name in o.values:
@@ -2185,10 +2421,19 @@ class Ref(Field):
             if r == False: return 0
         # Where must we insert the object ?
         insert = self.insert
-        if at and at.insertObject in refs:
-            # Insertion logic is overridden by this Position instance, that
-            # imposes obj's position within tied objects.
-            refs.insert(at.getInsertIndex(refs), p)
+        if at is not None:
+            if isinstance(at, int):
+                # p_at is already the index where to insert v_p
+                i = at
+            elif at.insertObject in refs:
+                # Insertion logic is overridden by this Position object, that
+                # imposes p_o's position within tied objects.
+                i = at.getInsertIndex(refs)
+            else:
+                # The object mentioned in p_at is not (anymore) among v_refs.
+                # Insert v_p at the end.
+                i = len(refs)
+            refs.insert(i, p)
         elif not insert or not executeMethods:
             refs.append(p)
         elif insert == 'start':
@@ -2211,16 +2456,23 @@ class Ref(Field):
             if insert[0] == 'sort':
                 # It is a tuple ('sort', method). Perform a full sort.
                 refs.sort(key=lambda q: insert[1](o, q))
-        # Update the back reference (if existing)
-        if not back and self.back:
-            # Disable security when required
-            if secure and not self.backSecurity: secure = False
-            self.back.linkObject(p, o, True, secure, executeMethods)
+        # Update the back reference (if existing and enabled)
+        if not back:
+            bacK = self.back
+            if bacK and not bacK.disabled:
+                # Disable security when required
+                if secure and not self.backSecurity: secure = False
+                indexBack = reindex if reindexBack is None else reindexBack
+                bacK.linkObject(p, o, True, secure, executeMethods,
+                                reindex=indexBack)
         # Execute self.afterLink if present
         if executeMethods and self.afterLink: self.afterLink(o, p)
+        # Reindex p_self on p_o if indexed
+        if reindex and self.indexed: o.reindex(fields=(self.name,))
         return 1
 
-    def unlinkObject(self, o, p, back=False, secure=False, executeMethods=True):
+    def unlinkObject(self, o, p, back=False, secure=False, executeMethods=True,
+                     reindex=False, reindexBack=None):
         '''Unlinks p_p (which can be a list of objects) from p_o through this
            Ref field and return the number of objects truly unlinked.'''
         # For an explanation about parameters p_back, p_secure and
@@ -2235,19 +2487,28 @@ class Ref(Field):
         if isinstance(p, utils.sequenceTypes):
             count = 0
             for q in p:
-                count += self.unlinkObject(o, q, back, secure, executeMethods)
+                count += self.unlinkObject(o, q, back, secure, executeMethods,
+                                           reindex=False, reindexBack=reindex)
+            # Reindex p_self on p_o if indexed
+            if reindex and self.indexed: o.reindex(fields=(self.name,))
             return count
         refs = o.values.get(self.name)
         if not refs or p not in refs: return 0
         # Unlink p_p
         refs.remove(p)
-        # Update the back reference (if existing)
-        if not back and self.back:
-            # Disable security when required
-            if secure and not self.backSecurity: secure = False
-            self.back.unlinkObject(p, o, True, secure, executeMethods)
+        # Update the back reference (if existing and enabled)
+        if not back:
+            bacK = self.back
+            if bacK and not bacK.disabled:
+                # Disable security when required
+                if secure and not self.backSecurity: secure = False
+                indexBack = reindex if reindexBack is None else reindexBack
+                bacK.unlinkObject(p, o, True, secure, executeMethods,
+                                  reindex=indexBack)
         # Execute self.afterUnlink if present
         if executeMethods and self.afterUnlink: self.afterUnlink(o, p)
+        # If p_self is indexed, update the index when appropriate
+        if reindex and self.indexed: o.reindex(fields=(self.name,))
         return 1
 
     def getStorableValue(self, o, value, single=False):
@@ -2313,7 +2574,8 @@ class Ref(Field):
         if self.isBack: return utils.No('is_back')
         r = True
         # Check if this Ref is addable/linkable
-        if mode == 'create':
+        create = mode == 'create'
+        if create:
             r = self.getAttribute(o, 'add')
             if not r: return utils.No('no_add')
         elif mode == 'link':
@@ -2329,7 +2591,7 @@ class Ref(Field):
             if not o.guard.mayEdit(o, self.writePermission):
                 return utils.No('no_write_perm')
         # May the user create instances of the referred class ?
-        if mode == 'create':
+        if create:
             if self.creators:
                 checkInitiator = True
                 initiator = RefInitiator(o.tool, o.req, (o, self))
@@ -2356,8 +2618,8 @@ class Ref(Field):
         if c.createVia == 'noForm':
             # Ajax-refresh the Ref with a special param to link a newly created
             # object.
-            r = "askAjax('%s', null, {'start':'%d', " \
-                "'action':'doCreateWithoutForm'})" % (c.hook, c.batch.start)
+            r = f"askAjax('{c.hook}', null, {{'start':'{c.batch.start}', " \
+                f"'action':'doCreateWithoutForm'}})"
             if self.addConfirm:
                 r = "askConfirm('script', %s, %s)" % \
                     (q(r, False), q(c.addConfirmMsg))
@@ -2376,12 +2638,16 @@ class Ref(Field):
                 r = c.onAddJs
         return r
 
-    def getOnUnlink(self, q, _, o, tiedId, batch):
+    def getOnUnlink(self, c):
         '''Computes the JS code to execute when button "unlink" is clicked'''
-        js = f"onLink('unlink','{o.url}','{self.name}','{tiedId}'," \
-             f"'{batch.hook}','{batch.start}')"
+        o = c.io
+        batch = c.batch
+        linkList = 'true' if c.linkList else 'false'
+        js = f"onLink('unlink','{o.url}','{self.name}','{c.id}'," \
+             f"'{batch.hook}','{batch.start}',null,{linkList})"
         if not self.unlinkConfirm: return js
-        text = _('action_confirm')
+        q = c.q
+        text = c._('action_confirm')
         return f"askConfirm('script',{q(js, False)},{q(text)})"
 
     def getAddLabel(self, o, addLabel, tiedClassLabel, inMenu):
@@ -2411,7 +2677,7 @@ class Ref(Field):
         '''When checkboxes are enabled, this method defines a JS associative
            array (named "_appy_objs_cbs") that will store checkboxes' statuses.
            This array is needed because all linked objects are not visible at
-           the same time (pagination)..'''
+           the same time (pagination).'''
 
         # Moreover, if self.link is "list", an additional array (named
         # "_appy_poss_cbs") is defined for possible values.
@@ -2517,6 +2783,7 @@ class Ref(Field):
            p_tied object in the select field allowing the user to choose which
            object(s) to link through the Ref. The information to display may
            only be the object title or more if "shownInfo" is used.'''
+        if tied is None: return '?' # Should not happen, but be robust
         r = ''
         # p_o may not be the tool if we are on a search screen
         for col in self.getColSets(o, tied.class_, usage=usage)[0].columns:
@@ -2579,8 +2846,15 @@ class Ref(Field):
     def getRenderMode(self, layout):
         '''Gets the render mode, determined by self.render and some
            exceptions.'''
-        if self.render == 'menus' and layout == 'view': return 'list'
-        return self.render
+        r = self.render
+        if r == 'menus' and layout == 'view':
+            r = 'list'
+        elif r == 'list' and layout == 'cell':
+            # Having a complete list rendering within an outer list, is an
+            # undesirable UI experience and may lead to name clashes or other
+            # problems.
+            r = 'links'
+        return r
 
     def getTitleMode(self, o, selector):
         '''How will we render the tied objects' titles ?'''
@@ -2650,12 +2924,11 @@ class Ref(Field):
         # If there is a request value, We are validating the form. Return the
         # request value instead of the popup value.
         if requestValue: return self.getRequestObjects(o, requestValue)
-        r = []
         # No object can be selected if the popup has not been opened yet
         if 'semantics' not in req:
             # In this case, display already linked objects if any
-            return r if o.isEmpty(name) \
-                     else self.getValue(o, name=name, single=False)
+            return self.getValue(o, name=name, single=False) or []
+        r = []
         ids = req.selected.split(',')
         tool = o.tool
         if req.semantics == 'checked':
@@ -2671,8 +2944,8 @@ class Ref(Field):
                                sortOrder=req.sortOrder,
                                filters=self.class_.meta.getFilters(tool))
             elif self.link == 'popupRef':
-                initiatorObj, fieldName = self.select(o)
-                r = getattr(initiatorObj, fieldName)
+                io, iname = self.select(o)
+                r = getattr(io, iname)
         return r
 
     traverse['onSelectFromPopup'] = 'perm:write'
@@ -2681,7 +2954,8 @@ class Ref(Field):
            a user has selected objects from the popup, to be added to existing
            tied objects, from the view widget.'''
         for tied in self.getPopupObjects(o, self.name, o.req, None):
-            self.linkObject(o, tied, secure=True)
+            if tied is None: continue # Be robust
+            self.linkObject(o, tied, secure=True, reindex=True)
 
     def getLinkBackUrl(self, o, req):
         '''Get the URL to redirect the user to after having (un)linked an object
@@ -2691,6 +2965,8 @@ class Ref(Field):
         for name, val in o.req.items():
             if name.endswith('start') or name == 'page':
                 params[name] = val
+        if 'page' not in params:
+            params['page'] = self.page.name
         return o.getUrl(sub='view', **params)
 
     traverse['onLink'] = 'perm:write'
@@ -2704,7 +2980,7 @@ class Ref(Field):
         if not action.endswith('_many'):
             method = getattr(self, f'{req.linkAction}Object')
             tied = o.getObject(int(req.targetId))
-            r = method(o, tied, secure=True)
+            r = method(o, tied, secure=True, reindex=True)
         else:
             # "link_many", "unlink_many", "delete_many". Get the (un-)checked
             # objects from the request.
@@ -2748,17 +3024,20 @@ class Ref(Field):
                     else:
                         # Link or unlink. For unlinking, we need to perform an
                         # additional check.
-                        if (singleAction == 'unlink') and \
+                        if singleAction == 'unlink' and \
                            not self.mayUnlinkElement(o, target):
                             failed += 1
                         else:
-                            method = eval('self.%sObject' % singleAction)
-                            method(o, target)
+                            method = eval(f'self.{singleAction}Object')
+                            method(o, target, reindex=True)
                 if failed:
                     msg = o.translate('action_partial', mapping={'nb':failed})
         # Redirect the user and display a message
-        o.goto(self.getLinkBackUrl(o, req),
-               message=msg or o.translate('action_done'))
+        text = msg or o.translate('action_done')
+        if o.H().isAjax():
+            o.say(text)
+        else:
+            o.goto(self.getLinkBackUrl(o, req), message=text)
 
     def renderMinimal(self, o, objects, popup, links=False):
         '''Render tied p_objects in render mode "minimal" (or "links" if p_links
@@ -2766,11 +3045,20 @@ class Ref(Field):
         if not objects: return o.translate(self.noObjectLabel)
         r = []
         for tied in objects:
-            title = self.getReferenceLabel(o, tied, True)
-            if links and tied.allows('read'):
+            if tied is None: continue # Should not happen, but be robust
+            # p_tied can be a string if it comes from the object history
+            if isinstance(tied, str):
+                title = tied
+                tied = None
+            else:
+                title = self.getReferenceLabel(o, tied, True)
+            if links and tied and tied.allows('read'):
                 # Wrap the title in a link
-                target = '_parent' if popup else '_self'
-                title = f'<a href="{tied.url}/view" target="{target}" ' \
+                target = self.target
+                if not target:
+                    target = '_parent' if popup else '_self'
+                pp = '?popup=1' if popup and target == '_self' else ''
+                title = f'<a href="{tied.url}/view{pp}" target="{target}" ' \
                         f'style="padding:0">{title}</a>'
             r.append(title)
         return self.renderMinimalSep.join(r)

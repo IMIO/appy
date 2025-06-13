@@ -3,7 +3,7 @@
 
 # Important notes  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# I. The scheduler runs in "best effort" mode. Everytime a series of jobs must
+# 1. The scheduler runs in "best effort" mode. Everytime a series of jobs must
 #    be run according to the current time, they are ran, sequentially, in the
 #    order of their definition. If their execution takes several minutes, during
 #    this period, the scheduler will not trigger any other job.
@@ -37,15 +37,20 @@
 #       scheduled between 00:00 and 00:34 and continues to check for jobs,
 #       starting at 00:35.
 
-# II. The scheduler delays any incoming HTTP request. While jobs are executed by
-#     the scheduler, the infinite server loop, used by the server to check for
-#     incoming HTTP requests, is paused. The next HTTP request will be handled
-#     after all currently running jobs have ended.
+# 2. The scheduler delays any incoming HTTP request. While jobs are executed by
+#    the scheduler, the infinite server loop, used by the server to check for
+#    incoming HTTP requests, is paused. The next HTTP request will be handled
+#    after all currently running jobs have ended.
 
-#     So, it is preferable to "size" your jobs into a series of "short-term"
-#     jobs, triggered at regular intervals, rather than defining "long-lasting"
-#     jobs, excepted if you are sure these latter are run when no web user is
-#     there, ie, during the night.
+#    So, it is preferable to "size" your jobs into a series of "short-term"
+#    jobs, triggered at regular intervals, rather than defining "long-lasting"
+#    jobs, excepted if you are sure these latter are run when no web user is
+#    there, ie, during the night.
+
+# 3. What has been said in items 1 and 2 hereabove mainly holds for unthreaded
+#    jobs, being the sole type of jobs in early Appy versions. A threaded job is
+#    ran as a separate thread (one from the same pool of threads as the one used
+#    for handling incoming HTTP requests).
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
@@ -66,26 +71,28 @@ TDEF_KO  = '%s. Must be of the form "m h dom mon dow".' % WRONG_TD
 class Job:
     '''Represents a job that must be executed in the context of the scheduler'''
 
-    def __init__(self, method):
+    def __init__(self, method, threaded=False):
+        # Is this job ran in a separate thread ?
+        self.threaded = threaded
         # Running a job consists in executing a method as defined on the tool.
         # m_method is the name of this method.
         method = method.strip() if method else method
         if not method: raise Exception(MISSING % 'method')
         self.method = method
-        # This instance will also hold more information, stored by the Appy
-        # server itself. For example, if this job is scheduled at regular
-        # intervals, the date of the last execution will be stored on this Job
-        # instance. Consequently, do not reuse the same job instance for several
-        # config entries. In order to avoid name clashes, any attribute added by
-        # Appy will start with an underscore.
-        # ~~~
+        # This object will also hold more information, stored by the Appy server
+        # itself. For example, if this job is scheduled at regular intervals,
+        # the date of the last execution will be stored on this Job object.
+        # Consequently, do not reuse the same job instance for several config
+        # entries. In order to avoid name clashes, any attribute added by Appy
+        # will start with an underscore.
+        #
         # By default, the job will lead to a database commit. As for any other
         # method executed in the context of a UI request, if m_method must not
         # lead to a commit (either because the job, intrinsically, dos not
         # update any data in the database, or because an error occurred), the
         # method can access the currently running handler and set its "commit"
         # attribute, ie:
-        # 
+        #
         #                      tool.H().commit = False
 
     def run(self, scheduler):
@@ -100,7 +107,7 @@ class Job:
 
     def __repr__(self):
         '''p_self's string representation'''
-        return '<Job %s>' % self.method
+        return f'‹Job {self.method}, threaded={self.threaded}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TimePart:
@@ -381,7 +388,7 @@ class Config:
         # The scheduler will be run every "minutes" minutes. It is not advised
         # to change this value, at the risk of being unable to conform to the
         # crontab semantics.
-        # ~~~
+        #
         # For example, if you decide to set the value to 5, every timeDef entry
         # where the "minutes" part is not a multiple of 5 will never match.
         self.minutes = 1
@@ -395,8 +402,8 @@ class Config:
         #         | goal is to implement behaviours like this one: "execute this
         #         | job if the system load was low during the last minutes".
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # Job     | A Job instance (see class Job hereabove), defining the
-        #         | method to execute.
+        # Job     | A Job object (see class Job hereabove), defining the method
+        #         | to execute and the type of job (threaded or not).
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Use method m_add below to add a job to this list.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -409,10 +416,10 @@ class Config:
         if not isinstance(minutes, int) or (minutes < 1):
             raise Exception(MIN_KO)
 
-    def add(self, timeDef, method):
+    def add(self, timeDef, method, threaded=False):
         '''Adds a job to p_self.all, for running this m_method according to this
            p_timeDef.'''
-        self.all.append( (TimeDef(timeDef), Job(method)) )
+        self.all.append( (TimeDef(timeDef), Job(method, threaded=threaded)) )
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Scheduler:
@@ -445,9 +452,15 @@ class Scheduler:
         jobs = self.config.all
         if not jobs: return
         now = time.localtime()
+        # If the server is executed in the foreground, the pool may be missing
+        pool = self.server.pool
         for timeDef, job in jobs:
             if timeDef.mustRun(now):
-                job.run(self)
+                if job.threaded and pool:
+                    # Run the job via a thread from the pool
+                    self.server.pool.addTask(lambda job=job: job.run(self))
+                else:
+                    job.run(self)
 
     def scanJobs(self):
         '''This method is called by the server's infinite loop and checks

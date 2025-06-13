@@ -5,7 +5,9 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from pathlib import Path
-import os, os.path, time, shutil, mimetypes, tempfile
+import os, os.path, time, shutil, mimetypes, tempfile, hashlib
+
+from DateTime import DateTime
 
 from appy import utils
 
@@ -20,14 +22,15 @@ def guessMimeType(fileName):
 def getShownSize(size, unbreakable=False):
     '''Express p_size (a file size in bytes) in a human-readable way'''
     b = ' ' if unbreakable else ' '
+    fmt = utils.formatNumber
     # Display the size in bytes if smaller than 1024 bytes
-    if size < 1024: return '%d%sbyte(s)' % (size, b)
+    if size < 1024: return f'{size}{b}byte(s)'
     size /= 1024 # This is the size, in Kb
-    if size < 1024: return '%s%sKb' % (utils.formatNumber(size, precision=1), b)
+    if size < 1024: return f'{fmt(size, precision=1)}{b}Kb'
     size /= 1024 # This is the size, in Mb
-    if size < 1024: return '%s%sMb' % (utils.formatNumber(size, precision=1), b)
+    if size < 1024: return f'{fmt(size, precision=1)}{b}Mb'
     size /= 1024 # This is the size, in Gb
-    return '%s%sGb' % (utils.formatNumber(size, precision=1), b)
+    return f'{fmt(size, precision=1)}{b}Gb'
 
 def getFolderSize(folder, nice=False, withCounts=False):
     '''Returns the size of this p_folder (all content, recursively)'''
@@ -63,13 +66,33 @@ def getTempFileName(prefix='', extension='', timestamp=True, asPath=False):
     # p_extension are allowed (ie, ".pdf" or "pdf").'''
     #
     # Suffix the file name with a timestamp when relevant
-    suffix = timestamp and ('_%f' % time.time()) or ''
-    r = os.path.join(getOsTempFolder(), '%s%s' % (prefix, suffix))
+    suffix = f'_{time.time():.6f}' if timestamp else ''
+    r = os.path.join(getOsTempFolder(), f'{prefix}{suffix}')
     if extension:
-        if extension.startswith('.'): r += extension
-        else: r += '.' + extension
+        if extension.startswith('.'): r = f'{r}{extension}'
+        else: r = f'{r}.{extension}'
     # Return, if p_asPath is True, the result as a pathlib.Path object
     return Path(r) if asPath else r
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def getHash(path, algo='sha256', bufSize=65536):
+    '''Returns a hash digest for the file @this p_path, with this p_algo'''
+    # Ensure p_path is a string
+    if isinstance(path, Path):
+        path = str(path)
+    # Python >= 3.11 has a special function for this
+    if hasattr(hashlib, 'file_digest'):
+        with open(path, 'rb') as f:
+            r = hashlib.file_digest(f, algo)
+    else:
+        r = hashlib.new(algo)
+        with open(path, 'rb') as f:
+            while True:
+                data = f.read(bufSize)
+                if not data:
+                    break
+                r.update(data)
+    return r.hexdigest()
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class FolderDeleter:
@@ -127,6 +150,7 @@ class FolderDeleter:
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extsToClean = ('.pyc', '.pyo', '.fsz', '.deltafsz', '.dat', '.log')
+
 def cleanFolder(folder, exts=extsToClean, folders=(), verbose=False):
     '''This function allows to remove, in p_folder and subfolders, any file
        whose extension is in p_exts, and any folder whose name is in
@@ -153,7 +177,7 @@ def cleanFolder(folder, exts=extsToClean, folders=(), verbose=False):
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def resolvePath(path):
     '''p_path is a file path that can contain occurrences of "." and "..". This
-       function resolves them and procuces a minimal path.'''
+       function resolves them and produces a minimal path.'''
     res = []
     for elem in path.split(os.sep):
         if elem == '.': pass
@@ -176,7 +200,7 @@ def copyFolder(source, dest, cleanDest=False):
     # Create the dest folder if it does not exist
     if not os.path.exists(dest):
         os.makedirs(dest)
-    # Copy the content of p_source to p_dest.
+    # Copy the content of p_source to p_dest
     for name in os.listdir(source):
         sourceName = os.path.join(source, name)
         destName = os.path.join(dest, name)
@@ -198,4 +222,26 @@ def chown(path, login, group=None, recursive=True):
     path = Path(path) if isinstance(path, str) else path
     for sub in path.glob('**/*'):
         shutil.chown(sub, user=login, group=group)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def isEmpty(path):
+    '''Return True if path corresponds to an empty folder'''
+    # Ensure p_path is a Path object
+    path = Path(path) if isinstance(path, str) else path
+    if not path.is_dir(): return
+    # Return False as soon as an element is walked within v_path
+    for sub in path.iterdir(): return
+    return True
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+PATH_KO = '%s does not correspond to an existing file.'
+
+def isLessThan(path, minutes):
+    '''Returns True if file at this p_path (as a pathlib.Path object) was
+       created less than p_minutes ago.'''
+    if not path.is_file():
+        raise Exception(PATH_KO % path)
+    now = DateTime()
+    modified = DateTime(path.stat().st_mtime)
+    return ((now-modified)*24*60) <= minutes
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

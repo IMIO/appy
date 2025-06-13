@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -24,7 +22,7 @@ IEDIT_KO   = 'It is currently not possible to inline-edit a multi-' \
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Selection:
     '''If you want to have dynamically computed possible values for a Select
-       field, use a Selection instance.'''
+       field, use a Selection object.'''
 
     def __init__(self, method, single=None):
         # p_method must be a method that will be called every time Appy will
@@ -49,21 +47,28 @@ class Selection:
         # (m_translate) to produce an i18n version of "text".
         self.method = method
 
-        # While p_method is called on edit and filter layouts to list the
+        # While p_method is called on "edit" and "filter" layouts to list the
         # possible values to select, the method you specify in p_single allows
-        # to produce the translated text for a single value. It accepts a single
-        # arg, being one of the values as stored by the select field, and must
-        # return its translated text. If you don't specify a p_single method,
-        # p_method will be used instead, but useless processing will take place,
-        # because p_method produces texts for the complete list of possible
-        # values. Moreover, a stored select value may not be among the list of
-        # values as returned by p_method anymore.
+        # to produce the translated text for a single value. Specified as a
+        # string or a real object method, it accepts a single arg, being one of
+        # the values as stored by the select field, and must return its
+        # translated text. If you don't specify a p_single method, p_method will
+        # be used instead, but useless processing will take place, because
+        # p_method produces texts for the complete list of possible values.
+        # Moreover, a stored select value may not be among the list of values as
+        # returned by p_method anymore.
         self.single = single
 
     def getText(self, o, value, field, language=None):
         '''Gets the text that corresponds to p_value'''
         # Use method p_single if specified
-        if self.single: return self.single(o, value)
+        single = self.single
+        if single:
+            if isinstance(single, str):
+                r = getattr(o, single)(value)
+            else:
+                r = single(o, value)
+            return r
         # Use p_self.method
         withTranslations = language if language else True
         vals = field.getPossibleValues(o, ignoreMasterValues=True,
@@ -112,12 +117,13 @@ class Select(Field):
 
     class Layouts(Layouts):
         '''Select-specific layouts'''
-        d  = Layouts(Layout('d2-l-f;rv=', width=None))
+        d  = Layouts(Layout('d2-lrv-f', width=None))
         # With a description, but no label
         dn = Layouts(Layout('d-frv=', width=None))
         # Within grid groups
-        g  = Layouts(edit=Layout('f;rv=', width=None),
-                     view=Layout('fl', width=None))
+        ed = Layout('f;rv=', width=None)
+        g  = Layouts(edit=ed, view=Layout('fl', width=None))
+        f  = Layouts(edit=ed, view=Layout('f', width=None))
         # Variants
         gd = Layouts(edit=Layout('d;rv=-f2=', width=None),
                      view=Layout('fl', width=None))
@@ -149,15 +155,20 @@ class Select(Field):
 
     edit = Px('''
      <x var="isSelect=field.render == 'select';
-             possibleValues=field.getPossibleValues(o, withTranslations=True, \
-               withBlankValue=isSelect);
+             possibleValues=field.getPossibleValues(o, withTranslations=True,
+                                     withBlankValue=isSelect and field.noValue);
              charsWidth=field.getWidthInChars(False)">
+
+     <!-- This hidden field tells the server that an empty value for this field
+          is in the request. -->
+     <input type="hidden" name=":f'{name}_hidden'"/>
 
      <!-- As a "select" widget -->
      <select if="isSelect" name=":name" id=":name" class=":masterCss"
        multiple=":isMultiple" onchange=":field.getOnChange(o, layout)"
        size=":field.getSelectSize(False, isMultiple)"
-       style=":field.getSelectStyle(False, isMultiple)">
+       style=":field.getSelectStyle(False, isMultiple)"
+       disabled=":field.getDisabled(o)">
       <option for="val, text in possibleValues" value=":val"
               selected=":field.isSelected(o, name, val, rawValue)"
               title=":text">:Px.truncateValue(text, charsWidth)</option>
@@ -169,21 +180,23 @@ class Select(Field):
       <!-- (Un)check all -->
       <div if="field.render == 'checkbox' and field.checkAll and
                (len(possibleValues) &gt; 1)"
-           class="divAll" var="allId='%s_all' % name">
+           class="divAll" var="allId=f'{name}_all'">
        <input type="checkbox" class="checkAll" id=":allId" name=":allId"
               onclick="toggleCheckboxes(this)"/>
        <label lfor=":allId">:_('check_uncheck')</label>
       </div>
 
       <div for="val, text in possibleValues" class="flex1"
-           var2="vid='%s_%s' % (name, val)">
+           var2="vid=f'{name}_{val}'">
        <input type=":field.render" name=":name" id=":vid" value=":val"
               class=":masterCss" onchange=":field.getOnChange(o, layout)"
               checked=":field.isSelected(o, name, val, rawValue)"/>
-       <label lfor=":vid" class="subLabel">:text</label>
+       <label lfor=":vid" class="subLabel">::text</label>
       </div>
      </div>
-     <script if="hostLayout" var2="x=o.Lock.set(o, user, field=field)">:\
+     <!-- Render a message when no widget can be rendered -->
+     <div class="discreet" if="not possibleValues">::_('no_choice')</div>
+     <script if="hostLayout" var2="x=o.Lock.set(o, field=field)">:\
       'prepareForAjaxSave(%s,%s,%s,%s)' % \
        (q(name), q(o.iid), q(o.url), q(hostLayout))</script></x>''')
 
@@ -245,15 +258,21 @@ class Select(Field):
       historized=False, mapping=None, generateLabel=None, label=None,
       sdefault='', scolspan=1, swidth=None, sheight=None, fwidth='7em',
       fheight=None, persist=True, inlineEdit=False, view=None, cell=None,
-      buttons=None, edit=None, xml=None, translations=None,
-      noValueLabel='choose_a_value', render='select', svalidator=None,
-      checkAll=True):
-        # When choosing a value in a select widget, the entry representing no
-        # value is translated according the label defined in attribute
-        # "noValueLabel". The default one is something like "[ choose ]", but if
-        # you prefer a less verbose version, you can use "no_value" that simply
-        # displays a dash, or your own label.
+      buttons=None, edit=None, custom=None, xml=None, translations=None,
+      noValue=True, noValueLabel='choose_a_value', render='select',
+      svalidator=None, checkAll=True, disabled=False):
+
+        # When choosing a value in a select widget, must an entry representing
+        # no value at all be inserted ?
+        self.noValue = noValue
+
+        # If the widget is a select widget with p_self.noValue being True, the
+        # entry representing no value is translated according the label defined
+        # in the following attribute. The default one is something like
+        # "[ choose ]", but if you prefer a less verbose version, you can use
+        # "no_value" that simply displays a dash, or your own label.
         self.noValueLabel = noValueLabel
+
         # A Select field, is, by default, rendered as a HTML select widget, but
         # there are alternate render modes. Here are all the possible render
         # modes.
@@ -271,18 +290,33 @@ class Select(Field):
         #            | multiplicity being higher than 1.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.render = render
+
+        # Unlike for other Field sub-classes, attribute p_validator, for a
+        # Select field, is required and may only hold following values.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  A list of  | Each string must be a short variable-like name, that
+        #   strings   | represents every possible storable field value. Appy
+        #             | generates a i18n label for each one.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # A Selection | Defining a "static" list of strings as defined above is
+        #   object    | only possible if all values are known in advance. When
+        #             | this list has a dynamic nature, use a Selection object.
+        #             | Refer to the hereabove-defined Selection class for more
+        #             | information.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
         # Call the base constructor
-        Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
-          show, renderable, page, group, layouts, move, indexed, mustIndex,
+        super().__init__(validator, multiplicity, default, defaultOnEdit, show,
+          renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, filterField, readPermission,
           writePermission, width, height, maxChars, colspan, master,
           masterValue, focus, historized, mapping, generateLabel, label,
           sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
-          buttons, edit, xml, translations)
+          buttons, edit, custom, xml, translations)
         # Default value on the *s*earch form. It must be a list of values.
         self.sdefault = sdefault or []
         # Validator to use on the *s*earch form. This has sense only if you use
-        # a Selection instance as validator.
+        # a Selection object as validator.
         self.svalidator = svalidator or validator
         # When render="checkbox", by default, an additional checkbox will be
         # rendered, allowing to select or unselect all possible values. If this
@@ -302,6 +336,10 @@ class Select(Field):
         # The *f*ilter width and height
         self.fwidth = fwidth
         self.fheight = fheight
+        # Must p_self be shown, on "edit", in "disabled" mode? It works only if
+        # p_self is rendered as a select widget.
+        self.disabled = disabled
+        # If render mode is "select", on "edit", a blank value will be added
         self.checkParameters()
 
     def checkParameters(self):
@@ -319,10 +357,10 @@ class Select(Field):
     def isSelected(self, o, name, possibleValue, dbValue):
         '''When displaying a Select field, must the p_possibleValue appear as
            selected? p_name is given and used instead of field.name because it
-           may contain a row number from a field within a List field.'''
+           may contain a row number from a field within an outer field.'''
         req = o.req
         # Get the value we must compare (from request or from database)
-        if name in req:
+        if name in req or f'{name}_hidden' in req:
             compValue = req[name]
         else:
             compValue = dbValue
@@ -331,8 +369,8 @@ class Select(Field):
             return possibleValue in compValue
         return possibleValue == compValue
 
-    def getValue(self, o, name=None, layout=None, single=None):
-        value = Field.getValue(self, o, name, layout, single)
+    def getValue(self, o, name=None, layout=None, single=None, at=None):
+        value = Field.getValue(self, o, name, layout, single, at)
         if not value:
             return emptyList if self.isMultiValued() else value
         if isinstance(value, str) and self.isMultiValued():
@@ -421,30 +459,32 @@ class Select(Field):
             else:
                 values = []
             # Manage parameter p_withTranslations
-            if not withTranslations: res = values
+            if not withTranslations: r = values
             else:
-                res = []
+                r = []
                 for v in values:
                     # Translations may already have been included
                     if not isinstance(v ,tuple):
                         v = (v, self.getFormattedValue(o,v,language=lg))
-                    res.append(v)
+                    r.append(v)
         else:
             # Get the possible values from attribute "[s]validator"
             validator = self.svalidator if className else self.validator
             if isinstance(validator, Selection):
-                res = validator.getValues(o, className)
-                if not withTranslations: res = [v[0] for v in res]
-                elif isinstance(res, list): res = res[:]
-            else:
+                r = validator.getValues(o, className)
+                if not withTranslations: r = [v[0] for v in r]
+                elif isinstance(r, list): r = r[:]
+            elif validator:
                 # The list of (static) values is in self.validator
-                res = []
+                r = []
                 for value in validator:
                     if withTranslations:
                         text = self.getTranslatedValue(o, value, language=lg)
-                        res.append((value, text))
+                        r.append((value, text))
                     else:
-                        res.append(value)
+                        r.append(value)
+            else:
+                r = () # Could be a slave without his own validator
         if (withBlankValue == 'forced') or \
            (withBlankValue and not self.isMultiValued()):
             # Create the blank value to insert at the beginning of the list
@@ -454,11 +494,11 @@ class Select(Field):
             else:
                 blankValue = ''
             # Insert the blank value in the result
-            if isinstance(res, tuple):
-                res = (blankValue,) + res
+            if isinstance(r, tuple):
+                r = (blankValue,) + r
             else:
-                res.insert(0, blankValue)
-        return res
+                r.insert(0, blankValue)
+        return r
 
     def validateValue(self, o, value):
         '''Ensure p_value is among possible values'''

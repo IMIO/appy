@@ -2,8 +2,6 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from DateTime import DateTime
-
 from appy.px import Px
 from appy.utils import iconParts
 from appy.model.fields.group import Group
@@ -11,7 +9,13 @@ from appy.model.workflow.state import State
 from appy.model.workflow import emptyDict, Role
 
 # Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-UN_TRIG  = 'Transition "%s" on %s can\'t be triggered.'
+UN_TRIG  = '%s :: Untriggerable transition "%s". %s'
+START_KO = 'Object is in state "%s", not being a start for this transition.'
+LOCK_KO  = 'A lock is in the way: %s.'
+ROLE_KO  = '%s lacks role %s.'
+ROLES_KO = '%s has none of the condition-defined roles.'
+METH_KO  = 'Blocked by custom method.'
+VAL_KO   = 'Condition value is "%s".'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Transition:
@@ -26,7 +30,8 @@ class Transition:
     def __init__(self, states, condition=True, preAction=None, action=None,
                  show=True, confirm=False, group=None, icon=None, sicon=None,
                  redirect=None, historizeActionMessage=False, iconOnly=False,
-                 iconOut=False, iconCss='iconS', updateModified=False):
+                 iconOut=False, iconCss='iconS', updateModified=False,
+                 ignoreLocks=False, yesLabel='yes', noLabel='no'):
 
         '''A transition instance must be created as a static attribute for a
            Workflow class.'''
@@ -58,7 +63,7 @@ class Transition:
         #         | currently logged user has *at least* one of the listed roles
         #         | and if *all* listed methods return True. If you want to mix
         #         | roles and methods, it is generally preferable to place roles
-        #         | before functions in the sequence.
+        #         | before methods in the sequence.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.condition = condition
         if isinstance(condition, str):
@@ -81,8 +86,8 @@ class Transition:
         # value can be a translated text, as a string, ready to be shown in the
         # UI. p_action can also hold a list or tuple of methods. In that case,
         # all these methods will be executed in their sequence order. Their
-        # return values, if any, will be concatenated. If there iis no returned
-        # text, a standard translated text will be returned in the UI.
+        # return values, if any, will be concatenated. If there is no returned
+        # text, a standard translated text will be returned to the UI.
         self.action = action
 
         # If p_show is False, the end user will not be able to trigger the
@@ -153,6 +158,15 @@ class Transition:
         # as a change on the object: his last modification date will be updated.
         self.updateModified = updateModified
 
+        # By default, a transition for an object onto which at least one lock is
+        # set cannot be triggered, excepted if you set p_ignoreLocks to True.
+        self.ignoreLocks = ignoreLocks
+
+        # When the confirm popup show up (p_self.confirm is True), what are the
+        # i18n labels to use for the "yes" and "no" buttons ?
+        self.yesLabel = yesLabel
+        self.noLabel = noLabel
+
     def init(self, workflow, name):
         '''Lazy initialisation'''
         self.workflow = workflow
@@ -161,7 +175,7 @@ class Transition:
 
     def __repr__(self):
         '''String's short representation for p_self'''
-        return f'<transition {self.workflow.name}::{self.name}>'
+        return f'‹Transition {self.workflow.name}::{self.name}›'
 
     def standardiseStates(self, states):
         '''Get p_states as a list or a list of lists. Indeed, the user may also
@@ -304,38 +318,72 @@ class Transition:
     #                    Check conditions and execute actions
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    def isTriggerable(self, o, secure=True):
-        '''Can this transition be triggered on p_o ?'''
-        # Checks that the current state of the object is a start state for this
-        # transition.
+    def isUnstartable(self, o, details=False):
+        '''Returns True if p_o.state is not a start state for p_self'''
+        # If p_self is unstartable and p_details is True, the return value is
+        # not the boolean True, but an explanation, as a string.
+        r = False
         state = o.state
         if self.isSingle():
-            if state != self.states[0].name: return
+            startState = self.states[0].name
+            if state != startState:
+                r = (START_KO % state) if details else True
         else:
             found = False
             for start, end in self.states:
                 if start.name == state:
                     found = True
                     break
-            if not found: return
-        # Check that the condition is met, excepted if secure is False
-        if not secure: return True
+            if not found:
+                r = (START_KO % state) if details else True
+        return r
+
+    def isLocked(self, o, details=False):
+        '''Returns True if there is a lock on p_o, preventing from triggering
+           p_self.'''
+        # if p_details is True and a lock is in the way, the return value is an
+        # explanation as a string instead of the boolean True.
+        #
+        # Does not perform this check if locks must be ignored
+        if self.ignoreLocks: return
+        r = o.Lock.hasOn(o, lockInfo=details)
+        if r and details:
+            r = LOCK_KO % r
+        return r
+
+    def conditionMet(self, o, details=False):
+        '''Returns a tuple (True, v_text) if the condition(s), as defined in
+           self.condition, is (are) met.'''
+        # If p_details is True and the condition is not met, v_text will contain
+        # an explanation about the problem, as a string. In any other case,
+        # v_text will be None.
+        #
+        # Note that, if the condition is not met, the main result may not be the
+        # bool value False, but a appy.utils.No object instead.
         user = o.user
         # We will need the workflow's prototypical instance
         proto = self.workflow.proto
-        if isinstance(self.condition, Role):
+        cond = self.condition
+        if isinstance(cond, str): cond = Role(cond) # A string is a role
+        text = None
+        if isinstance(cond, Role):
             # Condition is a role. Transition may be triggered if the user has
             # this role.
-            return user.hasRole(self.condition.name, o)
-        elif callable(self.condition):
-            return self.condition(proto, o)
-        elif type(self.condition) in (tuple, list):
-            # It is a list of roles and/or functions. Transition may be
-            # triggered if user has at least one of those roles and if all
-            # functions return True.
+            r = user.hasRole(cond.name, o)
+            if not r and details:
+                text = ROLE_KO % (user.login, cond.name)
+        elif callable(cond):
+            # Condition is a custom method
+            r = cond(proto, o)
+            if not r and details:
+                text = METH_KO
+        elif type(cond) in (tuple, list):
+            # It is a list of roles and/or methods. Transition may be triggered
+            # if user has at least one of those roles and if all methods return
+            # True.
             hasRole = None
-            for condition in self.condition:
-                # "Unwrap" role names from Role instances
+            for condition in cond:
+                # "Unwrap" role names from Role objects
                 if isinstance(condition, Role): condition = condition.name
                 if isinstance(condition, str): # It is a role
                     if hasRole is None:
@@ -345,14 +393,45 @@ class Transition:
                 else: # It is a method
                     r = condition(proto, o)
                     if not r:
-                        # v_r is False or a No instance. If roles were also
+                        # v_r is False or a No object. If roles were also
                         # mentioned among p_self.condition, and v_hasRole is
-                        # False so far, return False and not the No instance.
-                        return False if hasRole is False else r
-            if hasRole != False:
-                return True
+                        # False so far, return False and not the No object.
+                        if hasRole is False:
+                            r = False
+                        if not r and details:
+                            text = METH_KO
+                        return r, text
+            # All conditions were analyzed. If methods were defined, all them
+            # have returned True. It remains to check roles.
+            r = hasRole is not False
+            if details:
+                text = ROLES_KO % user.login
         else:
-            return bool(self.condition)
+            # The condition is a simple boolean (or equivalent) attribute
+            r = bool(cond)
+            if not r and details:
+                text = VAL_KO % str(cond)
+        return r, text
+
+    def isTriggerable(self, o, secure=True, details=False):
+        '''Can this transition be triggered on p_o ?'''
+        # If p_details is True, it returns a tuple (b_triggerable, s_detail);
+        # s_detail being a codified string giving details about the reason why
+        # the transition can't be triggered.
+        #
+        # Is p_o's current state a valid start state for p_self ?
+        unstartable = self.isUnstartable(o, details)
+        if unstartable:
+            return (False, unstartable) if details else False
+        # Prevent triggering the transition if a lock is found on p_o
+        locked = self.isLocked(o, details)
+        if locked:
+            return (False, locked) if details else False
+        # Check that the condition is met, excepted if p_secure is False
+        if not secure:
+            return (True, None) if details else True
+        met, text = self.conditionMet(o, details)
+        return (met, text) if details else met
 
     def executeAction(self, o, pre=False):
         '''Executes the action (or pre-action if p_pre is True) related to this
@@ -407,8 +486,10 @@ class Transition:
         name = self.name
         isInit = name == '_init_'
         # "Triggerability" and security checks
-        if not isInit and not self.isTriggerable(o, secure=secure):
-            raise Transition.Error(UN_TRIG % (name, o.url))
+        if not isInit:
+            mayFire, text = self.isTriggerable(o, secure=secure, details=True)
+            if not mayFire:
+                raise Transition.Error(UN_TRIG % (o.strinG(), name, text))
         # Identify the target state for this transition
         target = forceTarget or self.getTargetState(o)
         # Remember the source state, it will be necessary for executing the
@@ -424,7 +505,7 @@ class Transition:
                                 comment=comment)
         # Update the object's last modification date when relevant
         if self.updateModified:
-            history.modified = DateTime()
+            history.noteUpdate()
         # Execute the action that is common to all transitions, if defined. It
         # is named "onTrigger" on the workflow class by convention. This common
         # action is executed before the transition-specific action (if any).
@@ -442,6 +523,7 @@ class Transition:
             o.reindex()
         # Return a message to the user if needed
         if not doSay: return
+        if msg: o.resp.fleetingMessage = False # Let the user read it
         return msg or o.translate('object_saved')
 
     def ui(self, o, mayTrigger):
@@ -459,7 +541,7 @@ class Transition:
         # Trigger the transition
         msg = self.trigger(o, req.popupComment, reindex=False)
         # Reindex p_o if required
-        if not o.isTemp(): o.reindex()
+        if not o.isTemp() and o.class_.isIndexable(): o.reindex()
         # If we are called from an Ajax request, simply return msg
         if handler.isAjax(): return msg
         # If we are viewing the object and if the logged user looses the
@@ -510,8 +592,8 @@ class UiTransition:
      <input if="mayTrigger" type="button" class=":css" value=":label"
             var="back=transition.getBackHook(_ctx_)"
             name=":tr.name" style=":transition.getIconUrl(asBG=True)"
-            onclick=":'triggerTransition(%s,this.name,%s,%s)' % \
-                       (q(formId), q(transition.confirm), back)"/>
+            onclick=":'triggerTransition(%s,this.name,%s,%s,%s,%s)' % \
+                       (q(formId), q(transition.confirm), back, yes, no)"/>
      <!-- Fake button -->
      <input if="not mayTrigger" type="button" class=":'%s fake' % css"
             style=":transition.getIconUrl(asBG=True)"
@@ -522,7 +604,9 @@ class UiTransition:
              mayTrigger=transition.mayTrigger;
              inSub=layout=='sub';
              tr=transition.transition;
-             asIcon=not inSub or tr.iconOnly">
+             asIcon=forceIcons or not inSub or tr.iconOnly;
+             yes=q(_(tr.yesLabel));
+             no=q(_(tr.noLabel))">
 
       <!-- As picto or icon -->
       <a if="asIcon" class=":'clickable' if mayTrigger else 'fake'"
@@ -531,8 +615,8 @@ class UiTransition:
               iconBase='siconBase' if inSub else 'iconBase';
               iconRam='siconRam' if inSub else 'iconRam'"
          name=":tr.name" title=":transition.getIconTitle()"
-         onclick=":'triggerTransition(%s,this.name,%s,%s)' % 
-                    (q(formId), q(transition.confirm), back) 
+         onclick=":'triggerTransition(%s,this.name,%s,%s,%s,%s)' %
+                    (q(formId), q(transition.confirm), back, yes, no) 
                     if mayTrigger else ''">
        <img src=":url(getattr(tr, iconAttr), base=getattr(tr, iconBase),
                       ram=getattr(tr,iconRam))"
@@ -559,10 +643,14 @@ class UiTransition:
 
      js='''
       // Function used for triggering a workflow transition
-      function triggerTransition(formId, transition, msg, back) {
-        var f = document.getElementById(formId);
-        f.action = f.dataset.baseurl + '/' + transition + '/fire';
-        submitForm(formId, msg, true, back);
+      function triggerTransition(formId, transition, msg, back, yes, no) {
+        let f = document.forms[formId];
+        if (back) {
+          const iid = f.id.split('_').pop();
+          f.setAttribute('data-sub', `${iid}*${transition}*fire`);
+        }
+        else f.action = `${f.dataset.baseurl}/${transition}/fire`;
+        submitForm(formId, msg, true, back, null, null, yes, no);
       }''')
 
     def __init__(self, transition, o, mayTrigger):
@@ -574,7 +662,7 @@ class UiTransition:
         labelId = transition.labelId
         self.title = _(labelId)
         if transition.confirm:
-            msg = _('%s_confirm' % labelId, blankOnError=True) or \
+            msg = _(f'{labelId}_confirm', blankOnError=True) or \
                   _('action_confirm')
             self.confirm = msg
         else:
@@ -602,13 +690,7 @@ class UiTransition:
     def getIconTitle(self):
         '''Compute the title of the icon representing the transition, when this
            latter is represented by an icon only.'''
-        if not self.mayTrigger:
-            r = self.reason
-        elif self.transition.iconOnly:
-            r = self.title
-        else:
-            r = ''
-        return r
+        return self.title if self.mayTrigger else self.reason
 
     def getIconUrl(self, pre='s', asBG=False):
         '''Returns the URL to p_self's (s)icon (depending on p_pre(fix)), to be
@@ -618,7 +700,7 @@ class UiTransition:
         if asBG and tr.iconOut: return ''
         # If p_asBG, get the background image dimensions
         bg = '18px 18px' if asBG else False
-        return self.o.buildUrl(getattr(tr, '%sicon' % pre),
-                               base=getattr(tr, '%siconBase' % pre),
-                               ram=getattr(tr, '%siconRam' % pre), bg=bg)
+        return self.o.buildUrl(getattr(tr, f'{pre}icon'),
+                               base=getattr(tr, f'{pre}iconBase'),
+                               ram=getattr(tr, f'{pre}iconRam'), bg=bg)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -6,7 +6,7 @@ import time, uuid
 from appy.utils import Traceback
 
 # POD-specific constants - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-XHTML_HEADINGS = ('h1', 'h2', 'h3', 'h4', 'h5', 'h6')
+XHTML_HEADINGS = tuple((f'h{i}' for i in range(1,11)))
 XHTML_LISTS    = ('ol', 'ul')
 
 # "para" is a meta-tag representing p, div, blockquote or address
@@ -41,11 +41,13 @@ class Evaluator:
         # lookup produces no result, but returns None instead.
         context = context if isinstance(context, dict) else context.__dict__
         # Evaluate p_expression
-        return eval(expression, context)
-        # Note that the "eval" function adds, within p_context, if not already
-        # present, the Python built-ins at key '__builtins__'.
-        # context['__builtins__'] is similar to the homonym entry in dict
-        # globals().
+        return eval(expression, None, context)
+        # p_context is passed as locals, in order to avoid the "locals" dict to
+        # be cloned by the eval function (see https://peps.python.org/pep-0667).
+        # Before, v_context was passed as globals and, in that case, the "eval"
+        # function added, within it, if not already present, Python built-ins
+        # at key '__builtins__'. So, v_context['__builtins__'] was similar to
+        # the homonym entry in dict globals().
 
     @classmethod
     def updateContext(class_, context):
@@ -77,11 +79,12 @@ class PodError(Exception):
              dumpTb=True, escapeMessage=True):
         '''Dumps the error p_message in p_buffer or in r_ if p_buffer is None'''
         if withinElement:
-            buffer.write('<%s>' % withinElement.OD.nsName)
+            buffer.write(f'<{withinElement.OD.nsName}>')
             for subTag in withinElement.subTags:
-                buffer.write('<%s>' % subTag.nsName)
-        buffer.write('<office:annotation><dc:creator>POD</dc:creator>' \
-          '<dc:date>%s</dc:date><text:p>' % time.strftime('%Y-%m-%dT%H:%M:%S'))
+                buffer.write(f'<{subTag.nsName}>')
+        timeS = time.strftime('%Y-%m-%dT%H:%M:%S')
+        buffer.write(f'<office:annotation><dc:creator>POD</dc:creator>' \
+                     f'<dc:date>{timeS}</dc:date><text:p>')
         if escapeMessage:
             buffer.dumpContent(message)
         else:
@@ -96,8 +99,8 @@ class PodError(Exception):
             subTags = withinElement.subTags[:]
             subTags.reverse()
             for subTag in subTags:
-                buffer.write('</%s>' % subTag.nsName)
-            buffer.write('</%s>' % withinElement.OD.nsName)
+                buffer.write(f'</{subTag.nsName}>')
+            buffer.write(f'</{withinElement.OD.nsName}>')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def getUuid(removeDots=False, prefix='f'):

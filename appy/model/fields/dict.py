@@ -23,11 +23,11 @@ class SepRow:
         # An optional CSS class to apply to the row contaning this cell
         self.rowCss = rowCss
 
-    def get(self, field):
+    def get(self, field, subFields):
         '''Produces the chunk of XHTML code representing this row'''
         rowCss = f' class="{self.rowCss}"' if self.rowCss else ''
         cellCss = f' class="{self.cellCss}"' if self.cellCss else ''
-        return f'<tr valign="top"{rowCss}><td colspan="{len(field.fields)+1}"' \
+        return f'<tr valign="top"{rowCss}><td colspan="{len(subFields)+1}"' \
                f'{cellCss}>{self.text}</td></tr>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -37,6 +37,7 @@ class Dict(List):
        whose attributes are determined by parameter "fields" that, similarly to
        the List field, determines sub-data for every entry in the dict. This
        field is build on top of the List field.'''
+
     SepRow = SepRow
 
     # As an outer type, a Dict stores persistent mappings
@@ -45,10 +46,11 @@ class Dict(List):
     # PX for rendering a single row
     pxRow = Px('''
      <!-- Separation row -->
-     <x if="not rowId">::text.get(field)</x>
+     <x if="not rowId">::text.get(field, subFields)</x>
 
      <!-- Row -->
-     <tr if="rowId" valign="top" class=":'even' if loop.rowId.odd else 'odd'"
+     <tr if="rowId" valign=":field.contentAlign"
+         class=":'even' if loop.rowId.odd else 'odd'"
          var2="x=totalsC.reset() | None">
       <x if="not minimal">:field.pxFirstCell</x>
       <td><b>::text</b></td>
@@ -63,7 +65,7 @@ class Dict(List):
     pxTable = Px('''
      <table var="isEdit=layout == 'edit'" if="isEdit or value"
             id=":f'list_{name}'" class=":field.getTableCss(_ctx_)"
-            width=":field.width"
+            width=":field.width" data-name=":field.getTableName(o)"
             var2="keys=field.keys(o);
                   subFields=field.getSubFields(o, layout);
                   swidths=field.getWidths(subFields);
@@ -88,7 +90,10 @@ class Dict(List):
 
       <!-- Totals -->
       <x if="totals">:totals.px</x>
-     </table>''')
+     </table>
+
+     <!-- The text to show if the field is empty -->
+     <div if="not value and layout=='view'">::field.getValueIfEmpty(o)</div>''')
 
     def __init__(self, keys, fields, validator=None, multiplicity=(0,1),
       default=None, defaultOnEdit=None, show=True, renderable=None, page='main',
@@ -96,17 +101,18 @@ class Dict(List):
       writePermission='write', width='', height=None, maxChars=None, colspan=1,
       master=None, masterValue=None, focus=False, historized=False,
       mapping=None, generateLabel=None, label=None, subLayouts=List.Layouts.sub,
-      widths=None, view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None, totalRows=None, totalCols=None, headerAlign='middle',
-      listCss=None):
+      widths=None, view=None, cell=None, buttons=None, edit=None, custom=None,
+      xml=None, translations=None, totalRows=None, totalCols=None,
+      headerAlign='middle', contentAlign='top', listCss=None, valueIfEmpty='-'):
         # Call the base constructor
-        List.__init__(self, fields, validator, multiplicity, default,
+        super().__init__(fields, validator, multiplicity, default,
           defaultOnEdit, show, renderable, page, group, layouts, move,
           readPermission, writePermission, width, height, maxChars, colspan,
           master, masterValue, focus, historized, mapping, generateLabel, label,
-          subLayouts, widths, view, cell, buttons, edit, xml, translations,
-          totalRows=totalRows, totalCols=totalCols, headerAlign=headerAlign,
-          listCss=listCss)
+          subLayouts, widths, view, cell, buttons, edit, custom, xml,
+          translations, totalRows=totalRows, totalCols=totalCols,
+          headerAlign=headerAlign, contentAlign=contentAlign, listCss=listCss,
+          valueIfEmpty=valueIfEmpty)
         # Method in "keys" must return a list of tuples (key, title): "key"
         # determines the key that will be used to store the entry in the
         # database, while "title" will get the text that will be shown in the ui
@@ -118,7 +124,7 @@ class Dict(List):
         # For a nice rendering of your dict, some of the tuples returned by
         # method "keys" can be "separator rows". The tuple representing such a
         # row must have the form (None, sepRow). "None" indicates that this is
-        # not a row of data; "sepRow" must be a SepRow instance (see hereabove)
+        # not a row of data; "sepRow" must be a SepRow object (see hereabove)
         # that will determine content and style for the separator row.
         self.keys = keys
 
@@ -137,6 +143,7 @@ class Dict(List):
 
     def getStorableValue(self, o, value, single=False):
         '''Gets p_value in a form that can be stored in the database'''
+        if value is None: return
         r = PersistentMapping()
         for k, v in value.items():
             r[k] = self.getStorableRowValue(o, v)
@@ -151,6 +158,10 @@ class Dict(List):
 
     def getEntryName(self, sub, row, name=None):
         '''Add suffix "-d-" to the entry name'''
+        # p_sub is the name of the concerned sub-field (as a string that must
+        # correspond to the unprefixed sub-field name), or the Field object
+        # itself. p_row is the key corresponding to the dict entry for which the
+        # entry name must be computed.
         return super().getEntryName(sub, row, name, '-d-')
 
     def remove(self, o, key):
@@ -161,12 +172,20 @@ class Dict(List):
         del(val[key])
         o.values[self.name] = val
 
-    def store(self, o, value, overwrite=False):
-        '''Stores the p_value (produced by m_getStorableValue) on p_o. If some
-           entry from p_value already exists in the DB value, it is updated,
-           not overwritten.'''
+    def store(self, o, value, overwrite=True):
+        '''Stores p_value on p_o. If some entry from p_value already exists in
+           the DB value, it is updated, not overwritten, unless p_overwrite is
+           True.'''
         if not self.persist: return
+        # Delete the value when relevant
+        if overwrite and value is None and self.name in o.values:
+            del o.values[self.name]
+            return
+        # Ensure the stored value is a persistent mapping
         dbValue = o.values.get(self.name)
+        if dbValue is not None and not isinstance(dbValue, PersistentMapping):
+            o.values[self.name] = dbValue = PersistentMapping(dbValue)
+        # Update the whole value, or update it item per item
         if dbValue is None or overwrite:
             o.values[self.name] = value
         else:

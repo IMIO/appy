@@ -27,16 +27,16 @@ class Color(Field):
       maxChars=13, colspan=1, master=None, masterValue=None, focus=False,
       historized=False, mapping=None, generateLabel=None, label=None,
       sdefault=None, scolspan=1, swidth=None, sheight=None, persist=True,
-      inlineEdit=False, view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None):
+      inlineEdit=False, view=None, cell=None, buttons=None, edit=None,
+      custom=None, xml=None, translations=None):
         # Call the base constructor
-        Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
-          show, renderable, page, group, layouts, move, indexed, mustIndex,
+        super().__init__(validator, multiplicity, default, defaultOnEdit, show,
+          renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, filterField, readPermission,
           writePermission, width, height, maxChars, colspan, master,
           masterValue, focus, historized, mapping, generateLabel, label,
           sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
-          buttons, edit, xml, translations)
+          buttons, edit, custom, xml, translations)
         # Define the corresponding Python type for values stored for this type
         self.pythonType = str
         # The "Color" HTML field requires a default value

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -104,17 +102,22 @@ class Config:
         #
         # Keys must correspond to file names, not prefixed with any path-related
         # info.
-        self.versions = {'appy.css':56, 'appy.js':40, 'calendar.js':3}
+        self.versions = {'appy.css':90, 'appy.js':58, 'calendar.js':11}
+
+        # Log any file download representing more than this number of bytes. By
+        # "download", we mean, a file downloaded by a Appy client on a Appy
+        # server.
+        self.logDownloadAbove = 2097152 # 2Mb
 
     def check(self, messages):
         '''Checks that every entry in p_self.map is valid'''
         for key, path in self.map.items():
-            # Paths must be pathlib.Path instances
+            # Paths must be pathlib.Path objects
             if not isinstance(path, pathlib.Path):
                 raise Exception(MAP_VAL_KO)
-            # Paths must exist and be folders
+            # Paths should exist and be folders
             if not path.is_dir():
-                raise Exception(PATH_KO % path)
+                messages.append(PATH_KO % path)
         # Ensure the RAM root is not used as key in self.map
         if self.ramRoot in self.map:
             raise Exception(RAM_ROOT_KO % self.ramRoot)
@@ -173,9 +176,9 @@ class Static:
     def notFound(class_, handler, config):
         '''Raise a HTTP 404 error if the resource defined by p_handler.parts was
            not found.'''
-        path = '/%s/%s' % (config.root, '/'.join(handler.parts))
+        path = f'/{config.root}/{"/".join(handler.parts)}'
         code = HTTPStatus.NOT_FOUND # 404
-        handler.log('app', 'error', '%d @ %s' % (code.value, path))
+        handler.log('app', 'error', f'{code.value} @ {path}')
         resp = handler.resp
         resp.code = code
         resp.build()
@@ -190,22 +193,24 @@ class Static:
 
     @classmethod
     def write(class_, handler, path, modified, content=None, fileInfo=None,
-              disposition='attachment', downloadName=None, enableCache=True):
+              disposition='attachment', downloadName=None, enableCache=True,
+              forcedMime=None):
         '''Serves, to the browser, the content of the file whose path on disk is
            given in p_path or whose content in RAM is given in p_content.'''
-        # ~
+        #
         # If the file @ p_path has not changed since the last time the browser
         # asked it, return an empty response with code 304 "Not Modified". Else,
         # return file content with a code 200 "OK".
-        # ~
+        #
         # If p_path corresponds to a DB-controlled file, his corresponding
         # p_fileInfo is given. In that case, p_disposition will be taken into
-        # account. Else, it will be ignored, unless p_downloadName is specified.
-        # ~
+        # account (values can be "inline" or "attachment". Else, it will be
+        # ignored, unless p_downloadName is specified.
+        #
         # For privacy reasons, p_enableCache may be disabled (ie, for
         # potentially sensitive content from File fields). This way, it cannot
         # be stored in the browser cache.
-        # ~
+        #
         browserDate = handler.headers.get('If-Modified-Since')
         modified = fileInfo.modified if fileInfo else modified
         if isinstance(modified, DateTime): modified = modified.timeTime()
@@ -216,12 +221,12 @@ class Static:
             # Identify MIME type
             set = resp.setHeader
             mimeType, encoding = mimetypes.guess_type(path)
-            mimeType = mimeType or 'application/octet-stream'
+            mimeType = forcedMime or mimeType or 'application/octet-stream'
             set('Content-Type', mimeType)
             # Define content disposition
             if fileInfo or downloadName:
                 niceName = downloadName or fileInfo.uploadName
-                disp = '%s;filename="%s"' % (disposition, niceName)
+                disp = f'{disposition};filename="{niceName}"'
                 set('Content-Disposition', disp)
             # ~~~ Manage caching ~~~
             if enableCache:

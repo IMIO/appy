@@ -6,13 +6,16 @@ import re
 
 from appy.xml import Tag
 from appy.pod.elements import *
+from appy.pod.graphic import Graphic
 from appy.pod.buffers import FileBuffer, MemoryBuffer
 from appy.pod.odf_parser import OdfEnvironment, OdfParser
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OdTable:
     '''Informations about the currently parsed Open Document (Od)table'''
-    def __init__(self):
+
+    def __init__(self, name=None):
+        self.name = name
         self.nbOfColumns = 0
         self.nbOfRows = 0
         self.curColIndex = None
@@ -27,6 +30,7 @@ class OdInsert:
        at a given place in the odt file (ie: add the pod-specific fonts and
        styles). OdInsert instances define such 'inserts' (what to insert and
        when).'''
+
     def __init__(self, odtChunk, tag, nsUris={}):
         # The odt chunk to insert
         self.odtChunk = odtChunk
@@ -39,6 +43,7 @@ class OdInsert:
 class PodEnvironment(OdfEnvironment):
     '''Contains all elements representing the current parser state during
        parsing.'''
+
     # Possibles modes
     # ADD_IN_BUFFER: when encountering an impactable tag, we must continue to
     #                dump it in the current buffer.
@@ -98,6 +103,11 @@ class PodEnvironment(OdfEnvironment):
         # Currently parsed expression within an ODS template
         self.currentOdsExpression = None
         self.currentOdsHook = None
+        # A Graphic object representing the currently parsed pod graphic
+        self.currentOdsGraphic = None
+        # A dict of Appy-controlled graphics ~{s_path: Graphic}~. s_path refers
+        # to the folder, within the pod result, where LO stores the graphic.
+        self.odsGraphics = None
         # Currently parsed expression from a database-display field
         self.currentDbExpression = None
         # Names of some tags, that we will compute after namespace propagation
@@ -110,10 +120,10 @@ class PodEnvironment(OdfEnvironment):
 
     def getTable(self):
         '''Gets the currently parsed table'''
-        res = None
+        r = None
         if self.tableIndex != -1:
-            res = self.tableStack[self.tableIndex]
-        return res
+            r = self.tableStack[self.tableIndex]
+        return r
 
     def transformInserts(self):
         '''Now the namespaces were parsed; p_inserts can be set in the form of a
@@ -146,7 +156,8 @@ class PodEnvironment(OdfEnvironment):
             self.propagateNamespaces()
         tableNs = self.ns(self.NS_TABLE)
         if tag == Table.OD.nsName:
-            self.tableStack.append(OdTable())
+            name = attrs.get('table:name')
+            self.tableStack.append(OdTable(name=name))
             self.tableIndex += 1
         elif tag == Row.OD.nsName:
             table = self.getTable()
@@ -166,6 +177,8 @@ class PodEnvironment(OdfEnvironment):
                 table.nbOfColumns += int(attrs[cols])
             else:
                 table.nbOfColumns += 1
+        elif tag == 'draw:object' and self.currentOdsGraphic:
+            self.currentOdsGraphic.register(self, attrs)
         return ns
 
     def onEndElement(self):
@@ -194,20 +207,20 @@ class PodEnvironment(OdfEnvironment):
         text = ns[self.NS_TEXT]
         office = ns[self.NS_OFFICE]
         tags = {
-          'tracked-changes': '%s:tracked-changes' % text,
-          'change': '%s:change' % text,
-          'annotation': '%s:annotation' % office,
-          'table': '%s:table' % table,
-          'table-name': '%s:name' % table,
-          'table-cell': '%s:table-cell' % table,
-          'table-column': '%s:table-column' % table,
-          'formula': '%s:formula' % table,
-          'value-type': '%s:value-type' % office,
-          'value': '%s:value' % office,
-          'string-value': '%s:string-value' % office,
-          'span': '%s:span' % text,
-          'number-columns-spanned': '%s:number-columns-spanned' % table,
-          'number-columns-repeated': '%s:number-columns-repeated' % table,
+          'tracked-changes': f'{text}:tracked-changes',
+          'change': f'{text}:change',
+          'annotation': f'{office}:annotation',
+          'table': f'{table}:table',
+          'table-name': f'{table}:name',
+          'table-cell': f'{table}:table-cell',
+          'table-column': f'{table}:table-column',
+          'formula': f'{table}:formula',
+          'value-type': f'{office}:value-type',
+          'value': f'{office}:value',
+          'string-value': f'{office}:string-value',
+          'span': f'{text}:span',
+          'number-columns-spanned': f'{table}:number-columns-spanned',
+          'number-columns-repeated': f'{table}:number-columns-repeated',
         }
         self.tags = tags
         self.ignorableTags = (tags['tracked-changes'], tags['change'])
@@ -232,6 +245,15 @@ class PodEnvironment(OdfEnvironment):
         self.currentContent = ''
         return r.strip()
 
+    def isPodCell(self, tag, attrs):
+        '''Does this p_tag represent, in an ods template, a pod cell, ie, a cell
+           containing a pod expression ?'''
+        tags = self.tags
+        return tag == tags['table-cell'] and tags['formula'] in attrs and \
+               tags['value-type'] in attrs and \
+               attrs[tags['value-type']] == 'string' and \
+               attrs[tags['formula']].startswith('of:="')
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PodParser(OdfParser):
     def __init__(self, env, caller):
@@ -244,12 +266,13 @@ class PodParser(OdfParser):
     def startElement(self, tag, attrs):
         e = OdfParser.startElement(self, tag, attrs)
         ns = e.onStartElement(tag, attrs)
+        tags = e.tags
         officeNs = ns[e.NS_OFFICE]
         textNs = ns[e.NS_TEXT]
         tableNs = ns[e.NS_TABLE]
         if tag in e.ignorableTags:
             e.state = e.IGNORING
-        elif tag == e.tags['annotation']:
+        elif tag == tags['annotation']:
             # Be it in an ODT or ODS template, an annotation is considered to
             # contain a POD statement.
             e.state = e.READING_STATEMENT
@@ -258,13 +281,9 @@ class PodParser(OdfParser):
             # considered to be a POD expression.
             e.state = e.READING_EXPRESSION
             e.exprHasStyle = False
-            if (tag == 'text:database-display') and \
-               ('text:column-name' in attrs):
+            if tag == 'text:database-display' and 'text:column-name' in attrs:
                 e.currentDbExpression = attrs['text:column-name']
-        elif (tag == e.tags['table-cell']) and e.tags['formula'] in attrs and \
-             e.tags['value-type'] in attrs and \
-             (attrs[e.tags['value-type']] == 'string') and \
-             attrs[e.tags['formula']].startswith('of:="'):
+        elif e.isPodCell(tag, attrs):
             # In an ODS template, any cell containing a formula of type "string"
             # and whose content is expressed as a string between double quotes
             # (="...") is considered to contain a POD expression. But here it
@@ -277,25 +296,34 @@ class PodParser(OdfParser):
                 e.addSubBuffer()
             e.currentBuffer.addElement(e.currentTag.name)
             hook = e.currentBuffer.dumpStartElement(tag, attrs,
-                     ignoreAttrs=(e.tags['formula'], e.tags['string-value'],
-                                  e.tags['value-type']),
+                     ignoreAttrs=(tags['formula'], tags['string-value'],
+                                  tags['value-type']),
                      hook=True)
             # We already have the POD expression: remember it on the env
-            e.currentOdsExpression = attrs[e.tags['string-value']]
+            e.currentOdsExpression = attrs[tags['string-value']]
             e.currentOdsHook = hook
         else:
             if e.state == e.IGNORING:
                 pass
             elif e.state == e.READING_CONTENT:
+                # Dump an Element object if the current tag is impactable
                 if tag in e.impactableTags:
                     if e.mode == e.ADD_IN_SUBBUFFER:
                         e.addSubBuffer()
                     e.currentBuffer.addElement(e.currentTag.name)
+                    graphic = Graphic.get(tag, attrs, e)
+                else:
+                    graphic = None
+                # Dump the start tag in the current buffer
                 e.currentBuffer.dumpStartElement(tag, attrs)
+                # If a pod graphic is encountered, get info allowing to
+                # complete it afterwards.
+                if graphic:
+                    e.currentOdsGraphic = graphic
             elif e.state == e.READING_STATEMENT:
                 pass
             elif e.state == e.READING_EXPRESSION:
-                if (tag == (e.tags['span'])) and not e.currentContent.strip():
+                if (tag == (tags['span'])) and not e.currentContent.strip():
                     e.currentBuffer.dumpStartElement(tag, attrs)
                     e.exprHasStyle = True
         e.manageInserts(tag)
@@ -312,7 +340,7 @@ class PodParser(OdfParser):
         elif tag == e.tags['annotation']:
             # Manage statement
             oldCb = e.currentBuffer
-            actionElemIndex = oldCb.createPodActions(e.currentStatement)
+            actionElemIndex = oldCb.createActions(e.currentStatement)
             e.currentStatement = []
             if actionElemIndex != -1:
                 e.currentBuffer = oldCb.\
@@ -383,9 +411,9 @@ class PodParser(OdfParser):
             else:
                 e.currentBuffer.dumpContent(content)
         elif e.state == e.READING_STATEMENT:
-            # Ignore note meta-data: creator, date, sender-initials.
+            # Ignore note meta-data: creator, date, sender-initials
             if e.currentTag.nsName in e.NOTE_TAGS:
-                e.currentContent += content
+                e.currentContent = f'{e.currentContent}{content}'
         elif e.state == e.READING_EXPRESSION:
-            e.currentContent += content
+            e.currentContent = f'{e.currentContent}{content}'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

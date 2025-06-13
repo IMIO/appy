@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''<table>
  <tr>
   <td>Default cell style</td>

@@ -4,13 +4,14 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os, sys, time, socket, logging, pathlib, selectors, threading
+import os, sys, time, socket, logging, pathlib, selectors, threading, platform
 
 from appy.px import Px
 from appy import utils, version
 from appy.model.root import Model
 from appy.database import Database
 from appy.utils import url as uutils
+from appy.utils import executeCommand
 from appy.server.pool import ThreadPool
 from appy.utils.path import getShownSize
 from appy.model.utils import Object as O
@@ -20,9 +21,11 @@ from appy.server.handler import HttpHandler, VirtualHandler
 
 # Constants  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 START_CLASSIC = ':: Starting server ::'
-START_CLEAN   = ':: Starting clean mode ::'
+START_CLEAN   = ':: Starting clean mode%s ::'
+CLEAN_RISH    = ' ("rise file from the ashes" method=%s)'
 START_RUN     = ':: Starting run mode (%s) ::'
 READY         = '%s:%s ready (process ID %d).'
+RUNNING_APP   = 'Running app::%s'
 STOP_CLASSIC  = ':: %s:%s stopped ::'
 STOP_CLEAN    = ':: Clean end ::'
 STOP_RUN      = ':: Run end ::'
@@ -40,8 +43,17 @@ THR_LIMITS_KO = 'killThreadLimit (%d) should be > hungThreadLimit (%d)'
 SPAWN_IF_KO   = 'spawnIfUnder (%d) should be < than the number of threads (%d)'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
     '''HTTP server configuration for a Appy site'''
+
+    # A warning to those using non-free software
+    NONFREE_WARN = 'Using proprietary software reduces your freedom, makes ' \
+                   'you depend on companies whose growth may cause ethical ' \
+                   'problems and endanger your privacy as well as the world ' \
+                   'balance.'
 
     def __init__(self):
         # The server address
@@ -59,6 +71,18 @@ class Config:
         # The version of HTTP in use, as a float value. Currently, 1.0 and 1.1
         # are supported.
         self.httpVersion = 1.1
+        # Encoding for the HTTP headers
+        self.headersEncoding = 'iso-8859-1'
+        # Header key storing the host name = the domain name or address under
+        # which the server running this site is known. The standard one is
+        # "Host", but, when reverse proxies are in the way between the browser
+        # and the Appy server, another key may be used, such as X-Forwarded-Host
+        # or X-Forwarded-Server. For determining the host name, being the basis
+        # for generating all absolute URLs in pages returned to the browser,
+        # Appy will first try to retrieve it from the HTTP header key mentioned
+        # in p_self.hostKey. If this key is not found, Appy will retrieve it
+        # from standard key 'Host'.
+        self.hostKey = 'X-Forwarded-Host'
         # The value of the "SameSite" attribute for cookies. Can be "Lax" or
         # "Strict". More info on https://developer.mozilla.org/en-US/docs/Web/
         #                         HTTP/Headers/Set-Cookie/SameSite
@@ -75,21 +99,47 @@ class Config:
         # "debugLevel" below).
         self.pollInterval = 0.1
         # If attribute "debugLevel" is > 0, additional debug info will be
-        # produced on stdout. If debug level is...
+        # produced. If debug level is...
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # 1 | log is added before and after reading requests lines on client
+        # 1 | For every database-related request, 2 entries are dumped in the
+        #   | site log for every hit: one when the hit is done, one when the
+        #   | response is returned.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # 2 | For every request (including static requests, being excluded from
+        #   | debugLevel=1), 2 entries are dumped in the
+        #   | site log for every hit: one when the hit is done, one when the
+        #   | response is returned.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # 3 | app log is added before and after reading requests lines on client
         #   | sockets (to check if there is no I/O block there) ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # 2 | log is added in the server's infinite loop (every "pollInterval"
-        #   | seconds), to check if the server is not blocked somewhere. At this
-        #   | level, log also occurs everytime the server socket accepts a new
-        #   | client connection.
+        # 4 | app log is added in the server's infinite loop (every
+        #   | "pollInterval" seconds), to check if the server is not blocked
+        #   | somewhere. At this level, log also occurs everytime the server
+        #   | socket accepts a new client connection.
         #   |
         #   | When using this debug level, set a poll interval being higher (2
-        #   | seconds or more). It will slow down the server must will produce
+        #   | seconds or more). It will slow down the server but will produce
         #   | less verbose output.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.debugLevel = 0
+        # If you want to log HTTP headers for some incoming requests, set a
+        # regular expression (produced via the re.compile function) in one or
+        # all of the 2 following attributes. Static requests are requests for
+        # static content, like CSS, JS files or images; dynamic requests are
+        # those requiring updating or getting content via a database connection.
+        # These regular expressions will be applied to URL request paths (ie,
+        # everything that is found after the domain name. For example, for URL
+        # https://appyframe.work/su/ck?s=true, the regular expression will be
+        # applied on the "/su/ck?s=true" part.
+        # These 2 attributes will be RAM-editable by a Manager via the web
+        # intertace (admin-zone, page "Log"). In a production environment, avoid
+        # hard-coding values for these attributes in your app or ext' config
+        # file; instead, set a value through the web interface, only during a
+        # limited period of time. This can be convenient for observing HTTP
+        # headers within incoming web service calls.
+        self.logHeadersStatic = None
+        self.logHeadersDynamic = None
         # Configuration for static content (set by m_set below)
         self.static = None
         # Traversers. A "traverser" is a name that can be used at the root of a
@@ -113,9 +163,9 @@ class Config:
         self.traversers = {}
         # The path to the site. Will be set by m_set below.
         self.sitePath = None
-        # ~
+        #
         # Options for the pool of threads
-        # ~
+        #
         # The initial number of threads to run
         self.threads = 5
         # The maximum number of requests a worker thread will process before
@@ -170,9 +220,9 @@ class Config:
     def getHost(self, handler, withPort=True):
         '''Gets this server's hostname'''
         # In order to determine the host name, use, in that order, HTTP header
-        # keys "X-Forwarded-Host" or "Host".
+        # key mentioned in p_self.hostKey or "Host".
         headers = handler.headers
-        r = headers.get('X-Forwarded-Host') or headers.get('Host')
+        r = headers.get(self.hostKey) or headers.get('Host')
         if r:
             # v_r may contain the port. Remove it if it is present and
             # p_withPort is False.
@@ -185,7 +235,7 @@ class Config:
             # Use p_self.address as base
             r = self.address
             if withPort and self.port != 80:
-                r += ':%d' % self.port
+                r = f'{r}:{self.port}'
         return r
 
     def getUrl(self, handler, relative=False):
@@ -198,18 +248,18 @@ class Config:
             # Get protocol from header key "X-Forwarded-Proto" when present
             protocol = headers.get('X-Forwarded-Proto') or self.protocol
             # Build the base of the URL
-            base = '%s://%s' % (protocol, host)
+            base = f'{protocol}://{host}'
         # Add a potential path prefix to URLs
         prefix = headers.get('X-Forwarded-Prefix')
-        prefix = '/%s' % prefix if prefix else ''
-        return '%s%s' % (base, prefix)
+        prefix = f'/{prefix}' if prefix else ''
+        return f'{base}{prefix}'
 
     def getProtocolString(self):
         '''Returns the string representing the HTTP protocol version'''
         # For HTTP 1.0 and HTTP 1.1, return always HTTP 1.1
         version = self.httpVersion
         nb = str(version) if version > 1.1 else '1.1'
-        return 'HTTP/%s' % nb
+        return f'HTTP/{nb}'
 
     def inUse(self):
         '''Returns True if (self.address, self.port) is already in use'''
@@ -238,18 +288,53 @@ class Config:
         threads = self.threads
         assert spawnIf <= threads, (SPAWN_IF_KO % (spawnIf, threads))
 
+    def getOsInfo(self):
+        '''Returns, as a chunk of XHTML, info about the OS running the current
+           Appy server.'''
+        r = platform.system()
+        if r == 'Linux':
+            distro = ''
+            if hasattr(platform, 'freedesktop_os_release'):
+                # Add details and info about the distro
+                try:
+                    distro = platform.freedesktop_os_release()
+                    # Get distro info as a sub-table
+                    rows = []
+                    for name, val in distro.items():
+                        row = f'<tr><th>{name}</th><td>{val}</td></tr>'
+                        rows.append(row)
+                    distro = f'<table class="small discreet topSpace">' \
+                             f'{bn.join(rows)}</table>'
+                except OSError:
+                    pass
+            r = f'<div>{r}</div><div class="discreet">{platform.platform()}' \
+                f'</div>{distro}'
+        else:
+            # Add a warning
+            r = f'<div>{r}</div><div class="discreet topSpace">⚠️ ' \
+                f'{self.NONFREE_WARN}</div>'
+        return r
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Server:
     '''Appy HTTP server'''
+
+    # Make some names available gere
+    platform = platform
+
+    # Some elements will be traversable
+    traverse = {}
 
     def __init__(self, config, mode, method=None, ext=None):
         # p_config is the main app config
         self.config = config
         self.appyVersion = version.verbose
         # Tell clients the server name and version
-        self.nameForClients = 'Amnesiac/1.0 Python/%s' % sys.version.split()[0]
+        self.nameForClients = f'Amnesiac/1.0 Python/{sys.version.split()[0]}'
         # If an ext is there, load it
-        if ext: __import__(ext.name)
+        if ext:
+            __import__(ext.name)
+            config.model.extPath = ext
         # Ensure the config is valid
         warnings = config.check()
         # p_mode can be:
@@ -318,6 +403,8 @@ class Server:
         self.scheduler = Scheduler(self)
         # The server is ready
         if self.classic:
+            # Explain what app (and, possibly, ext) is loaded on this site
+            logger.info(RUNNING_APP % config.model.getAppExt())
             logger.info(READY % (cfg.address, cfg.port, os.getpid()))
 
     def init(self, config):
@@ -335,7 +422,8 @@ class Server:
         if self.classic:
             text = START_CLASSIC
         elif self.mode == 'clean':
-            text = START_CLEAN
+            part = CLEAN_RISH % method if method else ''
+            text = START_CLEAN % part
         elif self.mode == 'run':
             text = START_RUN % method
         logger = self.loggers.app
@@ -357,19 +445,19 @@ class Server:
         '''Logs a traceback'''
         self.loggers.app.error(utils.Traceback.get().strip())
 
-    def tlog(self, message, level=1, clientPort=None):
+    def tlog(self, message, level=3, clientPort=None):
         '''Output p_message if the debug level requires it'''
         # "tlog" means "thread log" because every p_message produced by this
         # method will be prefixed with the name of the currently running thread.
-        # ~~~
+        #
         # Do not log anything if the debug level is not appropriate
         if self.config.server.debugLevel < level: return
         # Get the name of the currently running thread
         name = threading.current_thread().getName()
         # Output the p_message on stdout, prefixed with the thread name and the
         # client port number when available.
-        port = '%d :: ' % clientPort if clientPort else ''
-        self.loggers.app.info('%s :> %s%s' % (name, port, message))
+        port = f'{clientPort} :: ' if clientPort else ''
+        self.loggers.app.info(f'{name} :> {port}{message}')
 
     def shutdown(self):
         '''Normal server shutdown'''
@@ -390,7 +478,7 @@ class Server:
         self.logShutdown()
         # Shutdown the loggers
         logging.shutdown()
-        # -= Warning =- hereafter, we enter a "blind" zone :: no log
+        # -= Warning =- hereafter, we enter a "blind" zone :: No log
         if self.mode == 'bg':
             # Delete the "pid" file when it exists
             pidFile = self.config.database.getPidPath()
@@ -485,7 +573,7 @@ class Server:
         clientSocket, clientAddress = socket.accept()
         self.selector.register(clientSocket, selectors.EVENT_READ,
                                self.manageClientRequest)
-        self.tlog(NEW_CLI % clientAddress, level=2)
+        self.tlog(NEW_CLI % clientAddress, level=4)
 
     def serveForever(self):
         '''Defines the server's infinite loop'''
@@ -502,7 +590,7 @@ class Server:
                 # quite verbose, but interesting if you want to check that the
                 # server is not blocked.
                 self.registered = len(selector.get_map()) - 1
-                self.tlog(POLLING % self.registered, level=2)
+                self.tlog(POLLING % self.registered, level=4)
                 try:
                     events = selector.select(timeout=config.pollInterval)
                 except (KeyboardInterrupt, InterruptedError) as ie:
@@ -539,19 +627,19 @@ class Server:
         # Complete the name when appropriate
         if name:
             # If no extension is found in p_name, we suppose it is a PNG image
-            name = name if '.' in name else '%s.png' % name
+            name = name if '.' in name else f'{name}.png'
             if base is None and not ram:
                 # Get the base folder containing the resource
                 base = config.ui.images.get(name) or 'appy'
-            name = '/%s' % name
+            name = f'/{name}'
         else:
             base = base or 'appy'
         # Patch p_base if the static resource is in RAM
         if ram: base = cfg.static.ramRoot
-        r = '%s/%s/%s%s' % (cfg.getUrl(handler), cfg.static.root, base, name)
+        r = f'{cfg.getUrl(handler)}/{cfg.static.root}/{base}{name}'
         if not bg: return r
-        suffix = ';background-size:%s' % bg if isinstance(bg, str) else ''
-        return 'background-image:url(%s)%s' % (r, suffix)
+        suffix = f';background-size:{bg}' if isinstance(bg, str) else ''
+        return f'background-image:url({r}){suffix}'
 
     def getUrlParams(self, params):
         '''Return the URL-encoded version of dict p_params as required by
@@ -559,8 +647,8 @@ class Server:
         # Manage special parameter "unique"
         if 'unique' in params:
             if params['unique']:
-                params['_hash'] = '%f' % time.time()
-            del(params['unique'])
+                params['_hash'] = f'{time.time():.6f}'
+            del params['unique']
         return uutils.encode(params, ignoreNoneValues=True)
 
     def getUrl(self, o, sub=None, relative=False, **params):
@@ -589,12 +677,12 @@ class Server:
         # The base app URL
         r = self.config.server.getUrl(o.H(), relative=relative)
         # Add the object ID
-        r = '%s/%s' % (r, o.id)
+        r = f'{r}/{o.id}'
         # Manage p_sub
-        r = '%s/%s' % (r, sub) if sub else r
+        r = f'{r}/{sub}' if sub else r
         # Manage p_params
         if not params: return r
-        return '%s?%s' % (r, self.getUrlParams(params))
+        return f'{r}?{self.getUrlParams(params)}'
 
     def patchUrl(self, url, **params):
         '''Modifies p_url and injects p_params into it. They will override their
@@ -606,26 +694,55 @@ class Server:
             parameters.update(params)
         else:
             parameters = params
-        return '%s?%s' % (r, self.getUrlParams(parameters))
+        return f'{r}?{self.getUrlParams(parameters)}'
+
+    def getLoVersion(self):
+        '''Gets the version of LibreOffice being installed on the server I am
+           currently running.'''
+        out, err = executeCommand(('soffice', '--version'))
+        return err or out or '?'
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                 PXs
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     view = Px('''
-     <x var="cfg=config.server; server=handler.server">
+     <x var="cfg=config.server; server=handler.server; info=server.platform">
       <h2>Server configuration</h2>
       <table class="small">
-       <tr><th>Server</th><td>:cfg.address</td></tr>
+       <tr><th>Name</th><td>:info.node()</td></tr>
+       <tr><th>Address</th><td>:cfg.address</td></tr>
        <tr><th>Port</th><td>:cfg.port</td></tr>
        <tr><th>Protocol</th><td>:cfg.protocol</td></tr>
        <tr><th>Mode</th><td>:server.mode</td></tr>
        <tr><th>Registered client sockets</th><td>:server.registered</td></tr>
-       <tr><th>Appy</th><td>:server.appyVersion</td></tr>
+       <tr var="level=config.server.debugLevel;
+                baseUrl=f'{tool.url}/Server/updateDebugLevel?delta'">
+        <th>Log level</th>
+        <td><x>:level</x>
+         <!-- Increment / decrement the log level -->
+         <div style="display:inline-flex;float:right;gap:1em;font-weight:bold">
+          <a if="level &lt; 4" title="Increment" href=":f'{baseUrl}=1'"> + </a>
+          <a if="level &gt; 0" title="Decrement" href=":f'{baseUrl}=-1'"> - </a>
+         </div>
+        </td>
+       </tr>
       </table>
+
+      <h2>Hardware and software</h2>
+      <table class="small">
+       <tr><th>Hardware</th>
+        <td>:f'{info.machine()} ({" · ".join(info.architecture())})'</td></tr>
+       <tr><th>OS</th><td>::cfg.getOsInfo()</td></tr>
+       <tr><th>Python</th><td>:info.python_version()</td></tr>
+       <tr><th>ZODB</th><td>:config.database.getZodbVersion()</td></tr>
+       <tr><th>Appy</th><td>:server.appyVersion</td></tr>
+       <tr><th>LibreOffice</th><td>:server.getLoVersion()</td></tr>
+      </table>
+
       <x if="server.pool">
        <h2>Threads status (initial number of threads=<x>:cfg.threads</x>).</h2>
-       <x>::server.pool.getTracked()</x>
+       <x>::server.pool.getTracked(handler)</x>
       </x>
       <h2>HTTP headers for the current request</h2>
       <table class="grid">
@@ -635,4 +752,16 @@ class Server:
        </tr>
       </table>
      </x>''')
+
+    traverse['updateDebugLevel'] = 'Manager'
+    @classmethod
+    def updateDebugLevel(class_, tool):
+        '''This method RAM-updates the config-defined debug level'''
+        delta = int(tool.req.delta) # May be negative
+        val = tool.config.server.debugLevel + delta
+        if 0 <= val <= 4:
+            tool.config.server.debugLevel = val
+            tool.goto(message=f'Debug level set to {val}.')
+        else:
+            tool.goto(message=f'Aborted :: Wrong delta.')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

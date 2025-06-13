@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import re, random, sys
+import re, random, sys, time
 
 from appy import utils
 from appy.px import Px
 from appy.data import Countries
-from appy.model.fields import Field
 from appy.utils.string import Normalize
 from appy.xml.cleaner import StringCleaner
 from appy.ui.layout import Layouts, Layout
+from appy.model.fields import Field, Validator
 from appy.database.operators import Operator, in_
 from appy.model.fields.multilingual import Multilingual
 
@@ -22,6 +20,100 @@ alpha  = re.compile('[a-zA-Z0-9]')
 letter = re.compile('[a-zA-Z]')
 digits = '0123456789'
 letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class NumberSelect(Validator):
+    '''Validator used for validating a selection of numbers encoded as a
+       string.'''
+
+    # A typical use of such a validator is for checking field values
+    # representing a selection of pages to print for some document. For example,
+    # if one wants to print pages 2, 5, 7 to 19 and 56, a string field may hold
+    # value "2;5;7-19;56", and validating that such a value is valid may be
+    # performed by this NumberSelect class.
+
+    # This class also offers methods for determining if a number is among a
+    # range of selected numbers.
+
+    def __init__(self, max, min=1, sep=';', rangeSep='-'):
+        # The maximum number one may encode in the field
+        self.max = max
+        # The minimum number one may encode in the field
+        self.min = min
+        # The separator to use between individual numbers
+        self.sep = sep
+        # The separator to use for defining a range of numbers
+        self.rangeSep = rangeSep
+
+    def validNumber(self, value):
+        '''Return True if p_value corresponds to a valid number'''
+        try:
+            n = int(value)
+            return self.min <= n <= self.max
+        except ValueError:
+            return
+
+    def validRange(self, value):
+        '''Return True if p_value is a valid range of numbers'''
+        min, max = value.split(self.rangeSep)
+        return self.validNumber(min) and self.validNumber(max) and \
+               int(min) < int(max)
+
+    def validate(self, o, value):
+        '''Validates that p_value conforms to p_self'''
+        # Spit p_value into parts
+        for part in value.split(self.sep):
+            # v_part can be a number or a range
+            sepCount = part.count(self.rangeSep)
+            if sepCount == 1:
+                # A range
+                method = 'validRange'
+            elif sepCount > 1:
+                return o.translate('number_select_ko', mapping=self.__dict__)
+            else:
+                method = 'validNumber'
+            if not getattr(self, method)(part):
+                return o.translate('number_select_ko', mapping=self.__dict__)
+        # If we are here, all the parts are valid
+        return True
+
+    def getValues(self, value):
+        '''Returns value parts from this validated string p_value, as a basis
+           for determining if a given number is among a range of selected
+           numbers as validated by this NumberSelect object (p_self).'''
+        # Indeed, beyond validating values, the NumberSelect class also offers
+        # methods allowing to check whether a value is among a range of selected
+        # numbers.
+        #
+        # As a first step towards this objective, m_getValues converts a raw,
+        # string p_value into a 2-tuple of sets. The first set contains all the
+        # individual numbers as found on p_value, while the second set contains
+        # all the ranges found in p_value. Each range is represented as a tuple
+        # of the form: (i_min, i_max).
+        #
+        # p_value is considered to be a valid value according to p_self
+        numbers = set()
+        ranges = set()
+        if value:
+            for part in value.split(self.sep):
+                if self.rangeSep in part:
+                    # A range
+                    miN, maX = part.split(self.rangeSep)
+                    ranges.add((int(miN), int(maX)))
+                else:
+                    numbers.add(int(part))
+        return numbers, ranges
+
+    def isAmong(self, number, numbers, ranges):
+        '''Is this integer p_number among p_numbers or p_ranges ?'''
+        # p_numbers and p_ranges must have been computed by p_getValues
+        # The easy part: check whether p_number is among p_numbers
+        if number in numbers: return True
+        # Check if p_number is among one of these p_ranges
+        for miN, maX in ranges:
+            # Is p_number among (v_miN, v_maX) ?
+            if miN <= number <= maX:
+                return True
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class String(Multilingual, Field):
@@ -37,11 +129,12 @@ class String(Multilingual, Field):
 
     # Some predefined regular expressions that may be used as validators
     c = re.compile
-    EMAIL = c('[a-zA-Z][\w\.-]*[a-zA-Z0-9]*@[a-zA-Z0-9][\w\.-]*[a-zA-Z0-9]\.' \
-              '[a-zA-Z][a-zA-Z\.]*[a-zA-Z]')
-    ALPHANUMERIC = c('[\w-]+')
-    URL = c('(http|https):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*(\.[a-z]{2,5})?' \
-            '(([0-9]{1,5})?\/.*)?')
+    aZ09  = '[a-zA-Z0-9]'
+    aZ    = '[a-zA-Z]'
+    EMAIL=c(fr'{aZ09}[\w\.-]*{aZ09}*@{aZ09}[\w\.-]*{aZ09}\.{aZ}[a-zA-Z\.]*{aZ}')
+    ALPHANUMERIC = c(r'[\w-]+')
+    URL = c(r'(http|https):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*(\.[a-z]{2,5})?' \
+            r'(([0-9]{1,5})?\/.*)?')
 
     # Default ways to render multilingual fields
     defaultLanguagesLayouts = {
@@ -74,7 +167,7 @@ class String(Multilingual, Field):
 
     editUni = Px('''
      <input type="text"
-       var="inputId='%s_%s' % (name, lg) if lg else name;
+       var="inputId=f'{name}_{lg}' if lg else name;
             placeholder=field.getPlaceholder(o)"
        id=":inputId" name=":inputId" size=":field.getInputSize()"
        maxlength=":field.maxChars" placeholder=":placeholder"
@@ -83,10 +176,10 @@ class String(Multilingual, Field):
 
     search = Px('''
      <input type="text" maxlength=":field.maxChars" size=":field.swidth"
-            value=":field.sdefault" name=":widgetName"
-            style=":'text-transform:%s' % field.transform"/><br/>''')
+            value=":field.getAttribute(o, 'sdefault')" name=":widgetName"
+            style=":f'text-transform:{field.transform}'"/><br/>''')
 
-    # Some predefined functions that may also be used as validators
+    # Some predefined functions that may be used as validators
     @staticmethod
     def _MODULO_97(o, value, complement=False):
         '''p_value must be a string representing a number, like a bank account.
@@ -125,9 +218,6 @@ class String(Multilingual, Field):
     def MODULO_97_COMPLEMENT(o, value): return String._MODULO_97(o, value, True)
     BELGIAN_ENTERPRISE_NUMBER = MODULO_97_COMPLEMENT
 
-    # Prefixes for which the Belgian NISS must be patched (see m_BELGIAN_NISS)
-    nissModuloPrefixes = ('0', '1', '2', '3')
-
     @staticmethod
     def BELGIAN_NISS(o, value):
         '''Returns True if the NISS in p_value is valid'''
@@ -138,11 +228,44 @@ class String(Multilingual, Field):
         if len(niss) != 11: return False
         # When NRN begins with some prefix, it must be prefixed with number "2"
         # for checking the modulo 97 complement. It is related to the birth
-        # year, coded on 2 chars: must 20 considered as 1920 or 2020 ?
-        if niss[0] in String.nissModuloPrefixes:
-            niss = '2' + niss
+        # year, coded on 2 chars: must 20 be considered as 1920 or 2020 ?
+        #
+        # Compute the current and niss years (2 last figures)
+        year = time.localtime().tm_year % 100
+        nissYear = int(niss[:2])
+        # If the niss year is above the current year, we consider it is an adult
+        # born the previous century. Example: suppose we are in 2025. A niss
+        # starting with 39 will supposedly belong to a person born in 1939,
+        # while a niss starting with 25 will supposedly belong to a baby born in
+        # 2025. In this latter case, the NISS must be prefix with figure 2
+        # before computing the module 97 complement.
+        prefix = '' if nissYear > year else '2'
+        niss = f'{prefix}{niss}'
         # Check modulo 97 complement
         return String.MODULO_97_COMPLEMENT(o, niss)
+
+    @staticmethod
+    def EURO_ZIP(o, value, maxChars=None):
+        '''Returns True if p_value contains a valid European postal code'''
+        # This code validates the minimal set of rules common to all european
+        # countries: having at least 4 digits, whose integer value is >1000.
+        if not value: return True
+        # Remove any non-digit char
+        pc = Normalize.digit(value)
+        # Postal code must at least be made of 4 chars and must be >1000
+        if len(pc) < 4 or int(pc) < 1000:
+            return False
+        # If p_maxChars is specified, check it
+        if maxChars is None:
+            r = True
+        else:
+            r = len(pc) <= maxChars
+        return r
+
+    @staticmethod
+    def BELGIAN_ZIP(o, value):
+        '''Returns True if p_value contains a valid Begian postal code'''
+        return String.EURO_ZIP(o, value, maxChars=4)
 
     @staticmethod
     def IBAN(o, value):
@@ -153,13 +276,13 @@ class String(Multilingual, Field):
         # First, remove any non-digit or non-letter char
         v = Normalize.alphanum(value)
         # Maximum size is 34 chars
-        if (len(v) < 8) or (len(v) > 34): return False
+        if not (8 <= len(v) <= 34): return False
         # 2 first chars must be a valid country code
         if not Countries.get().exists(v[:2].upper()): return False
         # 2 next chars are a control code whose value must be between 0 and 96.
         try:
             code = int(v[2:4])
-            if (code < 0) or (code > 97): return False
+            if not (2 <= code <= 98): return False
         except ValueError:
             return False
         # Perform the checksum
@@ -191,6 +314,9 @@ class String(Multilingual, Field):
             if not alpha.match(c): return False
         return True
 
+    # A Validator sub-class that may be used as validator
+    NumberSelect = NumberSelect
+
     def __init__(self, validator=None, multiplicity=(0,1), default=None,
       defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
       layouts=None, move=0, indexed=False, mustIndex=True, indexValue=None,
@@ -201,8 +327,8 @@ class String(Multilingual, Field):
       sdefault='', scolspan=1, swidth=None, fwidth=10, sheight=None,
       persist=True, transform='none', placeholder=None, languages=('en',),
       languagesLayouts=None, viewSingle=False, inlineEdit=False, view=None,
-      cell=None, buttons=None, edit=None, xml=None, translations=None,
-      readonly=False, stripped=True, alignOnEdit='left'):
+      cell=None, buttons=None, edit=None, custom=None, xml=None,
+      translations=None, readonly=False, stripped=True, alignOnEdit='left'):
         # Does this field store an URL ?
         self.isUrl = validator == String.URL
         # "placeholder", similar to the HTML attribute of the same name, allows
@@ -235,7 +361,7 @@ class String(Multilingual, Field):
           writePermission, width, height, maxChars, colspan, master,
           masterValue, focus, historized, mapping, generateLabel, label,
           sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
-          buttons, edit, xml, translations)
+          buttons, edit, custom, xml, translations)
         # Default width, height and maxChars
         if width is None:
             self.width  = 30
@@ -272,11 +398,10 @@ class String(Multilingual, Field):
 
     def getWidgetStyle(self):
         '''Get the styles to apply to the input widget on the edit layout'''
-        r = 'text-transform:%s;text-align:%s' % \
-            (self.transform, self.alignOnEdit)
+        r = f'text-transform:{self.transform};text-align:{self.alignOnEdit}'
         size = self.getInputSize(False)
         if size:
-            r = '%s;%s' % (r, size)
+            r = f'{r};{size}'
         return r
 
     @classmethod
@@ -287,7 +412,7 @@ class String(Multilingual, Field):
         if isinstance(value, Operator) or not value.endswith('*'): return value
         # Build and return a range
         prefix = value[:-1]
-        return in_(prefix, prefix + 'z')
+        return in_(prefix, f'{prefix}z')
 
     @classmethod
     def computeSearchValue(class_, field, req, value=None):
@@ -332,7 +457,7 @@ class String(Multilingual, Field):
         # Apply the transform
         method = String.transformMethods.get(self.transform)
         if method:
-            value = eval('value.%s()' % method)
+            value = eval(f'value.{method}()')
         return value
 
     def getUniStorableValue(self, o, value):

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
@@ -7,6 +7,7 @@
 from pathlib import Path
 import os, os.path, sys, zipfile, re, shutil
 
+from appy.utils import exeC
 from appy.xml.escape import Escape
 from appy.pod.renderer import Renderer
 from appy.pod import styles_manager as sm
@@ -101,8 +102,8 @@ class Test(BaseTest):
         contextPy = self.contextsPath / f'{contextName}.py'
         if not contextPy.is_file():
             raise TesterError(CONTEXT_KO % str(contextPy))
-        exec(f'from appy.pod.test.contexts import {contextName}')
-        module = eval(contextName)
+        module = exeC(f'from appy.pod.test.contexts import {contextName}',
+                      contextName)
         r = {}
         for elem in dir(module):
             if not elem.startswith('__'):

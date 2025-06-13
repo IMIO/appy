@@ -32,11 +32,16 @@ LOGIN_OP   = "Login change: local roles and/or history updated in %d/%d " \
              "object(s). Done in %.2f''."
 O_WALKED   = '%d objects walked so far...'
 USR_CONV   = 'User "%s" converted from "%s" to "%s".'
+SSO_USR_KO = 'SSO user "%s" could not be authenticated.'
+COOKIE_KO  = 'Unreadable cookie (%s).'
+SOL_KO     = 'When p_solely is True, p_role must be a single role and p_o ' \
+             'must be None.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class User(Base):
     '''Base class representing a user'''
-    workflow = workflow.Owner
+
+    workflow = workflow.User
     noLoginUsers = ('system', 'anon')
     specialUsers = noLoginUsers + ('admin',)
     searchAdvanced = Search('advanced', actionsDisplay='inline')
@@ -64,7 +69,7 @@ class User(Base):
         title.page.icon = 'pageProfile.svg'
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Password
+    #                               Password
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # This page contains the single field "password" allowing to edit a local
@@ -85,26 +90,29 @@ class User(Base):
                         label='User_page_password', icon='pagePassword.svg')
 
     password = Password(multiplicity=(1,1), show=showPassword, label='User',
-                        page=pagePassword)
+                        placeholder=lambda o: o.translate('password_type_new'),
+                        page=pagePassword, autofocus=True)
 
     # The encrypted password, carriable via the XML layout
     def showEncrypted(self):
         '''Allow to show encrypted password to admins only, via the xml
            layout.'''
-        if self.user.login == 'admin' and self.source != 'sso': return 'xml'
+        if self.user.login == 'admin' and self.source != 'sso' and \
+           'password' in self.values:
+            return 'xml'
 
     encrypted = Computed(show=showEncrypted, label='User',
-                         method=lambda o: o.values['password'])
+                         method=lambda o: o.values.get('password'))
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Title, name, first name
+    #                         Title, name, first name
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     baseGroup = Group('main', ['15%','85%'], style='grid', hasLabel=False)
 
     pm = {'page': Page('main', label='User_page_main', icon='pageProfile.svg'),
           'width': 28, 'layouts': Layouts.g, 'label': 'User',
-          'group': baseGroup}
+          'historized': True, 'group': baseGroup}
 
     def getTitle(self, normalized=False, useName=True, nameFirst=False,
                  nameTransform=None, firstNameTransform=None):
@@ -173,12 +181,12 @@ class User(Base):
     firstName = String(show=showName, **pm)
 
     def getFirstName(self):
-        '''Return p_self's first name, or its login if the first name is
+        '''Return p_self's first name, or call m_getTitle if the first name is
            undefined.'''
-        return self.firstName or self.login
+        return self.firstName or self.getTitle()
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Login
+    #                                 Login
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     pm['multiplicity'] = (1,1)
@@ -208,6 +216,7 @@ class User(Base):
                 return self.translate('login_in_use')
         return True
 
+    pm['layouts'] = Layouts.gd
     login = String(show=showLogin, validator=validateLogin, indexed=True, **pm)
     del pm['label']
 
@@ -222,7 +231,8 @@ class User(Base):
         '''
         guard = guard or self.guard
         # Return the cached value on the guard when appropriate
-        if not compute and not groupsOnly and self.login == guard.userLogin:
+        if not compute and not groupsOnly and \
+           (guard and self.login == guard.userLogin):
             return guard.userLogins
         # Compute it
         r = [group.login for group in self.groups or ()]
@@ -251,7 +261,8 @@ class User(Base):
                 hchanged = o.history.replaceLogin(old, new)
                 if rchanged or hchanged:
                     updated += 1
-                    o.reindex()
+                    if o.class_.isIndexable():
+                        o.reindex()
                 # Log progression
                 if (total % 10000) == 0:
                     self.log(O_WALKED % total)
@@ -292,18 +303,23 @@ class User(Base):
         return True
 
     pm['label'] = 'User'
-    email = String(show=showEmail, **pm)
+    pm['layouts'] = Layouts.g
+    email = String(validator=String.EMAIL, show=showEmail, **pm)
 
-    def getMailRecipient(self, normalized=True):
+    def getMailRecipient(self, normalized=True, mailOnly=False):
         '''Returns, for this user, the "recipient string" (first name, name,
            email) as can be used for sending an email.'''
         r = self.email or self.login
         # Ensure this is really an email
         if not String.EMAIL.match(r): return
+        # If p_mailOnly is True, return the email address only
+        if mailOnly: return r
+        # Return a formatted recipient, containing the person's first and last
+        # names.
         return f'{self.getTitle(normalized=normalized)} <{r}>'
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Roles and permissions
+    #                          Roles and permissions
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     pm['multiplicity'] = (0, None)
@@ -313,20 +329,27 @@ class User(Base):
         '''Global roles are not visible or editable under all circumstances'''
         # Local users can't be granted global roles
         if self.container != self.tool: return
-        # Only a Manager is allowed to grant global roles
+        # Only appropriate users are allowed to grant global roles
         user = self.user
-        if user.hasRole('Manager'): return True
+        if user.hasRole(self.config.model.roleSetters): return True
         # The user itself, owner of himself, can consult his roles
         if user.hasRole('Owner', self): return Show.E_
 
+    def selectRoles(self):
+        '''Returns the list of roles one may select for field "roles"'''
+        # Don't let a non-manager select role "Manager"
+        return self.model.getGrantableRoles(self, checkManager=True)
+
     roles = Select(show=showRoles, indexed=True, width=40, height=10,
-      fwidth='3em', validator=Selection(lambda o: o.model.getGrantableRoles(o)),
-      render='checkbox', checkAll=False, **pm)
+      validator=Selection(selectRoles,
+                          single=lambda o, role: o.translate(f'role_{role}')),
+      fwidth='3em', render='checkbox', checkAll=False, **pm)
 
     def addRole(self, role):
         '''Adds p_role among p_self.roles'''
         r = self.roles or []
-        r.append(role)
+        if role not in r:
+            r.append(role)
         self.values['roles'] = r
 
     def delRole(self, role):
@@ -359,21 +382,33 @@ class User(Base):
                 if role not in r: r.append(role)
         return r
 
-    def hasRole(self, role, o=None):
+    def hasRole(self, role, o=None, solely=False):
         '''Has p_self this p_role? If p_o is None, check if this user has p_role
-           globally; else, check if he has it in the context of p_o.
-
-           p_role can also be a list/tuple of roles. In this case, the method
-           returns True if the user has at least one of the listed roles.'''
-        # Try with the user's global roles, excepted if p_o is in "local" mode
+           globally; else, check if he has it in the context of p_o.'''
+        # p_role can also be a list/tuple of roles. In this case, the method
+        # returns True if the user has at least one of the listed roles.
+        #
+        # If p_solely is True, the method returns True if p_self has this global
+        # p_role and no other one (excepted automatic roles Authenticated or
+        # Anonymous). p_solely=True can be specified only if p_role is a single
+        # role and if p_o is None (no local role check must be performed).
         noo = o is None
+        # Check parameters
+        if solely and (not noo or not isinstance(role, str)):
+            raise Exception(SOL_KO)
+        # Try with the user's global roles, excepted if p_o is in "local" mode
         if noo or not o.localRoles.only:
-            r = sutils.stringIsAmong(role, self.getRoles())
-            if noo or r: return r
+            userRoles = self.getRoles()
+            r = sutils.stringIsAmong(role, userRoles)
+            # Use p_solely
+            if r and solely and len(userRoles) > 2:
+                r = False
+            if noo or r:
+                return r
         # Check now p_o(bject)'s local roles
         logins = self.getLogins()
         for login, roles in o.localRoles.items():
-            if (login in logins) and sutils.stringIsAmong(role, roles):
+            if login in logins and sutils.stringIsAmong(role, roles):
                 return True
 
     def ensureIsManager(self):
@@ -411,6 +446,10 @@ class User(Base):
     # stored in an external LDAP (source='ldap').
     source = String(show='xml', default='zodb', layouts='f', label='User')
 
+    def isLocal(self):
+        '''Returns True if p_self is a zodb user'''
+        return self.source == 'zodb'
+
     def convertTo(self, source):
         '''Convert p_self as if, now, he would be of p_source, that is different
            from is currently defined p_self.source.'''
@@ -441,17 +480,26 @@ class User(Base):
     #                               Actions
     #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
+    def mayResetPassword(self):
+        '''Anyone having write acces to a user may reset his password, excepted
+           if this action is configured to be available to Managers only.'''
+        if self.config.security.resetPasswordForManagers:
+            r = self.user.hasRole('Manager')
+        else:
+            r = self.allows('write')
+        return r
+
     def doResetPassword(self, secure=True):
         '''Triggered from the UI, this method defines a new, automatically
            generated password for this user and returns it in the UI.'''
-        user = self.user
-        if secure and not user.allows('write'):
+        if secure and not self.mayResetPassword():
             self.raiseUnauthorized()
         password = self.getField('password').generate()
         self.password = password
         self.changePasswordAtNextLogin = True
         # If p_self corresponds to the currently logged user, update the
         # authentication cookie with its new password.
+        user = self.user
         if self == user:
             self.guard.Cookie.updatePassword(self.H(), password)
         message = self.translate('new_password_text',
@@ -459,10 +507,13 @@ class User(Base):
         self.say(message, fleeting=False)
 
     def showResetPassword(self):
-        '''Action "reset password" is available to anyone having write access to
-           the user, excepted the user himself.'''
-        if self.source == 'zodb' and self.guard.mayEdit(self) and \
-           self.user != self and not self.isSpecial(includeAdmin=False):
+        '''Action "reset password" is available on local users only, to
+           authorized users only.'''
+        # If p_self is the connected user, he has the possibility to choose a
+        # new password on his page "Password": consequently, the "reset
+        # password" action is not avalable for him.
+        if self.source == 'zodb' and self.user != self and \
+           self.mayResetPassword() and not self.isSpecial(includeAdmin=False):
             return Show.BS
 
     resetPassword = Action(action=doResetPassword, show=showResetPassword,
@@ -470,7 +521,7 @@ class User(Base):
                            sicon='password.svg', render='icon')
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Hidden fields
+    #                              Hidden fields
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     hidden = {'show': False, 'layouts': 'f', 'label': 'User'}
@@ -504,10 +555,13 @@ class User(Base):
         if not r:
             # Return the first language supported by the app
             return config.languages[0]
-        # Browse prefered languages and return the first that is among app
+        # Browse preferred languages and return the first that is among app
         # language. If no language matches, return the first one as supported by
         # the app.
-        supported = config.languages
+        #
+        # When selectable languages are defined, they will constitute the basis
+        # for defining the languages being supported by the running app.
+        supported = config.selectableLanguages or config.languages
         for lang in r.split(','):
             # Extract the 2-letter code
             code = None
@@ -523,7 +577,7 @@ class User(Base):
                 # Warn the user that this one has been chosen
                 handler.resp.setHeader('Content-Language', code)
                 return code
-        # No supported language was found among user's prefered languages
+        # No supported language was found among user's preferred languages
         return supported[0]
 
     #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -545,12 +599,12 @@ class User(Base):
      <span if="not cfg.userLink">:cfg.getUserText(user)</span>''')
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Class methods
+    #                              Class methods
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     class System:
         '''Fake class representing the "system" user at places where its
-           corresponding User instance is not available yet.'''
+           corresponding User object is not available yet.'''
         login = 'system'
         logins = [login]
         roles = ['Manager', 'Authenticated']
@@ -634,7 +688,9 @@ class User(Base):
             user = config.sso.getUser(tool, login, createIfNotFound=True)
             if not user:
                 # For some reason, SSO user credentials could not be accepted
-                tool.raiseMessage('sso_user_blocked', isLabel=True)
+                handler.log('app', 'error', SSO_USR_KO % login)
+                tool.raiseMessage('sso_user_blocked', isLabel=True,
+                                  mapping={'login': login})
             # If authentication contexts are in use, retrieve the potentially
             # defined default context when relevant.
             if ctx is None and authContext:
@@ -718,8 +774,14 @@ class User(Base):
                f'</tr>{rows}</table>'
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Appy methods
+    #                             Base methods
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+    def onEditEarly(self, o):
+        '''(re)-compute p_self's title, computed from other fields'''
+        req = self.req
+        if req and req.page and req.page != 'main': return
+        self.updateTitle()
 
     def onEdit(self, created):
         '''To do when a user is p_created or updated'''
@@ -752,8 +814,6 @@ class User(Base):
         page = self.req.page or 'main'
         if page == 'main':
             login = self.login
-            # (re)-compute p_self's title, computed from other fields
-            self.updateTitle()
             # Ensure correctness of some infos about this user
             if isLocal and self.id == 'admin': self.ensureIsManager()
             # p_self must be owned by itself
@@ -770,11 +830,22 @@ class User(Base):
             self.changePasswordAtNextLogin = False
         return message
 
+    def mayUpdate(self, includeAdmin=False):
+        '''Conditions preventing a user from being edited or deleted'''
+        # No one can touch users "system" and "anon" (and also "admin" if
+        # includeAdmin is True).
+        if self.isSpecial(includeAdmin=includeAdmin): return
+        # Non-managers cannot edit managers
+        if self.hasRole('Manager') and not self.user.hasRole('Manager'):
+            return
+        return True
+
     def mayEdit(self):
-        '''No one can edit users "system" and "anon"'''
-        return not self.isSpecial(includeAdmin=False)
+        '''Additional conditions preventing a user from being edited'''
+        return self.mayUpdate()
 
     def mayDelete(self):
-        '''Special users cannot be deleted'''
-        return not self.isSpecial()
+        '''The condition is similar to m_mayEdit; the only difference is that
+           the "admin" user cannot be deleted but can be edited.'''
+        return self.mayUpdate(includeAdmin=True)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

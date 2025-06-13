@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
-#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import re
 
 from appy.px import Px
@@ -19,21 +17,26 @@ from appy.database.operators import and_, in_
 from appy.database.indexes.text import TextIndex
 from appy.model.fields.multilingual import Multilingual
 
-#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n'
+
 IN_ED_MLG  = 'Is is currently not possible to inline-edit multilingual Text ' \
              'fields.'
 
-#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Replacements:
     '''Used by class Text2Html below, this class is used to define replacements
        for characters found in structured text, in order to recreate formatting
        from structured text written with some conventions.'''
 
+    # XHTML code for char "o" set as exponent (disabled by default)
+    oSup = '<sup>o</sup>'
+
     # Default replacement conventions
     default = {
-      # Replace double quotes by "guillemets" (angle quotes). The sub-dict has
-      # this meaning: if the previous char is a space (or if there is no
-      # previous char), the double quote will be replaced with an opening
+      # Replace double quotes by "guillemets" (angle quotes). The sub-dict
+      # below has this meaning: if the previous char is a space (or if there is
+      # no previous char), the double quote will be replaced with an opening
       # guillemet; else (special key "0"), it will be replaced by a closing
       # guillemet. The guillemet is flanked by a non-breakable space.
       '"': {' ': '« ', '': '« ', 0: ' »'},
@@ -44,6 +47,9 @@ class Replacements:
       '&': '&amp;' # XML escaping
     }
 
+    # In v_default, one may want to add this entry, for '°':
+    #                {'N': oSup, 'n': oSup, 0: '°'}
+
     # Among "default", some keys represent opening and ending delimiters
     delimiters = {'[': ']', '<': '>', '{': '}'}
     endDelimiters = flipDict(delimiters)
@@ -52,12 +58,12 @@ class Replacements:
     # space, excepted if such a space is already present.
     nbspChars = (':', ';', '!', '?', '%')
     for c in nbspChars:
-        default[c] = {' ': c, 0: ' %s' % c}
+        default[c] = {' ': c, 0: f' {c}'}
     whitespace = (' ', ' ')
 
     # Regular expression for replacing special markers (see "replacementFun"
     # attribute below).
-    regex = re.compile('\*(.+?)\*')
+    regex = re.compile(r'\*(.+?)\*')
 
     def __init__(self, replacements=None):
         # Apply custom replacements (if any). In order to disable a default
@@ -217,11 +223,11 @@ class Text2Html:
             # Surround the list by a paragraph. Else, self.prefix could not be
             # rendered.
             if start:
-                self.add('<%s>' % self.p, '')
-                self.add('<%s>' % tag)
+                self.add(f'<{self.p}>', '')
+                self.add(f'<{tag}>')
             else:
-                self.add('</%s>' % tag, '')
-                self.add('</%s>' % self.p)
+                self.add(f'</{tag}>', '')
+                self.add(f'</{self.p}>')
         else:
             suffix = '\n'
             if start:
@@ -230,7 +236,7 @@ class Text2Html:
                     suffix = ''
             else:
                 t = '/'
-            self.add('<%s%s>' % (t, tag), suffix)
+            self.add(f'<{t}{tag}>', suffix)
 
     def convertText(self, text):
         '''Converts, within p_text, some chars according to self.replacements
@@ -254,7 +260,7 @@ class Text2Html:
         i = len(r) - 1
         while i >= 0:
             if r[i].startswith('<p>'):
-                r[i] = '<p class="%s"%s' % (self.preListClass, r[i][2:])
+                r[i] = f'<p class="{self.preListClass}"{r[i][2:]}'
                 break
             i -= 1
 
@@ -284,12 +290,12 @@ class Text2Html:
                 if isLast:
                     inList = False
                     if self.lastLiClass:
-                        css = ' class="%s"' % self.lastLiClass
+                        css = f' class="{self.lastLiClass}"'
                     else:
                         css = ''
                 else:
                     css = ''
-                self.add('<li%s>%s</li>' % (css, self.convertText(row[2:])))
+                self.add(f'<li{css}>{self.convertText(row[2:])}</li>')
                 # Add the end list tag when relevant
                 if isLast: self.addTag('ul', start=False)
             elif row.startswith('|'):
@@ -304,7 +310,7 @@ class Text2Html:
                     if cell.startswith('_'):
                         tdh = 'th'
                         cell = cell[1:]
-                    tr += '<%s>%s</%s>' % (tdh, self.convertText(cell), tdh)
+                    tr = f'{tr}<{tdh}>{self.convertText(cell)}</{tdh}>'
                 tr += '</tr>'
                 self.add(tr)
                 if self.isLast(rows, i, '|'):
@@ -314,8 +320,8 @@ class Text2Html:
                 self.addTag(self.p)
                 # Allow the use of dashes that remain dashes (and are not
                 # converted to bullets, as above).
-                if row.startswith('-'): row = '- %s' % row[1:]
-                self.add('%s</%s>' % (self.convertText(row), self.p))
+                if row.startswith('-'): row = f'- {row[1:]}'
+                self.add(f'{self.convertText(row)}</{self.p}>')
             i += 1
         # Close the last opened list if any
         if inList: self.addTag('ul', start=False)
@@ -396,10 +402,10 @@ class Icon:
         self.type = type
         # The i18n label for the icon's tooltip. Should include the keyboard
         # shortcut when present. If None, defaults to "icon_<name>"
-        self.label = label or ('icon_%s' % name)
+        self.label = label or f'icon_{name}'
         # The name of the icon image on disk. If None, will be computed as
         # "icon_<name>.png".
-        self.icon = icon or ('icon_%s' % name)
+        self.icon = icon or f'icon_{name}'
         # The data related to this icon, as described hereabove
         self.data = data
         # If a keyboard shortcut is tied to the icon, its key code is defined
@@ -418,30 +424,32 @@ class Icon:
                 sentence, info = sentence
             else:
                 info = ''
-            div = '<div class="sentence"><a class="clickable" ' \
-                  'onclick="injectSentence(this)" title="%s">%s</a>%s</div>' % \
-                  (sentence, Px.truncateValue(sentence, width=65), info)
+            sentenceT = Px.truncateValue(sentence, width=65)
+            div = f'<div class="sentence"><a class="clickable" ' \
+                  f'onclick="injectSentence(this)" title="{sentence}">' \
+                  f'{sentenceT}</a>{info}</div>'
             sentences.append(div)
         # Add a warning message if no sentence has been found
         if not sentences:
-            sentences.append('<div class="legend">%s</div>' % \
-                             o.translate('no_sentence'))
-        return '<div class="sentenceContainer" ' \
-               'onmouseover="toggleDropdown(this) " ' \
-               'onmouseout="toggleDropdown(this,\'none\')">%s' \
-               '<div class="dropdown" style="display:none; width:350px">' \
-               '%s</div></div>' % (r, '\n'.join(sentences))
+            noS = o.translate('no_sentence')
+            sentences.append(f'<div class="legend">{noS}</div>')
+        return f'<div class="sentenceContainer" ' \
+               f'onmouseover="toggleDropdown(this) " ' \
+               f'onmouseout="toggleDropdown(this,\'none\')">{r}' \
+               f'<div class="dropdown" style="display:none; width:350px">' \
+               f'{bn.join(sentences)}</div></div>'
 
     def get(self, o):
         '''Returns the HTML chunk representing this icon'''
         shortcut = str(self.shortcut) if self.shortcut else ''
-        r = '<img class="iconTB" src="%s" title="%s" name="%s"' \
-            ' onmouseover="switchIconBack(this, true)"' \
-            ' onmouseout="switchIconBack(this, false)"' \
-            ' data-type="%s" data-data="%s" data-shortcut="%s" ' \
-            'onclick="useIcon(this)"/>' % \
-             (o.buildUrl(self.icon), o.translate(self.label), self.name,
-              self.type, self.data or '', shortcut)
+        iconUrl = o.buildUrl(self.icon)
+        title = o.translate(self.label)
+        data = self.data or ''
+        r = f'<img class="iconTB" src="{iconUrl}" title="{title}" ' \
+            f'name="{self.name}" onmouseover="switchIconBack(this, true)" ' \
+            f'onmouseout="switchIconBack(this, false)" ' \
+            f'data-type="{self.type}" data-data="{data}" ' \
+            f'data-shortcut="{shortcut}" onclick="useIcon(this)"/>'
         # Add specific stuff if icon type is "sentences"
         if self.type == 'sentences': r = self.asSentences(r, o)
         return r
@@ -457,7 +465,7 @@ Icon.all = [Icon('bold',      'wrapper', data='[]',       shortcut=66),
             # Increment the field height by <data>%
             Icon('lengthen',  'action',  data='30',       shortcut=56)]
 
-#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Text(Multilingual, Field):
     '''Field allowing to encode a text made of several paragraphs, implemented
        by a HTML textarea tag.'''
@@ -489,8 +497,8 @@ class Text(Multilingual, Field):
 
     # Unilingual view
     viewUni = cellUni = Px('''
-     <x>::field.getInlineEditableValue(o, value or '-', layout, name=name,
-                                       language=lg)</x>''')
+     <div>::field.getInlineEditableValue(o, value or '-', layout, name=name,
+                                       language=lg)</div>''')
 
     search = Px('''
      <input type="text" maxlength=":field.maxChars" size=":field.swidth"
@@ -620,9 +628,9 @@ class Text(Multilingual, Field):
 
     # Unilingual edit
     editUni = Px('''
-     <x var="tid='%s_%s' % (name, lg) if lg else name;
-             tbid='%s_tb' % tid;
-             x=hostLayout and o.Lock.set(o, user, field=field);
+     <x var="tid=f'{name}_{lg}' if lg else name;
+             tbid=f'{tid}_tb';
+             x=hostLayout and o.Lock.set(o, field=field);
              placeholder=field.getPlaceholder(o);
              showToolbar=field.showToolbar(ignoreInner=hostLayout)">
 
@@ -652,7 +660,7 @@ class Text(Multilingual, Field):
       master=None, masterValue=None, focus=False, historized=False,
       mapping=None, generateLabel=None, label=None, sdefault='', scolspan=1,
       swidth=20, fwidth=10, sheight=None, persist=True, inlineEdit=False,
-      view=None, cell=None, buttons=None, edit=None, xml=None,
+      view=None, cell=None, buttons=None, edit=None, custom=None, xml=None,
       translations=None, indexType='TextIndex',
       # Specific attributes
       placeholder=None, languages=('en',), languagesLayouts=None,
@@ -691,7 +699,7 @@ class Text(Multilingual, Field):
           writePermission, width, height, maxChars, colspan, master,
           masterValue, focus, historized, mapping, generateLabel, label,
           sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
-          buttons, edit, xml, translations)
+          buttons, edit, custom, xml, translations)
         # The *f*ilter width
         self.fwidth = fwidth
         # Specify a filter PX if the field content is indexed
@@ -732,7 +740,7 @@ class Text(Multilingual, Field):
         '''When field is structured, this method returns the Javascript code to
            execute when a key is pressed, in order to implement keyboard
            shortcuts.'''
-        return "useShortcut(event, '%s')" % tid if self.structured else ''
+        return f"useShortcut(event, '{tid}')" if self.structured else ''
 
     def onFocus(self, tid, lg, hostLayout):
         '''When field is structured, this method returns the Javascript code to
@@ -744,8 +752,8 @@ class Text(Multilingual, Field):
             id = tid
         else:
             # For inner fields, there is a unique global toolbar
-            id = '%s_%s' % (self.name, lg) if lg else self.name
-        return "linkTextToolbar('%s_tb', this)" % id
+            id = f'{self.name}_{lg}' if lg else self.name
+        return f"linkTextToolbar('{id}_tb', this)"
 
     def getPlaceholder(self, o):
         '''Returns a placeholder for the field if defined'''
@@ -768,7 +776,7 @@ class Text(Multilingual, Field):
         # If value starts with a carriage return, add a space; else, it will
         # be ignored.
         elif isinstance(r, str) and \
-           (r.startswith('\n') or r.startswith('\r\n')): r = ' ' + r
+           (r.startswith('\n') or r.startswith('\r\n')): r = f' {r}'
         return r
 
     def getUniStorableValue(self, o, value):
@@ -778,14 +786,20 @@ class Text(Multilingual, Field):
         value = StringCleaner.clean(value.replace('\r', ''))
         # Manage maxChars
         max = self.maxChars
-        if max and (len(value) > max): value = value[:max]
+        if max and len(value) > max: value = value[:max]
         return value
 
     def validateUniValue(self, o, value):
-        '''Ensures there is no invalid text within p_value'''
-        # Perfom no validation at all if there is no invalid text to detect
+        '''Text-specific validation logic'''
+        # Ensure p_self.maxChars is respected
+        maxC = self.maxChars
+        if maxC and len(value) > maxC:
+            maP = mapping={'max': maxC, 'found': len(value)}
+            return o.translate('text_overflow', maP)
+        # Ensure there is no invalid text within p_value
         patterns = self.invalidTexts
-        if not patterns: return
+        if not patterns:
+            return # Don't perfom the check: there is no invalid text to detect
         found = sutils.firstMatch(patterns, value)
         if found:
             return o.translate('invalid_text', mapping={'text': found})
@@ -793,11 +807,12 @@ class Text(Multilingual, Field):
     def getFilterValue(self, value):
         '''Manipulates p_value such that it can become pertinent search
            keyword(s).'''
-        value = super().getFilterValue(value)
-        r = sutils.Normalize.text(value).strip()
+        words = TextIndex.toIndexed(value, self)
         # Suffix it with a star only if there is a single keyword
-        if ' ' not in r:
-            r = '%s*' % r
+        if len(words) == 1:
+            r = f'{words[0]}*'
+        else:
+            r = ' '.join(words)
         return r
 
     @classmethod
@@ -837,5 +852,5 @@ class Text(Multilingual, Field):
             bar = self.pxToolbar(c)
         else:
             bar = ''
-        return '%s%s' % (Field.getListHeader(self, c), bar)
-#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        return f'{Field.getListHeader(self, c)}{bar}'
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

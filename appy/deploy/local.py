@@ -9,7 +9,7 @@
 # some of them are also required for "truly distant" deployments.
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os, sys
+import os
 from pathlib import Path
 
 from appy.tr.po import File
@@ -77,8 +77,6 @@ if __name__ == '__main__':
 
 # <site>/config.py
 config = """
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 app = '{self.app}'
 site = '{self.folder}'
@@ -211,8 +209,10 @@ class Site(Target):
         # The folder or distant specifier for the app and its ext
         self.app = app
         self.ext = ext
-        # The path to the currently running Python interpreter
-        self.python = sys.executable
+        # The Python interpreter to use. Using the absolute path to the
+        # currently running interpreter (sys.executable) does not work if you
+        # are within a Python virtual env.
+        self.python = '/usr/bin/env python3'
         # The port on which the site will listen
         self.port = port
         # The owner of the site tree (if None, the user executing the script
@@ -280,7 +280,7 @@ class App(Target):
             folder = folder.resolve()
         self.folder = folder
         # The path to the currently running Python interpreter
-        self.python = sys.executable
+        self.python = '/usr/bin/env python3'
 
     def create(self):
         '''Creates a new app'''
@@ -328,7 +328,7 @@ class Ext(App):
         # could lead to import errors.
         r = []
         name = self.app.name
-        for po in (self.app / 'tr').glob('%s-*.po' % self.app.name):
+        for po in (self.app / 'tr').glob(f'{self.app.name}-*.po'):
             r.append(po.stem.rsplit('-')[1])
         return r
 
@@ -346,6 +346,6 @@ class Ext(App):
         # override some i18n labels.
         for lang in self.getAppLanguages():
             # Create an empty file named <ext>/tr/Custom-<lang>.po
-            name = 'Custom-%s.po' % lang
+            name = f'Custom-{lang}.po'
             File(self.folder / 'tr' / name).generate()
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

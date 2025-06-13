@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput='''
 <!-- "margin-left" property on paragraphs -->
 <p>Normal paragraph with a specia char\n\t\v\x0cUn montant de \x0b\v145,00 € TVAC</p>

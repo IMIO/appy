@@ -60,26 +60,29 @@ class Sibling:
     def getIcon(class_, c, type, css, js=None):
         '''Return the img tag corresponding to the sibling of this p_type'''
         # If no p_js is passed, it means that a disabled icon must be rendered
-        title = ' title="%s"' % c._('goto_%s' % type) if js else None
-        return '<img src="%s"%s class="clickable %s" style="transform: ' \
-               'rotate(%ddeg)" onclick="%s"/>' % \
-               (c.svg(Sibling.icons[type]), title, css, Sibling.rotate[type],js)
+        if js:
+            text = c._(f'goto_{type}')
+            title = f' title="{text}"'
+        else:
+            title = None
+        imageUrl = c.svg(Sibling.icons[type])
+        return f'<img src="{imageUrl}"{title} class="clickable {css}" style="' \
+               f'transform:rotate({Sibling.rotate[type]}deg)" onclick="{js}"/>'
 
     def get(self, c):
         '''Get the HTML chunk allowing to navigate to this sibling'''
         if self.o:
             # We already have the object and thus its URL
-            url = "'%s'" % self.o.url
+            url = f"'{self.o.url}'"
         else:
             # We only know the index of the object to go to. The object ID is in
             # the browser's session storage.
             container = self.container
             searchName = container.uiSearch.name
             key = container.search.getSessionKey(searchName)
-            url = "buildSiblingUrl('%s',%d)" % (key, self.getSiblingIndex())
+            url = f"buildSiblingUrl('{key}',{self.getSiblingIndex()})"
         # Build the JS code allowing to navigate to the sibling element
-        js = "gotoSibling(%s,'%s','%s','%s')" % \
-             (url, self.nav, self.page, self.popup)
+        js = f"gotoSibling({url},'{self.nav}','{self.page}','{self.popup}')"
         return self.getIcon(c, self.type, self.iconCss, js)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -97,7 +100,7 @@ class Siblings:
     # Icons for going to the current object's siblings
     pxNavigate = Px('''
      <div class="snav">
-      <!-- Go to the source URL (search or referred object) -->
+      <!-- Go to the source URL (search or ref object) -->
       <div if="not popup and gotoSource"
            class="pagePicto">::snav.getGotoSource(svg, _)</div>
 
@@ -122,7 +125,7 @@ class Siblings:
        <x>::snav.getIcons(_ctx_, previous=False)</x>
 
        <!-- Go to the element number... -->
-       <div if="snav.showGotoNumber()" class="pagePicto"
+       <div if="snav.showGotoNumber(_ctx_)" class="pagePicto"
             var2="field=snav.field; sourceUrl=snav.sourceObject.url;
                   total=snav.total">:snav.pxGotoNumber</div>
       </div></div>''',
@@ -135,16 +138,21 @@ class Siblings:
        function gotoSourceSearch(key) {
          // Post a form allowing to re-trigger a search
          let params = getSearchInfo(key, false);
-         post(siteUrl + '/tool/Search/results', params);
+         post(`${siteUrl}/tool/Search/results`, params);
        }
 
        function askSiblings(key, index) {
          /* Re-trigger a server search for getting siblings of the object having
             this p_index; store and return these IDs. */
-         let url = siteUrl + '/tool/Search/jresults',
+         let url = `${siteUrl}/tool/Search/jresults`,
              params = getSearchInfo(key, false);
          params['index'] = index;
-         askAjaxChunk(url, 'POST', params, '*'+key);
+         // Manage "+" escaping within search criteria
+         if ('criteria' in params) {
+           params['criteria-'] = params['criteria'];
+           delete params['criteria'];
+         }
+         askAjaxChunk(url, 'POST', params, `*${key}`);
          return getSearchInfo(key, true);
        }
 
@@ -154,18 +162,18 @@ class Siblings:
            ids = askSiblings(key, index);
          }
          let iid = ids[index];
-         return siteUrl + '/' + iid + '/view';
+         return `${siteUrl}/${iid}/view`;
        }
 
        function gotoSibling(url, nav, page, popup) {
-         let formName = (popup == 'True') ? 'siblingsPopup' : 'siblings',
+         let formName = (popup === 'True')? 'siblingsPopup' : 'siblings',
              f = document.forms[formName];
          // Navigate to the sibling by posting a form
          f.action = url;
          f.page.value = page;
          f.popup.value = popup;
          // Avoid losing navigation
-         if (nav) f.action = f.action + '?nav=' + nav;
+         if (nav) f.action = `${f.action}?nav=${nav}`;
          f.submit();
         }''')
 
@@ -231,11 +239,11 @@ class Siblings:
         nav = self.getNavKey()
         page = self.req.page or 'main'
         for siblingType in Sibling.types:
-            needIt = eval('self.%sNeeded' % siblingType)
-            name = '%sSibling' % siblingType
+            needIt = eval(f'self.{siblingType}Needed')
+            name = f'{siblingType}Sibling'
             setattr(self, name, None)
             if not needIt: continue
-            index = eval('self.%sIndex' % siblingType)
+            index = eval(f'self.{siblingType}Index')
             # If siblings are there, try to get the sibling object for this type
             if self.siblings:
                 o = self.getSiblingObject(index)
@@ -262,19 +270,22 @@ class Siblings:
         for name in Siblings.byType[previous]:
             sibling = getattr(self, name)
             if sibling:
-                r += sibling.get(c)
+                r = f'{r}{sibling.get(c)}'
             else:
                 # Get a disabled icon
-                r += Sibling.getIcon(c, name[:-7], 'disabled %s' % self.iconCss)
+                icon = Sibling.getIcon(c, name[:-7], f'disabled {self.iconCss}')
+                r = f'{r}{icon}'
         return r
 
-    def getGotoSource(self, svg, _, imgCss=None):
+    def getGotoSource(self, svg, _, imgCss=None, params=None):
         '''Get the link allowing to return to the source URL'''
         text, message = self.getBackTexts(_)
         # Additional CSS class for the icon
-        css = ' %s' % imgCss if imgCss else ''
-        return '<a href="%s" title="%s"><img src="%s" class="back%s"/>%s</a>'% \
-               (self.sourceUrl, message, svg('arrowsA'), css, text)
+        css = f' {imgCss}' if imgCss else ''
+        params = params or ''
+        imageUrl = svg('arrowsA')
+        return f'<a href="{self.sourceUrl}{params}" title="{message}">' \
+               f'<img src="{imageUrl}" class="back{css}"/>{text}</a>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class RefSiblings(Siblings):
@@ -327,15 +338,16 @@ class RefSiblings(Siblings):
            batch where the current object lies.'''
         # Allow to go back to the batch where the current object lies
         field = self.field
-        startNumberKey = '%d_%s_objs_start' % \
-                         (self.sourceObject.iid, field.name)
+        startKey = f'{self.sourceObject.iid}_{field.name}_objs_start'
         startNumber = str(self.computeStartNumber())
         return self.sourceObject.getUrl(sub='view', page=field.pageName,
-                                       nav='no', **{startNumberKey:startNumber})
+                                        nav='no', **{startKey:startNumber})
 
-    def showGotoNumber(self):
-        '''Show "goto number" if the Ref field is numbered'''
-        return self.field.isNumbered(self.sourceObject) and (self.total > 1)
+    def showGotoNumber(self, c):
+        '''Show "goto number" if the Ref field is numbered and if we are not in
+           a phase (due to a lack of space).'''
+        return not c.inPhase and self.field.isNumbered(self.sourceObject) and \
+               self.total > 1
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class SearchSiblings(Siblings):
@@ -354,13 +366,21 @@ class SearchSiblings(Siblings):
         self.uiSearch = tool.Search.get(searchName, tool, self.class_, ctx,
                                         ui=True)
         self.search = self.uiSearch.search
+        # Is this search in front of a ref ?
+        if ',' in searchName:
+            self.fromRef = True
+            # Unwrap info from this Ref
+            self.objectId, self.refName, info = searchName.split(',')
+            # The simple name of the search within the Ref
+            self.refSearchName = info.split('*')[-1]
+        else:
+            self.fromRef = False
         super().__init__(tool, ctx, number, total, iconCss)
 
     def getNavKey(self):
         '''Returns the general navigation key for navigating to another
            sibling.'''
-        return 'search.%s.%s.%%d.%d' % (self.className, self.searchName,
-                                        self.total)
+        return f'search.{self.className}.{self.searchName}.%d.{self.total}'
 
     def getBackText(self):
         '''Computes the text to display when the user want to navigate back to
@@ -381,35 +401,42 @@ class SearchSiblings(Siblings):
            results, at the batch where the current object lies, or to the
            originating field if the search was triggered from a field.'''
         tool = self.tool
-        if ',' in self.searchName:
+        if self.fromRef:
             # Go back to the originating field
             id, name, mode = self.searchName.split(',')
             o = tool.getObject(id)
             field = o.getField(name)
-            return '%s/view?page=%s' % (o.url, field.page.name)
+            return f'{o.url}/view?page={field.page.name}'
         else:
-            url = '%s/Search/results' % tool.url
+            url = f'{tool.url}/Search/results'
             # For a custom search, do not add URL params: we will build a form
             # and perform a POST request with search criteria.
             if self.searchName == 'customSearch': return url
-            params = 'className=%s&search=%s&start=%d' % \
-                    (self.className, self.searchName, self.computeStartNumber())
+            params = f'className={self.className}&search={self.searchName}&' \
+                     f'start={self.computeStartNumber()}'
             ref = self.req.ref
-            if ref: params += '&ref=%s' % ref
-            return '%s?%s' % (url, params)
+            if ref: params = f'{params}&ref={ref}'
+            return f'{url}?{params}'
 
-    def getGotoSource(self, svg, _, imgCss=None):
+    def getGotoSource(self, svg, _, imgCss=None, params=None):
         '''Get the code allowing to re-trigger the source search'''
+        if self.fromRef:
+            # Return to the Ref, configured with the current search as current
+            # view.
+            view = f'&{self.refName}_view={self.refSearchName}&' \
+                   f'start={self.computeStartNumber()}'
+            return super().getGotoSource(svg, _, imgCss, params=view)
         # Post a form with the search parameters (and criteria for a custom
         # search) retrieved from the browser's session storage.
         text, message = self.getBackTexts(_)
         # The key storing search parameters in the session storage
-        key = '%s_%s' % (self.className, self.searchName)
+        key = f'{self.className}_{self.searchName}'
         # Additional CSS class for the icon
-        css = ' %s' % imgCss if imgCss else ''
-        return '<a class="clickable" title="%s" onclick="gotoSourceSearch' \
-               '(\'%s\')"><img src="%s" class="clickable back%s"/>%s</a>' % \
-                (message, key, svg('arrowsA'), css, text)
+        css = f' {imgCss}' if imgCss else ''
+        iconUrl = svg('arrowsA')
+        return f'<a class="clickable" title="{message}" onclick="' \
+               f'gotoSourceSearch(\'{key}\')"><img src="{iconUrl}" ' \
+               f'class="clickable back{css}"/>{text}</a>'
 
-    def showGotoNumber(self): return
+    def showGotoNumber(self, c): return
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

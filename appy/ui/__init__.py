@@ -13,18 +13,21 @@ from appy.model.utils import Object as O
 
 # Make classes from sub-packages available here  - - - - - - - - - - - - - - - -
 from appy.ui.js import Quote
+from appy.ui.dark import Dark
 from appy.ui.title import Title
 from appy.ui.iframe import Iframe
 from appy.ui.message import Message
 from appy.ui.portlet import Portlet
 from appy.ui.globals import Globals
 from appy.ui.columns import Columns
+from appy.ui.sidebar import Sidebar
 from appy.ui.template import Template
 from appy.ui.navigate import Siblings
 from appy.ui.includer import Includer
 from appy.ui.language import Language
 from appy.ui.validate import Validator
 from appy.ui.svg import Config as SvgConfig
+from appy.ui.dark import Config as DarkConfig
 
 # Some elements in this module will be traversable - - - - - - - - - - - - - - -
 traverse = {'Language': True}
@@ -105,6 +108,9 @@ class Config:
         # in RAM and will be updated with these colors.
         self.svg = SvgConfig()
 
+        # Configuration for the dark mode
+        self.dark = DarkConfig()
+
         # Name of the home page. Here are the possibilites.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "home"  | (the default one) The default home page displays the login
@@ -157,8 +163,8 @@ class Config:
         #
         # Each such attribute may also hold a function, accepting the current
         # root PX and its context as args, and returning a tuple or list as
-        # described hereabove. If name of the background image is None or the
-        # empty string, no background will be rendered. Specifying None as
+        # described hereabove. If the name of the background image is None or
+        # the empty string, no background will be rendered. Specifying None as
         # global value for any attribute is invalid.
         self.homeBackground  = ['homeBG.jpg' , 'no-repeat', 'cover']
         self.baseBackground  = ['baseBG.jpg' , 'no-repeat', 'cover']
@@ -250,7 +256,7 @@ class Config:
         self.lightColor = '#f0f0f0'
         # Alternate text color, also used for button borders and other discreet
         # places.
-        self.altColor = '#009aa4'
+        self.altColor = self.svg.showyColor
         # Variant being lighter
         self.altColorLight = '#e9f2f3'
         # Color for some selected text
@@ -285,6 +291,8 @@ class Config:
         self.headerBgColor = self.darkColor
         self.headerSpanColor = self.brightColor # Color for standard text
                                                 # rendered within in the header.
+        self.lightBgColor = self.brightColor # An alternate, light background
+                                             # color.
 
         # Text color for links
         self.linkColor = self.darkColor
@@ -292,9 +300,9 @@ class Config:
         self.messageLinkColor = self.linkColor
         # Border bottom for input fields
         self.itextBottom = '1px solid'
-        self.itextBottomColor = '#afb8d4'
+        self.itextBottomColor = 'grey'
         # Color used as "fill" color, ie, for the message box
-        self.fillColor = '#dab823'
+        self.fillColor = '#7f7e85'
         # Background color for the inline Python interpreter
         self.pythonBgColor = self.darkColor
 
@@ -358,6 +366,10 @@ class Config:
 
         # Portlet
         self.portletShowLogo = True # Logo on top of the portlet
+        # The name of the portlet logo is defined here. It can hold a function
+        # that receives the current PX and its context as args, and returns the
+        # name of the logo image.
+        self.portletLogoName = 'portletLogo'
         self.portletShowFooter = False # Portlet-specific footer
         self.portletWidth = '250px'
         self.portletMinWidth = '140px'
@@ -381,6 +393,8 @@ class Config:
         self.portletFBgColor = self.darkColor # *F*ooter background color
         self.portletFWidth = self.portletWidth # *F*ooter width
         self.portletFHeight = '100px' # *F*ooter height
+        self.portletHob = self.darkColor # *Ho*ver background on a link
+        self.portletHoc = self.brightColor # *Ho*ver color on a link
         self.pgMargin = '0.5em 0 0.3em' # *p*ortlet *group margins
         self.pgPadding = '5px 0 0 0' # *p*ortlet *group padding
         self.pgTransform = 'uppercase' # Set "none" to disable it
@@ -417,10 +431,16 @@ class Config:
         self.sTopPadding = '0 0 1em 0'
         self.sTopMargin = 'initial'
         self.sTopBorderB = 'none' # Border bottom
+        self.sTopBgColor = 'transparent'
+
+        # Calendar elements
+        self.weekEndBg = '#797979' # Background for calendar week-end cells
+        self.calActBg = '#f7f8fb' # Calendar actions' background color
+        self.calTTB = '2px solid #f7f7f7' # Calendar's *t*imeline *t*d *b*order
+        self.calTFS = '85%' # Calendar's *t*imeline *f*ont *s*ize
 
         # Other elements
         self.gridFiltersMargin = '20px 0 0 0' # Filter in grid search results
-        self.weekEndBg = '#797979' # Background for calendar week-end cells
         self.ecWidth = '12px' # Width for *e*xpand / *c*ollapse icons
         self.podIWidth = '18px' # Width for the POD icons
         self.podPWidth = '50px' # Width for the POD icons in phases
@@ -432,7 +452,7 @@ class Config:
                                  # "row-reverse" to position the search/funnel
                                  # icon before the search field.
         self.gridPadding = '10px' # Padding for tables having CSS class "grid"
-        self.histMargin = 'margin:0 0 5px 0' # Margins for zone "history"
+        self.histMargin = '0 0 5px 0' # Margins for zone "history"
         self.lgMargin = '0' # Margin for a multi*l*in*g*ual block
         self.bcTitleAlignP = 'center' # *b*read*c*rumb title align. in a *p*opup
 
@@ -465,7 +485,7 @@ class Config:
         self.tabFSize = '95%' # *F*ont size
         self.tabBg = '#f1eeee' # background color for an unselected tab
         self.tabBgS = '#fbfbfb' # BG for the selected tab
-        self.tabBorder = '1px solid %s' % self.linkColor # Top, l, r borders
+        self.tabBorder = f'1px solid {self.linkColor}' # Top, l, r borders
         self.tabTransform = 'none' # Could be "uppercase"
         self.tabBorderBottom = self.tabBorder # Bottom border
         self.tabBorderBottomP = 'unset' # Bottom border for tabs within *p*hases
@@ -475,7 +495,7 @@ class Config:
         self.phaseBgColor = self.brightColor # When unselected
         self.phaseBgcColor = self.darkColor # When selected (*c*urrent)
         self.phaseFilter = 'invert(66%)' # The CSS filter to apply when selected
-        self.phaseBorderColor = self.linkColor # Set "transparent" to hide it
+        self.phaseBorderColor = '#333333' # Set "transparent" to hide it
         self.phaseColor = self.linkColor # Font color unselected
         self.phaseCcolor = self.brightColor # Font color, selected (*c*urrent)
         self.phaseMargin = '0 0 30px -30px' # Margins for phases
@@ -529,8 +549,8 @@ class Config:
         self.abuttonBgColor = 'transparent' # Standard buttons outside phases
         self.abuttonBgColorS = 'transparent' # *S*mall buttons
 
-        # Bottom space for every field
-        self.fieldBottom = '0.7em'
+        # Bottom space for every field. 0 by default, could be, ie, 0.7em
+        self.fieldBottom = '0'
 
         # Within a page, by default, the "edit" icon has an "absolute" position.
         # If you want to use standard positioning, set value "inherit".
@@ -547,7 +567,7 @@ class Config:
         # Application-wide maximum results on a single page of query results
         self.maxPerPage = 30
         # Number of translations for every page on a Translation object
-        self.translationsPerPage = 30
+        self.translationsPerPage = 50
         # If users modify translations via the ui, we must now overwrite their
         # work with the current content of po files at every server restart. In
         # any other case, it is preferable to do it.
@@ -586,7 +606,7 @@ class Config:
         # config.js, contents.css and styles.js stored in
         # appy/ui/static/ckeditor will be compatible with the version you want
         # to use.
-        self.ckVersion = '4.20.1'
+        self.ckVersion = '4.22.1'
         # ckDistribution can be "basic", "standard", "standard-all", "full" or
         # "full-all" (see doc in http://cdn.ckeditor.com).
         # Beyond choosing a CK distribution, you must also choose, on every Rich
@@ -638,7 +658,7 @@ class Config:
         # p_self.headerShow is "portlet", the home icon is not shown, because
         # replaced with the portlet logo.
         self.showHomeIcon = True
-        # When link "login" is shown (i, discreet login is enabled), must an
+        # When link "login" is shown (ie, discreet login is enabled), must an
         # icon be shown besides the link ?
         self.showLoginIcon = True
         # Must text "Disconnect" be renderer besides the "logout" icon ?
@@ -666,6 +686,13 @@ class Config:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.discreetLogin = False
 
+        # If you want additional attributes to be set to HTML pages rendered by
+        # Appy, set, in the following attribute, the required attributes as a
+        # dict of s_name:s_value pairs, or a function that returns it. If you
+        # place a function, this latter will receive 2 args: the current root
+        # PX and its context.
+        self.htmlAttributes = None
+
     def getHeaderText(self, tool):
         '''Get the permanent text that must appear in the page header'''
         # Get the text via config attribute "test"
@@ -692,17 +719,17 @@ class Config:
         if stop: return ''
         if type in ('home', 'base', 'popup'):
             # The background image for the home page or any other page
-            image, repeat, size = self.cget('%sBackground' % type, ctx)
+            image, repeat, size = self.cget(f'{type}Background', ctx)
             if not image: return
-            attrs = 'background-size:%s' % size
+            attrs = f'background-size:{size}'
         elif type == 'header':
             # The background for the page header
             image, repeat, position = self.cget('headerBackground', ctx)
             if not image: return
-            attrs = 'background-position: %s' % position
+            attrs = f'background-position:{position}'
         base = self.images.get(image) or 'appy'
-        return 'background-image: url(%s/static/%s/%s); background-repeat: ' \
-               '%s; %s' % (ctx.siteUrl, base, image, repeat, attrs)
+        return f'background-image:url({ctx.siteUrl}/static/{base}/{image});' \
+               f'background-repeat:{repeat};{attrs}'
 
     def _show(self, elem, px, context, popup):
         ''''In any case, hide p_elem in the popup. In any other situation, use
@@ -710,7 +737,7 @@ class Config:
         #if popup or (px.name.startswith('home')): return
         if popup: return
         # Use the corresponding config attribute
-        r = getattr(self, '%sShow' % elem)
+        r = getattr(self, f'{elem}Show')
         return r(px, context) if callable(r) else r
 
     def tget(self, name, tool):
@@ -741,21 +768,21 @@ class Config:
         # Apply default CSS classes
         if part == 'main':
             compact = ' mainC' if self.compact or context.popup else ''
-            r = 'main rel%s' % compact
+            r = f'main rel{compact}'
         else:
             r = ''
         # Add specific classes when relevant
         if self.css:
             add = self.css(part, px, context)
             if not add: return r
-            r = add if not r else ('%s %s' % (r, add))
+            r = add if not r else f'{r} {add}'
         return r
 
     def getFontsInclude(self):
         '''If Google Fonts are in use, return the link to the CSS include
            allowing to use it.'''
         families = '|'.join(self.googleFonts)
-        return 'https://fonts.googleapis.com/css?family=%s' % families
+        return f'https://fonts.googleapis.com/css?family={families}'
 
     def showTool(self, tool):
         '''Show the tool icon to anyone having write access to the tool,
@@ -769,22 +796,26 @@ class Config:
             r = tool.allows('write')
         return r
 
-    def patchCss(self, css, o=None):
+    def patchCss(self, css, base=None, o=None):
         '''Replaces variables possibly defined in this p_css code with values
-           from p_self.'''
-        # Values from p_self can be extended to also include values from p_o
-        return Variables.replace(css, self, o2=o)
+           from p_self, or from p_base if specified.'''
+        # Moreover, values from p_self or p_base can be extended to also include
+        # values from p_o.
+        return Variables.replace(css, base or self, o2=o)
 
     def getUserText(self, user):
         '''Get the text to show within the user link'''
         r = user.getFirstName()
         if self.userPrefix:
-            r = '%s %s' % (user.translate(self.userPrefix), r)
+            r = f'{user.translate(self.userPrefix)} {r}'
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class LinkTarget:
     '''Represents information about the target of an HTML "a" tag'''
+
+    # Default onClick JS code, being a anti-double-click protection
+    defaultOnClick = 'clickOn(this)'
 
     def __init__(self, class_=None, back=None, popup=None, forcePopup=False):
         '''The HTML "a" tag must lead to a page for viewing or editing an
@@ -792,8 +823,8 @@ class LinkTarget:
            (depends on p_popup, if not None, or attribute p_class_.popup else),
            and if p_back is specified, when coming back from the popup, we will
            ajax-refresh a DOM node whose ID is specified in p_back.'''
-        # The link leads to a instance of some Python p_class_ (the true Python
-        # class, not the metaclass).
+        # The link leads to a page related to an instance of some Python
+        # p_class_ (the true Python class, not the metaclass).
         self.class_ = class_
         # Does the link lead to a popup ?
         if popup or forcePopup:
@@ -810,8 +841,10 @@ class LinkTarget:
         # later on, allowing to open the same link in a popup. In that case, the
         # following attribute will store the JS code to open the popup.
         self.otherClick = None
-        # If the link leads to a popup, a "onClick" attribute must contain the
-        # JS code that opens the popup.
+        # If the link leads to a popup, an "onClick" attribute must contain the
+        # JS code that opens the popup. Else, the same attribute must contain an
+        # anti-multi-click JS code.
+        self.onClick = self.onClickIsDefault = None
         if toPopup:
             # Create the chunk of JS code to open the popup
             size = popup or getattr(class_, 'popup', '350px')
@@ -823,7 +856,7 @@ class LinkTarget:
                 params = f'{size[-2][:-2]},{size[-1][:-2]}'
                 if len(size) == 3:
                     # We were wrong: finally, the current target isn't a popup
-                    self.onClick = ''
+                    self.setDefaultOnClick()
                     self.target = '_self'
                     # Opening a popup will be for a future, other link target
                     click = 'otherClick'
@@ -832,7 +865,13 @@ class LinkTarget:
                 params = f"{params},null,'{back}'"
             setattr(self, click, f"openPopup('iframePopup',null,{params})")
         else:
-            self.onClick = ''
+            # Add a protection against double-clicks
+            self.setDefaultOnClick()
+
+    def setDefaultOnClick(self):
+        '''Sets the default value for p_self.onClick'''
+        self.onClick = LinkTarget.defaultOnClick
+        self.onClickIsDefault = True
 
     def getOnClick(self, back, o=None, onClick=None):
         '''Gets the "onClick" attribute, taking into account p_back DOM node ID
@@ -840,9 +879,11 @@ class LinkTarget:
         # If p_onClick is passed, force this code to execute instead of the
         # default code.
         if onClick: return onClick
-        # If we must not come back from a popup, return an empty string
+        # If we must not come back from a popup, return an empty string (or the
+        # default JS action).
         r = self.onClick
-        if not r: return r
+        if not r or self.onClickIsDefault: return r
+        # Add parameters to the JS call that opens the popup
         if o:
             # Get the CSS class to apply to the popup
             css = o.class_.getCssFor(o, 'popup')
@@ -858,8 +899,8 @@ class LinkTarget:
 
     def __repr__(self):
         cname = self.__class__.__name__
-        return f'<LinkTarget for={cname},target={self.target},onClick=' \
-               f'{self.onClick or "-"}>'
+        return f'‹LinkTarget for={cname},target={self.target},onClick=' \
+               f'{self.onClick or "-"}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Collapsible:
@@ -871,7 +912,7 @@ class Collapsible:
         '''Gets a Collapsible instance for showing/hiding some p_zone
            ("portlet" or "sidebar").'''
         icons = 'showHide' if align == 'left' else 'showHideInv'
-        return Collapsible('appy%s' % zone.capitalize(), req,
+        return Collapsible(f'appy{zone.capitalize()}', req,
                            default='expanded', icons=icons, align=align)
 
     # Various sets of icons can be used. Each one has a CSS class in appy.css
@@ -882,11 +923,11 @@ class Collapsible:
     # Icon allowing to collapse/expand a chunk of HTML
     px = Px('''
      <img var="coll=collapse; icons=coll.icons"
-          id=":'%s_img' % coll.id" align=":coll.align" class=":coll.css"
+          id=":f'{coll.id}_img'" align=":coll.align" class=":coll.css"
           onclick=":'toggleCookie(%s,%s,%s,%s,%s)' % (q(coll.id), \
                     q(coll.display), q(coll.default), \
                     q(icons.expand), q(icons.collapse))"
-       src=":coll.expanded and svg(icons.collapse) or svg(icons.expand)"/>''',
+       src=":svg(icons.collapse) if coll.expanded else svg(icons.expand)"/>''',
 
      css='''
       .expandCollapse { cursor:pointer; width:|ecWidth| }
@@ -905,47 +946,11 @@ class Collapsible:
         self.align = align
         # Must the element be collapsed or expanded ?
         self.expanded = (req[id] or default) == 'expanded'
-        self.style = 'display:%s' % (self.display if self.expanded else 'none')
+        val = self.display if self.expanded else 'none'
+        self.style = f'display:{val}'
         # The name of the CSS class depends on the set of applied icons
         self.css = icons
         self.icons = self.iconSets[icons]
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Sidebar:
-    '''The Appy sidebar'''
-
-    @classmethod
-    def show(class_, tool, o, layout, popup):
-        '''The sidebar must be shown when p_o declares to use the sidebar. If
-           it must be shown, its width is returned.'''
-        if not o or popup: return
-        sidebar = getattr(o.class_.python, 'sidebar', None)
-        if not sidebar: return
-        if callable(sidebar): sidebar = sidebar(tool)
-        if not sidebar: return
-        if sidebar.show in (True, layout):
-            # Complete user info
-            sidebar.width = sidebar.width or '320px'
-            sidebar.minWidth = sidebar.minWidth or '320px'
-            return sidebar
-
-    @classmethod
-    def getStyle(class_, sidebar, collapse):
-        '''Gets the CSS properties to apply to the sidebar'''
-        return '%s;width:%s;min-width:%s' % \
-               (collapse.style, sidebar.width, sidebar.minWidth)
-
-    px = Px('''
-     <div var="page,grouped,css,js,phases=o.getGroupedFields('main','sidebar');
-               collapse=ui.Collapsible.get('sidebar', dright, req)"
-          id=":collapse.id" class="sidebar"
-          style=":ui.Sidebar.getStyle(showSidebar, collapse)">
-      <x>::ui.Includer.getSpecific(tool, css, js)</x>
-      <x var="layout='view'">:o.pxFields</x>
-     </div>''',
-
-     css='''.sidebar { padding:|sbPadding|; position:sticky; top:0;
-                       overflow-y:auto; overflow-x:auto }''')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Breadcrumb:
@@ -968,7 +973,7 @@ class Breadcrumb:
         self.parts = None
         # The CSS classes to apply to the main breadcrumb tag
         self.css = 'pageTitle breadTitle'
-        if popup: self.css += ' pageTitleP'
+        if popup: self.css = f'{self.css} pageTitleP'
         # No breadcrumb is computed for the tool
         if o != o.tool:
             self.compute(popup=popup)
@@ -1026,12 +1031,12 @@ class Button:
             # CSS for a small button. No minimum width applies: small buttons
             # are meant to be small.
             part = 'Icon' if render == 'icon' else 'Small'
-            return '%sbutton button%s' % (prefix, part)
+            return f'{prefix}button button{part}'
         # CSS for a normal button. A minimum width (via buttonFixed) is defined
         # when the label is small: it produces ranges of buttons of the same
         # width (excepted when labels are too large), which is more beautiful.
-        if len(label) < 15: return '%sbuttonFixed button' % prefix
-        return '%sbutton' % prefix
+        if len(label) < 15: return f'{prefix}buttonFixed button'
+        return f'{prefix}button'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Footer:
@@ -1051,7 +1056,7 @@ class Browser:
     '''Determines if the browser is compatible with Appy'''
 
     # Main regex, allowing to extract browser name & version from the user agent
-    rex = re.compile('([a-zA-Z]+)(?:/|\s+)(\d+\.\d+)')
+    rex = re.compile(r'([a-zA-Z]+)(?:/|\s+)(\d+\.\d+)')
 
     # Here are some examples. Trident corresponds to IE 11.
     #   MSIE 6.0
@@ -1072,7 +1077,7 @@ class Browser:
     precedes = asDict(('Firefox', 'Chrome', 'Chromium'))
 
     # Browser names and minimal versions as supported by Appy
-    versions = {'Chrome': 87.0, 'Chromium': 87.0, 'Firefox': 90.0}
+    versions = {'Chrome': 87.0, 'Chromium': 87.0, 'Firefox': 93.0}
 
     @classmethod
     def getIncompatibilityMessage(class_, tool, handler):
@@ -1104,6 +1109,6 @@ class Browser:
         if version:
             minimal = class_.versions.get(name)
             if minimal and float(version) < minimal:
-                map = {'name': name, 'version': version, 'minimal':minimal}
+                map = {'name': name, 'version': version, 'minimal': minimal}
                 return tool.translate('old_browser', mapping=map)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -58,7 +56,7 @@ class Rich(Multilingual, Field):
             # Is this field in a grid-style group ?
             inGrid = field.inGrid()
             if field.historized:
-                # self.historized can be a method or a boolean. If it is a
+                # p_field.historized can be a method or a boolean. If it is a
                 # method, it means that under some condition, historization will
                 # be enabled. So we come here also in this case.
                 r = 'gc' if inGrid else 'c'
@@ -69,6 +67,9 @@ class Rich(Multilingual, Field):
     # Default ways to render multilingual fields
     defaultLanguagesLayouts = {
       'edit': 'horizontal', 'view': 'horizontal', 'cell': 'vertical'}
+
+    verticalLanguagesLayouts = {
+      'edit': 'vertical', 'view': 'vertical', 'cell': 'vertical'}
 
     # Override this dict, defined at the Multilingual level
     lgTop = {'view': 1, 'edit': 1}
@@ -98,10 +99,10 @@ class Rich(Multilingual, Field):
                          and guard.mayEdit(o, field.writePermission);
              value=field.injectContent(o, value) if field.inject else value">
       <div if="not mayAjaxEdit"
-           class=":css">::value or field.valueIfEmpty</div>
+           class=":css">::value or field.getValueIfEmpty(o)</div>
       <x if="mayAjaxEdit" var2="name=f'{name}_{lg}' if lg else name">
        <div class=":css" contenteditable="true"
-            id=":f'{o.iid}_{name}_ck'">::value or '-'</div>
+            id=":f'{o.iid}_{name}_ck'">::value or field.getValueIfEmpty(o)</div>
        <script if="mayAjaxEdit">::field.getJsInlineInit(o, name, lg)</script>
       </x>
      </x>''')
@@ -130,8 +131,9 @@ class Rich(Multilingual, Field):
       customStyles=None, documents=False, spellcheck=False, languages=('en',),
       languagesLayouts=None, viewSingle=False, inlineEdit=False,
       toolbar='Standard', view=None, cell=None, buttons=None, edit=None,
-      xml=None, translations=None, inject=False, valueIfEmpty='',
-      viewCss='xhtml', invalidTexts=None):
+      custom=None, xml=None, translations=None, inject=False, valueIfEmpty='-',
+      viewCss='xhtml', invalidTexts=None, transformText=None, toItalicize=None,
+      stripped=None):
         # The list of styles that the user will be able to select in the styles
         # dropdown (within CKEditor) is defined hereafter.
         self.styles = styles
@@ -234,7 +236,8 @@ class Rich(Multilingual, Field):
         #     from xhtml(o.someRichField, inject=True)
         #
         self.inject = inject
-        # The value to show on non-edit layouts if the field is empty
+        # The value to show on non-edit layouts if the field is empty. Can be a
+        # string or a method producing it.
         self.valueIfEmpty = valueIfEmpty
         # When rendering rich content on view or cell layout, standard Appy CSS
         # class named "xhtml" is applied. If you want to specify another class,
@@ -246,6 +249,45 @@ class Rich(Multilingual, Field):
         # Note that we are talking about non-exact matches here (ie, method
         # regex.search will be used, and not regex.match).
         self.invalidTexts = invalidTexts
+        # If passed, p_transformText must be a function, that will be called
+        # during the process of storing, on disk, p_self's content on some
+        # object. Within the chunk of XHTML string to store, everytime raw text
+        # is encountered, the function will be called. It must accept a string
+        # as unique arg and must return a string, being the parameter or a
+        # variant, transformed in some way. Transform functions are available in
+        # appy/xml/typo.py (use classmethod named "apply" on the chosen
+        # sub-class, but not "run*" methods).
+        self.transformText = transformText
+        # If passed, p_toItalicize must be a set of terms (or a method producing
+        # it) that, if found in field content, will be italicized = surrounded
+        # by <i></i> tags. p_toItalicize can also hold a regular expression
+        # (regex) (or a method producing it) combining all words, of the form:
+        #
+        #                         "word1|word2|..."
+        #
+        # Actually, if you pass a set in p_toItalicize, Appy will convert it to
+        # such a regex. The possibility to pass yourself a regex is for
+        # performance reasons. Suppose p_self is an inner field within a List or
+        # Dict field (this is not possible for a Rich field, but for a Poor
+        # field, being a Rich sub-class, it is). If you define, in
+        # p_toItalicize, a method producting and caching a regex in the Appy
+        # request cache, available on any object (o.cache), the regex will be
+        # computed once per request. Else, it will be recomputed for every row
+        # of data in your List/Dict field. In order to produce your regex from a
+        # set of words, you can use the Appy method, available here:
+        #
+        #              appy/xml/cleaner.py::Cleaner.getItalicizeRex
+        #
+        self.toItalicize = toItalicize
+        # When the Cleaner standardizes the content of a rich field, it strips
+        # unnecessary whitespace. In some cases, this approach could be
+        # inappropriate: it could, for example, be interesting to avoid
+        # stripping non-breaking spaces. Consequently, the list of p_stripped
+        # chars may be customized. By default, p_stripped is None: all chars
+        # considered as whitespace are stripped. But you may choose an alternate
+        # set of chars, for example, appy.utils.string.whitespaceNB_, that does
+        # not include the non-breaking space.
+        self.stripped = stripped
         # Call base constructors
         Multilingual.__init__(self, languages, languagesLayouts, viewSingle)
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
@@ -254,7 +296,7 @@ class Rich(Multilingual, Field):
           writePermission, width, height, maxChars, colspan, master,
           masterValue, focus, historized, mapping, generateLabel, label,
           sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
-          buttons, edit, xml, translations)
+          buttons, edit, custom, xml, translations)
         # The *f*ilter width
         self.fwidth = fwidth
         # No max chars by default
@@ -325,15 +367,28 @@ class Rich(Multilingual, Field):
             r = value
         return r
 
-    def getXhtmlCleaner(self, forValidation=False):
+    def getItalicized(self, o):
+        '''Returns the set of words to italicize, if relevant'''
+        it = self.toItalicize
+        return it(o) if callable(it) else it
+
+    def getXhtmlCleaner(self, o, forValidation=False):
         '''Returns a Cleaner instance tailored to p_self'''
-        texts = self.invalidTexts if forValidation else None
-        return Cleaner(invalidTexts=texts)
+        if forValidation:
+            invalid = self.invalidTexts
+            transform = None
+            italicize = None
+        else:
+            invalid = None
+            transform = self.transformText
+            italicize = self.getItalicized(o)
+        return Cleaner(invalidTexts=invalid, transformText=transform,
+                       toItalicize=italicize, stripped=self.stripped, logger=o)
 
     def validateUniValue(self, o, value):
         '''Ensure p_value as will be stored (=cleaned) is valid XHTML'''
         try:
-            self.getXhtmlCleaner(forValidation=True).clean(value)
+            self.getXhtmlCleaner(o, forValidation=True).clean(value)
         except SAXParseException as err:
             # Try after removing problematic chars
             value = StringCleaner.clean(value)
@@ -361,7 +416,7 @@ class Rich(Multilingual, Field):
         # Clean the value. When image upload is enabled, ckeditor inserts some
         # "style" attrs (ie for image size when images are resized). So in this
         # case we can't remove style-related information.
-        cleaner = self.getXhtmlCleaner()
+        cleaner = self.getXhtmlCleaner(o)
         try:
             value = cleaner.clean(value, wrap=wrap)
         except SAXParseException as err:
@@ -369,7 +424,7 @@ class Rich(Multilingual, Field):
             value = StringCleaner.clean(value)
             # ... then, re-try
             try:
-                value = self.getXhtmlCleaner().clean(value, wrap=wrap)
+                value = self.getXhtmlCleaner(o).clean(value, wrap=wrap)
             except SAXParseException as err:
                 # Errors while parsing p_value can't prevent the user from
                 # storing it.
@@ -378,7 +433,7 @@ class Rich(Multilingual, Field):
         # XHTML: the objective here, in allowing size restrictions, is to avoid
         # people or robots to inject large, insidious, content.
         max = self.maxChars
-        if max and (len(value) > max): value = value[:max]
+        if max and len(value) > max: value = value[:max]
         return value
 
     def injectContent(self, o, value):
@@ -417,7 +472,7 @@ class Rich(Multilingual, Field):
     def getCkParams(self, o, language):
         '''Gets the base params to set on a rich text field'''
         base = f'{o.buildUrl()}/ckeditor'
-        ckAttrs = {'customConfig': f'{base}/config.js?8',
+        ckAttrs = {'customConfig': f'{base}/config.js?9',
                    'contentsCss': f'{base}/contents.css',
                    'stylesSet': f'{base}/styles.js',
                    'toolbar': self.toolbar, 'format_tags':';'.join(self.styles),
@@ -457,7 +512,7 @@ class Rich(Multilingual, Field):
         return ', '.join(ck)
 
     def getJs(self, o, layout, r, config):
-        '''A rich field depend on CKeditor'''
+        '''A rich field depends on CKeditor'''
         if layout not in ('edit', 'view') or \
            ((layout == 'view') and not self.inlineEdit): return
         # Compute the URL to ckeditor CDN

@@ -25,7 +25,7 @@ class Integer(Field):
             style=":'text-align: %s' % field.alignOnEdit"
             autocomplete=":field.autoComplete and 'on' or 'off'"/>
 
-     <script if="hostLayout" var2="x=o.Lock.set(o, user, field=field)">:\
+     <script if="hostLayout" var2="x=o.Lock.set(o, field=field)">:\
       'prepareForAjaxSave(%s,%s,%s,%s)' % \
        (q(name), q(o.iid), q(o.url), q(hostLayout))</script>''')
 
@@ -65,8 +65,9 @@ class Integer(Field):
       master=None, masterValue=None, focus=False, historized=False,
       mapping=None, generateLabel=None, label=None, sdefault=('',''),
       scolspan=1, swidth=3, sheight=None, fwidth=3, persist=True,
-      inlineEdit=False, view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None, readonly=False, alignOnEdit='left', autoComplete=True):
+      inlineEdit=False, view=None, cell=None, buttons=None, edit=None,
+      custom=None, xml=None, translations=None, readonly=False,
+      alignOnEdit='left', autoComplete=True):
         # If attribute "readonly" is True (or stores a method returning True),
         # the rendered input field, on edit layouts, will have attribute
         # "readonly" set.
@@ -77,13 +78,13 @@ class Integer(Field):
         # Activate or not browser's field auto-completion
         self.autoComplete = autoComplete
         # Call the base constructor
-        Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
-          show, renderable, page, group, layouts, move, indexed, mustIndex,
+        super().__init__(validator, multiplicity, default, defaultOnEdit, show,
+          renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, None, readPermission,
           writePermission, width, height, maxChars, colspan, master,
           masterValue, focus, historized, mapping, generateLabel, label,
           sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
-          buttons, edit, xml, translations)
+          buttons, edit, custom, xml, translations)
         # Define the corresponding Python type for values stored for this type
         self.pythonType = int
         # Define the filter PX when appropriate

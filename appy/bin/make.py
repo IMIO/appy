@@ -63,6 +63,9 @@ class Make(Program):
     WRONG_APP_S  = 'Wrong app specifier: %s'
     APP_S_KO     = 'An app specifier must be of the form "%s".' % APP_S
     SPEC_APP_KO  = "In that context, the app's local path must be given."
+    NAME_CLASH   = 'Your Python interpreter already knows about a package or ' \
+                   'module named "%s". Please choose another name in order ' \
+                   'to avoid a name clash.'
 
     def defineArguments(self):
         '''Define the allowed arguments for this program'''
@@ -117,6 +120,21 @@ class Make(Program):
             i += 1
         return dependencies
 
+    def checkPackageExistence(self):
+        '''Exits if the name of the app or ext under creation corresponds to an
+           existing package or module known by the currently running Python
+           interpreter.'''
+        # We are in the process of creating an app or ext. If a module having
+        # this name already exists on the currently running Python interpreter
+        # (in the Python standard library for instance), a name clash will
+        # occur.
+        name = self.folder.name
+        try:
+            __import__(name)
+            self.exit(self.NAME_CLASH % name, printUsage=False)
+        except ImportError:
+            pass
+
     def analyseArguments(self):
         '''Check and store arguments'''
         # "folder" will be a Path created from the "folder" argument
@@ -151,9 +169,12 @@ class Make(Program):
             # Manage dependencies
             self.dependencies = self.analyseDependencies(self.args.dependencies)
         elif target == 'app':
-            # No more check for the moment. The folder can exist or not.
-            pass
+            # Do not check folder existence: the folder can exist or not.
+            # Prevent name clashes.
+            self.checkPackageExistence()
         elif target == 'ext':
+            # Prevent name clashes
+            self.checkPackageExistence()
             # The path to the ext must not exist (it is not possible to update
             # an ext, only create it).
             if self.folder.exists():

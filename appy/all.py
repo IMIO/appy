@@ -14,6 +14,7 @@ from appy.ui.columns import Col
 from appy.ui.colset import ColSet
 from appy.model.workflow import *
 from appy.xml.escape import Escape
+from appy.ui.sidebar import Sidebar
 from appy.model.fields.pod import Pod
 from appy.model.searches import Search
 from appy.model.fields.info import Info
@@ -24,6 +25,7 @@ from appy.model.fields.list import List
 from appy.model.fields.dict import Dict
 from appy.model.fields.text import Text
 from appy.model.fields.rich import Rich
+from appy.model.fields.poor import Poor
 from appy.utils.string import Normalize
 from appy.model.fields.phase import Page
 from appy.model.utils import Object as O

@@ -62,6 +62,7 @@ VAR_N_KO = 'Bad variable name "%s".'
 EVAL_KO  = 'Error while evaluating expression "%s". %s'
 MTA_C_KO = 'Wrong meta-condition "%s". A meta-condition must be a Python ' \
            'expression surrounded by single or double quotes.'
+L_IF_KO  = 'No "if" action can be linked to this "else" action.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class BufferIterator:
@@ -192,18 +193,20 @@ class Buffer:
     def dumpStartElement(self, elem, attrs={}, ignoreAttrs=(), hook=False,
                          noEndTag=False, renamedAttrs=None):
         '''Inserts into this buffer the start tag p_elem, with its p_attrs,
-           excepted those listed in p_ignoreAttrs. Attrs can be dumped with an
-           alternative name if specified in dict p_renamedAttrs. If p_hook is
-           not None (works only for MemoryBuffers), we will insert, at the end
-           of the list of dumped attributes:
-           * [pod] an Attributes instance, in order to be able, when evaluating
-                   the buffer, to dump additional attributes, not known at this
-                   dump time;
-           * [px]  an Attribute instance, representing a special HTML attribute
-                   like "checked" or "selected", that, if the tied expression
-                   returns False, must not be dumped at all. In this case,
-                   p_hook must be a tuple (s_attrName, s_expr).
-        '''
+           excepted those listed in p_ignoreAttrs.'''
+        # Attributes can be dumped with an alternative name if specified in dict
+        # p_renamedAttrs.
+        # If p_hook is not None (works only for MemoryBuffers), we will insert,
+        # at the end of the list of dumped attributes:
+        # [pod] an Attributes object, in order to be able, when evaluating the
+        #       buffer, to dump additional attributes, not known at this dump
+        #       time (in that case, p_hook is True and the Attributes object
+        #       will be created by this method);
+        # [px]  a PxAttributes object, representing special boolean XHTML
+        #       attributes like "checked" or "selected", that, if the tied
+        #       expression returns False, must not be dumped at all, as well as
+        #       dynamic attributes (in that case, p_hook already contains the
+        #       PxAttributes object).
         # With PX, the special "z" tag is being computed by an expression
         if not self.pod and elem == 'z':
             self.write('<')
@@ -227,10 +230,7 @@ class Buffer:
                 self.write('"')
         r = None
         if hook:
-            if self.pod:
-                r = self.addAttributes()
-            else:
-                self.addAttribute(*hook)
+            r = self.addAttributes(hook)
         # Close the tag
         self.write('/>' if noEndTag else '>')
         return r
@@ -295,9 +295,9 @@ class FileBuffer(Buffer):
             else:
                 raise Exception(EVAL_KO % (expression, e))
 
-    def addAttributes(self):
-        # Into a FileBuffer, it is not possible to insert Attributes. Every
-        # Attributes instance is tied to an Expression; because dumping
+    def addAttributes(self, hook):
+        # Into a FileBuffer, it is not possible to insert [Px]Attributes. Every
+        # Attributes object is tied to an Expression; because dumping
         # expressions directly into FileBuffer instances seems to be rare, it
         # should not be a severe problem.
         pass
@@ -308,13 +308,13 @@ class MemoryBuffer(Buffer):
 
     class Rex:
         '''Regular expressions in use for a memory buffer'''
-        part = '(for|if|else|with\+|with|meta-if)\s*(.*)'
-        action = re.compile('(?:(\w+)\s*\:\s*)?do\s+(\w+)(-)?(?:\s+%s)?' % part)
+        part = r'(for|if|else|with\+|with|meta-if)\s*(.*)'
+        action = re.compile(r'(?:(\w+)\s*\:\s*)?do\s+(\w+)(-)?(?:\s+%s)?'% part)
         subAction = re.compile(part)
-        for_ = re.compile('\s*([\w\-_,\s]+)\s+in\s+(.*)')
-        vars_ = re.compile('\s*([\w\-_*,\s@]+)\s*=\s*(.*)')
-        var_ = re.compile('@?[\w\-_]+')
-        from_ = re.compile('from(\+)?\s+(.*)')
+        for_ = re.compile(r'\s*([\w\-_,\s]+)\s+in\s+(.*)')
+        vars_ = re.compile(r'\s*([\w\-_*,\s@]+)\s*=\s*(.*)')
+        var_ = re.compile(r'@?[\w\-_]+')
+        from_ = re.compile(r'from(\+)?\s+(.*)')
 
     # Existing variants for the "with" statement
     withVariants = {'with': None, 'with+': None}
@@ -512,7 +512,7 @@ class MemoryBuffer(Buffer):
             self.content = f'{self.content} '
 
     def addExpression(self, expression, elem=None, tiedHook=None):
-        '''Creates an Expression instance and add it in the buffer'''
+        '''Creates an Expression object and add it in the buffer'''
         # Create the POD expression
         expr = Expression(expression, self.pod)
         # Get the meta-condition if found
@@ -532,19 +532,12 @@ class MemoryBuffer(Buffer):
         # in the buffer.
         self.content = f'{self.content} '
 
-    def addAttributes(self):
-        '''pod-only: adds an Attributes instance into this buffer'''
-        attrs = Attributes(self.env)
+    def addAttributes(self, hook):
+        '''Adds an [Px]Attributes object into this buffer'''
+        attrs = Attributes(self.env) if self.pod else hook
         self.elements[self.getLength()] = attrs
         self.content = f'{self.content} '
         return attrs
-
-    def addAttribute(self, name, expr):
-        '''px-only: adds an Attribute instance into this buffer'''
-        attr = Attribute(name, expr)
-        self.elements[self.getLength()] = attr
-        self.content = f'{self.content} '
-        return attr
 
     def _getVariables(self, expr):
         '''Returns variable definitions in p_expr as a list
@@ -587,9 +580,18 @@ class MemoryBuffer(Buffer):
             i -= 1
         return r
 
-    def createPodAction(self, actionType, statements, statementName, subExpr,
-                        podElem, minus, main=True):
-        '''Creates an Action instance, depending on p_actionType'''
+    def getLinkableIf(self, elseElem):
+        '''An (unnamed) "else" action needs to be created on this p_podElem.
+           Find and return an appropriate "if" from p_self.env.ifActions.'''
+        ifs = self.env.ifActions
+        while ifs:
+            action = ifs.pop()
+            if action.elem.isIfFor(elseElem):
+                return action
+
+    def createAction(self, actionType, statements, statementName, subExpr,
+                     podElem, minus, main=True):
+        '''Creates an Action object, depending on p_actionType'''
         if actionType == 'if':
             r = actions.If(statementName, self, subExpr, podElem, minus)
             # In the case of multi-statements, only the first "if" will be
@@ -616,7 +618,8 @@ class MemoryBuffer(Buffer):
                 del self.env.namedIfActions[ifReference]
                 self.env.ifActions.remove(linkedIfAction)
             else:
-                linkedIfAction = self.env.ifActions.pop()
+                linkedIfAction = self.getLinkableIf(podElem)
+                if not linkedIfAction: raise ParsingError(L_IF_KO)
             r = actions.Else(statementName, self, None, podElem, minus,
                              linkedIfAction)
         elif actionType == 'for':
@@ -636,7 +639,7 @@ class MemoryBuffer(Buffer):
             r = actions.Null(self, podElem)
         return r
 
-    def createPodActions(self, statements):
+    def createActions(self, statements):
         '''Tries to create action(s) based on p_statements. If the statement is
            not correct, r_ is -1. Else, r_ is the index of the element within
            the buffer that is the object of the action(s).'''
@@ -662,8 +665,8 @@ class MemoryBuffer(Buffer):
                         for e in self.elements.values()])))
             podElem = self.elements[i]
             # Create the main action
-            self.action = self.createPodAction(actionType, statements,
-              statementName, subExpr, podElem, minus)
+            self.action = self.createAction(actionType, statements,
+                                         statementName, subExpr, podElem, minus)
             # Parse the remaining statements, that can contain any number of
             # secondary actions and a from clause.
             fromClause = last = None
@@ -681,7 +684,7 @@ class MemoryBuffer(Buffer):
                     if not info:
                         raise ParsingError(BAD_S_ST % statement)
                     actionType, subExpr = info.groups()
-                    last = self.createPodAction(actionType, statements, '',
+                    last = self.createAction(actionType, statements, '',
                                              subExpr, podElem, None, main=False)
                     self.action.addSubAction(last)
             # Link the "from" clause
@@ -856,8 +859,8 @@ class MemoryBuffer(Buffer):
         for index in list(self.elements.keys()):
             if index < pos: del(self.elements[index])
 
-    reTagContent = re.compile('<(?P<p>[\w-]+):(?P<f>[\w-]+)(.*?)>.*</(?P=p):' \
-                              '(?P=f)>', re.S)
+    reTagContent = re.compile(r'<(?P<p>[\w-]+):(?P<f>[\w-]+)(.*?)>.*</(?P=p):' \
+                              r'(?P=f)>', re.S)
 
     def evaluate(self, result, context, subElements=True,
                  removeMainElems=False, slice=None):
@@ -898,7 +901,7 @@ class MemoryBuffer(Buffer):
                         else:
                             raise actions.EvaluationError(e, EVAL_KO % \
                                         (evalEntry.expr, '\n'+Traceback.get(5)))
-                elif isinstance(evalEntry, (Attributes, Attribute)):
+                elif isinstance(evalEntry, (Attributes, PxAttributes)):
                     result.write(evalEntry.evaluate(context))
                 else: # It is a subBuffer
                     if evalEntry.action:

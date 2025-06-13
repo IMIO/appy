@@ -19,13 +19,26 @@ HELP_METH = 'When action in "run", you must specify the name of the method ' \
             'to execute on your app\'s tool. When action is "start" or "fg", ' \
             'you may also specify such a method: it will be executed just ' \
             'after standard method "onInstall", if defined on the app\'s tool.'
+HELP_RISH = 'This option is only available when action is "clean". "Rishes" ' \
+            'is a portmanteau word meaning "rise [a file] from the ashes" ' \
+            'and has sense when a file mentioned in the database, via a ' \
+            'FileInfo object, is missing on the database-controlled ' \
+            'filesystem. When it occurs, the method whose name is passed in ' \
+            'this parameter (that must exist on the tool) is called with 3 ' \
+            'arguments: the concerned object, the related File field and the ' \
+            'FileInfo object. The method is supposed to find or rebuild the ' \
+            'file, if possible. If the method succeeds in doing this, it must' \
+            ' return True. Else, it must return False or None.'
 HELP_WAIT = '(do not use this, this is for Appy internal use only) When ' \
             'action is "stop" or "restart", "run" will wait WAIT seconds ' \
             'before sending the SIGINT signal to the Appy server. In this ' \
             'mode, no output at all is echoed on stdout.'
+
 ACT_KO    = 'Unknown action "%s".'
 METH_KO   = 'Specify a method name via option "-m".'
+METH_MM   = 'When action is "clean", parameter "-m" is irrelevant.'
 PORT_USED = 'Port %d is already in use.'
+RISHES_KO = 'Parameter "-r" (--rishes") has sense only if action is "clean".'
 PID_EX    = 'Existing pid file removed (server not properly shut down).'
 PID_NF    = "The server can't be stopped."
 S_START   = 'Started as process %s.'
@@ -46,25 +59,36 @@ class Run(Program):
         '''Define the allowed arguments for this program'''
         parser = self.parser
         parser.add_argument('action', help=HELP_ACT)
-        parser.add_argument('-m', '--method', type=str, help=HELP_METH)
-        parser.add_argument('-w', '--wait', type=int, help=HELP_WAIT)
+        parser.add_argument('-m', '--method' , type=str, help=HELP_METH)
+        parser.add_argument('-r', '--rishes' , type=str, help=HELP_RISH)
+        parser.add_argument('-w', '--wait'   , type=int, help=HELP_WAIT)
 
     def analyseArguments(self):
         '''Check arguments'''
         # Check that the specified action is valid
-        action = self.args.action
+        args = self.args
+        action = args.action
         if action not in Run.allowedActions:
             self.exit(ACT_KO % action)
         # Get other args
-        method = self.args.method
+        method = args.method
         wait = None
+        clean = False
         if action == 'run':
             if method is None:
                 self.exit(METH_KO)
         elif action in ('restart', 'stop'):
-            wait = self.args.wait
+            wait = args.wait
+        elif action == 'clean':
+            clean = True
+            if method:
+                self.exit(METH_MM)
+        if not clean and args.rishes:
+            self.exit(RISHES_KO)
         self.action = action
-        self.method = method
+        # In the context of a clean, p_self.method will store the "rise from
+        # ashes" method. In any other case, it will store p_self.args.method.
+        self.method = args.rishes or method
         self.wait = wait
 
     def say(self, something, cr=True):

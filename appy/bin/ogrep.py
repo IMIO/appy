@@ -372,21 +372,21 @@ class Grep(Program):
     formulaRex = re.compile('table:formula="of:=&quot;(.*?)&quot;"')
 
     # Help messages
-    HELP_K    = 'is the regular expression (or string if -s) to search ' \
+    HELP_K    = r'is the regular expression (or string if -s) to search ' \
                 'within the file(s). From the command-line, special chars ' \
                 'possibly included in the keyword (and also the replacement ' \
                 'string, if passed) must be escaped. For example, ' \
-                'cus(tom)_(agenda) must be written as  cus\(tom\)_\(agenda\).' \
+                'cus(tom)_(agenda) must be written as cus\(tom\)_\(agenda\).' \
                 ' \\2_\\1 must be written as \\\\2_\\\\1.'
     HELP_P    = 'is the path to a file or folder. If a file is passed, you ' \
                 'must pass the path to an ODF file (odt or ods). ogrep will ' \
                 'be run on this file only. If a folder is passed, ogrep will ' \
                 'be run on all ODF files found in this folder and sub-folders.'
-    HELP_R    = 'if this replacement string is passed, within matched ODF ' \
-                'files, the keyword will be replaced with it. The ' \
-                'replacement string may contain references to groups ' \
-                'possibly defined within the "keyword" regular expression, ' \
-                'but only via the "\<nb>" notation.'
+    HELP_R    = r'if this replacement string is passed, within matched ODF ' \
+                r'files, the keyword will be replaced with it. The ' \
+                r'replacement string may contain references to groups ' \
+                r'possibly defined within the "keyword" regular expression, ' \
+                r'but only via the "\<nb>" notation.'
     HELP_V    = 'dump more info about the find/replace zones (only available ' \
                 'if option "-c" is not used).'
     HELP_VV   = 'similar to -v, must with even more *v*erbosity.'

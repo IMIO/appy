@@ -3,6 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import persistent
+from http import HTTPStatus
 
 from appy.px import Px
 from appy.ui import Iframe
@@ -38,9 +39,11 @@ REF_INS_KO  = 'Param "insert" for Ref field %s is None.'
 CONT_ERR    = "Container can't be retrieved that way."
 INDEX_TEMP  = "A temp object can't be (un)indexed."
 CATALOG_KO  = 'Catalog not found for %s instance.'
+INDEX_KO    = 'Index "%s" not found on class "%s".'
 NO_ID       = 'Call to getObject with no ID.'
 NO_STR      = 'Specify the name of the class as a string.'
 F_FREEZ_KO  = 'Field "%s" is not (un)freezable.'
+RELINK_OK   = '%s %d relinked from %s %d::%s to %d::%s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Base:
@@ -65,6 +68,7 @@ class Base:
 
     # Field "searchable" defines an index containing keywords collected from all
     # other object fields having attribute searchable=True.
+
     def getSearchableText(self):
         '''Collects and returns keywords as defined on every field being
            "searchable".'''
@@ -76,25 +80,25 @@ class Base:
                 r.append(val)
         return ' '.join(r)
 
-    searchableAttributes = {'show': False, 'persist':False, 'indexed':True,
-      'default': getSearchableText, 'label':'Base', 'page': None}
-
-    searchable = Text(**searchableAttributes)
+    searchable = Text(show=False, persist=False, indexed=True,
+                      default=getSearchableText, label='Base', page=None)
 
     # Attribute "title" is a mandatory field used at various places by default,
     # for displaying base information about an object.
-    titleAttributes = {'multiplicity': (1,1), 'show': Show.EX, 'indexed': True,
-      'searchable': True, 'filterField': searchable,
-      # The following lambda allows to produce an index value suitable for
-      # sorting. In the call to m_getShownValue, language 'en' is forced in
-      # order to bypass the user language and always have a deterministic value.
-      'indexValue': lambda o, v:
-         Normalize.sortable(o.getShownValue(language='en')) if v else ''}
 
-    title = String(**titleAttributes)
+    title = String(multiplicity=(1,1), show=Show.EX, indexed=True,
+      searchable=True, filterField=searchable,
+      indexValue=lambda o, v: \
+        Normalize.sortable(o.getShownValue(language='en')) if v else '')
+
+    # The hereabove lambda allows to produce an index value suitable for
+    # sorting. In the call to m_getShownValue, language 'en' is forced in order
+    # to bypass the user language and always have a deterministic value.
+
+    p = {'multiplicity': (1,1), 'show': 'xml', 'indexed': True, 'label': 'Base',
+         'page': None}
 
     # Attribute "creator" gets the login of the user having created the object
-    p = {'multiplicity': (1,1), 'show': 'xml', 'indexed': True, 'label': 'Base'}
     creator = Computed(method=lambda o: o.history[-1].login, **p)
 
     def setCreator(self, login):
@@ -102,7 +106,7 @@ class Base:
         self.history[-1].login = login
 
     def getCreator(self, title=True):
-        '''Return the User instance (or its p_title) behind p_self.creator'''
+        '''Return the User object (or its p_title) behind p_self.creator'''
         return self.history[-1].getUser(self, title=title)
 
     # Object's creation and last modification dates
@@ -110,17 +114,27 @@ class Base:
     created = Date(default=lambda o: o.history[-1].date, persist=False, **p)
     modified = Date(default=lambda o: o.history.modified, persist=False, **p)
 
+    # The login of the last user having updated the object
+    modifier = Computed(method=lambda o: getattr(o.history, 'modifier', None),
+                        show='xml', label='Base', page=None)
+
+    def getModifier(self, title=True):
+        '''Return the user (as a User object or its p_title) having updated
+           p_self for the last time.'''
+        login = self.modifier
+        if not login: return f'({self.translate("unknown")})' if title else None
+        user = self.search1('User', login=login)
+        if not user: return login
+        return user.getTitle() if title else login
+
     # "state" is a field deduced from the object history and identifies the
     # object state according to its workflow. It must be a "select" field,
     # because it will be necessary for displaying the translated state name.
-    stateAttributes = {
-      'validator': Selection(lambda o: o.getWorkflow().listStates(o)),
-      'svalidator': Selection(lambda tool, c: c.workflow.listStates(tool)),
-      'show': 'result', 'default': lambda o: o.history[0].state,
-      'persist': False, 'indexed': True, 'height': 5, 'label':'Base'
-    }
 
-    state = Select(**stateAttributes)
+    state = Select(validator=Selection(lambda o: o.getWorkflow().listStates(o)),
+      svalidator=Selection(lambda tool, c: c.workflow.listStates(tool)),
+      show='result', default=lambda o: o.history[0].state, persist=False,
+      indexed=True, height=5, label='Base', page=None)
 
     # Field "allowed" defines an index storing the list of roles and users being
     # allowed to view this object. It will be used within catalog searches with
@@ -139,34 +153,36 @@ class Base:
         for id, roles in self.localRoles.items():
             for role in roles:
                 if role in allowedRoles:
-                    usr = 'user:%s' % id
+                    usr = f'user:{id}'
                     if usr not in r: r.append(usr)
         return r
 
     allowed = Select(multiplicity=(0, None), show=False, persist=False,
-                     indexed=True, default=getAllowed, label='Base')
+                     indexed=True, default=getAllowed, label='Base', page=None)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                             History
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    recordAttributes = {'method': History.view, 'label':'Base', 'layouts':'f',
-      'xml': lambda o, value: o.history,
-      'show': lambda o: Show.VX if o.user.hasRole('Manager') else None,
-      'page':Page('history', label='Base_page_history',
-                  sticky=True, icon='history.svg',
-                  show=lambda o: 'view' if o.user.hasRole('Manager') else None)}
-
-    record = Computed(**recordAttributes)
+    record = Computed(method=History.view, label='Base', layouts='f',
+      xml=lambda o, value: o.history,
+      show=lambda o: Show.VX if o.user.hasRole('Manager') else None,
+      page=Page('history', label='Base_page_history', sticky=True,
+                icon='history.svg',
+                show=lambda o: 'view' if o.user.hasRole('Manager') else None))
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                        UI Python interpreter
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    interpreter = Python(label='Base', layouts='f',
-      page=Page('python', label='Base_page_python', sticky=True,
-                show=lambda o: 'view' if o.user.login == 'admin' else None,
-                icon='python.svg'))
+    def showConsole(self):
+        '''Show the Python UI console only to a limited set of users'''
+        if self.user.login in self.config.security.consoleUsers:
+            return 'view'
+
+    console = Python(label='Base', layouts='f', show='view',
+                     page=Page('python', label='Base_page_python', sticky=True,
+                               icon='python.svg', show=showConsole))
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                            Properties
@@ -299,7 +315,7 @@ class Base:
         '''Get p_self's default page on p_layout'''
         # The defaut page for p_layout may be customized by special methods
         # m_getDefaultViewPage and m_getDefaultEditPage.
-        method = 'getDefault%sPage' % layout.capitalize()
+        method = f'getDefault{layout.capitalize()}Page'
         return getattr(self, method)() if hasattr(self, method) else 'main'
 
     def getCurrentPage(self, req, layout):
@@ -309,18 +325,29 @@ class Base:
         # page on p_layout.
         return req.page or self.getDefaultPage(layout)
 
-    def getObject(self, id, logMissing=False):
+    def getObject(self, id, logMissing=False, className=False):
         '''Gets an object given its p_id'''
         if not id: raise Exception(NO_ID)
-        return self.database.getObject(self.H(), id, logMissing=logMissing)
+        r = self.database.getObject(self.H(), id, logMissing=logMissing)
+        # Ignore the object if it is not an instance of the specifically desired
+        # class named p_className.
+        if className and r and r.class_.name != className:
+            r = None
+        return r
 
-    def getRefObject(self):
+    def getRefObject(self, withFieldName=False):
         '''This method returns the source object, if we are in the context of
            performing some action (like a search) in the context of a Ref.'''
         # Information about such Ref is found in the request
-        info = self.req.ref or Criteria.readFromRequest(self.H()).get('_ref')
+        info = self.req.ref
+        if not info:
+            criteria = Criteria.readFromRequest(self.H())
+            if criteria:
+                info = criteria.get('_ref')
         if not info: return
-        return self.getObject(info.split(':', 1)[0])
+        iid, name = info.split(':', 1)
+        o = self.getObject(iid)
+        return (o, name) if withFieldName else o
 
     def getPublishedObject(self):
         '''Returns the object being currently published in the UI, if any'''
@@ -328,12 +355,37 @@ class Base:
         if not traversal: return
         return traversal.o
 
+    # I tried, once, to define methods __hash__ and __eq__ being based on Appy
+    # object iids instead of RAM address, being the default behaviour. It has
+    # led to disastrous performance problems. Most notably, checking if an
+    # object was in a persistent list or not (the list containing >45k objects)
+    # took more than 25 seconds (this kind of check occurs when an object is
+    # linked in a forward or backward ref). This is because the ZODB does not
+    # load all objects into RAM, but loads a kind of "light version" for most of
+    # them. Defining hash and comparison methods based on object iids forced the
+    # ZODB to load all real objects in RAM.
+
     def __repr__(self):
         '''Returns the class name and Appy object ID'''
         id = self.id
         iid = self.iid
-        sid = 'id=%s' % id if id == iid else ('id=%s,iid=%d' % (id, iid))
-        return '<%s %s>' % (self.getClass().name, sid)
+        sid = f'id={id}' if id == iid else f'id={id},iid={iid}'
+        return f'‹{self.getClass().name} {sid}›'
+
+    def strinG(self, translated=False, path=True, titles=True):
+        '''Return summarized info about p_self, as a short string'''
+        cname = self.getClass().name
+        if translated: cname = self.translate(cname)
+        name = (self.getShownValue() or '') if titles else ''
+        if name: name = f' · {name}'
+        r = f'{cname} ⛁ {self.iid}{name}'
+        # Add, if requested, the "path" = container info
+        if path:
+            container = self.container
+            if container and container.iid != 1:
+                cont = container.strinG(translated=translated, titles=titles)
+                r = f'{cont} ∋ {r}'
+        return r
 
     def isTemp(self):
         '''Is this object temporary ?'''
@@ -343,9 +395,9 @@ class Base:
         '''Logs a p_message of some p_type'''
         return self.H().log('app', type, message)
 
-    def say(self, message, fleeting=None):
+    def say(self, message, fleeting=None, first=False):
         '''Adds p_message to the global message returned in the response'''
-        self.resp.addMessage(message, fleeting=fleeting)
+        self.resp.addMessage(message, fleeting=fleeting, first=first)
 
     def goto(self, url=None, message=None, fromPopup=False, fleeting=None):
         '''Return to some p_url or to the referer page. If you want to come back
@@ -365,11 +417,17 @@ class Base:
         '''Raise a security-related error'''
         raise self.guard.Error(msg)
 
-    def raiseMessage(self, message, isLabel=False):
+    def raiseNotFound(self, msg=None):
+        '''Raise a 404 error'''
+        return self.resp.buildError(HTTPStatus.NOT_FOUND, message=msg)
+
+    def raiseMessage(self, message, isLabel=False, mapping=None,
+                     backLink=False):
         '''Raise a nicely-rendered error, without technical details'''
         # If p_isLabel is True, p_message is not a translated message, but a
-        # to-be-translated i18n label.
-        raise MessageException(message, isLabel=isLabel)
+        # to-be-translated i18n label; in that case, a p_mapping can be passed.
+        raise MessageException(message, isLabel=isLabel, mapping=mapping,
+                               backLink=backLink)
 
     def allows(self, permission='read', raiseError=False):
         '''Check the guard's homonym method'''
@@ -389,7 +447,7 @@ class Base:
            are exclusively RAM-cached.'''
         # p_name must not contain the ".svg" file extension
         H = self.H()
-        return H.server.buildUrl(H, '%s.svg' % name, ram=True, bg=bg)
+        return H.server.buildUrl(H, f'{name}.svg', ram=True, bg=bg)
 
     def getUrl(self, sub=None, **params):
         '''See doc in appy.server.Server::getUrl'''
@@ -420,10 +478,7 @@ class Base:
         # Get the class where the field definition may be found
         class_ = self.H().server.model.classes[className] if className \
                                                           else self.getClass()
-        r = class_.fields.get(name)
-        if r is None and class_.switchFields:
-            # p_name could be a switch sub-field
-            r = class_.switchFields.get(name)
+        r = class_.getField(name, o=self)
         # Get the sub-field when relevant
         if r and isInner: r = r.getField(sub)
         # Raise an error if the field was not found and p_raiseError is True
@@ -434,29 +489,28 @@ class Base:
     def getFields(self, layout, page=None, phase=None, type=None, fields=None):
         '''Returns the list of fields to render on p_layout'''
         r = []
+        class_ = self.class_
         # Browse p_self's fields, or p_fields if passed
-        if fields is None:
-            class_ = self.class_
-            fields = class_.fields.values()
-            useClassFields = True
-        else:
-            useClassFields = False
-        for field in fields:
-            # Ignore fields not being on p_page
-            if page and field.pageName != page: continue
-            # Ignore fields not being on any page in p_phase
-            if phase and (field.page and (field.page.phase != phase)): continue
-            # Ignore fields not being of p_type
-            if type and field.type != type: continue
-            # Ignore fields that can't be rendered on p_layout
-            if not field.isRenderable(layout): continue
-            # Ignore unshowable fields
-            if not field.isShowable(self, layout): continue
-            r.append(field)
+        for fieldSet in class_.getFieldSets(self, fields):
+            for field in fieldSet.values():
+                # Ignore fields not being on p_page
+                if page and field.pageName != page: continue
+                # Ignore fields not being on any page in p_phase
+                if phase and (field.page and (field.page.phase != phase)):
+                    continue
+                # Ignore fields not being of p_type
+                if type and field.type != type: continue
+                # Ignore fields that can't be rendered on p_layout
+                if not field.isRenderable(layout): continue
+                # Ignore unshowable fields
+                if not field.isShowable(self, layout): continue
+                r.append(field)
         # Dump switch sub-fields when relevant
-        if useClassFields and class_.switchFields and layout == 'xml':
-            r += self.getFields(layout, page=page, phase=phase, type=type,
-                                fields=class_.switchFields.values())
+        if fields is None and layout == 'xml':
+            switchFields = class_.switchFields
+            if switchFields:
+                r += self.getFields(layout, page=page, phase=phase, type=type,
+                                    fields=switchFields)
         return r
 
     def getGroupedFields(self, page, layout, collect=True, fields=None):
@@ -484,36 +538,40 @@ class Base:
         css = js = phases = None # The elements to collect when relevant
         # Browse fields
         config = self.config
-        for field in (fields or self.class_.fields.values()):
-            if collect and field.page:
-                # Collect phases, for all fields, not just for fields that will
-                # be selected here.
-                if phases is None: phases = UiPhases(page, self, layout)
-                phases.addField(field)
-            # Ignore fields whose page is not p_page
-            if field.pageName != page: continue
-            # Ignore fields that must not be shown
-            if not field.isRenderable(layout) or \
-               not field.isShowable(self, layout): continue
-            if collect:
-                # Collect JS/CSS files
-                if css is None: css = []
-                field.getCss(self, layout, css)
-                if js is None: js = []
-                field.getJs(self, layout, js, config)
-            # Insert the field directly in the result if it is not in a group
-            if not field.group:
-                r.append(field)
-            else:
-                # Insert it in the right group (if the group exists on p_layout)
-                group = field.getGroup(layout)
-                if not group:
+        for fieldSet in self.class_.getFieldSets(self, fields):
+            for field in fieldSet.values():
+                if collect and field.page:
+                    # Collect phases, for all fields, not just for fields that
+                    # will be selected here.
+                    if phases is None: phases = UiPhases(page, self, layout)
+                    phases.addField(field)
+                # Ignore fields whose page is not p_page
+                if field.pageName != page: continue
+                # Ignore fields that must not be shown
+                if not field.isRenderable(layout) or \
+                   not field.isShowable(self, layout): continue
+                if collect:
+                    # Collect JS/CSS files
+                    if css is None: css = []
+                    field.getCss(self, layout, css)
+                    if js is None: js = []
+                    field.getJs(self, layout, js, config)
+                # Insert the field directly in the result if it is not in a
+                # group.
+                if not field.group:
                     r.append(field)
                 else:
-                    # Insert the UiGroup instance corresponding to field.group
-                    uiGroup = group.insertInto(r, groups, field.page,
-                                               self.class_.name)
-                    uiGroup.addElement(field)
+                    # Insert it in the right group (if the group exists on
+                    # p_layout).
+                    group = field.getGroup(layout)
+                    if not group:
+                        r.append(field)
+                    else:
+                        # Insert the UiGroup instance corresponding to
+                        # field.group.
+                        uiGroup = group.insertInto(r, groups, field.page,
+                                                   self.class_.name)
+                        uiGroup.addElement(field)
         # Finalize the data structure storing phases
         if phases: phases.finalize()
         # At this time, we may realize that p_page can't be shown on p_layout.
@@ -540,11 +598,11 @@ class Base:
             field = self.getField(name, raiseError=True)
             return self.translate('label', field=field, language=language)
         # Translate the name of a state or transition
-        return self.translate('%s_%s' % (self.getWorkflow().name, name),
+        return self.translate(f'{self.getWorkflow().name}_{name}',
                               language=language)
 
     def getValue(self, name, type=None, layout='view', language=None,
-                 value=None, bypassDefault=False):
+                 value=None, bypassDefault=False, at=None):
         '''Gets the value of field named p_name on p_self'''
         # In most cases, use the property set on p_self to retrieve this value.
         # For example, for retrieving the value of field named "title" on
@@ -586,7 +644,7 @@ class Base:
         #             | produced by methods <Field>.getCatalogValue.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # [Not implemented yet] If p_name refers to an inner field (has the form
-        # <fieldName>*<subName>), p_value must be passed ans must be one of
+        # <fieldName>*<subName>), p_value must be passed and must be one of
         # the sub-values contained within the outer field. 
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         field = self.getField(name)
@@ -596,25 +654,33 @@ class Base:
         # Get it, excepted if given in p_value.
         if value is None:
             method = 'getStoredValue' if bypassDefault else 'getValue'
-            r = getattr(field, method)(self, name)
+            r = getattr(field, method)(self, name, at=at)
         else:
             r = value
         if type is None: return r
         # Get the formatted or shown
-        method = getattr(field, 'get%sValue' % type.capitalize())
+        method = getattr(field, f'get{type.capitalize()}Value')
         return method(self, r, layout, language=language)
 
     def getShownValue(self, name='title', layout='view', language=None,
                       value=None):
         '''Call field.getShownValue on field named p_name'''
         field = self.getField(name)
-        value = field.getValue(self) if value is None else value
+        value = field.getValue(self, single=False) if value is None else value
         return field.getShownValue(self, value, layout, language=language)
 
     def countRefs(self, name):
         '''Counts the nb of objects linked to this one via Ref field p_name'''
         tied = self.values.get(name)
         return 0 if tied is None else len(tied)
+
+    def deleteRefs(self, name):
+        '''Unlinks AND delete any object tied to p_self via the ref having this
+           p_name.'''
+        objects = self.values.get(name)
+        if not objects: return
+        for o in objects: o.delete()
+        setattr(self, name, None)
 
     def path(self, name):
         '''Returns the absolute file name of file stored in File field p_named
@@ -631,21 +697,38 @@ class Base:
         '''See docstring in the homonym method on appy/model/fields/ref::Ref'''
         return self.getField(name).getPageIndexOf(self, tied)
 
-    def link(self, name, o, secure=False, executeMethods=True, at=None):
+    def link(self, name, o, secure=False, executeMethods=True, at=None,
+             reindex=False):
         '''Links p_o (which can be a list of objects) to p_self via Ref field
            p_name.'''
         # For understanding the 3 last params, check Ref's m_linkObject's doc
         field = self.getField(name)
         return field.linkObject(self, o, secure=secure,
-                                executeMethods=executeMethods, at=at)
+                                executeMethods=executeMethods, at=at,
+                                reindex=reindex)
 
-    def unlink(self, name, o, secure=False, executeMethods=True):
+    def unlink(self, name, o, secure=False, executeMethods=True, reindex=False):
         '''Unlinks p_o (which can be a list of objects) from p_self via Ref
            field p_name.'''
         # For understanding the 2 last params, check Ref's m_unlinkObject's doc
         field = self.getField(name)
         return field.unlinkObject(self, o, secure=secure,
-                                  executeMethods=executeMethods)
+                                  executeMethods=executeMethods,
+                                  reindex=reindex)
+
+    def relink(self, source, target, o):
+        '''Unlinks this p_o(bject) from Ref p_self.<p_source> and link it to Ref
+           p_self.p_target.'''
+        self.link(target, o, reindex=True)
+        self.unlink(source, o, reindex=True)
+        # Recompute index "cid" when relevant
+        fieldS = self.getField(source)
+        fieldT = self.getField(target)
+        if (fieldS.composite or fieldT.composite) and o.class_.isIndexable():
+            o.reindex(fields=('cid',))
+        # Log
+        self.log(RELINK_OK % (o.class_.name, o.iid, self.class_.name,
+                              self.iid, source, self.iid, target))
 
     def sort(self, name, sortKey='title', reverse=False):
         '''Sorts referred elements linked to p_self via Ref field named p_name
@@ -741,7 +824,7 @@ class Base:
                         iid = container.iid
                     except AttributeError:
                         iid = container[0].iid
-                    r = '%d_%s' % (iid, field.name)
+                    r = f'{iid}_{field.name}'
                     break
         # If no container has been found, the object is a root object
         return r
@@ -799,7 +882,7 @@ class Base:
         return r[0] if r else None
 
     def count(self, className=None, **kwargs):
-        '''Identical to m_search abo, but returns the number of objects matching
+        '''Identical to m_search, but returns the number of objects matching
            the search instead of returning the objects themselves.'''
         # Use this method instead of writing len(self.search(...))
         return len(self.search(className=className, ids=True, **kwargs))
@@ -834,6 +917,7 @@ class Base:
         # Initialize the context variable "ctx"
         ctx = context
         i = 0
+        locals_ = locals()
         for iid in self.search(className, ids=True, sortBy=sortBy, \
                                secure=secure, **fields):
             # Stop if the maximum number of objects has been reached
@@ -844,7 +928,8 @@ class Base:
             if o is None: continue
             i += 1
             # Evaluate the expression
-            if expression: exec(expression)
+            locals_['o'] = o; locals_['i'] = i
+            if expression: exec(expression, None, locals_)
         return ctx
 
     def reindex(self, **kwargs):
@@ -861,6 +946,17 @@ class Base:
         r = self.H().dbConnection.root.catalogs.get(class_.name)
         if not r and raiseError:
             raise Exception(CATALOG_KO % class_.name)
+        return r
+
+    def getIndex(self, name, class_=None, raiseError=False):
+        '''Returns the index having this p_name, on p_self's class or on this
+           p_class_, if passed.'''
+        class_ = class_ or self.class_
+        catalog = self.getCatalog(class_=class_, raiseError=raiseError)
+        if not catalog: return
+        r = catalog.get(name)
+        if not r and raiseError:
+            raise Exception(INDEX_KO % (class_.name, name))
         return r
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -900,7 +996,7 @@ class Base:
            var2="gotoSource=False">:snav.pxNavigate</div>
 
       <!-- Pod templates -->
-      <div var="fields=o.getFields('pre', 'main')" style="margin-left:auto">
+      <div var="fields=o.getFields('pre', 'main')" class="prePods">
        <div class="spod" for="field in fields"
             var2="fieldName=field.name">:field.pxRender</div>
       </div>
@@ -959,11 +1055,12 @@ class Base:
       <div if="isEdit and current.showSave"
            var2="label=o.class_.getTextFor(o, 'save')">
        <div>
-        <a class="clickable"
+        <a class="clickable" tabindex="0"
            onclick=":'submitAppyForm(%s,%s,%s)' % \
-                      (q('save'), q(current.name), q('view'))">
+                      (q('save'), q(current.name), q('view'))"
+           onkeydown="if (event.keyCode==13) this.click();">
          <img src=":svg('save')" class=":picto"/>
-         <div style=":'display:%s' % config.ui.pageDisplay">::label</div>
+         <div style=":f'display:{config.ui.pageDisplay}'">::label</div>
         </a>
        </div>
       </div>
@@ -971,18 +1068,19 @@ class Base:
       <!-- Cancel -->
       <div if="isEdit and current.showCancel" var2="label=_('object_cancel')">
        <div>
-        <a class="clickable" name="cancel"
+        <a class="clickable" name="cancel" tabindex="0"
            onclick=":'submitAppyForm(%s,%s,%s)' % \
-                      (q('cancel'), q(current.name), q('view'))">
+                      (q('cancel'), q(current.name), q('view'))"
+           onkeydown="if (event.keyCode==13) this.click();">
          <img src=":svg('cancel')" class=":picto"/>
-         <div style=":'display:%s' % config.ui.pageDisplay">::label</div>
+         <div style=":f'display:{config.ui.pageDisplay}'">::label</div>
         </a>
        </div>
       </div>
 
       <!-- Delete -->
       <div if="not isEdit and not popup and guard.mayDelete(o) and \
-               not o.Lock.isSet(o, user, page)" var2="label=_('object_delete')">
+               not o.Lock.isSet(o, page)" var2="label=_('object_delete')">
        <div>
         <a class="clickable" onclick=":o.class_.getDeleteConfirm(o, q)">
          <img src=":svg('delete')" class=":picto"/>
@@ -1011,7 +1109,7 @@ class Base:
      </x>''')
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                         Objet creation method
+    #                         Object creation method
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def create(self, _name, secure=False, raiseOnWrongAttribute=True,
@@ -1066,7 +1164,9 @@ class Base:
         # initialise its object before it is linked to its initiator object.
         if executeMethods: multicall(o, 'onEditEarly', False, None)
         # Link the created object to its initiator when relevant
-        if field: field.linkObject(self, o, executeMethods=executeMethods)
+        if field:
+            field.linkObject(self, o, executeMethods=executeMethods,
+                             reindex=indexIt)
         # Call custom initialization: a hook allowing the app developer to
         # initialise its object after it's been linked to its initiator object.
         if executeMethods: multicall(o, 'onEdit', False, True)
@@ -1081,7 +1181,6 @@ class Base:
         '''Returns a dict ~{s_fieldName, fieldValue}~ representing p_self's
            dataset ready-to-be-copied to another object.'''
         # Check m_createFrom below to know more about method args
-        # ~
         r = {}
         # Browse field values from p_self and store "copyable" ones in "r"
         for field in self.class_.fields.values():
@@ -1130,6 +1229,8 @@ class Base:
             history[-1].date = other.created
             # Keep the same modification date
             history.modified = other.modified
+            if hasattr(other, 'modifier'):
+                history.modifier = other.modifier
         return r
 
     def __copy__(self, memo):
@@ -1156,7 +1257,7 @@ class Base:
         return self.database.delete(self, historize, executeMethods)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # Translation method
+    #                          Translation method
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def translate(self, label, mapping=None, language=None, asText=False,
@@ -1168,7 +1269,9 @@ class Base:
         # field, so we must merge this mapping into p_mapping.
         handler = self.H()
         # In what language must we get the translation ?
-        language = language or handler.guard.userLanguage
+        if not language:
+            guard = handler.guard
+            language = guard.userLanguage if guard else 'en'
         # Get the label name, and the field-specific mapping if any
         if field:
             if field.type != 'group':
@@ -1183,7 +1286,7 @@ class Base:
                 # Translation may be found on a FieldTranslation instance
                 if field.translations:
                     return field.translations.get(label, language, mapping)
-            label = getattr(field, '%sId' % label)
+            label = getattr(field, f'{label}Id')
         # Get the appropriate Translation object, or, if not found, get the one
         # corresponding to the defined fallback language.
         store = handler.dbConnection.root.objects
@@ -1214,7 +1317,7 @@ class Base:
         if method: method()
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # XML export
+    #                               XML export
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     traverse['xml'] = 'perm:read'
@@ -1224,7 +1327,7 @@ class Base:
         return self # p_self will be automatically marshalled by the traversal
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # PXs
+    #                                   PXs
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     # The object, as shown in a list of referred (tied) objects. In this PX:
@@ -1238,23 +1341,24 @@ class Base:
               backHook=ohook if layout == 'cell' else None;
               target=ui.LinkTarget(ifield.class_, backHook, ifield.viaPopup);
               objectIndex=ifield.getIndexOf(io, o, raiseError=False);
-              cbId='%s_%s' % (hook, currentNumber);
+              cbId=f'{hook}_{currentNumber}';
               mayView=guard.mayView(o);
               id=o.iid"
-         id=":ohook">
+         id=":ohook" class=":tiedClass.getCssFor(o, 'row')">
       <x for="col in columns" var2="field=col.field">:col.pxCellRef</x>
 
       <!-- Store data in this tr node allowing to ajax-refresh it -->
-      <script>:ifield.getAjaxDataRow(o, ohook, hook, inPickList,
+      <script if="mayView">:ifield.getAjaxDataRow(o, ohook, hook, inPickList,
                currentNumber=currentNumber, cbChecked=cbId, ajaxSingle=True,
-               initiator=':%d:%s' % (io.iid, ifield.name))</script>
+               initiator=f':{io.iid}:{ifield.name}')</script>
      </tr>''')
 
     # The object, as shown in a list of search results
     pxResult = Px('''
      <tr var="id=o.iid; ohook=mode.getHookFor(o); mayView=guard.mayView(o);
-              backHook=ohook; cbId='%s_%s' % (mode.checkboxesId, currentNumber)"
-         id=":ohook">
+              backHook=ohook; cbId=f'{mode.checkboxesId}_{currentNumber}';
+              objectIndex=mode.getObjectIndex(o)"
+         id=":ohook" class=":mode.class_.getCssFor(o, 'row')">
       <x for="col in mode.columns" var2="field=col.field">:col.pxCell</x>
 
       <!-- Store data in this tr node allowing to ajax-refresh it -->
@@ -1308,7 +1412,7 @@ class Base:
      <x var="x=guard.mayEdit(o, raiseError=True);
              table=o.getPageLayout(layout);
              page=o.getCurrentPage(req, layout);
-             x=o.Lock.set(o, user, page);
+             x=o.Lock.set(o, page);
              confirmText=req.confirmText;
              page,grouped,css,js,phases=o.getGroupedFields(page, layout);
              x=req.patchFromTemplate(o)">
@@ -1342,14 +1446,20 @@ class Base:
      </x>''',
 
      js='''
+      enableDisabled = function(f) {
+        for (const elem of f.querySelectorAll('*[disabled]')) {
+          elem.disabled = false;
+        }
+      }
+
       completeAppyForm = function(f) {
         // Complete Appy form p_f via special form element named "_get_"
-        let g = f._get_;
+        const g = f._get_;
         if (!g.value) return;
         let [source, name, info] = g.value.split(':');
         if (source == 'form') {
           // Complete p_f with form elements coming from another form
-          let f2 = getNode(':' + name),
+          let f2 = getNode(`:${name}`),
               fields = info.split(','),
               fieldName = fieldValue = null;
           if (!f2) return;
@@ -1357,7 +1467,7 @@ class Base:
             fieldName = fields[i];
             if (fieldName[0] == '*') {
               // Try to retrieve search criteria from the storage if present
-              let spars = getSearchInfo(fieldName.substr(1) + '_customSearch');
+              let spars = getSearchInfo(`${fieldName.substr(1)}_customSearch`);
               fieldValue = ('criteria' in spars)? spars['criteria']: null;
               if (!fieldValue) continue;
               fieldName = 'criteria';
@@ -1383,7 +1493,7 @@ class Base:
       submitAppyForm = function(action, gotoPage, gotoLayout) {
         const f = document.getElementById('appyForm');
         // Complete the form via the "_get_" element if present
-        if (action != 'cancel') completeAppyForm(f);
+        if (action != 'cancel') { completeAppyForm(f); enableDisabled(f); }
         f.action.value = action;
         if (f.popup.value == 'True') {
           /* Initialize the "close popup" cookie. If set to "no", it is not time
@@ -1459,8 +1569,8 @@ class Base:
             return O(o=o, field=o.getField(name))
 
     def getFolder(self, create=False, withRelative=False):
-        '''Gets, as a pathlib.Path instance, the folder where binary files
-           related to this object are stored on the filesystem.'''
+        '''Gets, as a pathlib.Path object, the folder where binary files related
+           to this object are stored on the filesystem.'''
         return self.database.getFolder(self, create, withRelative)
 
     def cancel(self, initiator=None, popup=False, isTemp=False):
@@ -1526,7 +1636,7 @@ class Base:
             return
         # If we are here, action is "save" and p_self has been updated. Redirect
         # the user to the appropriate page.
-        self.say(text)
+        self.say(text, first=True)
         # Come back from the popup if we were in it
         if popup and req.gotoLayout == 'view':
             return Iframe.goBack(self, initiator)
@@ -1566,6 +1676,9 @@ class Base:
             params['nav'] = req.nav
             g = req._get_
             if g: params['_get_'] = g
+            # Developers may set additional, specific info in this key
+            c = req._custom_
+            if c: params['_custom_'] = c
             # Is the creation of the new object via the initiator allowed ?
             initiator.checkAllowed(log=True)
             # Let the initiator complete URL parameters when relevant
@@ -1584,6 +1697,8 @@ class Base:
     traverse['remove'] = 'perm:delete'
     def remove(self):
         '''Deletes p_self and return a message to the UI'''
+        # Ensure the object can be deleted
+        if not self.guard.mayDelete(self, perm=False): self.raiseUnauthorized()
         # Delete the object from the database. If a text is returned, an error
         # occurred and the deletion was aborted.
         text = self.delete(historize=True)
@@ -1594,7 +1709,7 @@ class Base:
         handler = self.H()
         if not text:
             # The deletion has been successfully performed
-            text = self.translate('action_done')
+            text = None if self.resp.message else self.translate('action_done')
             # If we were consulting the object itself, return to the home page.
             # Else, return to the referer page (it is the default).
             if not gotoSet and handler.isPublished(self):

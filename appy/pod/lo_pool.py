@@ -138,7 +138,7 @@ class LO:
 
     def __repr__(self):
         '''p_self's short string representation'''
-        return '<LO port=%d>' % self.port
+        return f'‹LO port={self.port}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class LoPool:

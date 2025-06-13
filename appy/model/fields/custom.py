@@ -38,13 +38,14 @@ class Custom(Field):
       readPermission='read', writePermission='write', width=None, height=None,
       maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
       historized=False, mapping=None, generateLabel=None, label=None, view=None,
-      cell=None, buttons=None, edit=None, xml=None, translations=None):
+      cell=None, buttons=None, edit=None, custom=None, xml=None,
+      translations=None):
         # Parameter "persist" is not available and is automatically set to True
-        Field.__init__(self, None, (0,1), None, None, show, renderable, page,
-          group, layouts, move, False, True, None, None, False, None,
-          readPermission, writePermission, width, height, None, colspan, master,
-          masterValue, focus, historized, mapping, generateLabel, label, None,
-          None, None, None, True, False, view, cell, buttons, edit, xml,
+        super().__init__(None, (0,1), None, None, show, renderable, page, group,
+          layouts, move, False, True, None, None, False, None, readPermission,
+          writePermission, width, height, None, colspan, master, masterValue,
+          focus, historized, mapping, generateLabel, label, None, None, None,
+          None, True, False, view, cell, buttons, edit, custom, xml,
           translations)
 
     def isEmptyValue(self, o, value):

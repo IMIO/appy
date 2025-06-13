@@ -42,6 +42,10 @@ SHUTD_FORCED  = 'Forcefully exiting process'
 SHUTD_F_OK    = 'All workers eventually killed'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n'
+br = '<br/>'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ThreadPool:
     '''Pool of threads for efficiently managing incoming client requests'''
 
@@ -106,7 +110,7 @@ class ThreadPool:
         self.config = config
         # The Queue object allowing inter-thread communication
         self.queue = queue.Queue()
-        # The list of Thread instances
+        # The list of Thread objects
         self.workers = []
         self.workersCount = count()
         # Dict storing info about thread's statuses
@@ -185,7 +189,7 @@ class ThreadPool:
         except KeyError:
             pass
 
-    def getTracked(self, formatted=True):
+    def getTracked(self, handler, formatted=True):
         '''Returns a dict summarizing info about the threads in the pool'''
         r = O(idle=[], busy=[], hung=[], dying=[], zombie=[])
         now = time.time()
@@ -211,11 +215,15 @@ class ThreadPool:
             for name, threads in r.items():
                 info = []
                 for thread in threads:
-                    info.append('%s - %s' % (thread.getName(), thread.ident))
-                rows.append('<tr><th>%s</th><td>%s</td></tr>' % \
-                            (name, '<br/>'.join(info)))
-            r = '<table class="small"><tr><th>Type</th><th>Threads</th></tr>' \
-                '%s</table>' % '\n'.join(rows)
+                    # What request does this thread handle ? Ready it from the
+                    # thread registry.
+                    threadId = thread.ident
+                    threadHandler = handler.registry.get(threadId)
+                    path = f' · {threadHandler.path}' if threadHandler else ''
+                    info.append(f'{thread.getName()} · {thread.ident}{path}')
+                rows.append(f'<tr><th>{name}</th><td>{br.join(info)}</td></tr>')
+            r = f'<table class="small"><tr><th>Type</th><th>Threads</th></tr>' \
+                f'{bn.join(rows)}</table>'
         return r
 
     def killWorker(self, id, recreate=True):

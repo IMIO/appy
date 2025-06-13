@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''
 <p>desc 2611-03</p>
 <p><br /></p>

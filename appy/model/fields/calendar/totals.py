@@ -4,35 +4,82 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy import utils
 from appy.px import Px
+from appy.xml.escape import Escape
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TOT_KO = 'Totals can only be specified for timelines (render == "timeline").'
+TOT_KO = 'Totals can only be specified when "render" is "monthMulti".'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Total:
     '''Represents a computation that will be executed on a series of cells
        within a timeline calendar.'''
 
-    def __init__(self, initValue):
+    def __init__(self, name, initValue, color=None, title=None, bgColor=None,
+                 style=None):
+        '''Total constructor'''
+        # The name associated to this total (see class Totals)
+        self.name = name
         # If p_initValue is mutable, get a copy of it
         if isinstance(initValue, dict):
             initValue = initValue.copy()
         elif isinstance(initValue, list):
             initValue = initValue[:]
         self.value = initValue
+        # The following attributes allow to style the cell into which the total
+        # will be dumped.
+        self.color = color # The font coloe
+        self.title = title # The cell's tooltip
+        self.bgColor = bgColor # The cell's backgroud color
+        self.style = style # Any additional CSS property can be expressed here,
+                           # as a classic semi-colon-separated list of CSS
+                           # properties.
 
     def __repr__(self):
         '''p_self's short string representation'''
-        return f'<Total={str(self.value)}>'
+        return f'‹Total::{self.name}={str(self.value)}›'
+
+    def getStyles(self):
+        '''Returns potential CSS attributes to apply to the HTML cell as
+           produced by m_asCell.'''
+        r = None
+        # Font color
+        if self.color:
+            color = f'color:{self.color}'
+            if r is None: r = []
+            r.append(color)
+        # Background color
+        if self.bgColor:
+            bgColor = f'background-color:{self.bgColor}'
+            if r is None: r = []
+            r.append(bgColor)
+        # Other CSS attributes
+        if self.style:
+            if r is None: r = []
+            r.append(self.style)
+        if r is None: return ''
+        r = ';'.join(r)
+        return f' style="{r}"'
+
+    def asCell(self):
+        '''Renders the "td" tag containing p_self's value'''
+        val = self.value
+        if val is None:
+            val = ''
+        else:
+            if not isinstance(val, str):
+                val = str(val)
+        # Integrate CSS and other elements
+        title = f' title={Escape.xhtml(self.title)}' if self.title else ''
+        return f'<td{title}{self.getStyles()}>{val}</td>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Totals:
     '''For a timeline calendar, if you want to add rows or columns representing
        totals computed from other rows/columns (representing agendas), specify
-       it via Totals instances (see Agenda fields "totalRows" and "totalCols"
-       below).'''
+       it via Totals objects (see Agenda attributes named "totalRows" and
+       "totalCols".'''
 
-    def __init__(self, name, label, onCell, initValue=0):
+    def __init__(self, name, label, onCell, initValue=0, translated=False):
         # "name" must hold a short name or acronym and will directly appear
         # at the beginning of the row. It must be unique within all Totals
         # instances defined for a given Calendar field.
@@ -40,6 +87,9 @@ class Totals:
         # "label" is a i18n label that will be used to produce a longer name
         # that will be shown as an "abbr" tag around the name.
         self.label = label
+        # If p_translated is True, p_label is not a i18n label, but an already
+        # translated term.
+        self.translated = translated
         # A method that will be called every time a cell is walked in the
         # agenda. It will get these args:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -80,7 +130,7 @@ class Totals:
            timeline calendar.'''
         suffix = 'trs' if type == 'rows' else 'tcs'
         return f"new AjaxData('{o.url}/{field.name}/Totals/pxFromAjax','GET'," \
-               f"{{}},'{hook}_{suffix}','{hook}')"
+               f"{{'multiple':'1'}},'{hook}_{suffix}','{hook}')"
 
     @classmethod
     def get(class_, o, field, type):
@@ -118,7 +168,8 @@ class Totals:
         lastCount = othersCount if isRow else datesCount
         r = {}
         for totals in allTotals:
-            r[totals.name]= [Total(totals.initValue) for i in range(totalCount)]
+            name = totals.name
+            r[name] = [Total(name, totals.initValue) for i in range(totalCount)]
         # Get the status of validation checkboxes
         status = class_.getValidationCBStatus(o.req)
         # Walk every date within every calendar
@@ -154,14 +205,16 @@ class Totals:
     # Total rows shown at the bottom of a timeline calendar
     pxRows = Px('''
      <tbody id=":f'{hook}_trs'"
-            var="rows=field.Totals.get(o, field, 'rows');
+            var="grid=view.grid;
+                 rows=field.Totals.get(o, field, 'rows');
                  totals=field.Totals.compute(field, rows, 'row', o, grid,
                                              others, preComputed)">
       <script>:field.Totals.getAjaxData(field, o, 'rows', hook)</script>
-      <tr for="row in rows" var2="rowTitle=_(row.label)">
+      <tr for="row in rows"
+          var2="rowTitle=row.label if row.translated else _(row.label)">
        <td class="tlLeft">
         <abbr title=":rowTitle"><b>:row.name</b></abbr></td>
-       <td for="date in grid">::totals[row.name][loop.date.nb].value</td>
+       <x for="date in grid">::totals[row.name][loop.date.nb].asCell()</x>
        <td class="tlRight">
         <abbr title=":rowTitle"><b>:row.name</b></abbr></td>
       </tr>
@@ -171,7 +224,8 @@ class Totals:
     pxCols = Px('''
      <table cellpadding="0" cellspacing="0" class="list timeline"
             style="float:right" id=":f'{hook}_tcs'"
-            var="cols=field.Totals.get(o, field, 'cols');
+            var="grid=view.grid;
+                 cols=field.Totals.get(o, field, 'cols');
                  rows=field.Totals.get(o, field, 'rows');
                  totals=field.Totals.compute(field, cols, 'col', o , grid,
                                              others, preComputed)">
@@ -187,13 +241,13 @@ class Totals:
       </tr>
 
       <!-- Re-create one row for every other calendar -->
-      <x var="i=-1" for="otherGroup in others">
-       <tr for="other in otherGroup" var2="@i=i+1">
-        <td for="col in cols">::totals[col.name][i].value</td>
+      <x var="i=-1" for="groupO in others">
+       <tr for="other in groupO" var2="@i=i+1">
+        <x for="col in cols">::totals[col.name][i].asCell()</x>
        </tr>
 
        <!-- The separator between groups of other calendars -->
-       <x if="not loop.otherGroup.last">::field.getOthersSep(len(cols))</x>
+       <x if="not loop.groupO.last">::field.Other.getSep(len(cols))</x>
       </x>
 
       <!-- Add empty rows for every total row -->
@@ -211,12 +265,10 @@ class Totals:
 
     # Ajax-call pxRows or pxCols
     pxFromAjax = Px('''
-     <x var="month=req.month;
+     <x var="view=field.View.get(o, field);
              totalType=req.totalType.capitalize();
              hook=f'{o.iid}{field.name}';
-             monthDayOne=field.DateTime(f'{month}/01');
-             grid=field.getGrid(month, 'timeline');
-             preComputed=field.getPreComputedInfo(o, monthDayOne, grid);
-             others=field.getOthers(o, \
+             preComputed=field.getPreComputedInfo(o, view);
+             others=field.Other.getAll(o, field,
                preComputed)">:getattr(field.Totals, f'px{totalType}')</x>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

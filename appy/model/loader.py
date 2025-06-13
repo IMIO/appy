@@ -7,18 +7,16 @@
 import sys, inspect, pathlib, importlib
 
 from appy.tr import po
+from appy.utils import exeC
 from appy.model.root import Model
-from appy.ui.layout import Layouts
 from appy.model.fields import Field
 from appy.model.fields.ref import Ref
-from appy.model.fields.text import Text
 from appy.model.fields.phase import Page
 from appy.model.workflow import standard
 from appy.model.meta.class_ import Class
 from appy.model.fields.string import String
 from appy.model.workflow.state import State
 from appy.model.meta.workflow import Workflow
-from appy.model.fields.computed import Computed
 
 # Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 NO_SEARCH = "Note that Appy classes and workflows are not searched within " \
@@ -34,7 +32,10 @@ NOT_WF    = '"%s", defined as workflow for class "%s", is not a workflow class.'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Loader:
     '''Reads the application model, completes it with the base Appy model, and
-       returns a appy.model.Model instance.'''
+       returns a appy.model.Model object.'''
+
+    # Standard folders that are present in every Appy app or ext
+    standardFolders = ('tr', 'static')
 
     def __init__(self, config, appConfig, logger, appOnly):
         # The model config (a appy.model.Config instance)
@@ -63,10 +64,16 @@ class Loader:
            * a Appy workflow, this method returns meta-class Wokflow;
            * none of it, this method returns None.
         '''
-        # If p_class_ declares at least one static attribute being an instance of
-        # appy.fields.Field, it will be considered a Appy class. If it declares
-        # at least one static attribute being an instance of
-        # appy.fields.workflow.State, it will be considered a Appy workflow.
+        # If p_class_ has a static attribute appy=True or at least one static
+        # attribute being an instance of appy.fields.Field, it will be
+        # considered a Appy class. If it declares at least one static attribute
+        # being an instance of appy.fields.workflow.State, it will be considered
+        # a Appy workflow.
+        if getattr(class_, 'appy', None) is True:
+            # Declaring appy=True on a class may be useful, ie, if you want to
+            # create a class that inherits from a Appy base class without
+            # defining any additional field.
+            return Class
         for attr in class_.__dict__.values():
             if isinstance(attr, Field): return Class
             elif isinstance(attr, State): return Workflow
@@ -83,8 +90,8 @@ class Loader:
         for name in Model.baseClasses:
             if name not in model.classes:
                 # Import the corresponding base class
-                exec('from appy.model.%s import %s' % (name.lower(), name))
-                pythonClass = eval(name)
+                statement = f'from appy.model.{name.lower()} import {name}'
+                pythonClass = exeC(statement, name)
                 model.classes[name] = Class(pythonClass, isBase=True)
         # Complete self.workflows
         for name in Model.baseWorkflows:
@@ -101,7 +108,7 @@ class Loader:
             if class_.type == 'app': continue
             # Browse forward Ref fields
             for field in class_.fields.values():
-                if (field.type != 'Ref') or field.isBack: continue
+                if field.type != 'Ref' or field.isBack: continue
                 # Get the target class
                 refClass = model.classes[field.class_.__name__]
                 # If this class has been overridden, we must update it with the
@@ -112,12 +119,25 @@ class Loader:
                     if field.back:
                         field.back.class_ = class_.python
 
+    def getWorkflowFor(self, meta):
+        '''Get the workflow to associate to this p_meta class'''
+        # If the Python class corresponding to this p_meta classdoes not define
+        # a workflow via its "workflow" attribute, get a default one.
+        r = getattr(meta.python, 'workflow', None)
+        if r is None and meta.type == 'over':
+            # Get the workflow possiblty defined on the base class
+            base = meta.getBaseClass(python=True)
+            r = getattr(base, 'workflow', None)
+        # Return the found workflow, or the Anonymous workflow, being the
+        # default workflow for any Appy class.
+        return r or standard.Anonymous
+
     def linkWorkflows(self, model):
         '''Associate classes and workflows at the model level, based on static
            attributes "workflows" defined on classes, and check that such
            classes are really workflows.'''
         for class_ in model.classes.values():
-            workflow = getattr(class_.python, 'workflow', standard.Anonymous)
+            workflow = self.getWorkflowFor(class_)
             name = workflow.__name__
             # Get the corresponding Workflow instance
             workflowClass = model.workflows.get(name)
@@ -126,67 +146,23 @@ class Loader:
             # Make the link
             class_.workflow = workflowClass
 
-    def setTranslationFields(self, pot, translationClass, message, page):
-        '''Sets, on this p_translationClass, 2 fields on p_page:
-           (1) a Computed field allowing to display the text in the source
-               language;
-           (2) an editable String field for storing the corresponding i18n
-               p_message.
-        '''
-        # Create the Computed field displaying the text in the source message
-        pythonClass = translationClass.python
-        labelField = Computed(method=pythonClass.computeLabel,
-                       page=page, show=pythonClass.showField, layouts=Layouts.f)
-        name = '%s_label' % message.id
-        labelField.init(translationClass, name)
-        translationClass.fields[name] = labelField
-        # Create the String field for storing the translation
-        params = {'page': page, 'layouts': Layouts.f,
-                  'show': pythonClass.showField}
-        # Scan all messages corresponding to p_messageId from all translation
-        # files corresponding to p_pot. We will define field length from the
-        # longer found message content.
-        maxLine = 100 # We suppose a line is 100 chars long
-        width = 0
-        height = 0
-        potBase = pot.stem
-        for fileName, poFile in self.translationFiles.items():
-            # Ignore po files not corresponding to p_pot
-            if not fileName.startswith('%s-' % potBase): continue
-            msgContent = poFile.messages[message.id].msg
-            # Compute width
-            width = max(width, len(msgContent))
-            # Compute height (a "\n" counts for one line)
-            mHeight = int(len(msgContent)/maxLine) + msgContent.count('<br/>')
-            height = max(height, mHeight)
-        if height < 1:
-            # Propose a one-line field
-            params['width'] = width
-            fieldClass = String
-        else:
-            # Propose a multi-line field, or a very-long-single-lined field
-            fieldClass = Text
-            params['height'] = height
-        field = fieldClass(**params)
-        field.init(translationClass, message.id)
-        translationClass.fields[message.id] = field
-
     def updateTranslations(self, model):
         '''Injects, on class Translation, a field for every defined i18n
            label. Returns the total number of i18n labels.'''
         # i18n labels are collected from 3 sources:
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Name       | Location   | Description
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Appy.pot   | appy/tr/po | The labels used in the base Appy classes.
         # <app>.pot  | <app>/tr   | The labels automatically generated by Appy
         #            |            | from the app model.
         # Custom.pot | <app>/tr   | The custom labels managed "by hand" by the
         #            |            | app's developer.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Translations for Appy.pot labels are not modifiable as-is by the app's
         # user. If the app's developer wants to make some Appy.pot label
         # modifiable, he must define its homonym in Custom.pot.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # As a preamble, load translations from po(t) files
         trPath = self.config.appPath / 'tr'
         self.translationFiles = po.load(path=trPath, pot=False)
@@ -195,11 +171,12 @@ class Loader:
         translationClass = model.classes['Translation']
         # Read the 3 "pot" files
         appyPot = pathlib.Path(inspect.getfile(po)).parent / 'Appy.pot'
-        appPot = trPath / ('%s.pot' % self.config.appPath.stem)
+        appPot = trPath / f'{self.config.appPath.stem}.pot'
         customPot = trPath / 'Custom.pot'
         for pot in (appyPot, appPot, customPot):
             # Get messages from the current pot file
-            messages = po.Parser(pot).parse().messages
+            potFile = po.Parser(pot).parse()
+            messages = potFile.messages
             r += len(messages)
             # Manage messages from Appy.pot
             if pot.stem == 'Appy':
@@ -214,77 +191,105 @@ class Loader:
                     translationClass.fields[message.id] = field
             # Manage messages from app's pot files
             else:
+                # Get all available .po files corresponding to this p_potFile:
+                # they will be used for computing the type and length for the
+                # fields storing the translations.
+                potBase = pot.stem
+                poFiles = []
+                for fileName, poF in self.translationFiles.items():
+                    # Ignore po files not corresponding to p_pot
+                    if not fileName.startswith(f'{potBase}-'): continue
+                    poFiles.append(poF)
                 if pot.stem == 'Custom':
                     phase = 'custom'
                     pageName = 'a'
                 else:
                     phase = 'main'
                     pageName = '1'
-                page = Page(pageName, phase=phase, sticky=True)
-                i = 0
-                for message in messages.values():
-                    # If this message overrides one from Appy.pot, remove the
-                    # overridden field added from Appy.pot. This way, we keep
-                    # app's fields in the right order.
-                    if message.id in translationClass.fields:
-                        del(translationClass.fields[message.id])
-                    i += 1
-                    # For every message, create 2 fields:
-                    # - a Computed used to display the text to translate;
-                    # - a String holding the translation in itself.
-                    self.setTranslationFields(pot, translationClass,
-                                              message, page)
-                    if (i % model.config.ui.translationsPerPage) == 0:
-                        # A new page must be defined
-                        page = Page(page.nextName(), phase=page.phase,
-                                    sticky=True)
+                pyClass = translationClass.python
+                pyClass.getAllFieldsFrom(model.config, translationClass,
+                  potFile, page=pageName, phase=phase, poOthers=poFiles)
+        return r
+
+    def getAppFolders(self):
+        '''Returns the list of folders and sub-folders, within the app folder,
+           where to look for Appy classes and workflows.'''
+        appPath = self.config.appPath
+        r = [appPath]
+        for sub in appPath.iterdir():
+            name = sub.name
+            if not sub.is_dir() or name.startswith('.') or \
+               name.startswith('_') or name in self.standardFolders: continue
+            r.append(sub)
+        return r
+
+    def getAppModules(self, folders):
+        '''Returns the imported Python modules corresponding to these
+           p_folders.'''
+        # Preamble: the app folder's parent must be in sys.path
+        appPath = self.config.appPath
+        basePath = str(appPath)
+        if basePath not in sys.path:
+            sys.path.insert(0, basePath)
+        # Walk v_folders
+        r = []
+        i = -1
+        for folder in folders:
+            i += 1
+            # Get all Python modules in v_folder
+            for pyModule in folder.glob('*.py'):
+                # __init__.py files are not searched
+                if pyModule.name == '__init__.py':
+                    continue
+                if i == 0:
+                    # v_pyModule is a file within the main app folder
+                    #
+                    # We don't use function appy.model.utils.importModule for
+                    # loading app modules here. Indeed, "importModule" loads a
+                    # fresh copy of a module, instead of returning the module as
+                    # already loaded via an "import" statement. But we
+                    # specifically need to retrieve the already loaded modules,
+                    # because their classes were already patched with back
+                    # references.
+                    name = f'{folder.name}.{pyModule.stem}'
+                    module = importlib.import_module(name)
+                else:
+                    # v_pyModule is in a sub-package
+                    name = pyModule.stem
+                    packageName = f'{appPath.stem}.{pyModule.parent.stem}'
+                    module = exeC(f'from {packageName} import {name}', name)
+                r.append(module)
         return r
 
     def run(self):
         '''Loads the model'''
         config = self.config
-        # Search Appy classes and workflow, in Python files at the root of the
-        # App module, __init__.py excepted.
-        pythonFiles = []
-        for path in config.appPath.glob('*.py'):
-            if path.name != '__init__.py':
-                pythonFiles.append(path)
+        # Search Appy classes and workflows, in Python files at the root of the
+        # App module, __init__.py excepted, and in every direct sub-package.
+        folders = self.getAppFolders()
         # The app may contain no Python file and only use the base Appy model.
-        # Import every found Python file, searching for Appy classes/workflows.
+        # Import, in every folder from v_folders, every found Python file,
+        # searching for Appy classes/workflows.
         classType = type(Model)
         classes = {} # ~{s_name: Class}~
         workflows = {} # ~{s_name: Workflow}~
-        # Import all modules before reading classes in it. That way, cross-
-        # module back references are correctly initialized. Ensure the app's
-        # path is in sys.path.
-        basePath = str(self.config.appPath.parent)
-        if basePath not in sys.path:
-            sys.path.insert(0, basePath)
-        modules = []
-        for path in pythonFiles:
-            # We don't use function appy.model.utils.importModule for loading
-            # app modules here. Indeed, "importModule" loads a fresh copy of a
-            # module, instead of returning the module as already loaded via an
-            # "import" statement. But we specifically need to retrieve the
-            # already loaded modules, because their classes were already patched
-            # with back references.
-            name = '%s.%s' % (config.appName, path.stem)
-            module = importlib.import_module(name)
-            modules.append(module)
+        # Import every Python module found in every folder from v_folders. Do
+        # this before reading classes in it. That way, cross-module back
+        # references are correctly initialized.
+        modules = self.getAppModules(folders)
         # Browse now the loaded modules
         for module in modules:
             # Find classes within this module
             for element in module.__dict__.values():
-                if (type(element) != classType): continue
                 # Ignore non-classes or classes imported from other modules
-                if (type(element) != classType) or \
-                   (element.__module__ != module.__name__): continue
+                if type(element) != classType or \
+                   element.__module__ != module.__name__: continue
                 # Ignore non-Appy classes
                 metaClass = self.determineMetaClass(element)
                 if not metaClass: continue
                 # Add the classes to "classes" or "workflows"
                 name = element.__name__
-                if (name in classes) or (name in workflows):
+                if name in classes or name in workflows:
                     raise Model.Error(DUP_NAME % name)
                 d = classes if metaClass == Class else workflows
                 d[name] = metaClass(element, appOnly=self.appOnly)

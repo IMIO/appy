@@ -16,11 +16,11 @@ from appy.xml.unmarshaller import Unmarshaller
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 DUR_SECS  = ', got in %.4f seconds'
 RESP_T    = '\n*Headers* %s\n*Body* %s\n'
-RESP_R    = '<HttpResponse %s (%s)%s%s>'
+RESP_R    = '‹HttpResponse %s (%s)%s%s›'
 D_ERR     = 'Distant server exception: %s'
 XML_ERR   = 'Invalid XML response (%s)'
 T_OUT_ERR = 'Timed out after %d second(s).'
-RESS_R    = '<Resource at %s>'
+RESS_R    = '‹Resource at %s›'
 CIC_ERR   = 'Check your Internet connection (%s)'
 CONN_ERR  = 'Connection error (%s)'
 URL_ERR   = 'Wrong URL: %s'
@@ -172,7 +172,7 @@ class DigestRealm:
     '''Represents information delivered by a server requiring Digest-based
        HTTP authentication.'''
 
-    rex = re.compile('(\w+)="(.*?)"')
+    rex = re.compile(r'(\w+)="(.*?)"')
 
     # List of attributes whose values must not be quoted
     unquoted = ('algorithm', 'qop', 'nc')
@@ -262,7 +262,7 @@ class HttpResponse:
     redirectCodes = (301, 302, 303)
 
     def __init__(self, resource, response, body, duration=None, utf8=True,
-                 responseType=None, unmarshallParams=None):
+                 forcedResponseType=None, unmarshallParams=None):
         self.resource = resource
         self.code = response.status # The return code, ie 404, 200, 500...
         self.text = response.reason # Textual description of the code
@@ -278,7 +278,7 @@ class HttpResponse:
         # The following attribute may contain specific data extracted from
         # the previous fields. For example, when response if 302 (Redirect),
         # self.data contains the URI where we must redirect the user to.
-        self.data = self.extractData(responseType)
+        self.data = self.extractData(forcedResponseType)
         self.response = response
 
     def __repr__(self, complete=False):
@@ -292,11 +292,18 @@ class HttpResponse:
     def get(self): return self.__repr__(complete=True)
 
     def getResponseUrl(self, url):
-        '''Get the URL path'''
-        parts = urllib.parse.urlparse(url)
-        r = parts.path or '/'
-        if parts.query:
-            r += f'?{parts.query}'
+        '''In the context of a 303 Redirect request, get the complete p_url to
+           redirect to.'''
+        if self.resource.redirectSame:
+            # Re-build p_url based on p_self.host, in order to ensure we stay on
+            # the same site.
+            parts = urllib.parse.urlparse(url)
+            r = parts.path or '/'
+            if parts.query:
+                r = f'{r}?{parts.query}'
+        else:
+            # Keep p_url as is
+            r = url
         return r
 
     def extractContentType(self, contentType):
@@ -326,7 +333,7 @@ class HttpResponse:
 
     xmlHeaders = ('text/xml', 'application/xml', 'application/soap+xml')
 
-    def extractData(self, responseType=None):
+    def extractData(self, forcedResponseType=None):
         '''Extracts, from the various parts of the HTTP response, some useful
            information.'''
         #
@@ -345,9 +352,13 @@ class HttpResponse:
         elif self.code == 401:
             authInfo = headers.get('WWW-Authenticate')
             return authInfo and DigestRealm(authInfo) or None
-        # Determine the response type from the HTTP response, or, if not found,
-        # use p_responseType that may have been given.
-        responseType = headers.get('Content-Type')
+        # Determine the response type from the HTTP response or use this
+        # p_forcedResponseType if passed. Forcing a response type may prevent to
+        # parse the response when it is not needed. For example, suppose you
+        # want to store the content of a JSON resource to a file on disk. If you
+        # force the response type to "text", you will disable the JSON parsing
+        # and simply get, as raw text, the JSON content in the response body.
+        responseType = forcedResponseType or headers.get('Content-Type')
         if not responseType: return
         # Apply some transform on the response content depending on its type
         contentType = self.extractContentType(responseType)
@@ -385,7 +396,8 @@ class Resource:
     standardPorts = {'http': 80, 'https': 443}
 
     def __init__(self, url, username=None, password=None, token=None,
-                 measure=False, utf8=True, authMethod='Basic', timeout=10):
+                 measure=False, utf8=True, authMethod='Basic', timeout=10,
+                 redirectSame=False):
         # The base URL corresponding to the distant resource
         self.url = url
         # A p_username and p_password must be passed when using Basic auth.
@@ -403,6 +415,16 @@ class Resource:
         # A timeout (in seconds) used when sending blocking requests to the
         # resource.
         self.timeout = timeout
+        # When redirecting to some URL after receiving a "303 Redirect"
+        # response, if p_redirectSame is False, the redirect URL, as transmitted
+        # in the "Location" HTTP header, will be used as is. If p_redirectSame
+        # is True, we will build the redirect URL by using p_self.host (see
+        # below) and the "path" part coming from the Location HTTP header. This
+        # approach is more secure and ensures a site doesn't redirect you to
+        # another one. However, it is not configured by default because it may
+        # lead to problems in the context of peer sites communication, when
+        # these peers can be accessed via different host names.
+        self.redirectSame = redirectSame
         # If measure is True, we will store hereafter, the total time (in
         # seconds) spent waiting for the server for all requests sent through
         # this resource object.
@@ -493,7 +515,7 @@ class Resource:
         return r
 
     def send(self, method, path, body=None, headers=None, bodyType=None,
-             responseType=None, unmarshallParams=None, timeout=None):
+             forcedResponseType=None, unmarshallParams=None, timeout=None):
         '''Sends a HTTP request with p_method, @ this p_path'''
         # p_path can be a complete URL (http://a.b.be/c) or the "path "part (/c)
         parts = self.getUrlParts(path, raiseOnError=False)
@@ -549,23 +571,24 @@ class Resource:
             duration = endTime - startTime
             self.serverTime += duration
         return HttpResponse(self, response, body, duration=duration,
-                            utf8=self.utf8, responseType=responseType,
-                            unmarshallParams=unmarshallParams)
+                 utf8=self.utf8, forcedResponseType=forcedResponseType,
+                 unmarshallParams=unmarshallParams)
 
     def get(self, path=None, headers=None, params=None, followRedirect=True,
-            responseType=None, unmarshallParams=None, timeout=None):
+            forcedResponseType=None, unmarshallParams=None, timeout=None):
         '''Perform a HTTP GET on the server'''
-        # Parameters can be given as a dict in p_params. p_responseType will be
-        # used if no "Content-Type" key is found on the HTTP response. In the
-        # processs of unmarshalling received data, specific parameters can be
-        # passed in dict p_unmarshallParams.
+        # Parameters can be given as a dict in p_params. p_forcedResponseType,
+        # if passed, will be used instead of the "Content-Type" key as found in
+        # the HTTP response. In the processs of unmarshalling received data,
+        # specific parameters can be passed in dict p_unmarshallParams.
         path = path or self.path
         # Encode and append params if given
         if params:
             sep = '&' if '?' in path else '?'
             paramsE = urllib.parse.urlencode(params)
             path = f'{path}{sep}{paramsE}'
-        r = self.send('GET', path, headers=headers, responseType=responseType,
+        r = self.send('GET', path, headers=headers,
+                      forcedResponseType=forcedResponseType,
                       unmarshallParams=unmarshallParams, timeout=timeout)
         # Follow redirect when relevant
         if r.code in r.redirectCodes and followRedirect:
@@ -581,7 +604,8 @@ class Resource:
             headers['Authorization'] = r.data.buildCredentials(self, path)
             return self.get(path=path, headers=headers, params=params,
                             followRedirect=followRedirect,
-                            responseType=responseType, timeout=timeout)
+                            forcedResponseType=forcedResponseType,
+                            timeout=timeout)
         return r
     rss = get
 

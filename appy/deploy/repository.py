@@ -81,14 +81,16 @@ class Repository:
         '''A sub-class may define a branch within its repo'''
 
     @classmethod
-    def getEnvironment(class_, asString=True):
+    def getEnvironment(class_, asString=True, verbose=False):
         '''Define environment variable GIT_SSH_COMMAND before launching a
            repository-related command. If p_asString is True, the method returns
            the definition a a string. Else, it updates os.environ with it.'''
         # The objective is to ensure we are not blocked by Host key verification
-        ssh = 'ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+        v = ' -v' if verbose else ''
+        ssh = f'ssh{v} -o UserKnownHostsFile=/dev/null -o ' \
+              f'StrictHostKeyChecking=no'
         if asString:
-            return 'GIT_SSH_COMMAND=\\"%s\\"' % ssh
+            return f'GIT_SSH_COMMAND=\\"{ssh}\\"'
         else:
             os.environ['GIT_SSH_COMMAND'] = ssh
 

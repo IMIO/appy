@@ -15,6 +15,11 @@ SEQ_TYP_KO  = 'Expression "%s" is not iterable.'
 WRONG_ITER  = 'Name "%s" cannot be used for an iterator variable.'
 TBL_X_CELL  = "The table you wanted to populate with '%s' can\'t be dumped " \
               "with the '-' option because it has more than one cell in it."
+IF_UNEXEC   = 'The corresponding "if" action was not executed'
+NAM_IF_NE   = f'{IF_UNEXEC}, there seems to be a structural problem in your ' \
+              f'if/else statements.'
+UNN_IF_NE   = f'{IF_UNEXEC}. Try to name the correspondoing "if" and link ' \
+              f'this "else" to it.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EvaluationError(Exception):
@@ -257,9 +262,18 @@ class Else(If):
         self.ifAction = ifAction
 
     def do(self, result, context, exprRes):
-        # This action is executed if the tied "if" action is not executed
-        iRes = context[self.storeExprKey][id(self.ifAction)]
-        If.do(self, result, context, not iRes)
+        '''Execute this "else" action: it occurs when the tied "if" action is
+           not executed.'''
+        # Retrieve the tied if's evaluation result
+        evals = context[self.storeExprKey]
+        actionId = id(self.ifAction)
+        if actionId in evals:
+            If.do(self, result, context, not evals[actionId])
+        else:
+            # The corresponding "if" action has not bee executed (was probably
+            # included in a buffer whose main "if" action resolved to False).
+            message = NAM_IF_NE if self.name else UNN_IF_NE
+            self.manageError(result, context, message)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class For(Action):

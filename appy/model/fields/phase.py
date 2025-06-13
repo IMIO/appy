@@ -116,7 +116,7 @@ class Page:
            If p_elem is not "page", this method returns the fact that a
            sub-element is viewable or not (buttons "save", "cancel", etc).'''
         # Define what attribute to test for "showability"
-        attr = 'show' if elem == 'page' else 'show%s' % elem.capitalize()
+        attr = 'show' if elem == 'page' else f'show{elem.capitalize()}'
         # Get the value of the "show" attribute as identified above
         r = getattr(self, attr)
         if callable(r):
@@ -139,7 +139,21 @@ class Page:
             r = name
         return r
 
-    def __repr__(self): return '<Page %s - phase %s>' % (self.name, self.phase)
+    def nextPhase(self):
+        '''If this page is part of a numerical series (pages 1, 2, 3...), this
+           method returns the next phase to use.'''
+        # The schema is the following:
+        # Page  1  to 9 are put in phase 'main'
+        # Pages 10 to 19 are put in phase '1x'
+        # Pages 20 to 29 are put in phase '2x'
+        # ... etc.
+        name = self.name
+        if not name.isdigit(): return self.phase
+        nb = int(name) + 1
+        if nb < 10: return self.phase
+        return f'{str(nb)[:-1]}x'
+
+    def __repr__(self): return f'‹Page {self.name} - phase {self.phase}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class UiPage:
@@ -161,20 +175,20 @@ class UiPage:
         layout = phases.layout
         for elem in Page.subElements:
             showable = page.isShowable(o, layout, elem)
-            setattr(self, 'show%s' % elem.capitalize(), showable)
+            setattr(self, f'show{elem.capitalize()}', showable)
         # Define the icon to display
         self.iconUrl = self.getIconUrl(o)
 
     def __repr__(self):
         '''p_self's string representation'''
-        return '<UiPage %s>' % self.name
+        return f'‹UiPage {self.name}›'
 
     def getLabel(self):
         '''Returns the translated label for this page, potentially based on a
            fixed label if p_self.label is not empty.'''
         page = self.page
         o = self.uiPhase.container.o
-        label = page.label or '%s_page_%s' % (o.class_.name, page.name)
+        label = page.label or f'{o.class_.name}_page_{page.name}'
         return o.translate(label)
 
     def showable(self, layout):
@@ -227,10 +241,11 @@ class UiPhase:
 
     view = Px('''
      <div class=":'phase phaseC' if compact else 'phase'"
-          if="phase.showPages(singlePhase, isEdit)">
+          if="phase.showPages(singlePhase, isEdit)"
+          var2="inPhase=True">
 
       <!-- Siblings navigation -->
-      <div if="phase.showNavigation(_ctx_)"
+      <div id="navP" if="phase.showNavigation(_ctx_)"
            var2="snav=ui.Siblings.get(req.nav, tool, _ctx_);
                  gotoSource=True">:snav.pxNavigate|'⚠'</div>
 
@@ -260,9 +275,9 @@ class UiPhase:
         </x>
 
         <!-- The edit or lock icon -->
-        <x var="locked=o.Lock.isSet(o, user, pag.name);
+        <x var="locked=o.Lock.isSet(o, pag.name);
                editable=mayEdit and mayAct and pag.showOnEdit and pag.showEdit">
-         <a if="editable and not locked"
+         <a if="editable and not locked" onclick="clickOn(this)"
             href=":o.getUrl(sub='edit', page=pag.name, popup=popup, nav=nav)">
           <img src=":svg('editPage')" class="pictoT shake"
                title=":_('object_edit')"/></a>
@@ -272,7 +287,7 @@ class UiPhase:
       </div>
 
       <!-- Additional object controls -->
-      <x var="inPhase=True">:o.pxButtons</x>
+      <x>:o.pxButtons</x>
      </div>''',
 
      # Class names ending with "C" are used when controls are *C*ompact
@@ -301,6 +316,7 @@ class UiPhase:
       .phase .snav { flex-wrap:wrap }
       .phase .navSib { padding:|navsPadding| }
       .phase .navText { padding:0; color:|phaseColor| }
+      .phase a:focus > img { animation: blinkingP 1s infinite }
 
       .picto { width:|pictoSize|; height:|pictoSize|; margin:|pictoMargin| }
       .pictoT { position:|epictoPosition|; top:8px; right:8px;
@@ -535,7 +551,7 @@ class UiPhases:
             # Typically, the user has logged out in browser tab A, and he tries
             # to reload a page in tab B, that became invisible when consulted as
             # anonymous user.
-            # ~~~
+            #
             # Another explanation may be that there is no current page to show
             # according to conditions defined on pages for self.o's class. While
             # this can be a problem of conception in the app, there is a

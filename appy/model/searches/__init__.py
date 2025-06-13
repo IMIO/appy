@@ -99,7 +99,9 @@ class Search:
         self.fields = fields
         # Must checkboxes be shown for every object of the search result ?
         self.checkboxes = checkboxes
-        # Default value for checkboxes
+        # Default value for checkboxes. Note that, for a search used in front
+        # of a ref (via attribute Ref::searches), this attribute is ignored: the
+        # homonym attribute at the Ref level is used instead.
         self.checkboxesDefault = checkboxesDefault
         # Most of the time, we know what is the class whose instances must be
         # searched. When it is not the case, the p_container can be explicitly
@@ -133,7 +135,7 @@ class Search:
         # Alignment of filters on a grid layout
         self.gridFiltersAlign = gridFiltersAlign
         # If you want to compute some totals based on search results, set, in
-        # p_totalRows, a list of appy.model.totals::Totals instances. Note that
+        # p_totalRows, a list of appy.model.totals::Totals objects. Note that
         # these rows will only be shown if all search results are present (ie,
         # the current batch matches all results).
         self.totalRows = totalRows
@@ -172,7 +174,8 @@ class Search:
 
     mergeAttributes = ('sortBy', 'sortOrder', 'showActions', 'actionsDisplay',
                        'actions', 'maxPerPage', 'resultModes', 'shownInfo',
-                       'checkboxes', 'checkboxesDefault', 'gridFiltersAlign')
+                       'checkboxes', 'checkboxesDefault', 'gridFiltersAlign',
+                       'totalRows')
 
     def merge(self, other):
         '''Merge parameters from another search in p_other'''
@@ -208,7 +211,7 @@ class Search:
         return r
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  The "run" method
+    #                             The "run" method
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def run(self, handler, batch=True, start=0, ids=False, secure=True,
@@ -243,7 +246,8 @@ class Search:
         # sortOrder).
         #
         # Prepare search parameters
-        className = self.container.name
+        class_ = self.container
+        className = class_.name
         params = self.fields.copy()
         # Use the search's default sort key and order if not passed as args
         if not sortBy and not other:
@@ -256,11 +260,7 @@ class Search:
             params.update(other.fields)
         # Take p_filters into account
         if filters:
-            for name, value in filters.items():
-                if not value: continue
-                field = self.getField(name)
-                value = field.getSearchValue(None, value=value)
-                if value is not None: params[name] = value
+            class_.filtersToParams(filters, params)
         # Manage a potential Ref field
         if refObject and refField.back:
             backName = refField.back.name
@@ -287,7 +287,7 @@ class Search:
         return batch
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Class methods
+    #                              Class methods
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     @classmethod
@@ -357,6 +357,8 @@ class Search:
                     r = field.getSelect(o)
             elif field.type == 'Computed':
                 r = field.getSearch(o)
+            else:
+                r = None
         elif name.isdigit():
             # The name of the search refers to a Query instance
             r = tool.getObject(name).getSearch()
@@ -378,7 +380,7 @@ class Search:
         context.mode = ui.getMode()
 
     @classmethod
-    def getRefInfo(class_, tool, info=None, nameOnly=True, sep=':'):
+    def getRefInfo(class_, tool, info=None, withName=False, sep=':'):
         '''When a search is triggered in the context of a Ref field, this method
            returns information about this reference: the source object and the
            Ref field.'''
@@ -394,10 +396,12 @@ class Search:
                 criteria = Criteria.readFromRequest(tool.H())
                 if criteria and '_ref' in criteria: info = criteria['_ref']
         if not info or (sep not in info): return None, None
-        id, field = info.split(sep)
+        id, name = info.split(sep)
         o = tool.getObject(id)
-        field = field if nameOnly else o.getField(field)
-        return o, field
+        field = o.getField(name)
+        # Depending on p_withName, the precise return value varies
+        r = (field, name) if withName else field
+        return o, r
 
     @classmethod
     def encodeForReplay(class_, req, layout):
@@ -445,7 +449,7 @@ class Search:
             info = f'{parts[0]}:{parts[1]}'
         else:
             info = None
-        refObject, refField = class_.getRefInfo(tool, info=info, nameOnly=False)
+        refObject, refField = class_.getRefInfo(tool, info=info)
         # Get the Search instance
         modelClass = tool.model.classes.get(params.className)
         search = class_.get(params.search, tool, modelClass, None, ui=False)
@@ -500,14 +504,15 @@ class Search:
             i -= 1
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  PXs
+    #                                    PXs
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # Display results of a search whose name is in the request
     results = Px('''
      <div var="x=uiSearch|tool.raiseMessage(_('search_broken'));
                hook=uiSearch.getRootHook()" id=":hook">
-      <script>:uiSearch.getCbJsInit(mode.outerHook)</script>
+      <script if="uiSearch.useCbJs(mode)">:uiSearch.getCbJsInit(mode.outerHook)
+      </script>
       <x if="not mode.inField">::ui.Globals.getForms(tool)</x>
 
       <!-- Search results -->
@@ -535,9 +540,12 @@ class Search:
         size = search.maxPerPage
         start = index - int(size / 2)
         if start < 0: start = 0
+        # Get a potential ref object and field
+        refObject, refField = class_.getRefInfo(tool)
         # Perform the search
         ids = search.run(tool.H(), ids=True, sortBy=req.sortKey or None,
                          sortOrder=req.sortOrder or 'asc',
+                         refObject=refObject, refField=refField,
                          filters=modelClass.getFilters(tool))
         r = {}
         i = start
@@ -555,7 +563,7 @@ class Search:
     liveResults = Px('''
      <div var="search=uiSearch.search;
               filters=search.container.getFilters(tool);
-              io,ifield=search.getRefInfo(tool, pre, nameOnly=False, sep='_');
+              io,ifield=search.getRefInfo(tool, pre, withName=True, sep='_');
               objects=search.run(handler,filters=filters,
                                  maxPerPage=search.maxPerLive).objects"
           id=":f'{pre}_LSResults'">
@@ -574,15 +582,16 @@ class Search:
      </div>''')
 
     def onSelectLiveResult(self, o, io, ifield):
-        '''Get the action to perform when the user click on a live search
+        '''Get the action to perform when the user clicks on a live search
            result.'''
         # If there is no *i*initiator *o*bject (io), redirect the user to p_o's
         # view page.
         if io is None: return o.url
         # Else, update the initiator field (io.ifield) in order to add p_o
+        ifield, iname = ifield
         multi = 'true' if ifield.isMultiValued() else 'false'
-        return "javascript:addLSResult('%s','%s','%s',%s)" % \
-               (io.iid, ifield.name, o.iid, multi)
+        return f"javascript:addLSResult('{io.iid}','{iname or ifield.name}'," \
+               f"'{o.iid}',{multi})"
 
     @classmethod
     def getAdvancedUrls(class_, tool, className):

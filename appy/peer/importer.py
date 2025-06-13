@@ -12,7 +12,7 @@ from appy.model.workflow import history
 from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-IMP_START = '%s %d %s instances(s) in %s:%s...'
+IMP_START = '%s %d %s object(s) in %s:%s...'
 REF_OBJS  = '%s:%s > %s objects'
 ADD_DONE  = ' %d created ¤ %d ignored ¤ %d linked.'
 U_NO_PWD  = 'Imported user %s has no password.'
@@ -48,7 +48,7 @@ class Importer:
     eventsNonKeyword = ('login', 'state', 'date', 'className')
 
     def __init__(self, tool, peer, local=None, distant=None, distantUrl=None,
-                 importHistory=True, importLocalRoles=True):
+                 importHistory=True, importLocalRoles=True, importFields=True):
         # The local tool and the request object
         self.tool = tool
         self.req = tool.req
@@ -69,6 +69,10 @@ class Importer:
         self.importHistory = importHistory
         # Must object's local roles be imported ?
         self.importLocalRoles = importLocalRoles
+        # Must object fields be imported ? A concrete importer may want to
+        # disable it in order to propose a custom way to import didtant object
+        # fields.
+        self.importFields = importFields
         # Must the local object be reindexed after the import ? True by default,
         # this may be set to False if, for example, the local object already
         # exists and does not need to be imported nor synchronized.
@@ -240,8 +244,11 @@ class Importer:
                     counts.created += 1
                 elif action in (importer.FIND, importer.SYNC):
                     # Find the local objet corresponding to the distant one
-                    tied = o.getObject(distant.id) if detail is None else \
-                           o.search1(tiedClass.name, **detail)
+                    classT = tiedClass.name
+                    if detail is None:
+                        tied = o.getObject(distant.id, className=classT)
+                    else:
+                        tied = o.search1(classT, **detail)
                     # Add it to the dict of already imported objects
                     imported[distantId] = tied
                     # Fill, when appropriate, local object's attributes from
@@ -348,6 +355,8 @@ class Importer:
             hist[-1].login = d.creator or '?'
             hist[-1].date = d.created or DateTime()
             hist.modified = d.modified or DateTime()
+            if d.modifier:
+                hist.modifier = d.modifier
         if copy and d.record:
             initial = hist.pop()
             # Get and copy distant events
@@ -409,11 +418,10 @@ class Importer:
         # process, consisting in syncing its fields with its distant
         # counterpart.
         if self.local:
-            # Set history and local roles when required
+            # Set history, local roles and fields when required
             if self.importHistory: self.setHistory()
             if self.importLocalRoles: self.setLocalRoles()
-            # Import values from simple fields
-            self.setFields()
+            if self.importFields: self.setFields()
         # Perfom custom processing, if any. If p_self.local did not exist, we
         # are in a custom import process: m_customize must do the whole job,
         # starting with creating the local object, or finding it and syncing it,
@@ -442,10 +450,10 @@ class UserImporter(Importer):
         '''Manage special field "encrypted" storing the encrypted password'''
         encrypted = self.distant.encrypted
         o = self.local
-        if not encrypted:
-            o.log(U_NO_PWD % o.login, type='error')
-        else:
+        if encrypted:
             o.values['password'] = encrypted.encode()
+        elif o.source == 'zodb':
+            o.log(U_NO_PWD % o.login, type='error')
 
     @classmethod
     def getAction(class_, distant):

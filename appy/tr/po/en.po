@@ -28,6 +28,10 @@ msgstr "Optional comment"
 msgid "role_Manager"
 msgstr "Manager"
 
+#. Default: "Publisher"
+msgid "role_Publisher"
+msgstr "Publisher"
+
 #. Default: "Anonymous"
 msgid "role_Anonymous"
 msgstr "Anonymous"
@@ -92,6 +96,10 @@ msgstr "[ choose ]"
 msgid "no_value"
 msgstr " - "
 
+#. Default: "-"
+msgid "no_choice"
+msgstr "-"
+
 #. Default: "[ Documents ]"
 msgid "choose_a_doc"
 msgstr "[ Documents ]"
@@ -115,6 +123,10 @@ msgstr "Too much elements are selected here."
 #. Default: "-"
 msgid "no_ref"
 msgstr "No object."
+
+#. Default: "Invalid value.\nIndividual values mus be separated by « ${sep} » chars.\nAn individual value must be a number between ${min} and ${max},\nor a range of 2 values separated by char « ${rangeSep} »."
+msgid "number_select_ko"
+msgstr "Invalid value.\nIndividual values mus be separated by « ${sep} » chars.\nAn individual value must be a number between ${min} and ${max},\nor a range of 2 values separated by char « ${rangeSep} »."
 
 #. Default: "There is currently no selectable element."
 msgid "no_selectable"
@@ -147,6 +159,14 @@ msgstr "Move to bottom"
 #. Default: "Update the hereabove number and click here to move this element to a new position."
 msgid "move_number"
 msgstr "Update the hereabove number and click here to move this element to a new position."
+
+#. Default: "Stretch"
+msgid "stretch"
+msgstr "Stretch"
+
+#. Default: "Shrink"
+msgid "shrink"
+msgstr "Shrink"
 
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"
@@ -260,9 +280,17 @@ msgstr "The field content is not well-formed XML. ${error}"
 msgid "invalid_text"
 msgstr "Content found, considered as invalid or incomplete: ${text}"
 
+#. Default: "The field contains ${found} characters · The maximum is ${max}."
+msgid "text_overflow"
+msgstr "The field contains ${found} characters · The maximum is ${max}."
+
 #. Default: "Choose a value between ${min} and ${max}."
 msgid "range_ko"
 msgstr "Choose a value between ${min} and ${max}."
+
+#. Default: "Wrong or missing file extension. Valid extension(s) is (are): ${exts}."
+msgid "ext_ko"
+msgstr "Wrong or missing file extension. Valid extension(s) is (are): ${exts}."
 
 #. Default: "(Un)select all"
 msgid "select_delesect"
@@ -275,6 +303,10 @@ msgstr "Automatic (de)selection"
 #. Default: "Unselect all"
 msgid "unselect_all"
 msgstr "Unselect all"
+
+#. Default: "Clean all"
+msgid "clean_all"
+msgstr "Clean"
 
 #. Default: "You must select at least one element."
 msgid "no_elem_selected"
@@ -332,9 +364,17 @@ msgstr "Insert"
 msgid "object_link_many"
 msgstr "Insert selection"
 
+#. Default: "Apply"
+msgid "filter_apply"
+msgstr "Apply"
+
+#. Default: "Clean"
+msgid "filter_clean"
+msgstr "Clean"
+
 #. Default: "Duplicate (below)"
 msgid "row_clone"
-msgstr ""
+msgstr "Duplicate (below)"
 
 #. Default: "Un·check everything"
 msgid "check_uncheck"
@@ -368,6 +408,10 @@ msgstr "Replace it with a new file"
 msgid "action_confirm"
 msgstr "Are you sure ?"
 
+#. Default: "Here we go ?"
+msgid "here_we_go"
+msgstr "Here we go ?"
+
 #. Default: "⚠️ Are you sure you want to delete this ?"
 msgid "delete_confirm"
 msgstr "⚠️ Are you sure you want to delete this ?"
@@ -387,6 +431,14 @@ msgstr "Action could not be performed on ${nb} element(s)."
 #. Default: "Action had no effect."
 msgid "action_null"
 msgstr "Action had no effect."
+
+#. Default: "⚠️ Missing login or email.\n\nPlease encode here a valid user login or email."
+msgid "missing_login"
+msgstr "⚠️ Missing login or email.\n\nPlease encode here a valid user login or email."
+
+#. Default: "⚠️ This procedure can't be performed:\nyou are already logged into this site."
+msgid "for_anon_only"
+msgstr "⚠️ This procedure can't be performed:\nyou are already logged into this site."
 
 #. Default: "Action would have had no effect."
 msgid "action_null_test"
@@ -520,13 +572,13 @@ msgstr "Upload a new file"
 msgid "upload_invalid"
 msgstr "Please upload a file of the same type."
 
-#. Default: "Made with <a href=\"http://appyframework.org\" target=\"_blank\">Appy</a>"
+#. Default: "Made with <a href=\"https://appyframe.work\" target=\"_blank\">Appy</a>"
 msgid "footer_text"
-msgstr "Made with <a href=\"http://appyframework.org\" target=\"_blank\">Appy</a>"
+msgstr "Made with <a href=\"https://appyframe.work\" target=\"_blank\">Appy</a>"
 
-#. Default: "Please type \"${text}\" (without the double quotes) in the field besides, but without the character at position ${number}."
+#. Default: "Please type “${text}” (without the double quotes) in the field besides, but without the character at position ${number}."
 msgid "captcha_text"
-msgstr "Please type \"${text}\" (without the double quotes) in the field besides, but without the character at position ${number}."
+msgstr "Please type “${text}” (without the double quotes) in the field besides, but without the character at position ${number}."
 
 #. Default: "The code was not correct. Please try again."
 msgid "bad_captcha"
@@ -584,17 +636,29 @@ msgstr "Login failed."
 msgid "login_ok"
 msgstr "Welcome! You are now logged in."
 
-#. Default: "Welcome! You are now logged in.<br/><br/><b>Before going further, please choose a new password.</b>"
+#. Default: "Welcome! You are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
 msgid "login_ok_change_password"
-msgstr "Welcome! You are now logged in.<br/><br/><b>Before going further, please choose a new password.</b>"
+msgstr "Welcome! You are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
 
 #. Default: "You have been logged out."
 msgid "logout_ok"
 msgstr "You have been logged out."
 
+#. Default: "Type your new password here"
+msgid "password_type_new"
+msgstr "Type your new password here"
+
 #. Default: "Confirm here the password"
 msgid "password_confirm"
 msgstr "Confirm here the password"
+
+#. Default: "Show the password"
+msgid "password_show"
+msgstr "Show the password"
+
+#. Default: "Hide the password"
+msgid "password_hide"
+msgstr "Hide the password"
 
 #. Default: "Passwords must contain at least ${nb} characters."
 msgid "password_too_short"
@@ -692,9 +756,13 @@ msgstr "Forgot password?"
 msgid "ask_password_reinit"
 msgstr "Ask new password"
 
-#. Default: "Something went wrong. First possibility: you have already clicked on the link (maybe have you double-clicked?) and your password has already been re-initialized. Please check that you haven't received your new password in another email. Second possibility: the link that you received in your mailer was splitted on several lines. In this case, please re-type the link in one single line and retry. Third possibility: you have waited too long and your request has expired, or a technical error occurred. In this case, please try again to ask a new password from the start."
+#. Default: "️⚠️ Something went wrong.\n\nYou may have waited too long.\n\nPlease try again."
 msgid "wrong_password_reinit"
-msgstr "Something went wrong. First possibility: you have already clicked on the link (maybe have you double-clicked?) and your password has already been re-initialized. Please check that you haven't received your new password in another email. Second possibility: the link that you received in your mailer was splitted on several lines. In this case, please re-type the link in one single line and retry. Third possibility: you have waited too long and your request has expired, or a technical error occurred. In this case, please try again to ask a new password from the start."
+msgstr "⚠️ Something went wrong.\n\nYou may have waited too long.\n\nPlease try again."
+
+#. Default: "️✌ Welcome back !\n\nIn order to be able to use your profile again, please define a brand new password."
+msgid "password_redefine"
+msgstr "✌ Welcome back !\n\nIn order to be able to use your profile again, please define a brand new password."
 
 #. Default: "A mail has been sent to you. Please follow the instructions from this email."
 msgid "reinit_mail_sent"
@@ -707,18 +775,6 @@ msgstr "Password re-initialisation"
 #. Default: "Hello,\n\nA password re-initialisation has been requested, tied to this email address, for the website ${siteUrl}. If you are not at the origin of this request, please ignore this email. Else, click on the link below to receive a new password.\n\n${url}"
 msgid "reinit_password_body"
 msgstr "Hello,\n\nA password re-initialisation has been requested, tied to this email address, for the website ${siteUrl}. If you are not at the origin of this request, please ignore this email. Else, click on the link below to receive a new password.\n\n${url}"
-
-#. Default: "Your new password"
-msgid "new_password"
-msgstr "Your new password"
-
-#. Default: "Hello,\n\nThe new password you have requested for website ${siteUrl} is ${password}\n\nBest regards."
-msgid "new_password_body"
-msgstr "Hello,\n\nThe new password you have requested for website ${siteUrl} is ${password}\n\nBest regards."
-
-#. Default: "Your new password has been sent to you by email."
-msgid "new_password_sent"
-msgstr "Your new password has been sent to you by email."
 
 #. Default: "The password for this user is ${password}"
 msgid "new_password_text"
@@ -759,6 +815,14 @@ msgstr "Comment"
 #. Default: "Create from another object"
 msgid "create_from_predecessor"
 msgstr "Create from another object"
+
+#. Default: "Month"
+msgid "month"
+msgstr "Month"
+
+#. Default: "Week"
+msgid "week"
+msgstr "Week"
 
 #. Default: "Mon"
 msgid "day_Mon_short"
@@ -936,9 +1000,9 @@ msgstr "Today"
 msgid "which_event"
 msgstr "Which event type would you like to create?"
 
-#. Default: "Extend the event on the following number of days (leave blank to create an event on the current day only):"
+#. Default: "Extend the event on the following number of days\n(leave blank to create an event on the current day only):"
 msgid "event_span"
-msgstr "Extend the event on the following number of days (leave blank to create an event on the current day only):"
+msgstr "Extend the event on the following number of days\n(leave blank to create an event on the current day only):"
 
 #. Default: "Also delete successive events of the same type."
 msgid "del_next_events"
@@ -956,17 +1020,25 @@ msgstr "Timeslot"
 msgid "timeslot_main"
 msgstr "Unique"
 
-#. Default: "Cannot create such an event in the ${slot} slot."
+#. Default: "Cannot create such an event in slot « ${slot} »."
 msgid "timeslot_misfit"
-msgstr "Cannot create such an event in the ${slot} slot."
+msgstr "Cannot create such an event in slot « ${slot} »."
 
 #. Default: "Validate events"
 msgid "validate_events"
 msgstr "Validate events"
 
-#. Default: "All the checked events will be confirmed, while the unchecked ones will be discarded.\n\nThe concerned user·s will be warned.\n\nAre you sure ?"
+#. Default: "Delete discarded events"
+msgid "validate_events_discard"
+msgstr "Delete discarded events"
+
+#. Default: "If this checkbox is checked, unselected events will left as-is, opening the possibility to validate them in a future, additional step. Else, unselected events will be removed and considered definitely rejected."
+msgid "validate_events_discard_descr"
+msgstr "If this checkbox is checked, unselected events will left as-is, opening the possibility to validate them in a future, additional step. Else, unselected events will be removed and considered definitely rejected."
+
+#. Default: "Only checked events will be validated.\n\nThe concerned user·s will be warned."
 msgid "validate_events_confirm"
-msgstr "All the checked events will be confirmed, while the unchecked ones will be discarded.\n\nThe concerned user·s will be warned.\n\nAre you sure ?"
+msgstr "Only checked events will be validated.\n\nThe concerned user·s will be warned."
 
 #. Default: "<table class=\"small\"><tr><th>Validated event·s</th><td align=\"center\">${validated}</td></tr><tr><th>Discarded event·s</th><td align=\"center\">${discarded}</td></tr></table>"
 msgid "validate_events_done"
@@ -1012,9 +1084,13 @@ msgstr "This page does not exist or you are not allowed to consult it."
 msgid "warn_leave_form"
 msgstr "In some situations, by leaving this page this way, you may lose encoded data or prevent other users from editing it afterwards. Please use buttons instead."
 
-#. Default: "You are not allowed to consult this."
+#. Default: "You are not (or no longer) allowed to come here."
 msgid "unauthorized"
-msgstr "You are not allowed to consult this."
+msgstr "You are not (or no longer) allowed to come here."
+
+#. Default: "You are not allowed to consult this."
+msgid "unconsultable"
+msgstr ""
 
 #. Default: "Microsoft Internet Explorer is not supported.\nUsing it with site is risky and could lead to problems as severe as data loss.\n\nPlease use a modern web browser to consult this site."
 msgid "wrong_browser"
@@ -1092,6 +1168,10 @@ msgstr "Non breaking dash (PC: Ctrl+-, Mac: Alt+Shift+-)"
 msgid "icon_dup"
 msgstr "Duplicate (Ctrl+D)"
 
+#. Default: "Insert a smiley"
+msgid "icon_smiley"
+msgstr "Insert a smiley"
+
 #. Default: "Lengthen (PC: Ctrl+_, Mac: Ctrl+!)"
 msgid "icon_lengthen"
 msgstr "Lengthen (PC: Ctrl+_, Mac: Ctrl+!)"
@@ -1128,6 +1208,10 @@ msgstr "I agree"
 msgid "cookie_read"
 msgstr "Read our privacy policy."
 
+#. Default: "unknown"
+msgid "unknown"
+msgstr "unknown"
+
 #. Default: "Pay"
 msgid "pay"
 msgstr "Pay"
@@ -1152,11 +1236,18 @@ msgstr "We are sorry, but something went wrong with your payment. Please try aga
 msgid "standard_view"
 msgstr "Standard view"
 
-#. Default: "It seems that you are not allowed to access this site, we are sorry."
+#. Default: "It seems that you (${login}) are not allowed to access this site, we are sorry."
 msgid "sso_user_blocked"
-msgstr "It seems that you are not allowed to access this site, we are sorry."
+msgstr "It seems that you (${login}) are not allowed to access this site, we are sorry."
 
-# ~~~~ Base-related labels ~~~~
+#. Default: "Darken"
+msgid "to_dark"
+msgstr "Darken"
+
+#. Default: "Lighten"
+msgid "to_light"
+msgstr "Lighten"
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "By"
@@ -1164,6 +1255,10 @@ msgstr "By"
 #. Default: "On"
 msgid "Base_created"
 msgstr "On"
+
+#. Default: "Last update by"
+msgid "Base_modifier"
+msgstr "Last update by"
 
 #. Default: "Last updated on"
 msgid "Base_modified"
@@ -1178,6 +1273,10 @@ msgid "Base_searchable"
 msgstr "Keywords"
 
 #. Default: "History"
+msgid "Base_record"
+msgstr "History"
+
+#. Default: "History"
 msgid "Base_page_history"
 msgstr "History"
 
@@ -1185,7 +1284,6 @@ msgstr "History"
 msgid "Base_page_python"
 msgstr "Python"
 
-# ~~~~ User-related labels ~~~~
 #. Default: "User"
 msgid "User"
 msgstr "User"
@@ -1222,6 +1320,10 @@ msgstr "First name"
 msgid "User_login"
 msgstr "Login"
 
+#. Default: "A login often, but not necessarily, corresponds to an email address."
+msgid "User_login_descr"
+msgstr "A login often, but not necessarily, corresponds to an email address."
+
 #. Default: "Email"
 msgid "User_email"
 msgstr "Email"
@@ -1254,7 +1356,6 @@ msgstr "Editable pages"
 msgid "User_editablePages_descr"
 msgstr "You'll find, hereafter, all the pages, on this site, you are allowed to edit."
 
-# ~~~~ Group-related labels ~~~~
 #. Default: "Group"
 msgid "Group"
 msgstr "Group"
@@ -1283,7 +1384,6 @@ msgstr "Roles"
 msgid "Group_users"
 msgstr "Users"
 
-# ~~~~ Translation-related labels ~~~~
 #. Default: "Translation"
 msgid "Translation"
 msgstr "Translation"
@@ -1320,7 +1420,6 @@ msgstr "PO file - Main labels"
 msgid "Translation_poCustom"
 msgstr "PO file - Additional labels"
 
-# ~~~~ Page-related labels ~~~~
 #. Default: "Page"
 msgid "Page"
 msgstr "Page"
@@ -1461,7 +1560,6 @@ msgstr "Choose here users that will be allowed to edit this page, and its sub-pa
 msgid "Page_parent"
 msgstr "Parent"
 
-# ~~~~ Carousel-related labels ~~~~
 #. Default: "Carousel"
 msgid "Carousel"
 msgstr "Carousel"
@@ -1598,9 +1696,13 @@ msgstr "If you upload a thin image here, it will be rendered just below the caro
 msgid "Carousel_page_documents"
 msgstr "Documents"
 
-#. Default: "Documents"
+#. Default: "Published documents"
 msgid "Carousel_documents"
-msgstr "Documents"
+msgstr "Published documents"
+
+#. Default: "Unpublished documents"
+msgid "Carousel_unpublished"
+msgstr "Unpublished documents"
 
 #. Default: "Preview"
 msgid "Carousel_page_preview"
@@ -1614,7 +1716,6 @@ msgstr "Preview"
 msgid "Carousel_pages"
 msgstr "Pages incorporating this carousel"
 
-# ~~~~ Document-related labels ~~~~
 #. Default: "Document"
 msgid "Document"
 msgstr "Document"
@@ -1646,6 +1747,22 @@ msgstr "Duplicate"
 #. Default: "You are about to duplicate this document and add the copy the same list.\n\nAre you sure ?"
 msgid "Document_duplicate_confirm"
 msgstr "You are about to duplicate this document and add the copy the same list.\n\nAre you sure ?"
+
+#. Default: "Publish"
+msgid "Document_publish"
+msgstr "Publish"
+
+#. Default: "You are about to publish this document.\n\nAre you sure ?"
+msgid "Document_publish_confirm"
+msgstr "You are about to publish this document.\n\nAre you sure ?"
+
+#. Default: "Unpublish"
+msgid "Document_unpublish"
+msgstr "Unpublish"
+
+#. Default: "You are about to unpublish this document.\n\nAre you sure ?"
+msgid "Document_unpublish_confirm"
+msgstr "You are about to unpublish this document.\n\nAre you sure ?"
 
 #. Default: "Elements"
 msgid "Document_elements"
@@ -1695,7 +1812,6 @@ msgstr "URL"
 msgid "Document_page"
 msgstr "Page"
 
-# ~~~~ Query-related labels ~~~~
 #. Default: "Query"
 msgid "Query"
 msgstr "Query"
@@ -1828,7 +1944,6 @@ msgstr "When consulting search results, the main page for viewing every matched 
 msgid "Query_pages"
 msgstr "Pages incorporating this query"
 
-# ~~~~ Tool-related labels ~~~~
 #. Default: "Configuration"
 msgid "Tool"
 msgstr "Configuration"
@@ -1937,11 +2052,10 @@ msgstr "If you want to include, in your web pages, search results, create Querie
 msgid "Tool_calendar"
 msgstr "Calendar"
 
-#. Default: " "
+#. Default: ""
 msgid "Tool_calendar_descr"
-msgstr " "
+msgstr ""
 
-# ~~~~ Move-related labels ~~~~
 #. Default: "Mover"
 msgid "Mover"
 msgstr "Mover"
@@ -1978,6 +2092,75 @@ msgstr "${replacements} done within ${updated}/${total} page·s."
 msgid "Mover_tested"
 msgstr "${replacements} replacement·s would have been done within ${updated}/${total} page·s."
 
+# ~~~~ Place-related labels ~~~~
+#. Default: "Place"
+msgid "Place"
+msgstr "Place"
+
+#. Default: "Places"
+msgid "Place_plural"
+msgstr "Places"
+
+#. Default: "Place"
+msgid "Place_page_main"
+msgstr "Place"
+
+#. Default: "Name"
+msgid "Place_title"
+msgstr "Name"
+
+#. Default: "Address"
+msgid "Place_group_address"
+msgstr "Address"
+
+#. Default: "This place is virtual"
+msgid "Place_virtual"
+msgstr "This place is virtual"
+
+#. Default: "Street"
+msgid "Place_street"
+msgstr "Street"
+
+#. Default: "Nb"
+msgid "Place_number"
+msgstr "Nb"
+
+#. Default: "Box"
+msgid "Place_box"
+msgstr "Box"
+
+#. Default: "Zip"
+msgid "Place_zip"
+msgstr "Zip"
+
+#. Default: "City"
+msgid "Place_city"
+msgstr "City"
+
+#. Default: "Country"
+msgid "Place_country"
+msgstr "Country"
+
+#. Default: "URL"
+msgid "Place_placeUrl"
+msgstr "URL"
+
+#. Default: "Address"
+msgid "Place_address"
+msgstr "Address"
+
+#. Default: "Latitude"
+msgid "Place_latitude"
+msgstr "Latitude"
+
+#. Default: "Longitude"
+msgid "Place_longitude"
+msgstr "Longitude"
+
+#. Default: "Geolocalized"
+msgid "Place_geolocalized"
+msgstr "Geolocalized"
+
 # ~~~~ Standard workflow-related labels ~~~~
 #. Default: "Active"
 msgid "Anonymous_active"
@@ -2009,6 +2192,30 @@ msgstr "Reactivate"
 
 #. Default: "Are you sure ?"
 msgid "Owner_reactivate_confirm"
+msgstr "Are you sure ?"
+
+#. Default: "Active"
+msgid "User_active"
+msgstr "Active"
+
+#. Default: "Inactive"
+msgid "User_inactive"
+msgstr "Inactive"
+
+#. Default: "Deactivate"
+msgid "User_deactivate"
+msgstr "Deactivate"
+
+#. Default: "Are you sure ?"
+msgid "User_deactivate_confirm"
+msgstr "Are you sure ?"
+
+#. Default: "Reactivate"
+msgid "User_reactivate"
+msgstr "Reactivate"
+
+#. Default: "Are you sure ?"
+msgid "User_reactivate_confirm"
 msgstr "Are you sure ?"
 
 #. Default: "Created"

@@ -3,6 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.pod.buffers import MemoryBuffer
+from appy.pod.elements import PxAttributes
 from appy.xml import Environment, Parser, XHTML_SC
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -44,7 +45,7 @@ class PxEnvironment(Environment):
         '''Returns True if the currently walked p_elem is the same elem as the
            main buffer elem.'''
         action = self.currentBuffer.action
-        return action and (action.elem == elem)
+        return action and action.elem == elem
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PxParser(Parser):
@@ -54,10 +55,11 @@ class PxParser(Parser):
     pxAttributes = ('var', 'for', 'if', 'var2')
 
     # PX attributes that must not be part of the reslt
-    pxIgnorable = pxAttributes + ('z',)
+    pxIgnorable = pxAttributes + ('z', 'attrs')
 
     # XHTML attributes that could not be dumped, depending on their value
-    noDump = ('selected', 'checked', 'disabled', 'multiple', 'readonly')
+    noDump = ('selected', 'checked', 'disabled', 'multiple', 'readonly',
+              'autofocus')
 
     # The following dict allows to convert attrs "lfor" to "for". Indeed,
     # because tags "label" can have an attribute named "for", it clashes with
@@ -92,17 +94,25 @@ class PxParser(Parser):
             # the main element or to a sub-element.
             e.currentBuffer.addElement(elem, pod=False)
         if elem != 'x':
-            # Dump the start element and its attributes. But as a preamble,
-            # manage special attributes that could not be dumped at all, like
-            # "selected" or "checked".
+            # Dump the start element and its attributes. AMong these latters,
+            # some are special: (a) boolean HTML attributes (like "selected" or
+            # "checked", that could not be dumped at all), and (b) dynamic
+            # attributes, that could be dumped via special attribute named
+            # "attrs", whose value may return a dict of additional attributes.
+            # Both (a) and (b) are managed by a appy.pod.elements.PxAttributes
+            # object that will be defined in v_hook, if required.
             hook = None
             ignorableAttrs = PxParser.pxIgnorable
             buffer = e.currentBuffer
             for name in self.noDump:
                 if name in attrs and attrs[name].startswith(':'):
-                    hook = (name, buffer.crunchExpr(attrs[name][1:]))
+                    # We have at least one boolean XHTML attribute
+                    if hook is None: hook = PxAttributes()
+                    hook.addBoolean(name, buffer.crunchExpr(attrs[name][1:]))
                     ignorableAttrs += (name,)
-                    break
+            if 'attrs' in attrs:
+                if hook is None: hook = PxAttributes()
+                hook.addDynamic(attrs['attrs'])
             buffer.dumpStartElement(elem, attrs, ignoreAttrs=ignorableAttrs,
                                     noEndTag=elem in XHTML_SC, hook=hook,
                                     renamedAttrs=self.renamedAttributes)

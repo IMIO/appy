@@ -3,6 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from pathlib import Path
+from DateTime import DateTime
 import re, urllib.parse, subprocess
 
 import appy.ui
@@ -17,6 +18,7 @@ from appy.model.root import Model
 from appy.data import nativeNames
 from appy.model.group import Group
 from appy.model.fields import Show
+from appy.utils.mail import Mailer
 from appy.model.query import Query
 from appy.model.mover import Mover
 from appy.database import Database
@@ -41,15 +43,15 @@ from appy.test.monitoring import Monitoring
 from appy.model.translation import Translation
 from appy.model.fields.calendar import Calendar
 from appy.model.fields.computed import Computed
-from appy.utils.mail import sendMail, sendMailIf
 from appy.server.context import AuthenticationContext
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 RS_FG_KO   = 'Server cannot be restarted if running in the foreground.'
 RESTART_S  = "Restarting server (wait %d'')..."
-SRV_CONF   = 'Server(s) %s configured.'
+SRV_CONF   = 'Server %s (%s%s) configured.'
 USR_CREA   = 'User "%s" created.'
 GRP_CREA   = 'Group "admins" created.'
+LD_C_KO    = 'LDAP config not found.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Tool(Base):
@@ -59,7 +61,9 @@ class Tool(Base):
     # Make some modules and classes available and/or traversable via the tool
     ui = appy.ui
     OPage = OPage
+    Server = Server
     Date = dutils.Date
+    DateTime = DateTime
     Database = Database
     AuthContext = AuthenticationContext
 
@@ -78,20 +82,17 @@ class Tool(Base):
 
     @staticmethod
     def update(class_):
-        '''Hide pages being not necessary'''
-        fields = class_.fields
-        for name in ('title', 'record'):
-            fields[name].page.show = False
+        '''Hide the main page, being unused'''
+        class_.fields['title'].page.show = False
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Tool initialisation
+    #                          Tool initialisation
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def checkServers(self, config):
         '''Log the names of servers (LDAP, mail...) this app wants to connect
            to. Servers declared as "testable" are contacted to check the app's
            connection to it.'''
-        servers = []
         # Browse connected servers
         for cfg in (config.security.ldap, config.mail, config.security.sso):
             if not cfg: continue
@@ -102,10 +103,8 @@ class Tool(Base):
             status = ''
             if cfg.enabled and cfg.testable:
                 status = cfg.test(self)
-                if status: status = ', ' + status
-            servers.append('%s (%s%s)' % (cfg, enabled, status))
-        if servers:
-            self.log(SRV_CONF % ', '.join(servers))
+                if status: status = f', {status}'
+            self.log(SRV_CONF % (cfg, enabled, status))
 
     def init(self, handler, poFiles, method=None):
         '''Ensure all required tool sub-objects are present and coherent'''
@@ -142,7 +141,7 @@ class Tool(Base):
         if load:
             appyFiles = po.load(pot=False, languages=ui.languages)
             if config.ext:
-                extPath = '%s/tr' % __import__(config.ext).__path__[0]
+                extPath = f'{__import__(config.ext).__path__[0]}/tr'
                 extFiles = po.load(path=Path(extPath), pot=False,
                                    languages=ui.languages)
 
@@ -151,7 +150,7 @@ class Tool(Base):
             if language not in root.objects:
                 # Create a Translation file
                 tr = self.create('translations', secure=False, id=language,
-                            title='%s (%s)' % (language, nativeNames[language]),
+                            title=f'{language} ({nativeNames[language]})',
                             sourceLanguage=ui.sourceLanguage)
                 tr.updateFromFiles(appyFiles, poFiles, extFiles or {})
             else:
@@ -163,6 +162,9 @@ class Tool(Base):
 
         # Define the home page
         Tool.default = getattr(Tool, config.ui.home)
+
+        # Reinit the current user, that may be a fake one so far
+        if handler.fake: handler.guard.initUser()
 
         # Call method "onInstall" on the tool when available. This hook allows
         # an app to execute code on server initialisation.
@@ -177,16 +179,18 @@ class Tool(Base):
             peers.appy0.pump(self)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Page "main"
+    #                              Page "main"
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # Methods protecting visibility of tool pages and fields
+
     def forToolWriters(self):
-        '''Some elements are only accessible to tool writers (ie Managers)'''
+        '''Some elements are only accessible to tool writers'''
+        # Tool writers include Managers and Publishers
         if self.allows('write'): return Show.ER_
 
     def pageForToolWriters(self):
-        '''Some tool pages are only accessible to tool writers (ie Managers)'''
+        '''Some tool pages are only accessible to tool writers'''
         if self.allows('write'): return 'view'
 
     ta = {'label': 'Tool'}
@@ -203,21 +207,43 @@ class Tool(Base):
         mode = ctx.mode
         if not mode:
             Px.injectRequest(ctx, self.req, self)
+        r = O(mode=mode)
         # Trigger the search via the mode
-        if mode: mode.search(first, grid)
-        return O(mode=mode)
+        if mode:
+            mode.search(first, grid)
+            # Calendar.createObject will only work for a root class
+            class_ = mode.class_
+            r.isRoot = class_.name in self.config.model.rootClasses
+            # The following attribute will store object attributes as required
+            # by calendar's "createObject" attribute (see below).
+            if r.isRoot:
+                r.attributes = O()
+                # Get default attributes that would be defined for that class
+                class_.updateViaCalendarDefaults(self, r.attributes)
+        return r
 
-    def calendarAdditionalInfo(self, date, preComputed):
+    def calendarAdditionalInfo(self, date, hour, render, cache):
         '''Renders the content of a given cell in the calendar used for
            searches' calendar mode.'''
-        info = preComputed.mode.dumpObjectsAt(date)
-        if info: return info
+        mode = cache.mode
+        if mode:
+            info = mode.dumpObjectsAt(date, hour, render)
+            if info: return info
+
+    def createViaCalendar(self, date, cache):
+        '''Allows the creation of Appy objects from field "calendar"'''
+        # Do it only if the tool calendar is used to render search results, and
+        # if the current class is root.
+        mode = cache.mode
+        if not mode or not cache.isRoot: return
+        return mode.class_.name, cache.attributes
 
     calendar = Calendar(preCompute=calendarPreCompute, show=False,
-                        additionalInfo=calendarAdditionalInfo, **ta)
+                        additionalInfo=calendarAdditionalInfo,
+                        createObjects=createViaCalendar, **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Page "users"
+    #                             Page "users"
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     userPage = Page('users', show=pageForToolWriters, label='Tool_page_users',
@@ -231,13 +257,14 @@ class Tool(Base):
       composite=True, back=Ref(attribute='toTool', show=False, layouts='f'),
       page=userPage, queryable=True, queryFields=('searchable','login','roles'),
       show=forToolWriters, showHeaders=True, actionsDisplay='right',
-      shownInfo=User.listColumns, **ta)
+      historized=True, shownInfo=User.listColumns, **ta)
 
     def doSynchronizeExternalUsers(self):
         '''Synchronizes the local User copies with a distant LDAP user base'''
         cfg, context = self.config.security.getLdap()
-        if not cfg: raise Exception('LDAP config not found.')
+        if not cfg: raise Exception(LD_C_KO)
         message = cfg.synchronizeUsers(self, sso=context)
+        self.resp.fleetingMessage = False
         return True, message
 
     def showSynchronizeUsers(self):
@@ -249,12 +276,12 @@ class Tool(Base):
       show=showSynchronizeUsers, confirm=True, page=userPage, **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Page "groups"
+    #                           Page "groups"
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # Ref(Group) will maybe be transformed into Ref(AppGroup)
     groups = Ref(Group, multiplicity=(0,None), add=True, link=False,
-      composite=True, back=Ref(attribute='toTool', show=False,layouts='f'),
+      composite=True, back=Ref(attribute='toTool', show=False, layouts='f'),
       page=Page('groups', show=pageForToolWriters, label='Tool_page_groups',
                 icon='groups.svg'),
       show=forToolWriters, queryable=True, queryFields=('title', 'login'),
@@ -262,7 +289,7 @@ class Tool(Base):
       shownInfo=('title', 'login*20%|', 'roles*20%|'), **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Page "translations"
+    #                        Page "translations"
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     pt = Page('translations', show=pageForToolWriters,
@@ -274,7 +301,7 @@ class Tool(Base):
       back=Ref(attribute='toTool', show=False, layouts='f'), **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Page "pages"
+    #                            Page "pages"
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def showPagePages(self):
@@ -300,11 +327,17 @@ class Tool(Base):
                       select=lambda o: o.pages, **ta)
 
     # Update the base URL of all internal links within pages's rich fields
-    updateBaseUrl = Action(action=lambda o, options: options.run(),
-                           show='buttons', options=Mover, page=pp, **ta)
+    def showUpdateBaseUrl(self):
+        '''This is for Managers and Publishers only'''
+        # The action has no sense if no page is defined
+        if self.isEmpty('pages'): return
+        return 'buttons' if self.user.hasRole(self.model.globalRoles) else None
+
+    updateBaseUrl = Action(action=lambda o, options: options.run(), page=pp,
+                           show=showUpdateBaseUrl, options=Mover, **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Page "carousels"
+    #                          Page "carousels"
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     pc = Page('carousels', show=lambda o: 'view' if o.allows('write') else None,
@@ -316,7 +349,7 @@ class Tool(Base):
                     layouts=Layouts.dv, page=pc, showHeaders=True, **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Page "queries"
+    #                           Page "queries"
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     pq = Page('queries', show=lambda o: 'view' if o.allows('write') else None,
@@ -329,7 +362,7 @@ class Tool(Base):
                   shownInfo=Query.listColumns, **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  "admin" zone
+    #                           "admin" zone
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def forAdmin(self):
@@ -348,6 +381,11 @@ class Tool(Base):
       page=Page('database', phase='admin', show=forAdmin,
                 label='Tool_page_database'), **ta)
 
+    # Database transactions
+    transInfo = Computed(method=Database.Transaction.pxList, layouts='f',
+      page=Page('transactions', phase='admin', show=forAdmin,
+                label='Tool_page_transactions'), **ta)
+
     modelInfo = Computed(method=Model.view, layouts='f',
       page=Page('model', phase='admin', show=forAdmin,
                 label='Tool_page_model'), **ta)
@@ -355,8 +393,8 @@ class Tool(Base):
     # View site's config.py from the UI
     def getConfigPy(self):
         '''Display the content of this Appy site's config.py file'''
-        with open('%s/config.py' % self.config.server.sitePath, 'r') as f:
-            return '<pre>%s</pre>' % Escape.xhtml(f.read())
+        with open(f'{self.config.server.sitePath}/config.py', 'r') as f:
+            return f'<pre>{Escape.xhtml(f.read())}</pre>'
 
     configPy = Computed(method=getConfigPy,
       page=Page('configPy', phase='admin', show=forAdmin,
@@ -367,7 +405,7 @@ class Tool(Base):
                 label='Tool_page_logsViewer'), **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Monitoring
+    #                             Monitoring
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     traverse['check'] = True
@@ -376,27 +414,37 @@ class Tool(Base):
         return Monitoring().get(self)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Main methods
+    #                            Main methods
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def sendMail(self, to, subject, body, attachments=None, replyTo=None,
                  split=False):
-        '''Sends a mail. See doc for appy.utils.mail.sendMail.'''
-        return sendMail(self.config.mail, to, subject, body,
-          attachments=attachments, log=self.log, replyTo=replyTo, split=split)
+        '''Sends a mail. See doc in appy/utils/mail.py.'''
+        mailer = Mailer(self.config.mail, self.log)
+        return mailer.send(to, subject, body, attachments=attachments,
+                           replyTo=replyTo, split=split)
 
     def sendMailIf(self, o, privilege, subject, body, attachments=None,
                    privilegeType='permission', excludeExpression='False',
-                   userMethod=None, replyTo=None, split=False):
+                   userMethod=None, replyTo=None, split=False, variables=None):
         '''Sends a mail concerning this p_o(bject), to people having this
-           p_privilege.'''
-        return sendMailIf(o.config.mail, o, privilege, subject, body,
-          attachments=attachments, privilegeType=privilegeType,
-          excludeExpression=excludeExpression, userMethod=userMethod, log=o.log,
-          replyTo=replyTo, split=split)
+           p_privilege. See doc in appy/utils/mail.py.'''
+        mailer = Mailer(o.config.mail, o.log)
+        return mailer.sendIf(o, privilege, subject, body,
+                 attachments=attachments, privilegeType=privilegeType,
+                 excludeExpression=excludeExpression, userMethod=userMethod,
+                 replyTo=replyTo, split=split, variables=variables)
+
+    def getMailer(self):
+        '''Return a Mailer object for those who want more control over their
+           mail sending process.'''
+        return Mailer(self.config.mail, self.log)
 
     def computeHomePage(self):
         '''Compute the page that is shown to the user when he hits the app'''
+        # This may be cached
+        cache = self.cache
+        if 'homePageUrl' in cache: return cache.homePageUrl
         # Does the app's tool define a custom method for getting the home page ?
         # If yes, call it.
         r = None
@@ -409,11 +457,13 @@ class Tool(Base):
             # others to user/view.
             if user.isAnon():
                 suffix = 'public' if self.config.ui.discreetLogin else 'home'
-                r = '%s/%s' % (self.url, suffix)
-            elif user.hasRole('Manager'):
-                r = '%s/view' % self.url
+                r = f'{self.url}/{suffix}'
+            elif user.hasRole(('Manager','Publisher')):
+                r = f'{self.url}/view'
             else:
-                r = '%s/view' % user.url
+                r = f'{user.url}/view'
+        # Return and cache the result
+        cache.homePageUrl = r
         return r
 
     def computeHomeObject(self, user, popup=False):
@@ -463,7 +513,7 @@ class Tool(Base):
         return Backup(self).run()
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  PXs
+    #                                   PXs
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # PX "home" is the default page shown for a standard Appy site, excepted
@@ -522,7 +572,8 @@ class Tool(Base):
      <!-- The home text -->
      <div class="public"
           var="layout='view';
-               root=tool.getObject(req.rp) if req.rp else tool.defaultPage">
+               root=tool.getObject(req.rp,
+                      className='Page') if req.rp else tool.defaultPage">
       <x if="root">
        <!-- Display links on top of the 1st page, if the header is not shown -->
        <div if="not showHeader"
@@ -532,13 +583,22 @@ class Tool(Base):
        <x for="o in root.getChain()"
           var2="x=o.initialiseLocalPage(req)">:o.view</x>
       </x>
-      <x if="not root">::_('no_default_page')</x>
+      <x if="not root">
+       <x>::_('no_default_page')</x>
+
+       <!-- No login link could be shown in that case -->
+       <div if="not showHeader" class="discreet topSpace"
+            var2="showLoginIcon=False">:guard.pxLoginLink</div>
+      </x>
      </div>''',
 
      css='''
-      .publicTop { position:fixed; top:20px; right:20px; color:|headerColor| }
+      .publicTop { position:fixed; top:20px; right:20px; display:flex;
+                   color:|darkColor| }
       .publicTop .img { width:27px }
       .publicTop .topIcons { display:inline-flex }
+      .publicTop .topIcons span,
+      .publicTop .topIcons>select { color:|darkColor| }
      ''',
 
      template=Template.px, hook='content', name='public')

@@ -163,10 +163,14 @@ class Backup:
         self.log(CMD % ' '.join(args))
         if text: self.log(text)
         # Run the sync
-        out, err = executeCommand(args)
+        try:
+            out, err = executeCommand(args)
+        except FileNotFoundError as fnf:
+            err = str(fnf)
         if err: self.log(err)
         elif out: self.log(out)
         else: self.logDone(start)
+        return bool(err)
 
     def runMethod(self):
         '''Runs the custom method as defined in the backup config. Returns True
@@ -174,7 +178,7 @@ class Backup:
         try:
             method = self.config.method
             start = time.time()
-            self.log(CMD % ('tool::%s' % method))
+            self.log(CMD % f'tool::{method}')
             getattr(self.tool, method)()
             self.logDone(start)
             return True
@@ -206,7 +210,7 @@ class Backup:
         sourceFile = self.tool.config.database.filePath
         fileSize = getShownSize(sourceFile.stat().st_size)
         args = ['rsync', '--inplace', '--no-whole-file',
-                str(sourceFile), str(destFolder / ('backup%d.fs' % nb))]
+                str(sourceFile), str(destFolder / f'backup{nb}.fs')]
         # Run the sync
         self.runCommand(args, text=S_SIZE % fileSize)
 
@@ -219,7 +223,7 @@ class Backup:
             destFolder.mkdir(parents=True, exist_ok=True)
         # Prepare the rsync command
         args = list(self.filesOptions)
-        args.append('%s/' % self.tool.config.database.binariesFolder)
+        args.append(f'{self.tool.config.database.binariesFolder}/')
         args.append(str(destFolder))
         # Run the sync
         self.runCommand(args)
@@ -236,7 +240,7 @@ class Backup:
         config = self.tool.config.log
         for logFile in (config.site.path, config.app.path):
             # Determine the name of the target
-            destName = '%s.%s.log' % (logFile.stem, prefix)
+            destName = f'{logFile.stem}.{prefix}.log'
             destPath = str(destFolder / destName)
             # Launch the copy
             self.log(COPY_LOG % (logFile.name, destPath))
@@ -249,8 +253,8 @@ class Backup:
            the mail recipients as defined in the backup config.'''
         tool = self.tool
         # Determine a subject for the mail
-        subject = 'Appy / %s / Nightlife > %s' % \
-                  (tool.config.model.appName, self.config.path)
+        appName = tool.config.model.appName
+        subject = f'Appy / {appName} / Nightlife > {self.config.path}'
         # The body is made of messages collected in p_self.messages
         body = '\n'.join(self.messages)
         # Send the mail
@@ -277,7 +281,7 @@ class Backup:
                     undeleted += 1
             counts[ext] = count
         # Log deletions
-        deleted = ['%s: %d' % (ext, count) for ext, count in counts.d().items()]
+        deleted = [f'{ext}: {count}' for ext, count in counts.d().items()]
         self.log(DELETED % (tempFolder, ' - '.join(deleted)))
         if undeleted:
             self.log(UNDELETED % undeleted)
@@ -316,18 +320,21 @@ class Backup:
         # Pack the database file if requested
         if full: database.pack(logger=logger)
         # Execute the "before command" if defined
-        if config.beforeCommand: self.runCommand(config.beforeCommand)
+        error = False
+        if config.beforeCommand:
+            error = self.runCommand(config.beforeCommand)
         # Copy the database itself (.fs file)
-        self.copyDatabase()
-        # Copy the files from the DB-controlled file system
-        self.copyFiles()
-        # Copy the log files when relevant
-        if full: self.copyLogs()
-        # Execute the "after command" if defined (after a potential delay)
-        if config.afterCommand:
-            if config.afterCommandWait:
-                time.sleep(config.afterCommandWait)
-            self.runCommand(config.afterCommand)
+        if not error:
+            self.copyDatabase()
+            # Copy the files from the DB-controlled file system
+            self.copyFiles()
+            # Copy the log files when relevant
+            if full: self.copyLogs()
+            # Execute the "after command" if defined (after a potential delay)
+            if config.afterCommand:
+                if config.afterCommandWait:
+                    time.sleep(config.afterCommandWait)
+                self.runCommand(config.afterCommand)
         # Send operation details by email when relevant
         self.messages.append(DETAILS)
         if config.emails: self.sendMails()

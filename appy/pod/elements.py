@@ -24,6 +24,18 @@ class PodElement:
     MINUS_ELEMS = ('section', 'table')
     MINUS_ELEMS_D = asDict(('section', 'table'))
 
+    # If this element is tied to an "else" action, what are the elements that
+    # are appropriate to host a "if" action for this "else" action ? None means
+    # that any element can used.
+    possibleIfs = None
+
+    def isIfFor(self, elseElem):
+        '''May p_self be used to host a "if" elem corresponding to the "else" as
+           defined in this p_elseElem ?'''
+        possible = elseElem.possibleIfs
+        if possible is None: return True
+        return self.__class__ in possible
+
     @staticmethod
     def create(elem):
         '''Used to create any POD elem that has an equivalent OD element. Not
@@ -66,6 +78,9 @@ class Row(PodElement):
     OD = Tag('table-row', nsUri=ns.NS_TABLE)
     subTags = [Cell.OD, Text.OD]
 
+# "do row else" is only possible if the "if" is itself defined on a row
+Row.possibleIfs = [Row]
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Table(PodElement):
     OD = Tag('table', nsUri=ns.NS_TABLE)
@@ -83,7 +98,11 @@ class Frame(PodElement):
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Doc(PodElement):
     '''Represents the base tag for a complete ODT document'''
+
     OD = Tag('text', nsUri=ns.NS_OFFICE)
+    # Sub-tag "p" as defined below is currently used when dumping an error: an
+    # annotation must be within a paragraph within the global doc.
+    subTags = [Text.OD]
     # End tag for the main tag representing the document
     END_TAG = '</office:text>'
     # End tag for the sub-tag containing sequence declarations
@@ -234,10 +253,10 @@ class Attributes(PodElement):
         # Depending on the result of a tied expression, we will dump, for
         # another tag, the series of attrs that this instance represents.
         self.tiedExpression = None
-        # We will need the env to get the full names of attributes to dump.
+        # We will need the env to get the full names of attributes to dump
         self.env = env
 
-    def computeAttributes(self, expr):
+    def compute(self, expr):
         '''p_expr has been evaluated: its result is in expr.result. Depending
            on its type, we will dump the corresponding attributes in
            self.attrs.'''
@@ -257,7 +276,7 @@ class Attributes(PodElement):
             attrs['office:value-type'] = 'string'
 
     def evaluate(self, context):
-        # Evaluate first the tied expression, in order to determine its type.
+        # Evaluate first the tied expression, in order to determine its type
         try:
             self.tiedExpression.evaluate(context)
             self.tiedExpression.evaluated = True
@@ -266,29 +285,76 @@ class Attributes(PodElement):
             # evaluate the expression directly, we will really evaluate it, so
             # the error will be dumped into the pod result.
             pass
-        # Analyse the return type of the expression.
-        self.computeAttributes(self.tiedExpression)
-        # Now, self.attrs has been populated. Transform it into a string.
+        # Analyse the return type of the expression
+        self.compute(self.tiedExpression)
+        # Now, p_self.attrs has been populated: transform it into a string
         r = ''
         for name, value in self.attrs.items():
-            r += f' {name}={quoteattr(value)}'
+            r = f'{r} {name}={quoteattr(value)}'
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Attribute(PodElement):
-    '''Represents an HTML special attribute like "selected" or "checked".
-       px-only.'''
+class PxAttributes(PodElement):
+    '''Represents a bunch of XML attributes that will be dumped for a given tag
+       in the result. px-only.'''
     OD = None
 
-    def __init__(self, name, expr):
-        # The name of the attribute
-        self.name = name
-        # The expression that will compute the attribute value
-        self.expr = expr.strip()
+    def __init__(self):
+        # HTML boolean attributes, like "selected" or "checked", if found, will
+        # be stored in the following attribute, either as a (s_name, s_expr)
+        # tuple if there is a single attribute (which is the most frequent
+        # case), or as a {s_name: s_expr} dict if there are several attributes.
+        self.booleans = None
+        # The following expression, if not None, must evaluate to a dict of
+        # (s_name, s_value) attributes. This is used to inject dynamic
+        # attributes into a tag.
+        self.expr = None
+
+    def addBoolean(self, name, expr):
+        '''Adds boolean HTML attribute having this p_name, whose value will be
+           evaluated based on this p_expr.'''
+        bools = self.booleans
+        if bools is None:
+            # Add this first entry as a tuple
+            self.booleans = name, expr
+        elif isinstance(bools, tuple):
+            # Convert the single entry to a dict and add this second entry int it
+            bools = {bools[0]: bools[1]}
+            bools[name] = expr
+            self.booleans = bools
+        else:
+            # Add the entry to the existing dict
+            bools[name] = expr
+
+    def addDynamic(self, expr):
+        '''Adds this p_expr, defining dynamic attributes, in p_self.expr'''
+        self.expr = expr
 
     def evaluate(self, context):
-        # If p_self.expr evaluates to False, do not dump the attribute at all
-        if context['_eval_'].run(self.expr, context):
-            return f' {self.name}="{self.name}"'
-        return ''
+        '''Renders all attributes represented by p_self'''
+        eval_ = context['_eval_'].run
+        # 1. Evaluate p_self.booleans
+        bools = self.booleans
+        r = ''
+        if bools:
+            if isinstance(bools, tuple):
+                name, expr = bools
+                # If v_expr evaluates to False, do not dump the attribute at all
+                if eval_(expr, context):
+                    r = f'{r} {name}="{name}"'
+            else:
+                for name, expr in bools.items():
+                    if eval_(expr, context):
+                        r = f'{r} {name}="{name}"'
+        # 2. Evaluate p_self.expr
+        expr = self.expr
+        if expr:
+            attrs = eval_(expr, context)
+            if attrs:
+                for name, value in attrs.items():
+                    # If there is no value for v_name, do not dump the attribute
+                    # at all.
+                    if value:
+                        r = f'{r} {name}={quoteattr(value)}'
+        return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

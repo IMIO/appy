@@ -5,8 +5,8 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from http import HTTPStatus
-from http import client as hc
-import re, socket, threading, urllib.parse, transaction
+import http.client, email.parser
+import re, time, socket, threading, urllib.parse, transaction
 
 from appy.utils import Function
 from appy.model.base import Base
@@ -22,18 +22,22 @@ from appy.pod.actions import EvaluationError
 from appy.utils import asDict, MessageException
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TRANS_RETRY = 'Conflict occurred (%s). Replay transaction (#%d)...'
-TRANS_ERR   = 'Unresolved conflict occurred (%s).'
+TRANS_RETRY = '%s on %s :: Conflict occurred :: %s :: Transaction replay #%d...'
+TRANS_ERR   = 'Unresolved conflict occurred :: %s.'
 SOCK_TO     = 'Client socket timeout: %s.'
 RQ_LINE_KO  = 'Bad request line "%s".'
+RQ_UNREAD   = '‹unreadable›'
 HTTP_V_KO   = 'Wrong HTTP version "%s".'
 HTTP_V_UNS  = 'Unsupported HTTP version "%s".'
 H_METH_KO   = 'Wrong HTTP method "%s".'
-HEAD_TOO_LG = 'Line too long: %s...'
-HEAD_T_MANY = 'Too many headers: %s...'
 T_READ_SOCK = 'Reading request line on rfile...'
 T_READ_GOT  = 'Got request line: %s (length: %d)'
 T_AL_REG    = 'Thread %d was already in registry.'
+HEADER_LN   = "Got more than %d bytes when reading header line."
+HEADER_OL   = 'Got more than %d headers.'
+UNKNOWN_IP  = '‹Unknown IP›'
+HEAD_ST     = 'HTTP headers for the current request @%s:'
+HEAD_NO     = '  no header found.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class MethodsCache(dict):
@@ -78,7 +82,7 @@ class MethodsCache(dict):
             # Prefix the method name with the name of its class. Indeed,
             # p_method may not belong to p_o's class.
             name = Function.getQualifiedName(method)
-        key = '%s:%s' % (prefix, name)
+        key = f'{prefix}:{name}'
         # Return the cached value if present in the method cache
         if key in self: return self[key]
         # No cached value: call the method, cache the result and return it
@@ -155,6 +159,10 @@ class Handler:
         self.cache = O()
         # Create a guard, a transient object for managing security
         self.guard = Guard(self)
+        # Are we currently replaying a database transaction ? 0 means: no. Any
+        # positive integer represents the replay round: 1 is the first retrial;
+        # 2 is the second one, etc.
+        self.replay = 0
 
     def customInit(self):
         '''The app can define a method on its tool, named "initialiseHandler",
@@ -169,10 +177,12 @@ class Handler:
         return self.headers.get('X-Forwarded-For') or self.clientHost
 
     # This dict allows, on a concrete handler, to find the data to log
-    logAttributes = O(ip='self.clientIP()', port='str(self.clientPort)',
-      command='self.command', path='self.path', protocol='self.requestVersion',
-      message='message', user='self.guard.userLogin',
-      agent='self.headers.get("User-Agent")')
+    logAttributes = O(
+      ip='self.clientIP()', port='str(self.clientPort)', message='message',
+      method='self.httpMethod', path='self.path', user='self.getUserLogin()',
+      protocol='self.requestVersion', thread='threading.current_thread().name',
+      agent='self.headers.get("User-Agent")'
+    )
 
     def log(self, type, level, message=None):
         '''Logs, in the logger determined by p_type, a p_message at some
@@ -188,9 +198,10 @@ class Handler:
         cfg = getattr(server.config.log, type)
         # Get the parts of the message to dump
         r = []
+        ctx = locals()
         for part in cfg.messageParts:
             try:
-                value = eval(getattr(Handler.logAttributes, part))
+                value = eval(getattr(Handler.logAttributes, part), None, ctx)
                 if value is not None:
                     r.append(value)
             except AttributeError:
@@ -227,10 +238,19 @@ class HttpHandler(Handler):
     onlineUsers = {}
 
     # Supported HTTP methods
-    supportedHttpMethods = asDict(['GET', 'POST'])
+    supportedHttpMethods = asDict(['GET', 'POST', 'PUT', 'DELETE'])
 
     # Regex used to detect a mobile browser from the User-Agent header
     mobileRex = re.compile('Android|iPhone|iPod')
+
+    # Maximum number of chars for reading one line when reading HTTP headers
+    HEADERS_MAX_LINE = 65536
+
+    # Maximum number of headers
+    HEADERS_MAX = 100
+
+    # Chars that signal the end of headers
+    HEADERS_END = (b'\r\n', b'\n', b'')
 
     def __init__(self, clientSocket, server):
         # The global config
@@ -278,10 +298,35 @@ class HttpHandler(Handler):
         '''Closes p_self.rfile'''
         self.rfile.close()
 
-    def getLayout(self):
-        '''Try to deduce the current layout from the traversal, if present'''
+    def getLayoutFromPath(self):
+        '''Tries to deduce the current layout from p_self.path'''
+        # Get the path parts
+        parts = self.parts
+        if not parts: return
+        return 'edit' if parts[-1] in ('edit', 'save') else None
+
+    def getLayout(self, host=False):
+        '''Try to deduce the current layout from the traversal, if present. If
+           p_host is True, the method tries to retrieve the host layout before
+           tring to retrieve the layout.'''
+        # If the info can't be retrieved from the current PX, try to deduce it
+        # from p_self.path.
         traversal = getattr(self, 'traversal', None)
-        if traversal: return getattr(traversal.context, 'layout', None)
+        if not traversal: return self.getLayoutFromPath()
+        ctx = traversal.context
+        if not ctx: return self.getLayoutFromPath()
+        if host:
+            r = ctx.hostLayout or ctx.layout
+        else:
+            r = ctx.layout
+        return r
+
+    def getUserLogin(self):
+        '''Gets the login of the currently logged user'''
+        try:
+            return self.guard.userLogin
+        except AttributeError:
+            return 'system'
 
     def isAjax(self):
         '''Is this handler handling an Ajax request ?'''
@@ -291,7 +336,7 @@ class HttpHandler(Handler):
     def inPopup(self):
         '''Are we "in" the Appy iframe popup ?'''
         req = self.req
-        return req and req.popup == 'True'
+        return req and req.popup in ('True', '1')
 
     def isPublished(self, o):
         '''Is object p_o the currently published object ?'''
@@ -299,8 +344,8 @@ class HttpHandler(Handler):
         if not referer: return
         # Ensure the referer URL path ends with a slash
         path = urllib.parse.urlparse(referer).path
-        if not path.endswith('/'): path = '%s/' % path
-        return ('/%s/' % o.id) in path
+        if not path.endswith('/'): path = f'{path}/'
+        return f'/{o.id}/' in path
 
     def isMobile(self):
         '''Was the currently handled HTTP request initiated from a mobile
@@ -309,6 +354,25 @@ class HttpHandler(Handler):
         if not headers: return
         agent = headers.get('User-Agent')
         return False if not agent else bool(HttpHandler.mobileRex.search(agent))
+
+    def logHeaders(self):
+        '''Logs HTTP headers for the current request'''
+        self.log('app', 'info', HEAD_ST % self.path)
+        headers = self.headers
+        if headers:
+            for name, value in self.headers.items():
+                self.log('app', 'info', f'  {name}: {value}')
+        else:
+            self.log('app', 'info', HEAD_NO)
+
+    def logHeadersIf(self, static):
+        '''Log HTTP headers from the incoming request (being a request for
+           p_static content or not) if appropriate according to the config.'''
+        config = self.config.server
+        rex = config.logHeadersStatic if static else config.logHeadersDynamic
+        if not rex: return
+        if rex.match(self.path):
+            self.logHeaders()
 
     def complete(self):
         '''Completes p_self's data structures, that were not initialised due to
@@ -331,9 +395,9 @@ class HttpHandler(Handler):
                 # This is (supposedly) a user behind a browser
                 config = self.config
                 siteUrl = config.server.getUrl(self)
-                gotoUrl = urllib.parse.quote('%s%s' % (siteUrl, self.path))
-                resp.goto(url='%s/tool/%s?goto=%s&stay=1' % \
-                          (siteUrl, config.ui.home, gotoUrl),
+                gotoUrl = urllib.parse.quote(f'{siteUrl}{self.path}')
+                resp.goto(url=f'{siteUrl}/tool/{config.ui.home}?goto=' \
+                              f'{gotoUrl}&stay=1',
                           message=self.tool.translate('please_authenticate'))
                 r = None
             else:
@@ -359,7 +423,7 @@ class HttpHandler(Handler):
             r = traversal.run()
         except Traversal.Error as err:
             resp.code = HTTPStatus.NOT_FOUND # 404
-            r = Error.get(resp, traversal)
+            r = Error.get(resp, traversal, error=err)
         except Guard.Error as err:
             r = self.manageGuardError(resp, traversal, error=err)
         except MessageException as msg:
@@ -384,11 +448,20 @@ class HttpHandler(Handler):
                 r = Error.get(resp, traversal)
         return r
 
+    def getPath(self):
+        '''Returns self.path, possibly augmented with a specifc action as
+           mentioned in self.req.action.'''
+        r = self.path
+        req = getattr(self, 'req', None)
+        if req and req.action:
+            r = f'{r} (action={req.action})'
+        return r
+
     def attemptDatabaseRequest(self):
         '''Tries to m_manageDatabaseRequest. Perform several attempts depending 
            on the occurrence of database conflict errors. Returns the content of
            the page to serve, as a string.'''
-        maxAttempts = self.config.database.conflictRetries
+        maxAttempts = 1 + self.config.database.conflictRetries
         attempts = 0
         database = self.server.database
         while True:
@@ -398,6 +471,7 @@ class HttpHandler(Handler):
                 if self.commit: database.commit(self)
             except database.ConflictErrors as err:
                 attempts += 1
+                self.replay = attempts
                 # Abort the transaction that could not be committed
                 transaction.abort()
                 # Return an error if is was the last attempt
@@ -407,8 +481,10 @@ class HttpHandler(Handler):
                     r = Error.get(self.resp, self.traversal)
                     break
                 else:
-                    self.log('app', 'warning',
-                             TRANS_RETRY % (str(err), attempts))
+                    text = TRANS_RETRY % (self.httpMethod, self.getPath(),
+                                          str(err), attempts)
+                    self.resp.init() # Response status must be re-computed
+                    self.log('app', 'warning', text)
             except MessageException as msg:
                 self.resp.code = HTTPStatus.OK
                 r = Error.get(self.resp, self.traversal, error=msg)
@@ -463,12 +539,30 @@ class HttpHandler(Handler):
         # self.static). Static content is any not-database-stored-and-editable
         # image, Javascript, CSS file, etc. Dynamic content is any request
         # reading and/or writing to/from the database.
+        start = time.time()
         self.determineType()
         resp = self.resp
         if self.static:
+            # [Debug level >1 only] Log the hit. Read similar explanations in
+            # the "else" statement below.
+            if self.debugLevel > 1:
+                self.log('site', 'info', '…')
+            # Log HTTP headers when appropriate
+            self.logHeadersIf(static=True)
             # Manage static content
             Static.get(self)
         else:
+            # [Debug level >0 only] Log the hit. Logging it now, before
+            # processing it, ensures the log occurs when the hit is done. At
+            # debug level 0, log occurs only after the hit has been processed
+            # and the response has been returned (see at the end of this
+            # method). This could occur several (milli)seconds later, after
+            # potentially time-consuming processing, with possible transaction
+            # retrials, preventing fine-grained analysis.
+            if self.debugLevel > 0:
+                self.log('site', 'info', '…')
+            # Log HTTP headers when appropriate
+            self.logHeadersIf(static=False)
             # Add myself to the registry of handlers
             already = Handler.add(self)
             if already:
@@ -477,7 +571,7 @@ class HttpHandler(Handler):
             database = self.server.database
             self.dbConnection = database.openConnection()
             try:
-                # Extract parameters and create a Request instance in p_self.req
+                # Extract parameters and create a Request object in p_self.req
                 self.req = Request.create(self)
                 # Compute dynamic content
                 r = self.attemptDatabaseRequest()
@@ -488,23 +582,52 @@ class HttpHandler(Handler):
                 Handler.remove()
                 # Close the DB connection
                 database.closeConnection(self.dbConnection)
-        # Log this hit and the response code on the site log
-        self.log('site', 'info', str(resp.code.value))
+        # Site-log this hit, the processing time and the response code
+        duration = time.time() - start
+        self.log('site', 'info', f"{resp.code.value} ({duration:.4f}'')")
+
+    def parseHttpHeaders(self):
+        '''Parses HTTP headers from an incoming request'''
+        # Read HTTP headers on p_self.rfile
+        r = []
+        fp = self.rfile
+        MAX = HttpHandler.HEADERS_MAX
+        END = HttpHandler.HEADERS_END
+        MAX_LINE = HttpHandler.HEADERS_MAX_LINE
+        while True:
+            line = fp.readline(MAX_LINE + 1)
+            if len(line) > MAX_LINE:
+                raise http.client.HTTPException(HEADER_LN % MAX_LINE)
+            r.append(line)
+            if len(r) > MAX:
+                raise http.client.HTTPException(HEADER_OL % MAX)
+            if line in END:
+                break
+        # Get the result as a string
+        r = b''.join(r).decode(self.config.server.headersEncoding)
+        # Return it as a http.client.HTTPMessage object
+        return email.parser.Parser(_class=http.client.HTTPMessage).parsestr(r)
 
     def parseRequestHeaders(self):
         '''Parses the request line and headers. Returns (None, None) on success
            and (errorCode, message) on failure.'''
         # Split the request line
         stripped = self.requestLine.rstrip(Response.eol)
-        parts = stripped.decode(Response.headersEncoding).split()
+        try:
+            parts = stripped.decode(self.config.server.headersEncoding).split()
+        except UnicodeDecodeError:
+            return HTTPStatus.BAD_REQUEST, RQ_LINE_KO % RQ_UNREAD
         count = len(parts)
         if count not in (2, 3):
+            # The following garbage may happen when a HTTPS request hits us
+            if b'\x16' in stripped: stripped = RQ_UNREAD
             return HTTPStatus.BAD_REQUEST, RQ_LINE_KO % stripped
         # Manage the request version
         if count == 3:
             # The version of the HTTP protocol requested by the client
             version = parts.pop()
             if not version.startswith('HTTP/'):
+                if len(version) > 7: version = RQ_UNREAD
                 return HTTPStatus.BAD_REQUEST, HTTP_V_KO % version
             self.requestVersion = version
             if version.count('.') != 1:
@@ -519,20 +642,17 @@ class HttpHandler(Handler):
                 return HTTPStatus.BAD_REQUEST, HTTP_V_KO % version
         else:
             self.requestVersion = self.config.server.getProtocolString()
-        # Manage the HTTP method (GET or POST) and path
+        # Manage the HTTP method (GET, POST, PUT...) and path
         self.httpMethod, self.path = parts
         # Parse HTTP headers
         try:
-            self.headers = hc.parse_headers(self.rfile, _class=hc.HTTPMessage)
-        except hc.LineTooLong as err:
+            self.headers = self.parseHttpHeaders()
+        except http.client.HTTPException as err:
             code = HTTPStatus.REQUEST_HEADER_FIELDS_TOO_LARGE
-            return code, HEAD_TOO_LG % str(err)[:15]
-        except hc.HTTPException as err:
-            code = HTTPStatus.REQUEST_HEADER_FIELDS_TOO_LARGE
-            return code, HEAD_T_MANY % str(err)[:15]
+            return code, str(err)
         return None, None
 
-    def tlog(self, message, level=1):
+    def tlog(self, message, level=3):
         '''Output p_message if the debug level requires it'''
         return self.server.tlog(message, level=level,
                                 clientPort=self.clientPort)
@@ -554,6 +674,10 @@ class HttpHandler(Handler):
             # Parse request headers
             errorCode, message = self.parseRequestHeaders()
             if errorCode:
+                # Prefix v_message with the client IP: indeed, no info about
+                # this error will be dumped in site.log.
+                clientIP = self.clientHost or UNKNOWN_IP
+                message = f'{clientIP} - {message}'
                 self.resp.buildError(errorCode, message=message)
                 return self.finish()
             # Is the HTTP method supported ?
@@ -577,7 +701,7 @@ class VirtualHandler(Handler):
 
     # Fake handler attributes
     clientPort = 0
-    command = 'GET'
+    method = 'VIRT'
     path = '/'
     requestVersion = 'HTTP/1.1'
     headers = {'User-Agent': 'system'}
@@ -590,7 +714,7 @@ class VirtualHandler(Handler):
     def __init__(self, server):
         '''Tries to define the same, or fake version of, a standard handler's
            attributes.'''
-        # The Appy HTTP server instance
+        # The Appy HTTP server object
         self.server = server
         self.config = server.config
         # Create fake Request and Response objects
@@ -605,4 +729,9 @@ class VirtualHandler(Handler):
         # The following attributes will be initialised later
         self.dbConnection = None
         self.tool = None
+
+    def getUserLogin(self):
+        '''Gets the login of the currently logged user'''
+        # A virtual handler is always ran by "system"
+        return 'system'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

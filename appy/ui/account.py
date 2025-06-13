@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 '''Manages accounts-related data in the user interface'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

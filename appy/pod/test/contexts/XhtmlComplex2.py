@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''
 <div><strong>Programmes FSE Convergence et Compétitivité
              régionale et emploi.</strong></div>

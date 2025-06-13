@@ -205,7 +205,7 @@ class TableRow(UserDict):
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Table(UserList):
-    nameRex = re.compile('([^\(]+)(?:\((.*)\))?')
+    nameRex = re.compile(r'([^\(]+)(?:\((.*)\))?')
 
     def __init__(self):
         UserList.__init__(self)

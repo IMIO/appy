@@ -86,14 +86,14 @@ class Action(Field):
             onclick=":field.getOnClick(_ctx_)"/>
 
      <!-- Fake button -->
-     <input if="isFake" type="button" class=":'%s fake' % css"
+     <input if="isFake" type="button" class=":f'{css} fake'"
             title=":isFake" value=":inputLabel"
             style=":field.getIconUrl(url, asBG=True)"/>''')
 
     # PX for viewing the Action button
     view = cell = buttons = query = Px('''
      <form var="isFake=field.isFake(o, _);  
-                formId='%d_%s_form' % (o.iid, name);
+                formId=f'{o.iid}_{name}_form';
                 label=_('label', field=field);
                 multi=multi|None;
                 className=className|o.class_.name;
@@ -118,7 +118,7 @@ class Action(Field):
        <input type="hidden" name="className" value=":field.options.__name__"/>
        <input type="hidden" name="popup" value="True"/>
        <input type="hidden" name="nav"
-              value=":'action.%d.%s.%s' % (o.iid, name, className)"/>
+              value=":f'action.{o.iid}.{name}.{className}'"/>
       </x>
 
       <!-- Form fields for multi-actions -->
@@ -150,7 +150,7 @@ class Action(Field):
        <!-- Variant with the icon outside the button -->
        <div if="field.iconOut" class="iflex1">
         <img src=":field.getIconUrl(url)" onclick="this.nextSibling.click()"
-             class=":'clickable %s' % field.iconCss" title=":label"/>
+             class=":f'clickable {field.iconCss}'" title=":label"/>
         <x>:field.pxButton</x>
        </div>
 
@@ -170,9 +170,9 @@ class Action(Field):
       downloadDisposition='attachment', confirm=False, master=None,
       masterValue=None, focus=False, historized=False, mapping=None,
       generateLabel=None, label=None, icon=None, sicon=None, view=None,
-      cell=None, buttons=None, edit=None, xml=None, translations=None,
-      render='button', iconOut=False, iconCss='iconS', iconSize=None,
-      options=None, fake=False):
+      cell=None, buttons=None, edit=None, custom=None, xml=None,
+      translations=None, render='button', iconOut=False, iconCss='iconS',
+      iconSize=None, options=None, fake=False):
         # Attribute "action" must hold a method or a list/tuple of methods.
         # In most cases, every method will be called without arg, but there are
         # exceptions (see parameters "options" and "confirm").
@@ -254,12 +254,12 @@ class Action(Field):
         self.sicon, self.siconBase, self.siconRam = utils.iconParts(sicon)
 
         # Call the base constructor
-        Field.__init__(self, None, (0,1), default, defaultOnEdit, show,
-          renderable, page, group, layouts, move, False, True, None, None,
-          False, None, readPermission, writePermission, width, height, None,
-          colspan, master, masterValue, focus, historized, mapping,
-          generateLabel, label, None, None, None, None, False, False, view,
-          cell, buttons, edit, xml, translations)
+        super().__init__(None, (0,1), default, defaultOnEdit, show, renderable,
+          page, group, layouts, move, False, True, None, None, False, None,
+          readPermission, writePermission, width, height, None, colspan, master,
+          masterValue, focus, historized, mapping, generateLabel, label, None,
+          None, None, None, False, False, view, cell, buttons, edit, custom,
+          xml, translations)
         self.validable = False
 
         # There are various ways to render the action in the ui:
@@ -391,34 +391,39 @@ class Action(Field):
         if self.options:
             # Submitting the form will lead to creating an object, in order to
             # retrieve action's options.
-            return '%s/new' % c.tool.url
+            return f'{c.tool.url}/new'
         else:
             # Submitting the form will really trigger the action.
             if c.layout == 'query':
                 # We are running a multi-action from search results. Add the
                 # name of the class in the path.
-                part = '@%s/' % self.container.name
+                part = f'@{self.container.name}/'
             elif c.multi:
                 # We are running a multi-action from a Ref field. Add the
                 # initiator object in the action sub-path.
-                part = '@:%s/' % c.o.iid
+                part = f'@:{c.o.iid}/'
             else:
                 part = ''
-            return '%s/%s%s/perform' % (c.o.url, part, self.name)
+            return f'{c.o.url}/{part}{self.name}/perform'
 
     def getOnClick(self, c):
         '''Gets the JS code to execute when the action button is clicked'''
         # Determine the ID of the form to submit
         o = c.o
         q = c.q
-        formId = '%d_%s_form' % (o.iid, c.name)
+        formId = f'{o.iid}_{c.name}_form'
         # Determine the back hook and check hook (if multi)
         multi = c.multi
         if multi:
             back = multi.back
             check = multi.check
         else:
-            back = c.ohook if c.layout == 'cell' else None
+            if c.layout in Layouts.cellLayouts:
+                # Try the object hook first (the closest possible hook, if
+                # available), then the back hook, then the main hook.
+                back = c.ohook or c.backHook or c.hook
+            else:
+                back = None
             check = None
         check = q(check) if check else 'null'
         if not self.options:
@@ -441,8 +446,8 @@ class Action(Field):
         else:
             # Determine the parameters for creating an options instance
             target = LinkTarget(class_=self.options, forcePopup=True, back=back)
-            js = '%s; submitForm(%s,null,null,null,%s)' % \
-                 (target.onClick, q(formId), check)
+            js = f'{target.onClick}; submitForm({q(formId)},null,null,null,' \
+                 f'{check})'
         return js
 
     def getTargetObjects(self, o, req):
@@ -519,12 +524,12 @@ class Action(Field):
                               comment=args.get('comment'))
         return r
 
-    def getValue(self, o, name=None, layout=None, single=None):
+    def getValue(self, o, name=None, layout=None, single=None, at=None):
         '''Call the action and return the result'''
         return self(o)
 
     # There is no stored value for an action
-    def getStoredValue(self, o, name=None, fromRequest=False): return
+    def getStoredValue(self, o, name=None, fromReq=False, at=None): return
 
     def isShowable(self, o, layout):
         '''Never show actions on an "edit" p_layout'''
@@ -590,7 +595,7 @@ class Action(Field):
             # the response object.
             if not resp.message:
                 suffix = 'done' if success else 'ko'
-                msg = o.translate('action_%s' % suffix)
+                msg = o.translate(f'action_{suffix}')
             # If we had to redirect the user, we have no URL to do that; so we
             # fall back to a computation.
             result = 'computation' if result == 'redirect' else result

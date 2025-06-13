@@ -16,46 +16,75 @@ class Anonymous:
     '''One-state workflow allowing anyone to consult and Manager + Owner(s) to
        edit.'''
 
-    ma = 'Manager'
     o = 'Owner'
-    everyone = (ma, 'Anonymous', 'Authenticated')
-    active = State({r:everyone, w:(ma, o), d:(ma, o)}, initial=True)
+    ma = 'Manager'
+    pub = 'Publisher'
+
+    editors = (ma, o, pub)
+    everyone = ('Anonymous', 'Authenticated')
+
+    active = State({r:everyone, w:editors, d:editors}, initial=True)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Authenticated:
     '''One-state workflow allowing authenticated users to consult and Manager
        to edit.'''
 
-    ma = 'Manager'
     o = 'Owner'
+    ma = 'Manager'
+
     authenticated = (ma, 'Authenticated')
     active = State({r:authenticated, w:(ma, o), d:(ma, o)}, initial=True)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Owner:
-    '''Workflow allowing only manager and owner to consult and edit'''
+    '''Workflow granting read anw write permissions to owners, managers and
+       publishers.'''
 
-    # ~~ Errors ~~~
-    ADMIN_DEACTIVATE_ERROR = 'Cannot deactivate admin.'
-
-    # ~~~ Roles in use ~~~
-    ma = 'Manager'
+    # Roles in use
     o = 'Owner'
+    ma = 'Manager'
+    pub = 'Publisher'
+    editors = o, ma, pub
 
-    # ~~~ States ~~~
-    active = State({r:(ma, o), w:(ma, o), d:ma}, initial=True)
-    inactive = State({r:(ma, o), w:ma, d:ma})
+    # States
+    active = State({r:editors, w:editors, d:ma}, initial=True)
+    inactive = State({r:editors, w:ma, d:ma})
 
-    # ~~~ Transitions ~~~
-    def doDeactivate(self, o):
+    # Transitions
+    tp = {'condition': ma, 'confirm': True}
+    deactivate = Transition( (active, inactive), **tp)
+    reactivate = Transition( (inactive, active), **tp)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class User:
+    '''Workflow for the User class'''
+
+    # Errors
+    AD_D_ERR = 'Cannot deactivate admin.'
+
+    # Roles in use
+    o = 'Owner'
+    ma = 'Manager'
+    pub = 'Publisher'
+    editors = o, ma
+    everyone = o, ma, pub
+
+    # States
+    active = State({r:everyone, w:editors, d:ma}, initial=True)
+    inactive = State({r:everyone, w:ma, d:ma})
+
+    # Transitions
+
+    tp = {'condition': ma, 'confirm': True}
+
+    def doDeactivate(self, user):
         '''Prevent user "admin" from being deactivated'''
-        if (o.class_.name == 'User') and (o.login == 'admin'):
-            raise WorkflowException(Owner.ADMIN_DEACTIVATE_ERROR)
+        if user.login == 'admin':
+            raise WorkflowException(User.AD_D_ERR)
 
-    deactivate = Transition( (active, inactive), condition=ma,
-                             action=doDeactivate, confirm=True)
-
-    reactivate = Transition( (inactive, active), condition=ma, confirm=True)
+    deactivate = Transition( (active, inactive), action=doDeactivate, **tp)
+    reactivate = Transition( (inactive, active), **tp)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TooPermissive:

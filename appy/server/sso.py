@@ -22,18 +22,19 @@ class Config:
        retrieve, within every HTTP request from the reverse proxy, information
        about the currently logged user: login, groups and roles.'''
 
-    ssoAttributes = {'loginKey': None, 'emailKey':'email', 'nameKey': 'name',
+    ssoAttributes = {'loginKey': None, 'emailKey': 'email', 'nameKey': 'name',
                      'firstNameKey': 'firstName', 'fullNameKey': 'title'}
-    otherPrerogative = {'role': 'group', 'group': 'role'}
 
-    # Default encodings
-    defaultEncodings = ('utf-8', 'utf8')
+    otherPrerogative = {'role': 'group', 'group': 'role'}
 
     # The connection to a SSO server can't really be tested
     testable = False
 
     # Empty dict
     emptyDict = {}
+
+    # If you want to define encoding for headers as sent by the SSO reverse
+    # proxy, define it in appy.config.server.headersEncoding.
 
     def __init__(self):
         # One can give a name to the SSO reverse proxy that will call us
@@ -80,6 +81,9 @@ class Config:
         # can be different from the one used in the Appy application. A role
         # mapping can thus be defined.
         self.roleMapping = {}
+        # If several roles are specified, we expect them to be separated by the
+        # following char.
+        self.roleSep = ','
         # Key storing user's groups. If no key is provided, we suppose
         # that groups are not provided by the SSO server and will be managed
         # locally by the Appy app.
@@ -95,6 +99,9 @@ class Config:
         self.groupFunction = None
         # Group mapping (similar to role mapping). Here, we map group logins.
         self.groupMapping = {}
+        # If several groups are specified, we expect them to be separated by the
+        # following char.
+        self.groupSep = ','
         # If you specify functions in the following attributes, they will be
         # called, respectively, after a user has been linked/unlinked to/from
         # a group. The function receives, as args, the user and the group.
@@ -109,10 +116,6 @@ class Config:
         # instance from HTTP headers' info. We will only do it if this number of
         # minutes has elapsed since the last time we've done it.
         self.syncInterval = 10
-        # "encoding" determines the encoding of the header values. Normally, it
-        # is defined in header key CONTENT_TYPE. You can force another value
-        # here.
-        self.encoding = None
         # If the reverse proxy adds some prefix to app URLs, specify it here.
         # For example, if the app is locally available at localhost:8080/ and
         # is publicly available via www.proxyserver.com/myApp, specify "myApp"
@@ -165,6 +168,36 @@ class Config:
         # This function must return a 2-tuple containing the object and the name
         # of the Ref from which to create the user.
         self.userStorage = None
+        # The SSO plug-in regularly updates the local User object corresponding
+        # to credentials as coming from HTTP header keys (see self.syncInterval
+        # as defined hereabove). But when such an update occurs, the SSO plug-in
+        # logically forces a dabatase commit. But imagine the current page is a
+        # heavy one, taking a lot of time to render, and that does not need any
+        # database commit. Worse: imagine that a mail notification is sent to
+        # hundreds of users, inviting them to consult this page (via a link
+        # being part of the mail body). If the sync interval requires a user
+        # sync, the hundreds of hits to the page will lead to as many database
+        # commits, that are quite useless: user object syncs may wait for a
+        # subsequent request. In order to avoid potential disasters, you may
+        # place a method in the following attribute. It will accept the tool and
+        # the current User object as parameters. If it returns False, this User
+        # object will not be synchronized now. Else, it will be synchronized,
+        # provided the sync interval requires it. In the example described
+        # hereabove, suppose the heavy object is an instance of a class named
+        # "Meeting": the function could be implemented as follows.
+        #
+        #def allowUserSync(tool, user):
+        #   '''Don't allow any p_user sync if we're on a meeting-related page'''
+        #   # Get the currently walked object
+        #    parts = tool.H().parts
+        #    if not parts: return True
+        #    for part in parts:
+        #        if part.isdigit():
+        #            o = tool.getObject(part)
+        #            if o and o.class_.name == 'Meeting':
+        #                return
+        #    return True
+        self.allowUserUpdate = None
 
     def init(self, tool):
         '''Lazy initialisation'''
@@ -174,26 +207,13 @@ class Config:
 
     def __repr__(self):
         name = self.name or 'SSO reverse proxy'
-        return 'sso: %s with login key=%s' % (name, self.loginKey)
-
-    def extractEncoding(self, headers):
-        '''What is the encoding of retrieved page ?'''
-        # Encoding can have a forced value
-        if self.encoding: return self.encoding
-        if 'Content-Type' in headers:
-            for elem in headers['Content-Type'].split(';'):
-                elem = elem.strip()
-                if elem.startswith('charset='): return elem[8:].strip()
-        # This is the default encoding according to HTTP 1.1
-        return 'iso-8859-1'
+        return f'‹Sso: {name} with login key={self.loginKey}›'
 
     def getUserParams(self, headers):
         '''Format and return user-related data from request p_headers, as a dict
            of parameters being usable for creating or updating the corresponding
            Appy user.'''
         r = {}
-        encoding = self.extractEncoding(headers)
-        mustEncode = encoding not in self.defaultEncodings
         decodeFunction = self.decodeFunction
         for keyAttr, appyName in self.ssoAttributes.items():
             if not appyName: continue
@@ -203,9 +223,6 @@ class Config:
             # Get the value for this header, if found
             value = headers.get(keyName)
             if value:
-                # Apply standard character decoding
-                if mustEncode:
-                    value = value.encode().decode(encoding)
                 # Apply specific decoding if any
                 if decodeFunction: value = decodeFunction(value)
                 r[appyName] = value
@@ -241,30 +258,27 @@ class Config:
                     return
         return login
 
-    def convertUserPrerogatives(self, tool, type, prerogatives,
-                                encoding='utf-8'):
+    def convertUserPrerogatives(self, tool, type, prerogatives):
         '''Converts SSO p_prerogatives to Appy roles and groups'''
         # p_prerogatives may contain "main" and "secondary" prerogatives.
         # Indeed, when extracting roles we may find groups, and vice versa.
         r = set()
         secondary = set()
         cache = tool.cache
-        mustEncode = encoding not in self.defaultEncodings
         # A comma-separated list of prerogatives may be present
         for value in prerogatives:
+            # Convert p_value to a string when expressed as bytes
+            if isinstance(value, bytes): value = value.decode()
             # Ignore empty values
             value = value.strip()
             if not value: continue
-            # Encode v_value when appropriate
-            if mustEncode:
-                value = value.encode().decode(encoding)
             # Apply a regular expression if specified
-            rex = getattr(self, '%sRex' % type)
+            rex = getattr(self, f'{type}Rex')
             if rex:
                 match = rex.match(value)
                 if not match: continue
                 # Apply a function if specified
-                fun = getattr(self, '%sFunction' % type)
+                fun = getattr(self, f'{type}Function')
                 if fun:
                     value = fun(self, match, cache)
                     if value is None: continue
@@ -274,7 +288,7 @@ class Config:
                         if value is None: continue
                         # Apply the secondary prerogative mapping if any
                         other = self.otherPrerogative[type]
-                        mapping = getattr(self, '%sMapping' % other)
+                        mapping = getattr(self, f'{other}Mapping')
                         if value in mapping:
                             value = mapping[value]
                         secondary.add(value)
@@ -282,7 +296,7 @@ class Config:
                 else:
                     value = match.group(1)
             # Apply a mapping if specified
-            mapping = getattr(self, '%sMapping' % type)
+            mapping = getattr(self, f'{type}Mapping')
             if value in mapping:
                 value = mapping[value]
             # Add the prerogative to the result
@@ -293,21 +307,19 @@ class Config:
         '''Extracts, from p_headers, user groups or roles, depending on
            p_type.'''
         # Do we care about getting this type or prerogative ?
-        key = getattr(self, '%sKey' % type)
+        key = getattr(self, f'{type}Key')
         if not key: return None, None
         # Get HTTP headers
         if not headers: return None, None
-        # Get the HTTP request encoding
-        encoding = self.extractEncoding(headers)
         # Extract the value for the "key" header
         headerValue = headers.get(key)
         if not headerValue: return None, None
         # We have prerogatives: convert them to Appy roles and groups
-        return self.convertUserPrerogatives(tool, type, headerValue.split(','),
-                                            encoding=encoding)
+        sep = getattr(self, f'{type}Sep')
+        return self.convertUserPrerogatives(tool, type, headerValue.split(sep))
 
     def setRoles(self, tool, user, roles):
-        '''Grants p_roles to p_user. Ensure those role are grantable.'''
+        '''Grants p_roles to p_user. Ensure those roles are grantable.'''
         grantable = tool.model.getGrantableRoles(tool, namesOnly=True)
         for role in roles:
             if role in grantable:
@@ -465,6 +477,24 @@ class Config:
         if fun is None: return
         return fun(self, headers, login)
 
+    def mustUpdateUser(self, tool, user):
+        '''Must this local User object be updated, based on data found within
+           SSO-related HTTP headers ?'''
+        # 1. Check that we have not done a user update since p_self.syncInterval
+        #    minutes. Note that the user may not have "syncDate" initialized
+        #    yet.
+        r = False
+        syncDate = user.syncDate
+        if not syncDate:
+            r = True
+        else:
+            interval = (DateTime() - syncDate) * 1440
+            r = interval > self.syncInterval
+        if not r: return
+        # 2. Check function self.allowUserUpdate
+        fun = self.allowUserUpdate
+        return not fun or fun(tool, user)
+
     def getUser(self, tool, login, createIfNotFound=True):
         '''Returns a local User instance corresponding to a SSO user'''
         # Check if SSO is enabled
@@ -472,25 +502,17 @@ class Config:
         # Must the user having this p_login be accepted on our site ?
         headers = tool.H().headers
         if self.mustBlockUser(tool, headers, login): return
-        # Do we already have a local User instance for this user ?
+        # Do we already have a local User object for this user ?
         user = tool.search1('User', login=login)
         if user:
-            # Update the user only if we have not done it since "syncInterval"
-            # minutes. The user may not have "syncDate" initialized yet.
-            mustUpdate = False
-            syncDate = user.syncDate
-            if not syncDate:
-                mustUpdate = True
-            else:
-                interval = (DateTime() - syncDate) * 1440
-                mustUpdate = interval > self.syncInterval
-            if mustUpdate:
-                # Update it from HTTP headers
+            # Are conditions met to update the user ?
+            if self.mustUpdateUser(tool, user):
+                # Yes: update it from HTTP headers
                 self.updateUser(tool, headers, user)
-                # Custom User update
+                # Call a custom User's "onEdit" method if any
                 if self.userOnEdit: self.userOnEdit(user, created=False)
         elif createIfNotFound:
-            # Create a local User instance representing the SSO-authenticated
+            # Create a local User object representing the SSO-authenticated
             # user. Collect roles and groups this user has.
             user = self.createUser(tool, login, headers)
         return user

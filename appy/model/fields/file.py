@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -13,6 +11,7 @@ from appy import utils
 from appy.ui.layout import Layouts
 from appy.model.fields import Field
 from appy.model.utils import Object
+from appy.utils import formatNumber
 from appy.server.static import Static
 from appy.utils import path as putils
 from appy.utils import string as sutils
@@ -26,6 +25,7 @@ BAD_FTUPLE = 'This is not the way to set a file. You can specify a 2-tuple ' \
 CONV_ERR   = 'Pod::Converter error. %s'
 PATH_KO    = 'Missing absolute disk path for %s.'
 RESIZED    = '%s resized to %spx.'
+DOWNLOADED = "%s • %s :: Downloaded in %s''."
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class FileInfo:
@@ -45,6 +45,9 @@ class FileInfo:
     # Max number of chars shown for a file's upload name
     uploadNameMax = 30
 
+    # Fields to copy when cloning a FileInfo object
+    clonable = ('uploadName', 'size', 'mimeType', 'modified')
+
     def __init__(self, fsPath, inDb=True, uploadName=None):
         '''FileInfo constructor. p_fsPath is the path of the file on disk.'''
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -58,7 +61,8 @@ class FileInfo:
         #           | storing absolute paths in order to ease the transfer of
         #           | databases from one place to the other. Moreover, p_fsPath
         #           | does not include the filename, that will be computed
-        #           | later, from the field name.
+        #           | later, from the field name and, when needed, a hash of the
+        #           | file content ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  False    |  ... is a simple temporary object representing any file on
         #           | the filesystem (not necessarily in the db-controlled
@@ -71,44 +75,68 @@ class FileInfo:
         #           | writeFile or copyFile).
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.fsPath = fsPath
-        self.fsName = None # The name of the file in fsPath
-        self.uploadName = uploadName # The name of the uploaded file
-        self.size = 0 # Its size, in bytes
-        self.mimeType = None # Its MIME type
-        # The last modification date for this file, as a DateTime instance
+        # The name of the file in fsPath. For an in-DB file, it may have 2
+        # formats: <fieldName>.<ext> (ie, 'file.pdf') or, if a file hash
+        # has been computed, <fieldName>.<hexdigest>.<ext>.
+        self.fsName = None
+        # The name of the uploaded file
+        self.uploadName = uploadName
+        # Its size, in bytes
+        self.size = 0
+        # Its MIME type
+        self.mimeType = None
+        # The last modification date for this file, as a DateTime object
         self.modified = None
         # Complete metadata if p_inDb is False. p_inDb is not stored as is:
         # checking if self.fsName is the empty string is equivalent.
         if not inDb:
-            self.fsName = '' # Already included in self.fsPath
+            self.fsName = '' # is already included in self.fsPath
             self.setAttributes(self.fsPath)
+        # If p_self.fsName contains the hex digest of a hash computed from the
+        # binary file content, the algo used to produce this digest is defined
+        # here, as a string (ie: 'md5', 'sha1', 'sha256'...).
+        self.algo = None
 
     def setAttributes(self, path):
         '''Compute file attributes (size, MIME type and last modification date)
            for a file whose absolute p_path is passed and store these attributes
            on p_self.'''
-        info = os.stat(path)
-        self.size = info.st_size
-        self.mimeType = putils.guessMimeType(path)
-        self.modified = DateTime(info.st_mtime)
+        try:
+            info = os.stat(path)
+            self.size = info.st_size
+            self.mimeType = putils.guessMimeType(path)
+            self.modified = DateTime(info.st_mtime)
+        except FileNotFoundError as err:
+            # The file on disk does not exist
+            pass
 
     def inDb(self):
         '''Does this FileInfo represent a file from the DB-controlled
            filesystem ?'''
         return bool(self.fsName)
 
+    def getTempFilePath(self, o, folder=None):
+        '''Return the path to the copy, made in the OS temp folder, of the file
+           corresponding to p_self (see m_getFilePath).'''
+        # Return None if p_self is a not-in-db file
+        name = self.fsName
+        if not name: return
+        folder = folder or o.getFolder()
+        return Path(putils.getOsTempFolder()) / folder.name / name
+
     def getFilePath(self, o, checkTemp=True):
-        '''Returns the Path instance corresponding to the file on disk that
-           corresponds to this FileInfo instance.'''
+        '''Returns the Path object corresponding to the file on disk that
+           corresponds to this FileInfo object.'''
         # For a not-in-db file, its full path is already in p_self.fsPath
-        if not self.fsName: return self.fsPath
+        name = self.fsName
+        if not name: return self.fsPath
         # Build the full path to this db-controlled file
         folder = o.getFolder()
-        path = folder / self.fsName
-        if not path.is_file() and checkTemp:
+        path = folder / name
+        if checkTemp and not path.is_file():
             # It may already have been deleted by a failed transaction. Try to
             # get a copy we may have made in the OS temp folder.
-            path = Path(putils.getOsTempFolder()) / folder.name / self.fsName
+            path = self.getTempFilePath(o, folder)
         return path
 
     def getUploadName(self, shorten=True):
@@ -120,8 +148,7 @@ class FileInfo:
         keep = FileInfo.uploadNameMax
         if len(r) <= keep or not shorten: return r
         # Return an "acronym" tag with the first chars of the name
-        return '<abbr title="%s" style="cursor:pointer">%s...</abbr>' % \
-               (r, r[:keep])
+        return f'<abbr title="{r}" style="cursor:pointer">{r[:keep]}...</abbr>'
 
     def exists(self, o):
         '''Does the file really exist on the filesystem ?'''
@@ -153,8 +180,8 @@ class FileInfo:
 
     def getNameAndSize(self, shorten=True):
         '''Gets the file name and size, nicely formatted'''
-        return "%s - %s" % (self.getUploadName(shorten=shorten),
-                            self.getShownSize())
+        name = self.getUploadName(shorten=shorten)
+        return f'{name} - {self.getShownSize()}'
 
     def replicateFile(self, src, dest):
         '''p_src and p_dest are open file handlers. This method copies content
@@ -196,11 +223,56 @@ class FileInfo:
         elif not path:
             # An in-database file for which we do not have the full path
             raise Exception(PATH_KO % self.fsName)
-        # Produce the file via the Static class
+        # Prepare some log about the file download, when appropriate
+        size = self.size
+        log = size and size > handler.config.server.static.logDownloadAbove
+        # Count the time spent for serving the file and log it
+        if log: start = time.time()
+        # Serve the file via the Static class
         Static.write(handler, path, None, fileInfo=self,
                      disposition=disposition, enableCache=cache)
+        if log:
+            # How long did it take to serve the file (in seconds) ?
+            duration = formatNumber(time.time() - start)
+            text = DOWNLOADED % (path, self.getNameAndSize(False), duration)
+            handler.log('app', 'info', text)
 
-    def writeFile(self, name, value, folder, config=None):
+    def writeFileTo(self, path, value, isO, config):
+        '''Called by p_writeFile, this method writes file content as passed in
+           p_value, to the file having this p_path on disk.'''
+        # Write the file on disk (and compute/get its size in bytes)
+        f = open(path, 'wb')
+        if isO:
+            content = value.value
+            self.size = len(content)
+            f.write(content)
+        elif isinstance(value, FileInfo):
+            fsPath = value.fsPath
+            if not fsPath.startswith('/'):
+                # The p_value is a "in-db" FileInfo instance. If p_config is
+                # there, we can reconstitute its absolute path.
+                fsPath = config.database.binariesFolder / fsPath / value.fsName
+                fsPath = str(fsPath)
+            try:
+                src = open(fsPath, 'rb')
+                self.size = self.replicateFile(src, f)
+                src.close()
+            except FileNotFoundError:
+                pass # The file does not exist
+        else:
+            # Write value[1] on disk
+            content = value[1]
+            if isinstance(content, str):
+                content = content.encode('utf-8')
+            if isinstance(content, bytes):
+                self.size = len(content)
+                f.write(content)
+            else:
+                # An open file handler
+                self.size = self.replicateFile(content, f)
+        f.close()
+
+    def writeFile(self, name, value, folder, config=None, hash=None):
         '''Writes a file to the filesystem, from p_value that can be:
            - an Object instance (coming from a HTTP post);
            - another ("not-in-DB") FileInfo instance;
@@ -217,43 +289,32 @@ class FileInfo:
             mimeType = value[2]
             niceName = value[0]
         self.mimeType = mimeType or putils.defaultMimeType
-        # Force the file to be written on disk with the field name, serving as
-        # an identifier within the database p_folder.
+        # The name of the file to be written on disk is based on the field name,
+        # serving as an identifier within the database p_folder.
         ext = utils.mimeTypesExts.get(self.mimeType) or 'bin'
-        self.fsName = '%s.%s' % (name, ext)
+        if hash:
+            # The name of the final file is not known yet: create a temp file
+            # first.
+            path = putils.getTempFileName(extension=ext)
+        else:
+            self.fsName = f'{name}.{ext}'
+            path = str(folder / self.fsName)
         self.uploadName = self.normalizeFileName(niceName or 'file')
         # Write the file on disk (and compute/get its size in bytes)
-        path = str(folder / self.fsName)
-        f = open(path, 'wb')
-        if isO:
-            content = value.value
-            self.size = len(content)
-            f.write(content)
-        elif isinstance(value, FileInfo):
-            fsPath = value.fsPath
-            if not fsPath.startswith('/'):
-                # The p_value is a "in-db" FileInfo instance. If p_config is
-                # there, we can reconstitute its absolute path.
-                fsPath = config.database.binariesFolder / fsPath / value.fsName
-                fsPath = str(fsPath)
-            src = open(fsPath, 'rb')
-            self.size = self.replicateFile(src, f)
-            src.close()
-        else:
-            # Write value[1] on disk
-            content = value[1]
-            if isinstance(content, str):
-                content = content.encode('utf-8')
-            if isinstance(content, bytes):
-                self.size = len(content)
-                f.write(content)
-            else:
-                # An open file handler
-                self.size = self.replicateFile(content, f)
-        f.close()
+        self.writeFileTo(path, value, isO, config)
+        # If the file was a temp file, compute now its final name (that must
+        # include a digest) and move it to its final place.
+        if hash:
+            digest = putils.getHash(path, algo=hash)
+            self.algo = hash
+            self.fsName = f'{name}.{digest}.{ext}'
+            final = folder / self.fsName
+            if final.is_file():
+                final.unlink()
+            shutil.move(path, str(final))
         self.modified = DateTime()
 
-    def copyFile(self, fieldName, filePath, dbFolder):
+    def copyFile(self, fieldName, filePath, dbFolder, hash=None):
         '''Copies the "external" file stored at p_filePath in the db-controlled
            file system, for storing a value for p_fieldName.'''
         # Set names for the file
@@ -267,7 +328,13 @@ class FileInfo:
             name = self.normalizeFileName(filePath)
             self.mimeType = putils.guessMimeType(filePath)
         self.uploadName = name
-        self.fsName = '%s%s' % (fieldName, os.path.splitext(name)[1])
+        if hash:
+            # Incorporate a file hash into the destination file name
+            self.algo = hash
+            digest = f'.{putils.getHash(filePath, algo=hash)}'
+        else:
+            digest = ''
+        self.fsName = f'{fieldName}{digest}{os.path.splitext(name)[1]}'
         # Copy the file
         fsName = dbFolder / self.fsName
         shutil.copyfile(filePath, fsName)
@@ -284,8 +351,8 @@ class FileInfo:
            LibreOffice will be called for converting the dumped file to the
            desired format.'''
         if not filePath:
-            filePath = '%s/file%f.%s' % (putils.getOsTempFolder(), time.time(),
-                                         self.fsName)
+            tempFolder = putils.getOsTempFolder()
+            filePath = f'{tempFolder}/file{time.time():.6f}.{self.fsName}'
         # Copies the file to disk
         shutil.copyfile(self.getFilePath(o), filePath)
         if format:
@@ -302,10 +369,10 @@ class FileInfo:
             os.remove(filePath)
             # Get the name of the converted file
             baseName, ext = os.path.splitext(filePath)
-            if ext == ('.%s' % format):
-                filePath = '%s.res.%s' % (baseName, format)
+            if ext == f'.{format}':
+                filePath = f'{baseName}.res.{format}'
             else:
-                filePath = '%s.%s' % (baseName, format)
+                filePath = f'{baseName}.{format}'
             if not os.path.exists(filePath):
                 o.log(CONV_ERR % err, type='error')
                 return
@@ -320,17 +387,25 @@ class FileInfo:
         # Get the width, in pixels, that will be used to resize it
         width = sutils.Normalize.digit(str(width))
         try:
-            utils.ImageMagick.convert(spath, '-resize %sx%s>' % (width, width))
+            utils.ImageMagick.convert(spath, f'-resize {width}x{width}>')
             o.log(RESIZED % (spath, width))
         except Exception as err:
             o.log(err, type='warning')
         # (re)compute p_self's attributes, after resizing
         self.setAttributes(spath)
 
+    def cloneOut(self, o):
+        '''Clones p_self, being inDb, to a standalone, outside-DB File info
+           object. This method does not perform any file copy.'''
+        filePath = self.getFilePath(o)
+        r = FileInfo(filePath, inDb=False)
+        for name in self.clonable:
+            setattr(r, name, getattr(self, name))
+        return r
+
     def __repr__(self):
         '''p_self's short string representation'''
-        return '<File @%s/%s %s>' % \
-               (self.fsPath, self.fsName, self.getShownSize())
+        return f'‹File @{self.fsPath}/{self.fsName} {self.getShownSize()}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class File(Field):
@@ -351,6 +426,10 @@ class File(Field):
     # Types that may represent paths to a binary file
     pathTypes = (str, Path)
 
+    # A file field may store a binary file in the object folder, within the
+    # database-controlled filesystem.
+    disk = True
+
     class Layouts(Layouts):
         '''File-specific layouts'''
         b = Layouts(edit='lrv-f', view='l-f')
@@ -362,28 +441,28 @@ class File(Field):
             return class_.bg if field.inGrid() else class_.b
 
     view = cell = buttons = Px('''
-      <x>::field.getDownloadLink(name, o, layout)</x>''')
+      <x>::field.getDownloadLink(o, layout, name)</x>''')
 
     edit = Px('''
-     <x var="fname='%s_file' % name; rname='%s_action' % name">
+     <x var="fname=f'{name}_file'; rname=f'{name}_action'">
       <x if="value">
        <x>:field.view</x><br/>
        <!-- Keep the file unchanged -->
        <input type="radio" value="keep" checked=":bool(value)" name=":rname"
-              id=":'%s_keep' % name"
-              onclick=":'document.getElementById(%s).disabled=true'% q(fname)"/>
-       <label lfor=":'%s_keep' % name">:_('keep_file')</label><br/>
+              id=":f'{name}_keep'"
+              onclick=":f'document.getElementById({q(fname)}).disabled=true'"/>
+       <label lfor=":f'{name}_keep'">:_('keep_file')</label><br/>
        <!-- Delete the file -->
        <x if="not field.required">
-        <input type="radio" value="delete" name=":rname" id=":'%s_delete'% name"
-               onclick=":'document.getElementById(%s).disabled=true'%q(fname)"/>
-        <label lfor=":'%s_delete' % name">:_('delete_file')</label><br/>
+        <input type="radio" value="delete" name=":rname" id=":f'{name}_delete'"
+               onclick=":f'document.getElementById({q(fname)}).disabled=true'"/>
+        <label lfor=":f'{name}_delete'">:_('delete_file')</label><br/>
        </x>
        <!-- Replace with a new file -->
-       <input type="radio" value="replace" id=":'%s_upload' % name"
+       <input type="radio" value="replace" id=":f'{name}_upload'"
               checked=":None if value else 'checked'" name=":rname"
-              onclick=":'document.getElementById(%s).disabled=false'%q(fname)"/>
-       <label lfor=":'%s_upload' % name">:_('replace_file')</label><br/>
+              onclick=":f'document.getElementById({q(fname)}).disabled=false'"/>
+       <label lfor=":f'{name}_upload'">:_('replace_file')</label><br/>
       </x>
       <!-- The upload field -->
       <input type="file" name=":fname" id=":fname" style=":field.getStyle()"
@@ -394,6 +473,18 @@ class File(Field):
 
     search = ''
 
+    @classmethod
+    def validExt(class_, o, exts, value):
+        '''Has the file uploaded in p_value one of the correct extensions as
+           defined in p_exts ?'''
+        if not value: return True
+        ext = value.name.rsplit('.', 1)[-1]
+        if not ext or ext not in exts:
+            r = o.translate('ext_ko', mapping={'exts': ', '.join(exts)})
+        else:
+            r = True
+        return r
+
     def __init__(self, validator=None, multiplicity=(0,1), default=None,
       defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
       layouts=None, move=0, readPermission='read', writePermission='write',
@@ -401,10 +492,10 @@ class File(Field):
       master=None, masterValue=None, focus=False, historized=False,
       mapping=None, generateLabel=None, label=None, isImage=False,
       downloadAction=None, sdefault='', scolspan=1, swidth=None, sheight=None,
-      view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None, render=None, icon='paperclip',
+      view=None, cell=None, buttons=None, edit=None, custom=None, xml=None,
+      xmlLocation=None, translations=None, render=None, icon='paperclip',
       disposition='attachment', nameStorer=None, cache=False, resize=False,
-      thumbnail=None, viewWidth=None):
+      thumbnail=None, viewWidth=None, hash='md5'):
         # This boolean is True if the file is an image
         self.isImage = isImage
         # "downloadAction" can be a method called every time the file is
@@ -457,17 +548,34 @@ class File(Field):
         # that, specify a width (as a string, ie '700px') in the following
         # attribute. The attribute may also hold a method returning the value.
         self.viewWidth = viewWidth
+        # The name of the file, in the object folder, will contain a digest
+        # produced with the algo as defined in p_hash. This allows to avoid name
+        # clashes when several transactions using, temporarily, the same object
+        # IID, are executed at the same time, potentially leading to writing a
+        # file at the same place, with the same name, on disk. Moreover, it
+        # allows to check if the file on disk corresponds to the file as
+        # uploaded via the app, because the file name (that contains the digest)
+        # is stored in the database, within the FileInfo object.
+        self.hash = hash
         # Call the base constructor
-        Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
-          show, renderable, page, group, layouts, move, False, True, None, None,
+        super().__init__(validator, multiplicity, default, defaultOnEdit, show,
+          renderable, page, group, layouts, move, False, True, None, None,
           False, None, readPermission, writePermission, width, height, None,
           colspan, master, masterValue, focus, historized, mapping,
           generateLabel, label, sdefault, scolspan, swidth, sheight, True,
-          False, view, cell, buttons, edit, xml, translations)
+          False, view, cell, buttons, edit, custom, xml, translations)
+        # On the XML layout, when binary content is not dumped into the XML
+        # content, but a location to the file on disk is dumped instead (see
+        # config.model.marshallBinaries), this location defaults to the absolute
+        # path to the file on the site's DB-controlled disk. If you want to
+        # specify an alternate location, specify, in p_xmlLocation, a method.
+        # This method will accept no arg and return the alternate location, as
+        # a string.
+        self.xmlLocation = xmlLocation
 
     def getRequestValue(self, o, requestName=None):
         name = requestName or self.name
-        return o.req['%s_file' % name]
+        return o.req[f'{name}_file']
 
     def getRequestSuffix(self, o): return '_file'
 
@@ -486,7 +594,7 @@ class File(Field):
         '''Must p_value be considered as empty ?'''
         if value: return
         # If "keep", the value must not be considered as empty
-        return o.req['%s_action' % self.name] != 'keep'
+        return o.req[f'{self.name}_action'] != 'keep'
 
     def getJsOnChange(self):
         '''Gets the JS code for updating the name storer when defined'''
@@ -506,29 +614,30 @@ class File(Field):
             return layout not in Layouts.topLayouts
         return super().isRenderableOn(layout)
 
-    def getDownloadLink(self, name, o, layout):
+    def getDownloadLink(self, o, layout='view', name=None):
         '''Gets the HTML code for downloading the file as stored in field
            named p_name on p_o.'''
+        name = name or self.name
         value = self.getValueIf(o, name, layout)
         # Display an empty value
         if not value: return '' if layout == 'cell' else '-'
         # On "edit", simply repeat the file title
         if layout == 'edit': return value.getUploadName()
         # Build the URL for downloading or displaying the file
-        url = '%s/%s/download' % (o.url, name)
+        url = f'{o.url}/{name}/download'
         # For images, display them directly
         if self.isImage:
             # Define a max width when relevant
             viewWidth = self.getAttribute(o, 'viewWidth')
-            css = ' style="max-width:%s"' % viewWidth if viewWidth else ''
-            return '<img src="%s" title="%s"%s/>' % \
-                   (url, value.getNameAndSize(shorten=False), css)
+            css = f' style="max-width:{viewWidth}"' if viewWidth else ''
+            titleI = value.getNameAndSize(shorten=False)
+            return f'<img src="{url}" title="{titleI}"{css}/>'
         # For non-images, display a link for downloading it, as an icon when
         # relevant.
         if self.render == 'icon':
             iurl = o.buildUrl(self.icon, base=self.iconBase, ram=self.iconRam)
             title = value.getNameAndSize(shorten=False)
-            content = '<img src="%s" title="%s"/>' % (iurl, title)
+            content = f'<img src="{iurl}" title="{title}"/>'
             # On "view", we have place, so display "title" besides the icon
             suffix = title if layout == 'view' else ''
         else:
@@ -536,8 +645,8 @@ class File(Field):
             content = value.getNameAndSize()
             suffix = ''
         # Style the suffix
-        if suffix: suffix = '<span class="refLink">%s</span>' % suffix
-        return '<a href="%s">%s%s</a>' % (url, content, suffix)
+        if suffix: suffix = f'<span class="refLink">{suffix}</span>'
+        return f'<a href="{url}">{content}{suffix}</a>'
 
     def isCompleteValue(self, o, value):
         '''Always consider the value being complete, even if empty, in order to
@@ -548,7 +657,12 @@ class File(Field):
 
     def validateValue(self, o, value):
         '''Ensure p_value is valid'''
-        if not value and (o.req['%s_action' % self.name] == 'replace'):
+        # Multiplicity must be enforced because of our little cheat in
+        # m_isCompleteValue.
+        action = o.req[f'{self.name}_action']
+        if self.required and not value and action != 'keep':
+            return o.translate('field_required')
+        if not value and action == 'replace':
             # The user has selected "replace the file with a new one" but has
             # not uploaded a new file.
             return o.translate('file_required')
@@ -556,6 +670,22 @@ class File(Field):
         elif value and self.isImage:
             if value.type not in File.imageMimeTypes:
                 return o.translate('image_required')
+
+    def deleteFile(self, o, deleteFileInfo=True, removeEmptyFolders=True):
+        '''Delete the file stored on this p_o(bject) corresponding to p_self'''
+        info = o.values.get(self.name)
+        if info:
+            folder = o.getFolder()
+            info.removeFile(folder, removeEmptyFolders=removeEmptyFolders)
+            # Delete the FileInfo in the DB
+            if deleteFileInfo:
+                del o.values[self.name]
+
+    def deleteFiles(self, o):
+        '''Deletes the file possibly stored for this field on this p_o(bject)'''
+        # In this context, we are only interested by removing the file on the
+        # filesystem.
+        self.deleteFile(o, deleteFileInfo=False, removeEmptyFolders=False)
 
     def store(self, o, value):
         '''Stores the p_value that represents some file'''
@@ -593,15 +723,16 @@ class File(Field):
             # Remove the previous file if it existed
             info = o.values.get(self.name)
             if info: info.removeFile(folder)
-            # Store the new file. As a preamble, create a FileInfo instance.
+            # Store the new file. As a preamble, create a FileInfo object.
             info = FileInfo(relative)
             if isinstance(value, File.pathTypes) or \
                (isinstance(value, UnmarshalledFile) and value.location):
                 # Case (b)
-                info.copyFile(self.name, value, folder)
+                info.copyFile(self.name, value, folder, self.hash)
             elif isinstance(value, File.objectTypes):
                 # Cases (a) and (e)
-                info.writeFile(self.name, value, folder, config=o.config)
+                info.writeFile(self.name, value, folder, config=o.config,
+                               hash=self.hash)
             else:
                 # Cases (c) and (d): extract file name, content and MIME type
                 name = type = None
@@ -612,7 +743,8 @@ class File(Field):
                 if not name:
                     raise Exception(BAD_FTUPLE)
                 type = type or putils.guessMimeType(name)
-                info.writeFile(self.name, (name, content, type), folder)
+                info.writeFile(self.name, (name, content, type), folder,
+                               hash=self.hash)
             # Store the FileInfo instance in the database
             o.values[self.name] = info
             # Resize the image when relevant
@@ -621,21 +753,22 @@ class File(Field):
                 info.resize(folder, width, o)
             # Update the thumbnail if defined
             fileName = str(folder / info.fsName)
-            if self.thumbnail: o.getField(self.thumbnail).store(o, fileName)
+            if self.thumbnail:
+                o.getField(self.thumbnail).store(o, fileName)
         else:
-            # Store value "None", excepted if we find, in the request, the
-            # desire to keep the file unchanged.
-            if o.req['%s_action' % self.name] != 'keep':
-                # Delete the file on disk if it existed
-                info = o.values.get(self.name)
-                if info:
-                    info.removeFile(o.getFolder(), removeEmptyFolders=True)
-                    # Delete the FileInfo in the DB
-                    del(o.values[self.name])
+            # Delete the file, excepted if we find, in the request, the desire
+            # to keep it unchanged.
+            if o.req[f'{self.name}_action'] == 'keep': return
+            # Delete the file on disk if it existed
+            self.deleteFile(o)
 
     traverse['download'] = 'perm:read'
     def download(self, o):
         '''Triggered when a file download is requested from the ui'''
+        # Security check: ensure v_o is viewable. Indeed, the traversal only
+        # checks standard security, like permissions or roles, but not security
+        # complements like the custom "mayView" method.
+        o.guard.mayView(o, permission=None, raiseError=True)
         # Write the file in the HTTP response
         info = o.values.get(self.name)
         config = o.config.server.static

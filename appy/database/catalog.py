@@ -30,6 +30,7 @@ IDXS_POP    = '%d/%d object(s) reindexed during population of index(es) %s.'
 IDXS_CLEAN  = '%d catalog entries removed (inexistent objects).'
 IDX_NF      = 'There is no indexed field named "%s" on class "%s".'
 OBJECT_NF   = 'Object with IID %d does not exist in catalog "%s".'
+IITS_KO     = 'Catalog %s :: IITreeSet found @%d instead of an object.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Changes:
@@ -55,11 +56,10 @@ class Changes:
             # Ignore this type of change if no change of this type has occurred
             if not names: continue
             prefix = 'index' if len(names) == 1 else 'indexes'
-            names = ', '.join(['"%s"' % name for name in names])
-            r.append('%s %s %s' % (prefix, names, type))
+            names = ', '.join([f'"{name}"' for name in names])
+            r.append(f'{prefix} {names} {type}')
         for info in r:
-            self.handler.log('app', 'info', 'Class %s: %s.' % \
-                             (self.class_.name, info))
+            self.handler.log('app','info', f'Class {self.class_.name}: {info}.')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Catalog(PersistentMapping):
@@ -112,6 +112,9 @@ class Catalog(PersistentMapping):
                     # This object, referenced in the catalog, does not exist
                     counts.lost.append((className, iid))
                     continue
+                elif isinstance(o, IITreeSet):
+                    handler.log('app', 'error', IITS_KO % (className, iid))
+                    continue
                 # Count this object
                 counts.total += 1
                 # Submit the object to every index to populate
@@ -128,7 +131,7 @@ class Catalog(PersistentMapping):
             names = [] # The names of the populated indexes
             for className, indexes in populate.items():
                 for index in indexes:
-                    names.append('%s::%s' % (className, index.name))
+                    names.append(f'{className}::{index.name}')
             message = IDXS_POP % (counts.updated, counts.total,
                                   ', '.join(names))
             handler.log('app', 'info', message)
@@ -184,33 +187,36 @@ class Catalog(PersistentMapping):
         changes = Changes(handler, class_)
         r = [] # The indexes that must be populated
         all = [] # Remember the names of all indexes
-        # Browse fields
-        for field in class_.fields.values():
-            # Ignore fields requiring no index
-            if not field.indexed: continue
-            name = field.name
-            all.append(name)
-            # Get the name of the index class to use
-            indexType = field.getIndexType()
-            # Does the index already exist ?
-            if name in self:
-                # Do nothing if the index exists and is of the correct type
-                index = self[name]
-                if index.__class__.__name__ == indexType:
-                    continue
+        # Browse fields. Switch fields may also be indexed.
+        for fields in (class_.fields, class_.switchFields):
+            if not fields: continue
+            for field in fields.values():
+                # Ignore fields requiring no index
+                if not field.indexed: continue
+                name = field.name
+                all.append(name)
+                # Get the name of the index class to use
+                indexType = field.getIndexType()
+                # Does the index already exist ?
+                if name in self:
+                    # Do nothing if the index exists and is of the correct type
+                    index = self[name]
+                    if index.__class__.__name__ == indexType:
+                        continue
+                    else:
+                        # There is a mismatch between the index currently
+                        # created and the index to use according to the field.
+                        # It probably corresponds to a change in the field
+                        # definition: delete the existing index and recreate it
+                        # with the correct type.
+                        del(self[name])
+                        changes.updated.append(name)
                 else:
-                    # There is a mismatch between the index currently created
-                    # and the index to use according to the field. It probably
-                    # corresponds to a change in the field definition: delete
-                    # the existing index and recreate it with the correct type.
-                    del(self[name])
-                    changes.updated.append(name)
-            else:
-                # The index must be created
-                changes.created.append(name)
-            # Create the index: it does not exist yet
-            index = self[name] = eval(indexType)(field, self)
-            r.append(index)
+                    # The index must be created
+                    changes.created.append(name)
+                # Create the index: it does not exist yet
+                index = self[name] = eval(indexType)(field, self)
+                r.append(index)
         # Browse indexes, looking for indexes to delete
         for name in self.keys():
             if name not in all:
@@ -325,20 +331,20 @@ class Catalog(PersistentMapping):
         # Convert the IITreeSet to a sorted list of IIDs and return it
         return self.getSorted(r, sortBy, sortOrder, maxResults)
 
-    def unindexObject(self, iid, log=None):
+    def unindexObject(self, iid, o=None):
         '''Unindexes object having this p_iid from this catalog. Returns True if
            at least one entry from one index has actually been removed within
            this catalog.'''
         r = False
         for index in self.values():
-            changed = index.unindexObject(iid)
+            changed = index.unindexObject(iid, o)
             if changed: r = True
         # Remove it from p_self.all
         try:
             self.all.remove(iid)
         except KeyError:
             # The object is not in the catalog, issue a warning
-            if log: log(OBJECT_NF % (iid, self.name), type='warning')
+            if o: o.log(OBJECT_NF % (iid, self.name), type='warning')
         return r
         
     def reindexObject(self, o, fields=None, indexes=None, unindex=False,
@@ -377,7 +383,7 @@ class Catalog(PersistentMapping):
         #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         r = False
         # Manage unindexing
-        if unindex: return self.unindexObject(o.iid, o.log)
+        if unindex: return self.unindexObject(o.iid, o)
         # Manage (re)indexing
         if indexes:
             # The list of indexes to update is given
@@ -428,9 +434,9 @@ class Catalog(PersistentMapping):
 
     # PX displaying info stored in this catalog's indexes for some object
     forObject = Px('''<x var="catalog=o.getCatalog(raiseError=True)">
-     <h3><a href=":o.url">:o.getValue('title', type='shown')</a></h3>
+     <h3><a href=":o.url">:o.getShownValue()</a></h3>
      <form name="reindexForm" method="post"
-           action=":'%s/catalog/reindex' % o.url">
+           action=":f'{o.url}/catalog/reindex'">
       <input type="hidden" name="indexName"/>
       <table class="small">
        <!-- 1st line: dump local roles, by the way -->
@@ -445,8 +451,7 @@ class Catalog(PersistentMapping):
        <tr><th>Index name</th><th>Type</th><th>Content</th><th>
         <img src=":url('reindex')" class="clickable" title="Reindex all indexes"
              onclick="reindexObject(\'_all_\')"/></th></tr>
-       <tr for="name, index in catalog.items()"
-           class=":loop.name.odd and 'odd' or 'even'">
+       <tr for="name, index in catalog.items()">
          <td>:name</td><td>:index.__class__.__name__</td>
          <td>:o.getField(index.name).getCatalogValue(o, index)</td>
          <td><img src=":url('reindex')" class="clickable"

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Appy\n"
-"POT-Creation-Date: 2013-07-23 10:41-28\n"
+"POT-Creation-Date: 2024-02-12 15:36-06\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -27,13 +27,17 @@ msgstr "Kommentar"
 msgid "role_Manager"
 msgstr "Systemmanager"
 
+#. Default: "Publisher"
+msgid "role_Publisher"
+msgstr ""
+
 #. Default: "Anonymous"
 msgid "role_Anonymous"
-msgstr ""
+msgstr "Anonym"
 
 #. Default: "Authenticated"
 msgid "role_Authenticated"
-msgstr ""
+msgstr "Authentifiziert"
 
 #. Default: "Owner"
 msgid "role_Owner"
@@ -53,31 +57,31 @@ msgstr "Änderung der Angaben"
 
 #. Default: "Addition"
 msgid "event_Addition"
-msgstr ""
+msgstr "Hinzufügen"
 
 #. Default: "Deletion"
 msgid "event_Deletion"
-msgstr ""
+msgstr "Löschen"
 
 #. Default: "Link"
 msgid "event_Link"
-msgstr ""
+msgstr "Verbindung"
 
 #. Default: "Unlink"
 msgid "event_Unlink"
-msgstr ""
+msgstr "Löschen"
 
 #. Default: "This event does not exist. It could have been deleted in the meanwhile."
 msgid "missing_event"
-msgstr ""
+msgstr "Dieses Element existiert nicht. Es kann inzwischen gelöscht sein."
 
 #. Default: "Modified field"
 msgid "modified_field"
-msgstr "Feld verändert"
+msgstr "Verändertes Feld"
 
 #. Default: "Previous value or modification"
 msgid "previous_value"
-msgstr "Voriger Wert"
+msgstr "Vorherige Angabe oder Veränderung"
 
 #. Default: "phase"
 msgid "phase"
@@ -89,7 +93,11 @@ msgstr "[ Wählen ]"
 
 #. Default: " - "
 msgid "no_value"
-msgstr " - "
+msgstr "-"
+
+#. Default: "-"
+msgid "no_choice"
+msgstr "-"
 
 #. Default: "[ Documents ]"
 msgid "choose_a_doc"
@@ -97,15 +105,15 @@ msgstr "[ Dokumente ]"
 
 #. Default: "Everything"
 msgid "everything"
-msgstr ""
+msgstr "Alle"
 
 #. Default: "None"
 msgid "no_object"
-msgstr ""
+msgstr "Keine"
 
 #. Default: "You must choose more elements here."
 msgid "min_ref_violated"
-msgstr "Hier müssen Sie Elemente auswählen."
+msgstr "Hier müssen Sie mehr Elemente auswählen."
 
 #. Default: "Too much elements are selected here."
 msgid "max_ref_violated"
@@ -113,11 +121,15 @@ msgstr "Sie haben zuviele Elemente ausgewählt."
 
 #. Default: "-"
 msgid "no_ref"
-msgstr "Kein Element"
+msgstr "-"
+
+#. Default: "Invalid value.\nIndividual values mus be separated by « ${sep} » chars.\nAn individual value must be a number between ${min} and ${max},\nor a range of 2 values separated by char « ${rangeSep} »."
+msgid "number_select_ko"
+msgstr "Ungültiger Wert.\nEinzelne Werte müssen sich vom Zeichen „${sep}“ unterscheiden.\nDies sind die Namen zwischen ${min} und ${max},\noder ein Wertebereich verfügt nicht über die 2 separaten Werte des Zeichens „${rangeSep}“."
 
 #. Default: "There is currently no selectable element."
 msgid "no_selectable"
-msgstr ""
+msgstr "Es gibt derzeit kein auszuwählendes Element."
 
 #. Default: "Available elements"
 msgid "selectable_objects"
@@ -137,15 +149,23 @@ msgstr "Nach unten verschieben"
 
 #. Default: "Move to top"
 msgid "move_top"
-msgstr "Verschiebe an den Anfang"
+msgstr "An den Anfang verschieben"
 
 #. Default: "Move to bottom"
 msgid "move_bottom"
-msgstr "Verschiebe ans Ende"
+msgstr "An das Ende verschieben"
 
 #. Default: "Update the hereabove number and click here to move this element to a new position."
 msgid "move_number"
-msgstr ""
+msgstr "Bearbeiten Sie die Numme oberhalb und klicken Sie hier, um das Element an eine neue Position zu verschieben."
+
+#. Default: "Stretch"
+msgid "stretch"
+msgstr "Erweitern"
+
+#. Default: "Shrink"
+msgid "shrink"
+msgstr "Verkleinern"
 
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"
@@ -169,11 +189,11 @@ msgstr "Suchen"
 
 #. Default: "Clean"
 msgid "search_clean"
-msgstr ""
+msgstr "Löschen"
 
 #. Default: "Search results"
 msgid "search_results"
-msgstr "Resultate suchen"
+msgstr "Resultate"
 
 #. Default: " "
 msgid "search_results_descr"
@@ -181,7 +201,7 @@ msgstr ""
 
 #. Default: "All results"
 msgid "search_results_all"
-msgstr ""
+msgstr "Alle Resultate"
 
 #. Default: "New search"
 msgid "search_new"
@@ -205,23 +225,23 @@ msgstr "bis"
 
 #. Default: "on"
 msgid "date_on"
-msgstr ""
+msgstr "den"
 
 #. Default: "A precise date"
 msgid "date_match_precise"
-msgstr ""
+msgstr "Genaues Datum"
 
 #. Default: "Until this date"
 msgid "date_match_until"
-msgstr ""
+msgstr "Bis"
 
 #. Default: "From this date"
 msgid "date_match_from"
-msgstr ""
+msgstr "Ab"
 
 #. Default: "or"
 msgid "search_or"
-msgstr "odr"
+msgstr "oder"
 
 #. Default: "and"
 msgid "search_and"
@@ -229,7 +249,7 @@ msgstr "und"
 
 #. Default: "Search results are not available anymore. Please launch a new search."
 msgid "search_broken"
-msgstr ""
+msgstr "Diese Suche ist nicht mehr verfügbar. Bitte erstellen Sie eine neue."
 
 #. Default: "No move occurred: please specify a valid number."
 msgid "ref_invalid_index"
@@ -245,22 +265,30 @@ msgstr "Füllen Sie einen reellen Wert ein."
 
 #. Default: "Please specify a valid date."
 msgid "bad_date"
-msgstr ""
+msgstr "Bitte geben Sie ein gültiges Datum an."
 
 #. Default: "The value is not among possible values for this field."
 msgid "bad_select_value"
-msgstr "Dieser Wert wird in diesem Feld nicht akzeptiert."
+msgstr "Dieser Wert ist für dieses Feld nicht zulässig."
 
 #. Default: "The field content is not well-formed XML. ${error}"
 msgid "bad_xml"
-msgstr ""
+msgstr "Der Feldinhalt ist kein gültiges XML. ${error}"
 
 #. Default: "Content found, considered as invalid or incomplete: ${text}"
 msgid "invalid_text"
-msgstr ""
+msgstr "Inhalt gefunden, als ungültig oder unvollständig betrachtet: ${text}"
+
+#. Default: "The field contains ${found} characters · The maximum is ${max}."
+msgid "text_overflow"
+msgstr "Das Feld enthält ${found} Zeichen · Der maximal zulässige Wert ist ${max}."
 
 #. Default: "Choose a value between ${min} and ${max}."
 msgid "range_ko"
+msgstr "Wählen Sie einen Wert zwischen ${min} und ${max}."
+
+#. Default: "Wrong or missing file extension. Valid extension(s) is (are): ${exts}."
+msgid "ext_ko"
 msgstr ""
 
 #. Default: "(Un)select all"
@@ -269,11 +297,15 @@ msgstr "Alle aus- oder abwählen"
 
 #. Default: "Automatic (de)selection"
 msgid "select_auto"
-msgstr ""
+msgstr "Automatische Abwahl"
 
 #. Default: "Unselect all"
 msgid "unselect_all"
-msgstr ""
+msgstr "Alles wiederufen"
+
+#. Default: "Clean all"
+msgid "clean_all"
+msgstr "Löschen"
 
 #. Default: "You must select at least one element."
 msgid "no_elem_selected"
@@ -289,15 +321,15 @@ msgstr "Hinzufügen von..."
 
 #. Default: "Add above"
 msgid "object_add_above"
-msgstr ""
+msgstr "Oben hinzufügen"
 
 #. Default: "Add above from..."
 msgid "object_add_above_from"
-msgstr ""
+msgstr "Oben hinzufügen von..."
 
 #. Default: "Add below"
 msgid "object_add_below"
-msgstr ""
+msgstr "Unten hinzufügen"
 
 #. Default: "Edit"
 msgid "object_edit"
@@ -309,11 +341,11 @@ msgstr "Löschen"
 
 #. Default: "Delete selection"
 msgid "object_delete_many"
-msgstr ""
+msgstr "Auswahl entfernen"
 
 #. Default: "The element has been deleted."
 msgid "object_deleted"
-msgstr ""
+msgstr "Der Löschvorgang ist abgeschlossen."
 
 #. Default: "Remove"
 msgid "object_unlink"
@@ -321,55 +353,67 @@ msgstr "Zurückziehen"
 
 #. Default: "Remove selection"
 msgid "object_unlink_many"
-msgstr ""
+msgstr "Auswahl entfernen"
 
 #. Default: "Insert"
 msgid "object_link"
-msgstr ""
+msgstr "Einfügen"
 
 #. Default: "Insert selection"
 msgid "object_link_many"
-msgstr ""
+msgstr "Auswahl einfügen"
+
+#. Default: "Apply"
+msgid "filter_apply"
+msgstr "Anwenden"
+
+#. Default: "Clean"
+msgid "filter_clean"
+msgstr "Löschen"
 
 #. Default: "Duplicate (below)"
 msgid "row_clone"
-msgstr ""
+msgstr "Unterhalb duplizieren"
 
 #. Default: "Un·check everything"
 msgid "check_uncheck"
-msgstr ""
+msgstr "Alle deaktivieren"
 
 #. Default: "Click the icon to unlock."
 msgid "page_unlock"
-msgstr ""
+msgstr "Klicken Sie zum Entsperren auf das Symbol."
 
 #. Default: "No page."
 msgid "no_page"
-msgstr ""
+msgstr "Keine Seite."
 
 #. Default: "No page is currently defined as being the default page."
 msgid "no_default_page"
-msgstr ""
+msgstr "Derzeit sind keine Seiten als Standardseite festgelegt."
 
 #. Default: "Keep the file unchanged"
 msgid "keep_file"
-msgstr ""
+msgstr "Datei aufbewahren"
 
 #. Default: "Delete the file"
 msgid "delete_file"
-msgstr ""
+msgstr "Datei löschen"
 
 #. Default: "Replace it with a new file"
 msgid "replace_file"
-msgstr ""
+msgstr "Datei durch eine andere ersetzen"
 
 #. Default: "Are you sure ?"
 msgid "action_confirm"
 msgstr "Sind Sie sicher ?"
 
+#. Default: "Here we go ?"
+msgid "here_we_go"
+msgstr ""
+
 #. Default: "⚠️ Are you sure you want to delete this ?"
 msgid "delete_confirm"
-msgstr ""
+msgstr "⚠️ Sind Sie sicher, dass Sie diese EIngabe löschen möchten ?"
 
 #. Default: "The action has been performed."
 msgid "action_done"
@@ -381,31 +425,39 @@ msgstr "Ein Problem ist aufgetreten."
 
 #. Default: "Action could not be performed on ${nb} element(s)."
 msgid "action_partial"
-msgstr ""
+msgstr "Die Aktion konnte für ${nb}-Element(e) nicht ausgeführt werden."
 
 #. Default: "Action had no effect."
 msgid "action_null"
-msgstr ""
+msgstr "Die Aktion hatte keine Wirkung."
+
+#. Default: "⚠️ Missing login or email.\n\nPlease encode here a valid user login or email."
+msgid "missing_login"
+msgstr "⚠️ Fehlender Benutzername oder E-Mail-Adresse.\n\nBitte geben Sie einen gültigen Benutzernamen oder eine gültige E-Mail-Adresse ein."
+
+#. Default: "⚠️ This procedure can't be performed:\nyou are already logged into this site."
+msgid "for_anon_only"
+msgstr "⚠️ Dieser Vorgang kann nicht durchgeführt werden: Sie sind bereits verbunden."
 
 #. Default: "Action would have had no effect."
 msgid "action_null_test"
-msgstr ""
+msgstr "Die Aktion hätte keine Wirkung gehabt."
 
 #. Default: "This action can't currently be executed."
 msgid "action_unexecutable"
-msgstr ""
+msgstr "Diese Aktion kann derzeit nicht ausgeführt werden."
 
 #. Default: "Are you sure you want to apply this change?"
 msgid "save_confirm"
-msgstr ""
+msgstr "Sind Sie sicher, dass Sie diese Änderung anwenden möchten?"
 
 #. Default: "Are you sure? You are going to permanently change the order of these elements, for all users."
 msgid "sort_confirm"
-msgstr ""
+msgstr "Sind Sie du sicher? Sie ändern die Reihenfolge dieser Elemente dauerhaft für alle Benutzer."
 
 #. Default: "Go to ..."
 msgid "goto_link"
-msgstr ""
+msgstr "Wählen..."
 
 #. Default: "Go to top"
 msgid "goto_first"
@@ -425,7 +477,7 @@ msgstr "Gehen Sie zum Ende"
 
 #. Default: "List"
 msgid "goto_source"
-msgstr "Zurück"
+msgstr "LIste"
 
 #. Default: "Go to number"
 msgid "goto_number"
@@ -433,7 +485,7 @@ msgstr "Gehe zu Nummer"
 
 #. Default: "Back"
 msgid "go_back"
-msgstr ""
+msgstr "Zurück"
 
 #. Default: "Whatever"
 msgid "whatever"
@@ -497,39 +549,39 @@ msgstr "XLSX (Microsoft Excel)"
 
 #. Default: "CSV"
 msgid "csv"
-msgstr "CSV (Comma-Separated Values)"
+msgstr "CSV (Komma-getrennte Werte)"
 
 #. Default: "frozen"
 msgid "frozen"
-msgstr "Gesperrt"
+msgstr "gesperrt"
 
 #. Default: "(Re-)freeze"
 msgid "freezeField"
-msgstr ""
+msgstr "(Wieder) sperren"
 
 #. Default: "Unfreeze"
 msgid "unfreezeField"
-msgstr ""
+msgstr "Entsperren"
 
 #. Default: "Upload a new file"
 msgid "uploadField"
-msgstr ""
+msgstr "Überschreiben durch..."
 
 #. Default: "Please upload a file of the same type."
 msgid "upload_invalid"
-msgstr ""
+msgstr "Bitte laden Sie eine Datei desselben Typs hoch."
 
-#. Default: "Made with <a href=\"http://appyframework.org\" target=\"_blank\">Appy</a>"
+#. Default: "Made with <a href=\"https://appyframe.work\" target=\"_blank\">Appy</a>"
 msgid "footer_text"
-msgstr ""
+msgstr "Erstellt mit <a href=\"https://appyframe.work\" target=\"_blank\">Appy</a>"
 
-#. Default: "Please type \"${text}\" (without the double quotes) in the field besides, but without the character at position ${number}."
+#. Default: "Please type “${text}” (without the double quotes) in the field besides, but without the character at position ${number}."
 msgid "captcha_text"
-msgstr ""
+msgstr "Geben Sie gegenüber „${text}“ (ohne Anführungszeichen) ein und lassen Sie das Zahlenzeichen ${number} weg."
 
 #. Default: "The code was not correct. Please try again."
 msgid "bad_captcha"
-msgstr ""
+msgstr "Der Code ist nicht korrekt. Bitte versuchen Sie es erneut mit diesem neuen Code."
 
 #. Default: "Login"
 msgid "app_login"
@@ -537,7 +589,7 @@ msgstr "Login"
 
 #. Default: "Please connect."
 msgid "please_connect"
-msgstr ""
+msgstr "Bitte loggen Sie sich ein."
 
 #. Default: "Log in"
 msgid "app_connect"
@@ -545,11 +597,11 @@ msgstr "Anmelden"
 
 #. Default: "Not registered yet ?"
 msgid "want_register"
-msgstr ""
+msgstr "Noch keinen Account ?"
 
 #. Default: "Register myself"
 msgid "app_register"
-msgstr ""
+msgstr "Registrieren"
 
 #. Default: "Logout"
 msgid "app_logout"
@@ -561,15 +613,15 @@ msgstr "Passwort"
 
 #. Default: "Home"
 msgid "app_home"
-msgstr ""
+msgstr "Zurück zu meiner Hauptseite"
 
 #. Default: "Welcome"
 msgid "welcome"
-msgstr ""
+msgstr "Willkommen"
 
 #. Default: "This login is reserved."
 msgid "login_reserved"
-msgstr "Dieses Login ist reserviert"
+msgstr "Dieses Login ist reserviert."
 
 #. Default: "This login is already in use."
 msgid "login_in_use"
@@ -583,17 +635,29 @@ msgstr "Anmeldung fehlgeschlagen."
 msgid "login_ok"
 msgstr "Willkommen! Sie sind jetzt angemeldet."
 
-#. Default: "Welcome! You are now logged in.<br/><br/><b>Before going further, please choose a new password.</b>"
+#. Default: "Welcome! You are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
 msgid "login_ok_change_password"
-msgstr "Willkommen! Sie sind jetzt angemeldet."
+msgstr "Willkommen! Sie sind jetzt angemeldet.\n\n<b>Bevor Sie fortfahren, wählen Sie ein neues Passwort.</b>"
 
 #. Default: "You have been logged out."
 msgid "logout_ok"
-msgstr ""
+msgstr "Sie wurden ausgeloggt."
+
+#. Default: "Type your new password here"
+msgid "password_type_new"
+msgstr "Geben Sie hier das Neue ein"
 
 #. Default: "Confirm here the password"
 msgid "password_confirm"
-msgstr ""
+msgstr "Bestätigen Sie es hier"
+
+#. Default: "Show the password"
+msgid "password_show"
+msgstr "Passwort anzeigen"
+
+#. Default: "Hide the password"
+msgid "password_hide"
+msgstr "Passwort verbergen"
 
 #. Default: "Passwords must contain at least ${nb} characters."
 msgid "password_too_short"
@@ -605,51 +669,51 @@ msgstr "Die Passwörter müssen übereinstimmen."
 
 #. Default: "lowercase letters"
 msgid "pwd_lower"
-msgstr ""
+msgstr "kleinbuchstaben"
 
 #. Default: "uppercase letters"
 msgid "pwd_upper"
-msgstr ""
+msgstr "großbuchstaben"
 
 #. Default: "figures"
 msgid "pwd_figure"
-msgstr ""
+msgstr "zahlen"
 
 #. Default: "special chars"
 msgid "pwd_special"
-msgstr ""
+msgstr "sonderzeichen"
 
 #. Default: "Chars considered as special: ${chars}"
 msgid "pwd_special_chars"
-msgstr ""
+msgstr "Als Sonderzeichen gelten: ${chars}"
 
 #. Default: "Not enough ${group} · ${found} found, ${min} required."
 msgid "pwd_occur_ko"
-msgstr ""
+msgstr "Nicht genügend ${group} · ${found} gefunden, ${min} erforderlich."
 
 #. Default: "Minimum size for the password: ${min} chars"
 msgid "pwd_min_length"
-msgstr ""
+msgstr "Mindestpasswortgröße: ${min} Zeichen"
 
 #. Default: "Minimum number of ${group}: ${min}${detail}"
 msgid "pwd_min"
-msgstr ""
+msgstr "Mindestanzahl von ${group}: ${min}${detail}"
 
 #. Default: "The password must respect the following rule·s:"
 msgid "pwd_rules"
-msgstr ""
+msgstr "Das Passwort muss folgende Regel(n) erfüllen:"
 
 #. Default: "Please choose a password that is different from the current one."
 msgid "same_password"
-msgstr ""
+msgstr "Wählen Sie ein Passwort, das sich vom aktuellen Passwort unterscheidet."
 
 #. Default: "Context"
 msgid "login_context"
-msgstr ""
+msgstr "Kontext"
 
 #. Default: "Choose an authentication context in the list besides your name. If no list appears, your profile is not configured yet: contact an administrator."
 msgid "auth_context_error"
-msgstr ""
+msgstr "Wählen Sie aus der Liste neben Ihrem Namen einen Authentifizierungskontext aus. Wenn keine Liste angezeigt wird, ist Ihr Profil noch nicht konfiguriert: Wenden Sie sich an einen Administrator."
 
 #. Default: "Save"
 msgid "object_save"
@@ -665,11 +729,11 @@ msgstr "Bitte korrigieren Sie die angezeigten Fehler."
 
 #. Default: "Please consult error details in the field(s) below."
 msgid "validation_sub_error"
-msgstr ""
+msgstr "Bewegen Sie die Maus über das Ausrufezeichen-Symbol (ohne zu klicken), die Fehlerdetails werden angezeigt."
 
 #. Default: "Error"
 msgid "error_name"
-msgstr ""
+msgstr "Fehler"
 
 #. Default: "Cancel"
 msgid "object_cancel"
@@ -685,59 +749,51 @@ msgstr "Sie müssen Cookies erlauben, bevor Sie sich anmelden können."
 
 #. Default: "Forgot password?"
 msgid "forgot_password"
-msgstr "Passwort vergessen?"
+msgstr "Passwort vergessen ?"
 
 #. Default: "Ask new password"
 msgid "ask_password_reinit"
-msgstr ""
+msgstr "Ein neues Passwort anfordern"
 
-#. Default: "Something went wrong. First possibility: you have already clicked on the link (maybe have you double-clicked?) and your password has already been re-initialized. Please check that you haven't received your new password in another email. Second possibility: the link that you received in your mailer was splitted on several lines. In this case, please re-type the link in one single line and retry. Third possibility: you have waited too long and your request has expired, or a technical error occurred. In this case, please try again to ask a new password from the start."
+#. Default: "️⚠️ Something went wrong.\n\nYou may have waited too long.\n\nPlease try again."
 msgid "wrong_password_reinit"
-msgstr ""
+msgstr "⚠️ Es ist ein Fehler aufgetreten.\n\nVielleicht haben Sie zu lange gewartet.\n\nVersuchen Sie es erneut."
+
+#. Default: "️✌ Welcome back !\n\nIn order to be able to use your profile again, please define a brand new password."
+msgid "password_redefine"
+msgstr "✌ Es freut mich, Sie wieder bei uns zu sehen!\n\nUm auf Ihr Profil zuzugreifen, legen Sie bitte ein neues Passwort fest."
 
 #. Default: "A mail has been sent to you. Please follow the instructions from this email."
 msgid "reinit_mail_sent"
-msgstr ""
+msgstr "Eine E-Mail wurde an Sie gesendet. Bitte befolgen Sie die Anweisungen in dieser E-Mail."
 
 #. Default: "Password re-initialisation"
 msgid "reinit_password"
-msgstr ""
+msgstr "Zurücksetzen Ihres Passworts"
 
 #. Default: "Hello,\n\nA password re-initialisation has been requested, tied to this email address, for the website ${siteUrl}. If you are not at the origin of this request, please ignore this email. Else, click on the link below to receive a new password.\n\n${url}"
 msgid "reinit_password_body"
-msgstr ""
-
-#. Default: "Your new password"
-msgid "new_password"
-msgstr ""
-
-#. Default: "Hello,\n\nThe new password you have requested for website ${siteUrl} is ${password}\n\nBest regards."
-msgid "new_password_body"
-msgstr ""
-
-#. Default: "Your new password has been sent to you by email."
-msgid "new_password_sent"
-msgstr ""
+msgstr "Hallo,\n\nFür die Website ${siteUrl} wurde eine mit Ihrer E-Mail-Adresse verknüpfte Passwort-Zurücksetzung angefordert. Wenn Sie nicht der Urheber dieser Anfrage sind, ignorieren Sie diese Nachricht bitte. Andernfalls klicken Sie auf den Link unten, um Ihr Passwort zurückzusetzen.\n\n${url}"
 
 #. Default: "The password for this user is ${password}"
 msgid "new_password_text"
-msgstr ""
+msgstr "Das Passwort für diesen Benutzer lautet ${password}"
 
 #. Default: "Your new account and password"
 msgid "first_password"
-msgstr ""
+msgstr "Ihr neues Konto und Passwort"
 
 #. Default: "Hello,\n\nAn account has been created for you on website ${siteUrl}. Your login is\n${login}\nYour password is\n${password}\n\nBest regards."
 msgid "first_password_body"
-msgstr ""
+msgstr "Hallo,\n\nAuf der Website ${siteUrl} wurde ein Konto für Sie erstellt. Ihr Benutzername ist\n${login}\nIhr Passwort lautet\n${Passwort}\n\nViele Grüße."
 
 #. Default: "The password has been sent by mail to the user."
 msgid "first_password_sent"
-msgstr ""
+msgstr "Dem Benutzer wurde eine E-Mail mit seinem Benutzernamen, seinem Passwort und der URL für den Zugriff auf diese Website gesendet."
 
 #. Default: "Last access"
 msgid "last_user_access"
-msgstr ""
+msgstr "Letzter Zugriff"
 
 #. Default: "Action"
 msgid "object_action"
@@ -745,7 +801,7 @@ msgstr "Aktion"
 
 #. Default: "Author"
 msgid "object_author"
-msgstr ""
+msgstr "Autor"
 
 #. Default: "Date"
 msgid "action_date"
@@ -757,7 +813,15 @@ msgstr "Kommentar"
 
 #. Default: "Create from another object"
 msgid "create_from_predecessor"
-msgstr ""
+msgstr "Aus einem anderen Element erstellen"
+
+#. Default: "Month"
+msgid "month"
+msgstr "Monat"
+
+#. Default: "Week"
+msgid "week"
+msgstr "Woche"
 
 #. Default: "Mon"
 msgid "day_Mon_short"
@@ -825,11 +889,11 @@ msgstr "Urlaub"
 
 #. Default: "AM"
 msgid "ampm_am"
-msgstr "AM"
+msgstr "VM"
 
 #. Default: "PM"
 msgid "ampm_pm"
-msgstr "PM"
+msgstr "NM"
 
 #. Default: "Jan"
 msgid "month_Jan_short"
@@ -933,67 +997,75 @@ msgstr "Heute"
 
 #. Default: "Which event type would you like to create?"
 msgid "which_event"
-msgstr ""
+msgstr "Was möchten Sie hinzufügen?"
 
-#. Default: "Extend the event on the following number of days (leave blank to create an event on the current day only):"
+#. Default: "Extend the event on the following number of days\n(leave blank to create an event on the current day only):"
 msgid "event_span"
-msgstr ""
+msgstr "Verlängern Sie die Veranstaltung über die folgende Anzahl an Tagen\n(Leerraum lassen, um an diesem Tag ein Ereignis zu erstellen):"
 
 #. Default: "Also delete successive events of the same type."
 msgid "del_next_events"
-msgstr ""
+msgstr "Löschen Sie auch aufeinanderfolgende Ereignisse desselben Typs"
 
 #. Default: "Several events"
 msgid "several_events"
-msgstr ""
+msgstr "Mehrere Veranstaltungen"
 
 #. Default: "Timeslot"
 msgid "timeslot"
-msgstr ""
+msgstr "Zeitfenster"
 
 #. Default: "Unique"
 msgid "timeslot_main"
-msgstr ""
+msgstr "EInmaligeVeranstaltung"
 
-#. Default: "Cannot create such an event in the ${slot} slot."
+#. Default: "Cannot create such an event in slot « ${slot} »."
 msgid "timeslot_misfit"
-msgstr ""
+msgstr "Diese Art von Ereignis kann im Zeitfenster « ${slot} » nicht erstellt werden."
 
 #. Default: "Validate events"
 msgid "validate_events"
-msgstr ""
+msgstr "Validieren Sie die Ereignisse"
 
-#. Default: "All the checked events will be confirmed, while the unchecked ones will be discarded.\n\nThe concerned user·s will be warned.\n\nAre you sure ?"
+#. Default: "Delete discarded events"
+msgid "validate_events_discard"
+msgstr "Löschen Sie nicht validierte Ereignisse"
+
+#. Default: "If this checkbox is checked, unselected events will left as-is, opening the possibility to validate them in a future, additional step. Else, unselected events will be removed and considered definitely rejected."
+msgid "validate_events_discard_descr"
+msgstr "Wenn dieses Kontrollkästchen deaktiviert ist, bleiben die gelöschten Ereignisse unverändert, sodass die Möglichkeit besteht, sie später zu validieren (oder auch nicht). Wenn diese Option aktiviert ist, werden abgewählte Ereignisse gelöscht und gelten als dauerhaft abgelehnt."
+
+#. Default: "Only checked events will be validated.\n\nThe concerned user·s will be warned."
 msgid "validate_events_confirm"
-msgstr ""
+msgstr "Nur ausgewählte Ereignisse werden validiert.\n\nDer bzw. die betroffenen Benutzer werden benachrichtigt."
 
 #. Default: "<table class=\"small\"><tr><th>Validated event·s</th><td align=\"center\">${validated}</td></tr><tr><th>Discarded event·s</th><td align=\"center\">${discarded}</td></tr></table>"
 msgid "validate_events_done"
-msgstr ""
+msgstr "<table class=\"small\"><tr><th>Validierte Ereignisse</th><td align=\"center\">${validated}</td></tr><tr><th>Unvalidierte Ereignisse</th><td align=\"center\">${discarded}</td></tr></table>"
 
 #. Default: "validated"
 msgid "event_validated"
-msgstr ""
+msgstr "bestätigt"
 
 #. Default: "discarded"
 msgid "event_discarded"
-msgstr ""
+msgstr "abgelehnt"
 
 #. Default: "Inserted by ${userName}"
 msgid "history_insert"
-msgstr ""
+msgstr "Eingefügt von ${userName}"
 
 #. Default: "Deleted by ${userName}"
 msgid "history_delete"
-msgstr ""
+msgstr "Gelöscht von ${userName}"
 
 #. Default: "Show changes"
 msgid "changes_show"
-msgstr ""
+msgstr "Änderungen anzeigen"
 
 #. Default: "Hide changes"
 msgid "changes_hide"
-msgstr ""
+msgstr "Änderungen ausblenden"
 
 #. Default: "an anonymous user"
 msgid "anonymous"
@@ -1001,167 +1073,190 @@ msgstr "ein anonymer Benutzer"
 
 #. Default: "${date} - This page is locked by ${user}."
 msgid "page_locked"
-msgstr ""
+msgstr "${date} – Diese Seite ist von ${user} gesperrt."
 
 #. Default: "This page does not exist or you are not allowed to consult it."
 msgid "page_not_found"
-msgstr ""
+msgstr "Diese Seite existiert nicht oder Sie sind nicht berechtigt, sie anzuzeigen."
 
 #. Default: "In some situations, by leaving this page this way, you may lose encoded data or prevent other users from editing it afterwards. Please use buttons instead."
 msgid "warn_leave_form"
-msgstr ""
+msgstr "In bestimmten Situationen kann das Verlassen dieser Seite dazu führen, dass die verschlüsselten Daten verloren gehen oder andere Benutzer sie nicht mehr bearbeiten können. Bitte nutzen Sie die entsprechenden Schaltflächen."
+
+#. Default: "You are not (or no longer) allowed to come here."
+msgid "unauthorized"
+msgstr "Sie sind nicht berechtigt, diesen Bereich einzusehen."
 
 #. Default: "You are not allowed to consult this."
-msgid "unauthorized"
+msgid "unconsultable"
 msgstr ""
 
 #. Default: "Microsoft Internet Explorer is not supported.\nUsing it with site is risky and could lead to problems as severe as data loss.\n\nPlease use a modern web browser to consult this site."
 msgid "wrong_browser"
-msgstr ""
+msgstr "Microsoft Internet Explorer wird nicht unterstützt.\nDie Verwendung für diese Website ist riskant und kann zu schwerwiegenden Fehlfunktionen, einschließlich Datenverlust, führen.\n\nBitte verwenden Sie einen modernen Browser."
 
 #. Default: "Your are using ${name}, version ${version}, which is now obsolete and unsupported.\nUsing it with site is risky and could lead to problems as severe as data loss.\n\nPlease upgrade your browser to at least version ${minimal}, or use another one."
 msgid "old_browser"
-msgstr ""
+msgstr "Sie verwenden ${name} in der veralteten Version ${version}.\nDie Verwendung für diese Website ist riskant und kann zu schwerwiegenden Fehlfunktionen, einschließlich Datenverlust, führen.\n\nBitte aktualisieren Sie Ihren Browser auf mindestens ${minimal} oder verwenden Sie einen anderen."
 
 #. Default: "Send by email"
 msgid "email_send"
-msgstr ""
+msgstr "Per E-Mail gesendet"
 
 #. Default: "Mail subject"
 msgid "email_subject"
-msgstr ""
+msgstr "Thema"
 
 #. Default: "Mail body"
 msgid "email_body"
-msgstr ""
+msgstr "Nachrichtentext"
 
 #. Default: "${site} - ${title} - ${template}"
 msgid "podmail_subject"
-msgstr ""
+msgstr "${site} – ${title} – ${template}"
 
 #. Default: "Hello, this email that was sent to you via ${site}. Please consult the attached file(s)."
 msgid "podmail_body"
-msgstr ""
+msgstr "Hallo,\n\nDiese E-Mail wird Ihnen von ${site} gesendet.\n\nSiehe Anhang."
 
 #. Default: "List"
 msgid "result_mode_list"
-msgstr ""
+msgstr "Auflistung"
 
 #. Default: "Grid"
 msgid "result_mode_grid"
-msgstr ""
+msgstr "Raster"
 
 #. Default: "Calendar"
 msgid "result_mode_calendar"
-msgstr ""
+msgstr "Kalender"
 
 #. Default: "Repeated event"
 msgid "repeated"
-msgstr ""
+msgstr "Wiederkehrend"
 
 #. Default: "Last of a series"
 msgid "repeated_last"
-msgstr ""
+msgstr "Der Letzte der Reihe"
 
 #. Default: "Bold (Ctrl+B)"
 msgid "icon_bold"
-msgstr ""
+msgstr "Fett (Strg+B)"
 
 #. Default: "Italic (Ctrl+I)"
 msgid "icon_italic"
-msgstr ""
+msgstr "Kursiv (Strg+I)"
 
 #. Default: "Highlight (Ctrl+H)"
 msgid "icon_highlight"
-msgstr ""
+msgstr "Fließend (Strg+H)"
 
 #. Default: "Remove format (Ctrl+M)"
 msgid "icon_unformat"
-msgstr ""
+msgstr "Formatierung entfernen (Strg+M)"
 
 #. Default: "Non breaking blank (PC: Ctrl+space, Mac: Alt+Shift+space)"
 msgid "icon_blank"
-msgstr ""
+msgstr "Geschütztes Leerzeichen (PC: Strg+Leertaste, Mac: Alt+Umschalt+Leertaste)"
 
 #. Default: "Non breaking dash (PC: Ctrl+-, Mac: Alt+Shift+-)"
 msgid "icon_dash"
-msgstr ""
+msgstr "Geschützter Bindestrich (PC: Strg+-, Mac: Alt+Umschalt+-)"
 
 #. Default: "Duplicate (Ctrl+D)"
 msgid "icon_dup"
-msgstr ""
+msgstr "Duplizieren (Strg+D)"
+
+#. Default: "Insert a smiley"
+msgid "icon_smiley"
+msgstr "Fügen Sie einen Smiley ein"
 
 #. Default: "Lengthen (PC: Ctrl+_, Mac: Ctrl+!)"
 msgid "icon_lengthen"
-msgstr ""
+msgstr "Erweitern (PC: Strg+_, Mac: Strg+!)"
 
 #. Default: "No sentence is available in this context."
 msgid "no_sentence"
-msgstr ""
+msgstr "Es liegen hierzu keine Sätze vor."
 
 #. Default: "This page does not exist. It could have been deleted or you may request a wrong URL."
 msgid "not_found"
-msgstr ""
+msgstr "Diese Seite existiert nicht. Möglicherweise wurde sie gelöscht oder die von Ihnen angeforderte URL ist falsch."
 
 #. Default: "An error occurred, our apologies. Please contact the site administrator if the problem persists."
 msgid "server_error"
-msgstr ""
+msgstr "Es ist ein Fehler aufgetreten, wir entschuldigen uns. Sollte das Problem weiterhin bestehen, wenden Sie sich bitte an den Verantwortlichen für diese Anwendung."
 
 #. Default: "The system is too busy for the moment: your request could not be satisfied, our apologies. Please try again in a few seconds and contact the site administrator if the problem persists."
 msgid "conflict_error"
-msgstr ""
+msgstr "Das System ist überlastet und konnte nicht auf Ihre Anfrage reagieren. Wir entschuldigen uns. Bitte versuchen Sie es in ein paar Sekunden noch einmal. Sollte das Problem weiterhin bestehen, wenden Sie sich bitte an den Verantwortlichen für diese Anwendung."
 
 #. Default: "Please authenticate."
 msgid "please_authenticate"
-msgstr ""
+msgstr "Bitte authentifizieren Sie sich."
 
 #. Default: "This site uses cookies for a better user experience."
 msgid "cookie_warn"
-msgstr ""
+msgstr "Diese Website verwendet Cookies, um Ihnen ein optimales Erlebnis zu bieten. Indem Sie weitersurfen, akzeptieren Sie deren Verwendung."
 
 #. Default: "I agree"
 msgid "cookie_accept"
-msgstr ""
+msgstr "OK"
 
 #. Default: "Read our privacy policy."
 msgid "cookie_read"
-msgstr ""
+msgstr "Erfahren Sie mehr."
+
+#. Default: "unknown"
+msgid "unknown"
+msgstr "unbekannt"
 
 #. Default: "Pay"
 msgid "pay"
-msgstr ""
+msgstr "Zahlen"
 
 #. Default: "Your payment was successful."
 msgid "payment_accepted"
-msgstr ""
+msgstr "Ihre Zahlung wurde erfolgreich abgeschlossen."
 
 #. Default: "We are sorry, but your payment has been refused. The order has been canceled."
 msgid "payment_refused"
-msgstr ""
+msgstr "Es tut uns leid, aber Ihre Zahlung wurde abgelehnt. Die Bestellung wurde storniert."
 
 #. Default: "You have canceled the payment. The order has been canceled, too."
 msgid "payment_canceled"
-msgstr ""
+msgstr "Sie haben die Zahlung storniert. Die Bestellung wurde storniert."
 
 #. Default: "We are sorry, but something went wrong with your payment. Please try again."
 msgid "payment_abandoned"
-msgstr ""
+msgstr "Es tut uns leid, aber beim Bezahlvorgang ist ein Fehler aufgetreten. Versuchen Sie es erneut."
 
 #. Default: "Standard view"
 msgid "standard_view"
-msgstr ""
+msgstr "Standard Ansicht"
 
-#. Default: "It seems that you are not allowed to access this site, we are sorry."
+#. Default: "It seems that you (${login}) are not allowed to access this site, we are sorry."
 msgid "sso_user_blocked"
-msgstr ""
+msgstr "Es scheint, dass Sie (${login}) nicht berechtigt sind, diese Website anzuzeigen. Es tut uns leid."
 
-# ~~~~ Base-related labels ~~~~
+#. Default: "Darken"
+msgid "to_dark"
+msgstr "Verdunkeln"
+
+#. Default: "Lighten"
+msgid "to_light"
+msgstr "Aufhellen"
+
 #. Default: "By"
 msgid "Base_creator"
-msgstr ""
+msgstr "Erstellt von"
 
 #. Default: "On"
 msgid "Base_created"
+msgstr "Erstellt am"
+
+#. Default: "Last update by"
+msgid "Base_modifier"
 msgstr ""
 
 #. Default: "Last updated on"
@@ -1177,21 +1272,24 @@ msgid "Base_searchable"
 msgstr "Stichwörter"
 
 #. Default: "History"
+msgid "Base_record"
+msgstr "History"
+
+#. Default: "History"
 msgid "Base_page_history"
-msgstr ""
+msgstr "Historie"
 
 #. Default: "Python"
 msgid "Base_page_python"
 msgstr "Python"
 
-# ~~~~ User-related labels ~~~~
 #. Default: "User"
 msgid "User"
-msgstr ""
+msgstr "Benutzer"
 
 #. Default: "Users"
 msgid "User_plural"
-msgstr ""
+msgstr "Benutzer"
 
 #. Default: "Password"
 msgid "User_page_password"
@@ -1207,7 +1305,7 @@ msgstr "Profil"
 
 #. Default: "Title"
 msgid "User_title"
-msgstr "Titel"
+msgstr "Name, Vorname"
 
 #. Default: "Name"
 msgid "User_name"
@@ -1220,6 +1318,10 @@ msgstr "Vorname"
 #. Default: "Login"
 msgid "User_login"
 msgstr "Login"
+
+#. Default: "A login often, but not necessarily, corresponds to an email address."
+msgid "User_login_descr"
+msgstr "Verwenden Sie nach Möglichkeit eine E-Mail-Adresse."
 
 #. Default: "Email"
 msgid "User_email"
@@ -1235,7 +1337,7 @@ msgstr "Neues Passwort"
 
 #. Default: "This will re-generate a password for this user. The new password will not be automatically sent to him: it will be shown to you. Are you sure?"
 msgid "User_resetPassword_confirm"
-msgstr ""
+msgstr "Dadurch wird ein neues Passwort für diesen Benutzer generiert. Das neue Passwort wird Ihnen angezeigt; Es liegt an Ihnen, es an den Benutzer weiterzugeben. SInd Sie sicher?"
 
 #. Default: "Groups"
 msgid "User_groups"
@@ -1243,28 +1345,27 @@ msgstr "Gruppen"
 
 #. Default: "Pages"
 msgid "User_page_editablePages"
-msgstr ""
+msgstr "Seiten"
 
 #. Default: "Editable pages"
 msgid "User_editablePages"
-msgstr ""
+msgstr "Bearbeitbare Seiten"
 
 #. Default: "You'll find, hereafter, all the pages, on this site, you are allowed to edit."
 msgid "User_editablePages_descr"
-msgstr ""
+msgstr "Hier ist die Liste aller Seiten dieser Website, zu deren Änderung Sie berechtigt sind."
 
-# ~~~~ Group-related labels ~~~~
 #. Default: "Group"
 msgid "Group"
-msgstr ""
+msgstr "Gruppe"
 
 #. Default: "Groups"
 msgid "Group_plural"
-msgstr ""
+msgstr "Gruppe"
 
 #. Default: "Group"
 msgid "Group_page_main"
-msgstr ""
+msgstr "Gruppe"
 
 #. Default: "Title"
 msgid "Group_title"
@@ -1282,18 +1383,17 @@ msgstr "Rollen"
 msgid "Group_users"
 msgstr "Benutzer"
 
-# ~~~~ Translation-related labels ~~~~
 #. Default: "Translation"
 msgid "Translation"
-msgstr ""
+msgstr "Übersetzung"
 
 #. Default: "Translations"
 msgid "Translation_plural"
-msgstr ""
+msgstr "Übersetzungen"
 
 #. Default: "Main labels"
 msgid "Translation_phase_main"
-msgstr ""
+msgstr "Hauptetiketten"
 
 #. Default: "Options"
 msgid "Translation_page_main"
@@ -1301,36 +1401,35 @@ msgstr "Optionen"
 
 #. Default: "Additional labels"
 msgid "Translation_phase_custom"
-msgstr ""
+msgstr "Zusätzliche Etiketten"
 
 #. Default: "Title"
 msgid "Translation_title"
-msgstr ""
+msgstr "Titel"
 
 #. Default: "Source language"
 msgid "Translation_sourceLanguage"
-msgstr "Grund Sprach"
+msgstr "Usgangssprache"
 
 #. Default: "PO file - Main labels"
 msgid "Translation_poAutomatic"
-msgstr ""
+msgstr "Haupt-.po"
 
 #. Default: "PO file - Additional labels"
 msgid "Translation_poCustom"
-msgstr ""
+msgstr "Zusätzliches .po"
 
-# ~~~~ Page-related labels ~~~~
 #. Default: "Page"
 msgid "Page"
-msgstr ""
+msgstr "Seite"
 
 #. Default: "Pages"
 msgid "Page_plural"
-msgstr ""
+msgstr "Seiten"
 
 #. Default: "Page"
 msgid "Page_page_main"
-msgstr ""
+msgstr "Seite"
 
 #. Default: "Title"
 msgid "Page_title"
@@ -1338,503 +1437,519 @@ msgstr "Titel"
 
 #. Default: "Warning: uploading images will not be possible unless you save the page and edit it again."
 msgid "Page_warning"
-msgstr ""
+msgstr "Bitte beachten Sie: Das Hochladen von Bildern ist nur möglich, wenn Sie die Seite speichern und erneut bearbeiten."
 
 #. Default: "Linked carousel"
 msgid "Page_carousel"
-msgstr ""
+msgstr "Verknüpftes Karussell"
 
 #. Default: "The carousel you choose here will be shown just before the content of this page."
 msgid "Page_carousel_descr"
-msgstr ""
+msgstr "Das hier ausgewählte Karussell wird direkt vor dem Inhalt dieser Seite angezeigt."
 
 #. Default: "Content"
 msgid "Page_content"
-msgstr ""
+msgstr "Inhalt"
 
 #. Default: "Encode or update here the content of this web page."
 msgid "Page_content_descr"
-msgstr ""
+msgstr "Kodieren oder ändern Sie den Inhalt dieser Webseite hier."
 
 #. Default: "Linked query"
 msgid "Page_query"
-msgstr ""
+msgstr "Verwandte Suche"
 
 #. Default: "Results computed from the query you choose here will be shown just after the content of this page."
 msgid "Page_query_descr"
-msgstr ""
+msgstr "Verwandte Suche\nDie hier ausgewählten Suchergebnisse werden direkt unter dem Seiteninhalt angezeigt."
 
 #. Default: "Selectable"
 msgid "Page_selectable"
-msgstr ""
+msgstr "Wählbar"
 
 #. Default: "Check this box if this page can be selected in the main dropdown."
 msgid "Page_selectable_descr"
-msgstr ""
+msgstr "Aktivieren Sie dieses Kontrollkästchen, wenn diese Seite in der globalen Auswahlliste ausgewählt werden kann."
 
 #. Default: "Exportable in PDF"
 msgid "Page_podable"
-msgstr ""
+msgstr "ALs PDF"
 
 #. Default: "Check this box if you want to enable PDF export containing the content of this page and sub-pages."
 msgid "Page_podable_descr"
-msgstr ""
+msgstr "Aktivieren Sie dieses Kontrollkästchen, wenn Sie den PDF-Export des Inhalts dieser Seite und ihrer Unterseiten aktivieren möchten."
 
 #. Default: "Images"
 msgid "Page_page_images"
-msgstr ""
+msgstr "Bilder"
 
 #. Default: "Documents"
 msgid "Page_documents"
-msgstr ""
+msgstr "Dokumente"
 
 #. Default: "Next page"
 msgid "Page_next"
-msgstr ""
+msgstr "Nächste Seite"
 
 #. Default: "Define here the page following this one. Chaining pages is useful if you want to produce a single, composite page from several pages."
 msgid "Page_next_descr"
-msgstr ""
+msgstr "Definieren Sie hier die Seite, die dieser Seite folgen soll. Die Verkettung von Seiten auf diese Weise ist nützlich, wenn Sie eine einzelne, zusammengesetzte Seite erstellen möchten, die aus mehreren Seiten besteht."
 
 #. Default: "Previous page"
 msgid "Page_previous"
-msgstr ""
+msgstr "Vorherige Seite"
 
 #. Default: "Topics"
 msgid "Page_pages"
-msgstr ""
+msgstr "Abschnitte"
 
 #. Default: "Back"
 msgid "Page_toParent"
-msgstr ""
+msgstr "Zurück"
 
 #. Default: "Expression"
 msgid "Page_expression"
-msgstr ""
+msgstr "Ausdrucken"
 
 #. Default: "By default, this page can be seen by anyone, anonymous users included. If you want to reduce its audience, please specify here a Python expression. The expression will receive, in its context, the currently logged user in variable « user » and the page itself in variable « self ». If the expression evaluates to False, the page won't be shown. In case of any doubt about this field, please leave it empty."
 msgid "Page_expression_descr"
-msgstr ""
+msgstr "Standardmäßig ist diese Seite für jeden sichtbar, auch für anonyme Benutzer. Wenn Sie die Zielgruppe eingrenzen möchten, geben Sie hier einen Python-Ausdruck an. Der Ausdruck erhält im Kontext den angemeldeten Benutzer in der Variablen „user“ und die Seite selbst in der Variablen „self“. Wenn der Ausdruck „False“ ergibt, wird die Seite nicht angezeigt. Wenn Sie Zweifel an der Verwendung dieses Feldes haben, lassen Sie es leer."
 
 #. Default: "CSS class"
 msgid "Page_viewCss"
-msgstr ""
+msgstr "CSS-Klasse"
 
 #. Default: "CSS class to use when rendering the content of this page. Modify this parameter only if you know what you are doing."
 msgid "Page_viewCss_descr"
-msgstr ""
+msgstr "CSS-Klasse, die zum Rendern dieser Seite verwendet werden soll. Ändern Sie diese Einstellung nur, wenn Sie wissen, was Sie tun."
 
 #. Default: "Background"
 msgid "Page_page_bg"
-msgstr ""
+msgstr "Hintergrund"
 
 #. Default: "Background image"
 msgid "Page_backgroundImage"
-msgstr ""
+msgstr "Hintergrundbild"
 
 #. Default: "When this page is shown on your app's main public page, the background image you upload here will be used instead of the standard one."
 msgid "Page_backgroundImage_descr"
-msgstr ""
+msgstr "Wenn diese Seite auf der öffentlichen Seite Ihrer App erscheint, wird das hier hochgeladene Hintergrundbild angewendet. Überall sonst wird das Standard-Hintergrundbild verwendet."
 
 #. Default: "Background size"
 msgid "Page_backgroundSize"
-msgstr ""
+msgstr "rendern"
 
 #. Default: "When the background image hereabove is in use, specify here how it will be rendered. This is the equivalent of CSS attribute « background-size ». Value « cover » resizes the image to cover the entire page (keeping the width/height ratio). For most pages, it produces the best results. However, if the page is very long (ie, it contains search results), prefer value « auto », that simply displays the image in its original size."
 msgid "Page_backgroundSize_descr"
-msgstr ""
+msgstr "Wenn das obige Hintergrundbild verwendet wird, geben Sie hier an, wie es gerendert werden soll. Dieses Attribut entspricht dem CSS-Attribut „background-size“. Der Wert „cover“ ändert die Größe des Bildes so, dass es die gesamte Seite abdeckt (unter Beibehaltung des Breiten-/Höhenverhältnisses). Für die meisten Seiten liefert dieser Wert die besten Ergebnisse. Für sehr lange Seiten (zum Beispiel solche, die Suchergebnisse anzeigen) bevorzugen Sie jedoch den Wert „auto“, der das Bild einfach in seiner Originalgröße anzeigt."
 
 #. Default: "Editors"
 msgid "Page_page_editors"
-msgstr ""
+msgstr "Herausgeber"
 
 #. Default: "Editors"
 msgid "Page_editors"
-msgstr ""
+msgstr "Bearbeitbar von"
 
 #. Default: "Choose here users that will be allowed to edit this page, and its sub-pages if any."
 msgid "Page_editors_descr"
-msgstr ""
+msgstr "Wählen Sie hier die Personen aus, die berechtigt sind, diese Seite sowie ggf. alle Unterseiten zu ändern."
 
 #. Default: "Parent"
 msgid "Page_parent"
-msgstr "Relativ"
+msgstr "Übergeordnete Seite"
 
-# ~~~~ Carousel-related labels ~~~~
 #. Default: "Carousel"
 msgid "Carousel"
-msgstr ""
+msgstr "Karussell"
 
 #. Default: "Carousels"
 msgid "Carousel_plural"
-msgstr ""
+msgstr "Karusselle"
 
 #. Default: "Carousel"
 msgid "Carousel_page_main"
-msgstr ""
+msgstr "Karussell"
 
 #. Default: "Name"
 msgid "Carousel_title"
-msgstr ""
+msgstr "Name"
 
 #. Default: "Maximum images' width (in pixels)"
 msgid "Carousel_maxWidth"
-msgstr ""
+msgstr "Maximale Bildbreite (in Pixel)"
 
 #. Default: "If an image uploaded in the carousel has a width being larger than this number of pixels, it will be resized, keeping its width/height ratio. When shown in the carousel, the image will take the full carousel's width, being redimensioned by the browser depending on the size of its window."
 msgid "Carousel_maxWidth_descr"
-msgstr ""
+msgstr "Wenn die Breite eines in das Karussell hochgeladenen Bildes diesen Wert überschreitet, wird die Größe geändert. Das Verhältnis Breite/Höhe bleibt erhalten. Wenn das Bild im Karussell angezeigt wird, nimmt es seine volle Breite ein und wird vom Browser entsprechend der Größe seines aktuellen Fensters in der Größe angepasst."
 
 #. Default: "Maximum carousel's height"
 msgid "Carousel_maxHeight"
-msgstr ""
+msgstr "Maximale Karussellhöhe"
 
 #. Default: "Specify here the maximum height for the carousel, including the unit, as in « 620px ». If you don't want to define this limit, set it to « none »: in that case, the real carousel's height will depend on the images' heights and the size of the browser window."
 msgid "Carousel_maxHeight_descr"
-msgstr ""
+msgstr "Geben Sie hier die maximale Höhe des Karussells inklusive der Einheit an, wie in diesem Beispiel: „620px“. Wenn Sie diese Grenze nicht festlegen möchten, schreiben Sie „none“: In diesem Fall hängt die tatsächliche Höhe des Karussells von der Höhe seiner Bilder und den Abmessungen des Browserfensters ab."
 
 #. Default: "Automatically switch between images?"
 msgid "Carousel_autoSwitch"
-msgstr ""
+msgstr "Automatischer Wechsel von einem Bild zum anderen"
 
 #. Default: "Duration between 2 switches (in seconds)"
 msgid "Carousel_switchInterval"
-msgstr ""
+msgstr "Dauer zwischen 2 Änderungen (in Sekunden)"
 
 #. Default: "Font attributes by element type"
 msgid "Carousel_elemAttributes"
-msgstr ""
+msgstr "Schriftartattribute nach Elementtyp"
 
 #. Default: "Color"
 msgid "Carousel_elemAttributes_color"
-msgstr ""
+msgstr "Farbe"
 
 #. Default: "Font"
 msgid "Carousel_elemAttributes_font"
-msgstr ""
+msgstr "Police"
 
 #. Default: "Size"
 msgid "Carousel_elemAttributes_fontSize"
-msgstr ""
+msgstr "Größe"
 
 #. Default: "Weight"
 msgid "Carousel_elemAttributes_fontWeight"
-msgstr ""
+msgstr "Gewicht"
 
 #. Default: "Normal"
 msgid "fw_normal"
-msgstr ""
+msgstr "Normal"
 
 #. Default: "Bold"
 msgid "fw_bold"
-msgstr ""
+msgstr "Fett"
 
 #. Default: "Lighter"
 msgid "fw_lighter"
-msgstr ""
+msgstr "Leichter"
 
 #. Default: "Bolder"
 msgid "fw_bolder"
-msgstr ""
+msgstr "Akzentuierter"
 
 #. Default: "Font style"
 msgid "Carousel_elemAttributes_fontStyle"
-msgstr ""
+msgstr "Stil"
 
 #. Default: "Normal"
 msgid "fs_normal"
-msgstr ""
+msgstr "Normal"
 
 #. Default: "Italique"
 msgid "fs_italique"
-msgstr ""
+msgstr "Kursivschrift"
 
 #. Default: "Oblique"
 msgid "fs_oblique"
-msgstr ""
+msgstr "Schräg"
 
 #. Default: "Link attributes by element type"
 msgid "Carousel_linkAttributes"
-msgstr ""
+msgstr "Verknüpfen Sie Attribute nach Elementtyp"
 
 #. Default: "URL parameters"
 msgid "Carousel_linkAttributes_params"
-msgstr ""
+msgstr "URL-Parameter"
 
 #. Default: "Target"
 msgid "Carousel_linkAttributes_target"
-msgstr ""
+msgstr "Ziel"
 
 #. Default: "onClick"
 msgid "Carousel_linkAttributes_onClick"
-msgstr ""
+msgstr "onClick"
 
 #. Default: "Background color for « A » buttons"
 msgid "Carousel_buttonBgColorA"
-msgstr ""
+msgstr "Hintergrundfarbe der „A“-Tasten"
 
 #. Default: "Background color for « B » buttons"
 msgid "Carousel_buttonBgColorB"
-msgstr ""
+msgstr "Hintergrundfarbe der „B“-Tasten"
 
 #. Default: "Color of the selected element"
 msgid "Carousel_selectedColor"
-msgstr ""
+msgstr "Farbe des ausgewählten Elements"
 
 #. Default: "Color of unselected elements"
 msgid "Carousel_unselectedColor"
-msgstr ""
+msgstr "Farbe nicht ausgewählter Elemente"
 
 #. Default: "Bottom border image"
 msgid "Carousel_bottomImage"
-msgstr ""
+msgstr "Bild am unteren Rand"
 
 #. Default: "If you upload a thin image here, it will be rendered just below the carousel, taking the same width as the images themselves, in order to produce a nice bottom border."
 msgid "Carousel_bottomImage_descr"
-msgstr ""
+msgstr "Wenn Sie hier ein Bild hochladen, das einige Pixel hoch ist, wird es direkt unter den Karussellbildern angezeigt, um einen eleganten unteren Rand zu erzeugen."
 
 #. Default: "Documents"
 msgid "Carousel_page_documents"
-msgstr ""
+msgstr "Dokumente"
 
-#. Default: "Documents"
+#. Default: "Published documents"
 msgid "Carousel_documents"
-msgstr ""
+msgstr "Veröffentlichte Dokumente"
+
+#. Default: "Unpublished documents"
+msgid "Carousel_unpublished"
+msgstr "Unveröffentlichte Dokumente"
 
 #. Default: "Preview"
 msgid "Carousel_page_preview"
-msgstr ""
+msgstr "Vorhersage"
 
 #. Default: "Preview"
 msgid "Carousel_preview"
-msgstr ""
+msgstr "Vorschau"
 
 #. Default: "Pages incorporating this carousel"
 msgid "Carousel_pages"
-msgstr ""
+msgstr "Seiten, die dieses Karussell enthalten"
 
-# ~~~~ Document-related labels ~~~~
 #. Default: "Document"
 msgid "Document"
-msgstr ""
+msgstr "Dokument"
 
 #. Default: "Documents"
 msgid "Document_plural"
-msgstr ""
+msgstr "Dokumente"
 
 #. Default: "Document"
 msgid "Document_page_main"
-msgstr ""
+msgstr "Dokument"
 
 #. Default: "Title"
 msgid "Document_title"
-msgstr ""
+msgstr "Name"
 
 #. Default: "File"
 msgid "Document_file"
-msgstr ""
+msgstr "Datei"
 
 #. Default: "Thumbnail"
 msgid "Document_thumb"
-msgstr ""
+msgstr "Miniaturansicht"
 
 #. Default: "Duplicate"
 msgid "Document_duplicate"
-msgstr ""
+msgstr "Duplikat"
 
 #. Default: "You are about to duplicate this document and add the copy the same list.\n\nAre you sure ?"
 msgid "Document_duplicate_confirm"
+msgstr "Sie sind dabei, dieses Dokument zu duplizieren und die Kopie am Ende derselben Liste hinzuzufügen.\n\nSind Sie sicher ?"
+
+#. Default: "Publish"
+msgid "Document_publish"
+msgstr ""
+
+#. Default: "You are about to publish this document.\n\nAre you sure ?"
+msgid "Document_publish_confirm"
+msgstr ""
+
+#. Default: "Unpublish"
+msgid "Document_unpublish"
+msgstr ""
+
+#. Default: "You are about to unpublish this document.\n\nAre you sure ?"
+msgid "Document_unpublish_confirm"
 msgstr ""
 
 #. Default: "Elements"
 msgid "Document_elements"
-msgstr ""
+msgstr "Elemente"
 
 #. Default: "Define here the elements that will be positioned on top of this document rendered as a background image. An element's position is expressed as a distance from the top left corner of the image, of the form « top left ». Use percentages preferably, as in « 40% 5% »: these percentages are expressed relatively to the image's height (top) and width (left)."
 msgid "Document_elements_descr"
-msgstr ""
+msgstr "Definieren Sie hier die Elemente, die dem Dokument überlagert und als Hintergrundbild gerendert werden. Die Position eines Elements wird als Abstand von der oberen linken Ecke des Bildes ausgedrückt und hat die Form „top left“. Verwenden Sie vorzugsweise Prozentsätze wie „40% 5%“: Diese Prozentsätze werden relativ zur Höhe (top) und Breite (left) des Hintergrundbilds ausgedrückt."
 
 #. Default: "Type"
 msgid "Document_elements_type"
-msgstr ""
+msgstr "Typ"
 
 #. Default: "Title"
 msgid "et_title"
-msgstr ""
+msgstr "Titel"
 
 #. Default: "Sub-title"
 msgid "et_underTitle"
-msgstr ""
+msgstr "Untertitel"
 
 #. Default: "Button A"
 msgid "et_buttonA"
-msgstr ""
+msgstr "Taste A"
 
 #. Default: "Button B"
 msgid "et_buttonB"
-msgstr ""
+msgstr "Taste B"
 
 #. Default: "Text"
 msgid "Document_elements_text"
-msgstr ""
+msgstr "Text"
 
 #. Default: "Position"
 msgid "Document_elements_position"
-msgstr ""
+msgstr "Position"
 
 #. Default: "Position must be of the form « top left », as in « 40% 5% »."
 msgid "position_ko"
-msgstr ""
+msgstr "Die Position sollte die Form „top left“ haben, also „40% 5%“."
 
 #. Default: "URL"
 msgid "Document_elements_url"
-msgstr ""
+msgstr "URL"
 
 #. Default: "Page"
 msgid "Document_page"
-msgstr ""
+msgstr "Seite"
 
-# ~~~~ Query-related labels ~~~~
 #. Default: "Query"
 msgid "Query"
-msgstr ""
+msgstr "Suche"
 
 #. Default: "Queries"
 msgid "Query_plural"
-msgstr ""
+msgstr "Suche"
 
 #. Default: "Query"
 msgid "Query_page_main"
-msgstr ""
+msgstr "Suche"
 
 #. Default: "Name"
 msgid "Query_title"
-msgstr ""
+msgstr "Name"
 
 #. Default: "Searched elements"
 msgid "Query_className"
-msgstr ""
+msgstr "Durchsuchte Artikel"
 
 #. Default: "Matching states"
 msgid "Query_states"
-msgstr ""
+msgstr "Berücksichtigte Zustände"
 
 #. Default: "Sort by"
 msgid "Query_sortBy"
-msgstr ""
+msgstr "Sortiert nach"
 
 #. Default: "Sort order"
 msgid "Query_sortOrder"
-msgstr ""
+msgstr "Reihenfolge"
 
 #. Default: "Ascending"
 msgid "Query_sortOrder_list_asc"
-msgstr ""
+msgstr "Aufsteigend"
 
 #. Default: "Descending"
 msgid "Query_sortOrder_list_desc"
-msgstr ""
+msgstr "Absteigend"
 
 #. Default: "Results mode"
 msgid "Query_mode"
-msgstr ""
+msgstr "Ergebnisse anzeigen"
 
 #. Default: "List"
 msgid "Query_mode_list_list"
-msgstr ""
+msgstr "Liste"
 
 #. Default: "Grid"
 msgid "Query_mode_list_grid"
-msgstr ""
+msgstr "Raster"
 
 #. Default: "Calendar"
 msgid "Query_mode_list_calendar"
-msgstr ""
+msgstr "Kalender"
 
 #. Default: "Results per page"
 msgid "Query_maxPerPage"
-msgstr ""
+msgstr "Ergebnisse pro Seite"
 
 #. Default: "Show documents to generate"
 msgid "Query_showPods"
-msgstr ""
+msgstr "Zu generierende Dokumente anzeigen"
 
 #. Default: "Show title and description"
 msgid "Query_showTitle"
-msgstr ""
+msgstr "Titel und Beschreibung anzeigen"
 
 #. Default: "Show navigation between page results"
 msgid "Query_showNav"
-msgstr ""
+msgstr "Navigation zwischen Ergebnisseiten anzeigen"
 
 #. Default: "Both"
 msgid "Query_showNav_list_both"
-msgstr ""
+msgstr "Überall"
 
 #. Default: "Top"
 msgid "Query_showNav_list_top"
-msgstr ""
+msgstr "Oberhalb der Ergebnisse"
 
 #. Default: "Bottom"
 msgid "Query_showNav_list_bottom"
-msgstr ""
+msgstr "Unter den Ergebnissen"
 
 #. Default: "None"
 msgid "Query_showNav_list_none"
-msgstr ""
+msgstr "NIrgends"
 
 #. Default: "Alignment of navigation blocks"
 msgid "Query_navAlign"
-msgstr ""
+msgstr "Ausrichten der Navigationspads"
 
 #. Default: "Left"
 msgid "Query_navAlign_list_left"
-msgstr ""
+msgstr "Links"
 
 #. Default: "Center"
 msgid "Query_navAlign_list_center"
-msgstr ""
+msgstr "Zentriert"
 
 #. Default: "Right"
 msgid "Query_navAlign_list_right"
-msgstr ""
+msgstr "Rechts"
 
 #. Default: "Show filters"
 msgid "Query_showFilters"
-msgstr ""
+msgstr "Filter anzeigen"
 
 #. Default: "Via popup"
 msgid "Query_viaPopup"
-msgstr ""
+msgstr "Über ein Popup"
 
 #. Default: "When consulting search results, viewing or editing every matched element is done either in the same window or via a popup. This is determined by your app's settings. If you want to override this behaviour, specify something here. Specify « False » if you want to ensure the matched element will be opened in the same window. If you want to ensure the matched element will be shown in a popup, either specify popup's width and height, in that order, as in « 400px 300px », or simply its width, as in « 400px ». In this latter case, the popup's height will be determined automatically, according to available space in the browser window."
 msgid "Query_viaPopup_descr"
-msgstr ""
+msgstr "Beim Anzeigen von Suchergebnissen erfolgt die Anzeige oder Änderung der Details eines einzelnen Elements entweder über dasselbe Fenster oder über ein Popup. Dies wird durch Ihre App-Einstellungen bestimmt. Wenn Sie das Standardverhalten ändern möchten, verwenden Sie das Feld unten. Setzen Sie den Wert auf „False“, wenn Sie sicherstellen möchten, dass jedes einzelne Element im selben Fenster angezeigt wird. Wenn Sie hingegen sicherstellen möchten, dass es in einem Popup angezeigt wird, geben Sie entweder die Breite und die Höhe in dieser Reihenfolge an, wie in diesem Beispiel: „400px 300px“, oder nur die Breite, wie zum Beispiel , Beispiel: „400px“. Im letzteren Fall wird die Höhe des Popups automatisch anhand des verfügbaren Platzes im Browserfenster bestimmt."
 
 #. Default: "Allowed values are:<ul><li>« False »,</li><li>a popup's width and height, in that order, separated by a space and expressed in pixels, as in « 400px 300px »,</li><li>or a popup's width only, as in « 400px ».</li></ul>"
 msgid "wrong_via_popup"
-msgstr ""
+msgstr "Die zulässigen Werte sind:<ul><li>„False“,</li><li>die Breite und Höhe eines Popups, in dieser Reihenfolge, getrennt durch ein Leerzeichen und ausgedrückt in Pixeln, wie in „400px 300px“,</li><li>oder nur die Breite des Popups, wie in „400px“.</li></ul>"
 
 #. Default: "Target page layout on « view »"
 msgid "Query_pageLayoutOnView"
-msgstr ""
+msgstr "Zielseitenlayout „view“"
 
 #. Default: "When consulting search results, the main page for viewing every matched element conforms to a « page layout ». This technical concept is explained in appy/ui/layout.py. If you feel comfortable with this concept and wish to use a specific « view » page layout instead of the standard one, encode it here."
 msgid "Query_pageLayoutOnView_descr"
-msgstr ""
+msgstr "Beim Anzeigen von Suchergebnissen entspricht die Hauptseite, auf die zum Anzeigen jedes einzelnen Elements zugegriffen wird, einem „Seitenlayout“. Dieses technische Konzept ist in appy/ui/layout.py dokumentiert. Wenn Sie mit diesem Konzept vertraut sind und anstelle des Standardlayouts ein bestimmtes Ansichtsseitenlayout verwenden möchten, geben Sie es hier ein."
 
 #. Default: "Pages incorporating this query"
 msgid "Query_pages"
-msgstr ""
+msgstr "Seiten, die diese Suche beinhalten"
 
-# ~~~~ Tool-related labels ~~~~
 #. Default: "Configuration"
 msgid "Tool"
-msgstr ""
+msgstr "Konfiguration"
 
 #. Default: "Configuration"
 msgid "Tool_page_main"
-msgstr ""
+msgstr "Konfiguration"
 
 #. Default: "Users"
 msgid "Tool_page_users"
@@ -1854,15 +1969,15 @@ msgstr "config.py"
 
 #. Default: "Content of this site's config.py file"
 msgid "Tool_configPy"
-msgstr "Content of this site's config.py file"
+msgstr "Inhalt der config.py-Datei dieser Site"
 
 #. Default: "Logs"
 msgid "Tool_page_logsViewer"
-msgstr ""
+msgstr "Protokolle"
 
 #. Default: "Log files' content"
 msgid "Tool_logsViewer"
-msgstr ""
+msgstr "Inhalt der Protokolldateien"
 
 #. Default: "Synchronize external users"
 msgid "Tool_synchronizeExternalUsers"
@@ -1870,7 +1985,7 @@ msgstr "Synchronisieren Sie externe Benutzer"
 
 #. Default: "This will read the the whole LDAP users database as visible by this app and create or update every user's local copy.\n\nAre you sure?"
 msgid "Tool_synchronizeExternalUsers_confirm"
-msgstr ""
+msgstr "Dadurch wird die gesamte LDAP-Benutzerbasis als für diese Site sichtbar gelesen und die lokale Kopie für jeden Benutzer erstellt oder aktualisiert.\n\nSind Sie sicher?"
 
 #. Default: "Groups"
 msgid "Tool_page_groups"
@@ -1898,118 +2013,208 @@ msgstr "Seiten"
 
 #. Default: "Default page"
 msgid "Tool_defaultPage"
-msgstr ""
+msgstr "Standardseite"
 
 #. Default: "The page defined here will be selected as home page."
 msgid "Tool_defaultPage_descr"
-msgstr ""
+msgstr "Die hier ausgewählte Seite wird als Startseite der Website verwendet."
 
 #. Default: "Update URLs"
 msgid "Tool_updateBaseUrl"
-msgstr ""
+msgstr "URLs ändern"
 
 #. Default: "Carousels"
 msgid "Tool_page_carousels"
-msgstr ""
+msgstr "Karussells"
 
 #. Default: "Carousels"
 msgid "Tool_carousels"
-msgstr ""
+msgstr "Karussells"
 
 #. Default: "A carousel is like a slideshow, allowing to define a series of images and switch from one to the other with a nice effect. After having defined a carousel and its inner images here, link it to the desired page: it will appear before its content."
 msgid "Tool_carousels_descr"
-msgstr ""
+msgstr "Ein Karussell ist wie eine Diashow mit Bildern, die automatisch mit einem Übergangseffekt durch die Bilder scrollen. Nachdem Sie hier ein Karussell, seine Bilder und die darüber zu überlagernden Texte definiert haben, verknüpfen Sie es mit der gewünschten Seite: Es erscheint direkt vor seinem Inhalt."
 
 #. Default: "Queries"
 msgid "Tool_page_queries"
-msgstr ""
+msgstr "Suchen"
 
 #. Default: "Queries"
 msgid "Tool_queries"
-msgstr ""
+msgstr "Ein Karussell ist wie eine Diashow mit Bildern, die automatisch mit einem Übergangseffekt durch die Bilder scrollen. Nachdem Sie hier ein Karussell, seine Bilder und die darüber zu überlagernden Texte definiert haben, verknüpfen Sie es mit der gewünschten"
 
 #. Default: "If you want to include, in your web pages, search results, create Queries here and then, link them to the appropriate page(s) where these results must appear."
 msgid "Tool_queries_descr"
-msgstr ""
+msgstr "Wenn Sie Suchergebnisse in Ihre Webseiten integrieren möchten, erstellen Sie hier Suchanfragen und verknüpfen Sie sie dann mit den Seiten, auf denen sie angezeigt werden sollen."
 
 #. Default: "Calendar"
 msgid "Tool_calendar"
-msgstr ""
+msgstr "Kalender"
 
-#. Default: " "
+#. Default: ""
 msgid "Tool_calendar_descr"
 msgstr ""
 
-# ~~~~ Move-related labels ~~~~
 #. Default: "Mover"
 msgid "Mover"
-msgstr ""
+msgstr "Beweger"
 
 #. Default: "Current base URL"
 msgid "Mover_currentBase"
-msgstr ""
+msgstr "Aktuelle Basis-URL"
 
 #. Default: "Encode here the prefix of the URLs that can currently be found in web pages, to refer to any internal content: link to another page, image, or any other object."
 msgid "Mover_currentBase_descr"
-msgstr ""
+msgstr "Kodieren Sie hier das Präfix von URLs, die derzeit auf Ihren Webseiten zu finden sind und auf interne Inhalte verweisen: andere Seiten, Bilder oder andere Objekte."
 
 #. Default: "New base URL"
 msgid "Mover_newBase"
-msgstr ""
+msgstr "Neue Basis-URL"
 
 #. Default: "Encode here the prefix that will replace the one you encoded in the hereabove field. Take care of to start both prefixes with the correct protocol: <b>http</b> or <b>https</b>."
 msgid "Mover_newBase_descr"
-msgstr ""
+msgstr "Geben Sie hier das Präfix ein, das das im vorherigen Feld angegebene ersetzt. Achten Sie darauf, jedes Präfix mit dem richtigen Protokoll zu beginnen: http oder https."
 
 #. Default: "Test mode ?"
 msgid "Mover_dryRun"
-msgstr ""
+msgstr "Testmodus?"
 
 #. Default: "If this checkbbox is checked, nothing will be actually performed, but a message will tell you what could have happened."
 msgid "Mover_dryRun_descr"
-msgstr ""
+msgstr "Wenn dieses Kästchen aktiviert ist, passiert eigentlich nichts, aber eine Meldung informiert Sie darüber, was passiert sein könnte."
 
 #. Default: "${replacements} replacement·s done within ${updated}/${total} page·s."
 msgid "Mover_done"
-msgstr ""
+msgstr "${replacements} Ersetzungen wurden auf ${updated}/${total} Seite/n vorgenommen"
 
 #. Default: "${replacements} replacement·s would have been done within ${updated}/${total} page·s."
 msgid "Mover_tested"
-msgstr ""
+msgstr "${replacements}-Ersetzungen wären auf ${updated}/${total} Seite/n vorgenommen worden."
 
-# ~~~~ Standard workflow-related labels ~~~~
+#. Default: "Place"
+msgid "Place"
+msgstr "Adresse"
+
+#. Default: "Places"
+msgid "Place_plural"
+msgstr "Adressen"
+
+#. Default: "Place"
+msgid "Place_page_main"
+msgstr "Adresse"
+
+#. Default: "Name"
+msgid "Place_title"
+msgstr "Name"
+
+#. Default: "Address"
+msgid "Place_group_address"
+msgstr "Adresse"
+
+#. Default: "This place is virtual"
+msgid "Place_virtual"
+msgstr "Dieser Ort ist virtuell"
+
+#. Default: "Street"
+msgid "Place_street"
+msgstr "Straße"
+
+#. Default: "Nb"
+msgid "Place_number"
+msgstr "Nummer"
+
+#. Default: "Box"
+msgid "Place_box"
+msgstr "Fach"
+
+#. Default: "Zip"
+msgid "Place_zip"
+msgstr "PLZ"
+
+#. Default: "City"
+msgid "Place_city"
+msgstr "Ort"
+
+#. Default: "Country"
+msgid "Place_country"
+msgstr "Land"
+
+#. Default: "URL"
+msgid "Place_placeUrl"
+msgstr "URL"
+
+#. Default: "Address"
+msgid "Place_address"
+msgstr "Adresse"
+
+#. Default: "Latitude"
+msgid "Place_latitude"
+msgstr "Breitengrad"
+
+#. Default: "Longitude"
+msgid "Place_longitude"
+msgstr "Längengrad"
+
+#. Default: "Geolocalized"
+msgid "Place_geolocalized"
+msgstr "Geolokalisiert"
+
 #. Default: "Active"
 msgid "Anonymous_active"
-msgstr ""
+msgstr "Aktiv∙e"
 
 #. Default: "Active"
 msgid "Authenticated_active"
-msgstr ""
+msgstr "Aktiv∙e"
 
 #. Default: "Active"
 msgid "Owner_active"
-msgstr ""
+msgstr "Aktiv∙e"
 
 #. Default: "Inactive"
 msgid "Owner_inactive"
-msgstr ""
+msgstr "Inaktiv∙e"
 
 #. Default: "Deactivate"
 msgid "Owner_deactivate"
-msgstr ""
+msgstr "Deaktivieren"
 
 #. Default: "Are you sure ?"
 msgid "Owner_deactivate_confirm"
-msgstr ""
+msgstr "Sind Sie sicher ?"
 
 #. Default: "Reactivate"
 msgid "Owner_reactivate"
-msgstr ""
+msgstr "Reaktivieren"
 
 #. Default: "Are you sure ?"
 msgid "Owner_reactivate_confirm"
+msgstr "Sind Sie sicher ?"
+
+#. Default: "Active"
+msgid "User_active"
+msgstr ""
+
+#. Default: "Inactive"
+msgid "User_inactive"
+msgstr ""
+
+#. Default: "Deactivate"
+msgid "User_deactivate"
+msgstr ""
+
+#. Default: "Are you sure ?"
+msgid "User_deactivate_confirm"
+msgstr ""
+
+#. Default: "Reactivate"
+msgid "User_reactivate"
+msgstr ""
+
+#. Default: "Are you sure ?"
+msgid "User_reactivate_confirm"
 msgstr ""
 
 #. Default: "Created"
 msgid "TooPermissive_created"
-msgstr ""
+msgstr "Erstellt"

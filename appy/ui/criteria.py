@@ -55,7 +55,7 @@ class Criteria:
     highlighted = '<span class="highlight">%s</span>'
 
     # The regex template representing highlithed text
-    highlightedRex = '(?<= |\(|\>)?%s'
+    highlightedRex = r'(?<= |\(|\>)?%s'
 
     @classmethod
     def getKeywords(class_, handler):
@@ -95,6 +95,11 @@ class Criteria:
                               class_.highlighted % variant, text)
         return text
 
+    @classmethod
+    def dictAsString(class_, d):
+        '''Returns the strinfied version of this p_(ict)'''
+        return sutils.getStringFrom(d, stringify=False, c='"')
+
     def getFromRequest(self, class_):
         '''Retrieve search criteria from the request after the user has filled
            an advanced search form and store them in p_self.criteria.'''
@@ -106,7 +111,7 @@ class Criteria:
             if not name.startswith('w_'): continue
             name = name[2:]
             # Get the corresponding field
-            field = class_.fields.get(name)
+            field = class_.getField(name)
             # Ignore this value if it is empty or if the field is inappropriate
             # for a search.
             if not field or not field.indexed or field.searchValueIsEmpty(req):
@@ -122,5 +127,5 @@ class Criteria:
 
     def asString(self):
         '''Returns p_self.criteria, marshalled in a string'''
-        return sutils.getStringFrom(self.criteria, stringify=False, c='"')
+        return Criteria.dictAsString(self.criteria)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

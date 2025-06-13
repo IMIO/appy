@@ -9,6 +9,8 @@ import re, urllib.parse
 
 from appy.utils import json
 from appy.model.utils import Object
+from appy.utils.seval import evalDict
+from appy.xml.unmarshaller import Unmarshaller
 
 # Entries considered as empty in a multipart message - - - - - - - - - - - - - -
 emptyMultiparts = (b'', b'--\r\n')
@@ -22,43 +24,6 @@ EMPTY_POST = 'No Content-Length header for request with Content-Type "%s".'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Request(Object):
     '''Represents data coming from a HTTP request'''
-
-    @classmethod
-    def create(class_, handler):
-        '''Analyses various elements from an incoming HTTP request (GET
-           parameters, POST form data, cookies) and creates a Request object for
-           storing them. If no element is found, an empty Request is created.'''
-        # Create the Request instance
-        req = Request()
-        # Get parameters from a GET request if any
-        qs = handler.parsedPath.query
-        if qs: req.parse(qs)
-        # Get POST form data if any
-        contentType = handler.headers['Content-Type']
-        if contentType:
-            # Get the request length and content
-            length = handler.headers['Content-Length']
-            if length is None:
-                handler.log('app', 'warning', EMPTY_POST % contentType)
-                return req
-            content = handler.rfile.read(int(length))
-            # Several content encodings are possible
-            if contentType == 'application/x-www-form-urlencoded':
-                # Form elements are encoded in a way similar to GET parameters
-                req.parse(content.decode('utf-8'), post=True)
-            elif contentType.startswith('multipart/form-data'):
-                # Form elements are encoded in a "multi-part" message, whose
-                # elements are separated by some boundary text.
-                boundary = '--' + contentType[contentType.index('boundary=')+9:]
-                req.parseMultiPart(content, boundary.encode())
-            elif contentType == 'application/json':
-                req.parseJson(content)
-        # Get Cookies
-        cookieString = handler.headers['Cookie']
-        if cookieString is not None:
-            # Cookies' (name, value) pairs are separated by semicolons
-            req.parse(cookieString, sep=';')
-        return req
 
     def addValue(self, name, value):
         '''Adds, on this request, an new attribute named p_name with this
@@ -105,6 +70,11 @@ class Request(Object):
                 value = None
             self.addValue(name, value)
 
+    def parseForm(self, content):
+        '''Manages simple, url-encoded, form data'''
+        # Form elements are encoded in a way similar to GET parameters
+        self.parse(content.decode('utf-8'), post=True)
+
     def parseMultiPart(self, content, boundary):
         '''Parses multi-part form content (bytes) and add to p_self one
            attribute per form element.'''
@@ -149,6 +119,22 @@ class Request(Object):
         if not parsed: return
         self.update(parsed)
 
+    def parseXml(self, content):
+        '''Parses this XML p_content and adds, on p_self, one attribute for
+           every XML tag found as child of p_content's main tag.'''
+        data = Unmarshaller().unmarshall(content)
+        if not data: return
+        for name, value in data.items():
+            setattr(self, name, value)
+
+    contentParsers = {
+      'application/x-www-form-urlencoded'    : parseForm,
+      'text/xml'                             : parseXml,
+      'application/xml'                      : parseXml,
+      'application/soap+xml'                 : parseXml,
+      'application/json'                     : parseJson,
+    }
+
     def patchFromTemplate(self, o):
         '''p_o is a temp object that is going to be edited via px "edit". If a
            template object must be used to pre-fill the web form, patch the
@@ -157,11 +143,57 @@ class Request(Object):
         if not o.isTemp(): return
         id = self.template_
         if not id: return
-        template = o.getObject(id)
-        # Some fields may be excluded from the copy
-        toExclude = o.class_.getCreateExclude(template)
-        # Browse fields
-        for field in o.getFields('edit'):
-            if field.name in toExclude: continue
-            field.setRequestValue(template)
+        if id[0] == '{':
+            # This is a dict of values instead of a template object
+            values = evalDict(id)
+            req = o.req
+            for name, value in values.items():
+                req[name] = value
+        else:
+            template = o.getObject(id)
+            # Some fields may be excluded from the copy
+            toExclude = o.class_.getCreateExclude(template)
+            # Browse fields
+            for field in o.getFields('edit'):
+                if field.name in toExclude: continue
+                field.setRequestValue(template)
+
+    @classmethod
+    def create(class_, handler):
+        '''Analyses various elements from an incoming HTTP request (GET
+           parameters, POST form data, cookies) and creates a Request object for
+           storing them. If no element is found, an empty Request is created.'''
+        # Create the Request object
+        req = Request()
+        # Get parameters from a GET request if any
+        qs = handler.parsedPath.query
+        if qs: req.parse(qs)
+        # Get POST form data if any
+        contentType = handler.headers['Content-Type']
+        if contentType:
+            # Get the request length and content
+            length = handler.headers['Content-Length']
+            if length is None:
+                handler.log('app', 'warning', EMPTY_POST % contentType)
+                return req
+            content = handler.rfile.read(int(length))
+            # Several content formats are possible
+            if contentType.startswith('multipart/form-data'):
+                # Form elements are encoded in a "multi-part" message, whose
+                # elements are separated by some boundary text.
+                boundary = contentType[contentType.index('boundary=')+9:]
+                req.parseMultiPart(content, f'--{boundary}'.encode())
+            else:
+                # Call the appropriate parser method
+                method = class_.contentParsers.get(contentType)
+                if method: method(req, content)
+                else:
+                    # Put raw content on p_self
+                    req.content = content
+        # Read Cookies
+        cookieString = handler.headers['Cookie']
+        if cookieString is not None:
+            # Cookies' (name, value) pairs are separated by semicolons
+            req.parse(cookieString, sep=';')
+        return req
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

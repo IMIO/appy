@@ -11,8 +11,8 @@ class Legend:
 
     px = Px('''
      <table class=":field.legend.getCss()"
-            var="entries=field.legend.getEntries(field, o, allEventTypes, \
-                    allEventNames, url, _, activeLayers, preComputed)">
+            var="entries=field.legend.getEntries(field, o, typeInfo, url, _,
+                                                 activeLayers, preComputed)">
       <tr for="row in field.splitList(entries, field.legend.cols)" valign="top">
        <x for="entry in row">
         <td align="center">
@@ -40,9 +40,12 @@ class Legend:
         # field, is used as name for the legend entry. If you prefer to define
         # another name, specify a method in attribute p_entryName. This method
         # will receive these args:
-        # 1) an event type (eventType)
-        # 2) the dict of all encountered event names (eventNames), keyed by
-        # event type.
+        # 1) an event type ;
+        # 2) a dict of info about every such type. Every key is the type; every
+        #    value is an object having these attributes:
+        #    - "name" stores a translated name for the type;
+        #    - "used" is an integer storing the number of events having this
+        #             type in the currently shown calendar view.
         # The method must return the name of the corresponding entry.
         self.entryName = entryName
         # If several event types share the same color, a single entry must be
@@ -52,7 +55,7 @@ class Legend:
         # given color, any other event type corresponding to the same color will
         # simply be ignored.
         self.concatenate = concatenate
-        # A method that will, once the legend is build, receive it a single arg
+        # A method that will, once the legend is build, receive it as single arg
         # and possibly update it if necessary.
         self.update = update
         # When multiple events are present in a single cell, this latter is
@@ -73,43 +76,44 @@ class Legend:
         '''Gets CSS attributes for a text entry'''
         return f'padding-left:5px; width:{self.width}'
 
-    def getEntryNameFor(self, o, eventType, allEventNames):
+    def getEntryNameFor(self, o, eventType, typeInfo):
         '''Get the name of the legend entry corresponding to this p_eventType'''
         method = self.entryName
         if method:
-            r = method(o, eventType, allEventNames)
+            r = method(o, eventType, typeInfo)
         else:
-            r = allEventNames[eventType]
+            r = typeInfo[eventType].name
         return r
 
-    def getEntries(self, field, o, allEventTypes, allEventNames, url, _,
-                   activeLayers, preComputed):
+    def getEntries(self, field, o, typeInfo, url, _, activeLayers, cache):
         '''Gets information needed to produce the legend for a timeline'''
         # Produce one legend entry by event type, provided it is shown and
         # colored.
         r = []
         byStyle = {}
         concat = self.concatenate
-        for eventType in allEventTypes:
+        for eventType in typeInfo:
             # Create a new entry for every not-yet-encountered color
-            eventColor = field.getColorFor(o, eventType, preComputed)
-            if not eventColor: continue
-            style = f'background-color:{eventColor}'
+            info = field.getCellInfo(o, eventType, cache)
+            if not info or not info.bgColor: continue
+            style = f'background-color:{info.bgColor}'
             if style not in byStyle:
-                entryName = self.getEntryNameFor(o, eventType, allEventNames)
-                entry = O(name=entryName, content='', style=style)
-                r.append(entry)
-                byStyle[style] = entry
+                entryName = self.getEntryNameFor(o, eventType, typeInfo)
+                if entryName:
+                    entry = O(name=entryName, content='', style=style)
+                    r.append(entry)
+                    byStyle[style] = entry
             elif concat is not None:
                 # Update the existing entry with this style
                 entry = byStyle[style]
-                entryName = self.getEntryNameFor(o, eventType, allEventNames)
-                entry.name = f'{entry.name}{concat}{entryName}'
+                entryName = self.getEntryNameFor(o, eventType, typeInfo)
+                if entryName:
+                    entry.name = f'{entry.name}{concat}{entryName}'
         # Add, if appropriate, the background indicating that several events are
         # hidden behind a timeline cell.
         if self.showEntrySeveral:
             r.append(O(name=_('several_events'), content='',
-                       style=url('angled', bg=True)))
+                       style=field.View.cellGradient))
         # Add layer-specific items
         for layer in field.layers:
             if layer.name not in activeLayers: continue

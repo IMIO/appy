@@ -4,7 +4,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os, sys, time, pathlib
+import os, os.path, sys, time, pathlib, shutil
 
 from DateTime import DateTime
 from zc.lockfile import LockError
@@ -18,14 +18,15 @@ from appy.database.lazy import Lazy
 from appy.utils import path as putils
 from appy.database.catalog import Catalog
 from appy.utils import multicall, Function
+from appy.database.trans import Transaction
 
-# Constants  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 DB_CREATED   = 'Database created @%s.'
 DB_NOT_FOUND = 'Database does not exist @%s.'
 DB_LOCKED    = 'The database is currently locked (%s)'
 DB_CORRUPTED = 'The database @%s is corrupted and probably empty. Please ' \
                'remove it and restart your site.'
-DB_PACKING   = 'Packing %s (may take a while)...'
+DB_PACKING   = 'Packing %s (initial size: %s). May take a while...'
 DB_PACKED    = 'Done. Went from %s to %s.'
 TMP_STORE_NF = 'Temp store does not exist in %s.'
 O_STORE_NF   = 'Object store does not exist in %s.'
@@ -44,7 +45,15 @@ MISS_O_CLASS = 'Catalog for class "%s": object not found for ID "%s".'
 MISS_O       = 'Object not found for ID "%s".'
 MISS_IDS_DEL = 'Catalog "%s": ID(s) removed because no corresponding ' \
                'object(s) found: %s.'
-FOLDER_DEL   = 'Folder %s deleted and moved to /tmp for object %d (%s).'
+FOLDER_CP    = 'Folder %s copied to %s for %s.'
+FOLDER_DEL   = 'Folder %s deleted.'
+FOLDER_NDEL  = 'Folder %s was not deleted because not empty.'
+SITE_INIT    = ':: Site init ::'
+SITE_CLEAN   = ':: Site clean ::'
+SITE_RUN     = ':: Method "%s" called ::'
+M_TRANS_ERR  = 'Running tool.%s :: Unresolved conflict occurred :: %s.'
+M_RETRY      = 'Running tool.%s :: Conflict occurred :: %s :: Transaction ' \
+               'replay #%d...'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -69,12 +78,19 @@ class Config:
         #   "phantomFolder"  is <site>/var/phantom
         #
         # What roles can unlock pages ? By default, only a Manager can do it.
-        # You can place here roles expressed as strings or Role instances,
+        # You can place here roles expressed as strings or Role objects,
         # global or local.
         self.unlockers = ['Manager']
+        # Attribute "lockExpires" determines a number of days from which a lock
+        # is considered to have expired.
+        self.lockExpires = 0.125 # 3 hours
         # Number of times a transaction is retried after a conflict error has
         # occurred.
-        self.conflictRetries = 5
+        self.conflictRetries = 3
+        # Under the following ratio, representing free space on the device
+        # storing the database and binaries, a warning will be shown on page
+        # "Admin zone > Database".
+        self.warnSpaceLeft = 0.05
 
     def set(self, folder, filePath=None, phantomFolder=None):
         '''Sets site-specific configuration elements. If filePath is None,
@@ -129,7 +145,7 @@ class Config:
             # Clean the database temp folder, pack the database and launch a
             # database analysis, leading to the potential removal of phantom
             # files.
-            database.clean(handler, logger)
+            database.clean(handler, logger, method=method)
         elif server.mode == 'run':
             # Execute method named p_method on the tool
             database.run(method, handler, logger)
@@ -155,6 +171,27 @@ class Config:
             r = 'unknown'
         return r
 
+    def getDiskInfo(self, path):
+        '''Returns info about disk (size and free space) where the database is
+           stored.'''
+        info = shutil.disk_usage(path)
+        if not info: return '?'
+        fmt = putils.getShownSize
+        # Get info as human-readable sizes
+        total = fmt(info.total, unbreakable=True)
+        free = fmt(info.free, unbreakable=True)
+        used = fmt(info.used, unbreakable=True)
+        # Render a warning if there is not much space left on device
+        if (info.free / info.total) <= self.warnSpaceLeft:
+            free = f'<b>⚠️ {free}</b>'
+        ar = ' align="right"'
+        return f'<table class="small discreet" align="center">' \
+               f'<tr><td rowspan="3">⛁</td>' \
+               f'<th>Used</th><td{ar}>{used}</td></tr>' \
+               f'<tr><th>Free</th><td{ar}>{free}</td></tr>' \
+               f'<tr><th>Total</th><td{ar}>{total}</td></tr>' \
+               f'</table>'
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Database:
     '''Represents the app's database'''
@@ -164,9 +201,10 @@ class Database:
 
     # Make some classes available here
     Catalog = Catalog
+    Transaction = Transaction
 
     # Some elements will be traversable
-    traverse = {'Catalog': 'Manager'}
+    traverse = {'Catalog': 'Manager', 'Transaction': 'Manager'}
 
     # ZODB exceptions that identify a conflict error
     ConflictErrors = (transaction.interfaces.TransactionFailedError,
@@ -200,18 +238,13 @@ class Database:
         '''Returns the list of active connections to the database'''
         return self.db.connectionDebugInfo()
 
-    def listTransactions(self, start=None, end=None):
-        '''Lists the database transactions that occurred between this p_start
-           and p_end dates.'''
-        # p_start and/or p_end, if passed, must be DateTime instances
-        # If p_start is None, it will represent the start of the database life.
-        # If p_end is None, it will represent the end of times.
-        start = start.timeTime() if start else 0
-        end = end.timeTime() if end else sys.maxsize
-        return self.db.undoLog(start, end)
-
-    def commit(self, handler):
+    def commit(self, handler, description=None):
         '''Commits the current transaction related to p_handler'''
+        # Define, on the underlying ZODB transaction object, the login of the
+        # current user and the "path" of the committed action.
+        trans = transaction.get()
+        trans.user = handler.getUserLogin()
+        trans.description = description or handler.path
         transaction.commit()
 
     def abort(self, connection=None, message=None, logger=None):
@@ -222,12 +255,6 @@ class Database:
         transaction.abort()
         # Close the p_connection if given
         if connection: connection.close()
-
-    def undo(self, handler, transactionIds):
-        '''Undo transactions whose IDs are in p_transactionIds'''
-        for id in transactionIds:
-            self.db.undo(id)
-            handler.dbConnection.sync()
 
     def close(self, abort=False):
         '''Closes the database'''
@@ -245,7 +272,7 @@ class Database:
         # Get a connection to the database. This is the "initialization"
         # connection, allowing to perform database initialization or update at
         # server startup.
-        connection = self.db.open()
+        connection = self.openConnection()
         # Make this connection available to the initialisation p_handler
         handler.dbConnection = connection
         # Get the root object
@@ -362,7 +389,7 @@ class Database:
             # Let the tool initialise itself and create sub-objects as required
             tool.init(handler, poFiles, method=method)
             # Commit changes (forced, even if handler.commit is False)
-            transaction.commit()
+            self.commit(handler, description=SITE_INIT)
         except self.Error as e:
             transaction.abort()
             raise e
@@ -416,15 +443,15 @@ class Database:
         path = self.db.storage.getName()
         # Get its size, in bytes, before the pack
         size = os.stat(path).st_size
+        sizeF = putils.getShownSize(size)
         # Perform the pack
-        logger.info(DB_PACKING % path)
+        logger.info(DB_PACKING % (path, sizeF))
         self.db.pack()
         # Get its size, in bytes, after the pack
         newSize = os.stat(path).st_size
         # Log the operation
         if logger:
-            logger.info(DB_PACKED % (putils.getShownSize(size),
-                                     putils.getShownSize(newSize)))
+            logger.info(DB_PACKED % (sizeF, putils.getShownSize(newSize)))
 
     def cleanTemp(self, handler, logger, count=None):
         '''Removes any object from the temp store'''
@@ -441,11 +468,11 @@ class Database:
         connection.root.lastTempId = 0
         logger.info(TMP_OBJS_DEL % count)
 
-    def clean(self, handler, logger):
+    def clean(self, handler, logger, method=None):
         '''Clean the database = (a) remove any temp object from it, (b) launch
            an analysis via the appy.database.analyser and (c) pack it.'''
         # Create a specific connection
-        connection = handler.dbConnection = self.db.open()
+        connection = handler.dbConnection = self.openConnection()
         # (a) Remove temp objects. Get the temp store.
         temp = getattr(connection.root, 'temp', None)
         dbFile = handler.server.config.database.filePath
@@ -463,22 +490,32 @@ class Database:
         # (b) Launch an analysis. importing the Analyser at the start of this
         #     file produces a circular import.
         from appy.database.analyser import Analyser
-        Analyser(handler, logger).run()
+        Analyser(handler, logger, method).run()
         # At this step, close the connection (after committing if necessary)
         if commit:
-            transaction.commit()
+            self.commit(handler, description=SITE_CLEAN)
         connection.close()
         # (c) Pack the database
         self.pack(logger)
 
+    def runMethod(self, handler, tool, method):
+        '''Executes this p_method on the p_tool and returns True if no exception
+           was raised.'''
+        try:
+            Function.scall(tool, method, raiseOnError=True)
+            return True
+        except Exception as err:
+            handler.server.logTraceback()
+
     def run(self, method, handler, logger):
         '''Executes method named m_method on the tool'''
         # Create a specific connection
-        connection = handler.dbConnection = self.db.open()
+        connection = handler.dbConnection = self.openConnection()
         # Get the store containing the tool
         root = connection.root
         store = getattr(root, 'objects', None)
-        dbFile = handler.server.config.database.filePath
+        config = handler.server.config.database
+        dbFile = config.filePath
         dbPath = str(dbFile)
         # Ensure the "objects" store exists
         abort = self.abort
@@ -492,15 +529,32 @@ class Database:
         # fake one so far.
         handler.guard.initUser()
         # Execute the method
-        try:
-            Function.scall(tool, method, raiseOnError=True)
-        except Exception as err:
-            handler.server.logTraceback()
-            return abort(connection)
-        # Make a commit when relevant
-        if handler.commit:
-            transaction.commit()
-        connection.close()
+        maxAttempts = 1 + config.conflictRetries
+        attempts = 0
+        while True:
+            success = self.runMethod(handler, tool, method)
+            if not success: return abort(connection)
+            # End now if no commit is required
+            if not handler.commit: break
+            # Make a commit when relevant
+            if handler.commit:
+                try:
+                    self.commit(handler, description=SITE_RUN % method)
+                    break
+                except Database.ConflictErrors as err:
+                    attempts += 1
+                    handler.replay = attempts
+                    # Abort the transaction that could not be committed
+                    transaction.abort()
+                    if attempts == maxAttempts:
+                        text = M_TRANS_ERR % (method, str(err))
+                        handler.log('app', 'error', text)
+                        break
+                    else:
+                        text = M_RETRY % (method, str(err), attempts)
+                        handler.log('app', 'warning', text)
+        # Close the DB connection
+        self.closeConnection(connection)
 
     def getIkey(self, id=None, o=None):
         '''Gets an "ikey" = the first level key for finding an object in store
@@ -680,16 +734,27 @@ class Database:
         # fields, for potential historization.
         currentValues = None if isTemp \
                              else o.history.getCurrentValues(o,validator.fields)
-        # Store, on p_o, new values for fields as collected on p_validator
+        # Call the custom "beforeEdit" if available, just before setting or
+        # updating p_self's fields. At this step, o's container is not there
+        # yet. p_initiator is passed if m_beforeEdit requires it.
+        multicall(o, 'beforeEdit', False, isTemp, initiator)
+        if not self.exists(o=o): return
+        # Update field values
         for field in validator.fields:
-            field.store(o, validator.values[field.name])
+            value = validator.values[field.name]
+            if field.type == 'Dict':
+                # Prevent loosing entries that would not become editable anymore
+                # via the UI.
+                field.store(o, value, overwrite=False)
+            else:
+                field.store(o, value)
         # Keep in history potential changes on historized fields
         if currentValues:
             o.history.historize(currentValues)
         # In the remaining of this method, at various places, we will check if
         # p_o has already been deleted or not. Indeed, p_o may just have been a
         # transient object whose only use was to collect data from the UI.
-        # ~
+        #
         # Call the custom "onEditEarly" if available. This method is called
         # *before* potentially linking p_o to its initiator.
         if isTemp:
@@ -701,8 +766,8 @@ class Database:
         if isTemp and initiator:
             r = initiator.manage(o)
             if not self.exists(o=o): return r
-        # Update last modification date
-        if not isTemp: o.history.modified = DateTime()
+        # Update last modification date and modifier
+        if not isTemp: o.history.noteUpdate()
         # Call the custom "onEdit" if available. It may return a translated msg.
         r = multicall(o, 'onEdit', False, isTemp)
         if not self.exists(o=o): return
@@ -726,7 +791,7 @@ class Database:
         # the back ref pointing to the deleting object, that must not be walked
         # again.
         #
-        # For performance, when available, the p_root database object is passed
+        # For performance, when available, the p_root database object is passed.
         #
         # If the deletion is aborted by custom method "onDelete", a translated
         # error message is returned.
@@ -755,24 +820,21 @@ class Database:
                                 executeMethods=executeMethods, root=root)
                     continue
                 # Unlink the tied object else
-                back = field.back
-                if back is None: continue
-                field.back.unlinkObject(tied, o, back=True)
+                bacK = field.back
+                if bacK is None: continue
+                nb = bacK.unlinkObject(tied, o, back=True, reindex=True)
                 # Historize this unlinking when relevant
-                if historize and field.back.getAttribute(tied, 'historized'):
-                    className = o.translate(o.class_.name)
-                    tied.history.add('Unlink', deletion=True,
-                                     field=field.back.name,
-                                     comment=f'{className}: {title}')
+                if nb and historize and bacK.getAttribute(tied, 'historized'):
+                    tied.history.add('Unlink', deletion=True, field=bacK.name,
+                                   comment=o.strinG(translated=True, path=None))
         if not isTemp:
             # Unindex p_o if it was indexed
             if o.class_.isIndexable(): o.reindex(unindex=True)
             # Delete the filesystem folder corresponding to this object
             folder = self.getFolder(o, create=False)
             if folder.exists():
-                # Try to move it to the OS temp folder; if it fails, delete it
-                putils.FolderDeleter.delete(folder, move=True)
-                o.log(FOLDER_DEL % (folder, o.iid, o.title))
+                # Manage the deletion of this folder
+                self.deleteFolder(folder, o)
         # Get the store containing p_o
         root = root or o.H().dbConnection.root
         iid = o.iid
@@ -793,13 +855,18 @@ class Database:
         # If p_logMissing is True and no object is found corresponding to the
         # passed p_id, an error message will be logged. If the caller knows it,
         # the p_className may be passed, producing a more precise error message.
-        # ~
+        #
         # Convert p_id to an int if it is an integer coded in a string
         if isinstance(id, str) and (id.isdigit() or id.startswith('-')):
-            id = int(id)
+            try:
+                id = int(id)
+            except ValueError:
+                # Can occur if p_id starts with a dash but the remaining of the
+                # ID does not correspond to an integer number.
+                pass
         store = self.getStore(id=id, root=handler.dbConnection.root)
         r = store.get(id) if store else None
-        if (r is None) and logMissing:
+        if r is None and logMissing:
             # Log the fact that no object has been found
             sid = str(id)
             if className:
@@ -811,11 +878,11 @@ class Database:
 
     def getObjects(self, handler, ids, className=None, start=0, size=None):
         '''Returns a list of objects from their p_ids'''
-        # ~
+        #
         # p_ids can be a list or a IISet. If p_size is not None, it represents a
         # number of IDs: only this number of IDs will be retrieved from p_ids,
         # starting at index p_start.
-        # ~
+        #
         # IDs for which no object is found are removed from their catalog (if
         # p_className is not None).
         r = [] # The retrieved objects
@@ -865,16 +932,16 @@ class Database:
         return r
 
     def getFolder(self, o, create=True, withRelative=False):
-        '''Gets, as a pathlib.Path instance, the folder where binary files
-           related to p_o are (or will be) stored on the database-controlled
-           filesystem. If p_create is True and the folder does not exist, it is
-           created (together with potentially missing parent folders).'''
+        '''Gets, as a pathlib.Path object, the folder where binary files related
+           to p_o are (or will be) stored on the database-controlled filesystem.
+           If p_create is True and the folder does not exist, it is created
+           (together with potentially missing parent folders).'''
         # If p_withRelative is True, the methods returns a tuple
         #                         (path, relative),
-        # where "path" is the Path instance as described hereabove, and
+        # where "path" is the Path object as described hereabove, and
         # "relative" is a string containing the part of the path that does not
         # contain its start (= the root folder containing binaries).
-        # ~
+        #
         # Start with getting the root folder storing site binaries
         r = o.config.database.binariesFolder
         # Add the object-specific path, depending on its ID
@@ -884,34 +951,83 @@ class Database:
         r = r / ikey / sid
         # Create this folder if p_create is True and it does not exist yet
         if create and not r.exists():
-            r.mkdir(parents=True)
+            try:
+                r.mkdir(parents=True)
+            except FileExistsError:
+                # Another thread may have created the folder in the meanwhile
+                pass
         # Return the path, together with its relative part if requested
-        return r if not withRelative else (r, ('%s/%s' % (ikey, sid)))
+        return (r, f'{ikey}/{sid}') if withRelative else r
+
+    def deleteFolder(self, folder, o):
+        '''This p_o(bject) is being deleted: manage its database-controlled
+           p_folder.'''
+        # Do nothing if the p_folder is empty. Do not delete it: another thread
+        # may be about to write in it.
+        if putils.isEmpty(folder): return
+        # Before deleting it, make a copy of it in the OS temp folder: a
+        # permanent removal is always risky.
+        source = str(folder)
+        dest = str(putils.getOsTempFolder(asPath=True) / folder.name)
+        putils.copyFolder(source, dest, cleanDest=True)
+        o.log(FOLDER_CP % (source, dest, o.strinG(path=False, titles=False)))
+        # Delete, from p_folder, any file referred in the database (within
+        # appy/model/fields/file.py::Fileinfo objects) or being a frozen pod
+        # (see appy/model/fields/pod.py). In other words: don't blindly delete
+        # p_folder and its whole content. Indeed, concurrent transactions may be
+        # both writing files in p_folder (using the same, uncommitted yet,
+        # object iids currently representing distinct objects): the current
+        # transaction should only delete its own stuff.
+        for field in o.class_.fields.values():
+            if field.disk:
+                field.deleteFiles(o)
+        # In the end, is the object folder completely empty ?
+        if putils.isEmpty(folder):
+            putils.FolderDeleter.deleteEmpty(source)
+            text = FOLDER_DEL
+        else:
+            text = FOLDER_NDEL
+        o.log(text % source)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                 PXs
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     view = Px('''
+     <x var="cfg=config.database;
+             root=handler.dbConnection.root;
+             connections=tool.database.listConnections()">
+
      <h2>Main configuration</h2>
-     <table class="small"
-            var="cfg=config.database; root=handler.dbConnection.root">
-      <tr><th>Database (ZODB)</th><td>:cfg.filePath</td></tr>
+     <table class="small">
+      <tr>
+       <th>Database (ZODB)</th>
+       <td>:<x>:cfg.filePath</x>
+           <div class="discreet topSpace">Disk usage</div>
+           <x>::cfg.getDiskInfo(cfg.filePath)</x>
+       </td>
+      </tr>
       <tr><th>Database size</th><td>:cfg.getDatabaseSize(True)</td></tr>
-      <tr><th>Binaries</th><td>:cfg.binariesFolder</td></tr>
+      <tr>
+       <th>Binaries</th>
+       <td>:<x>:cfg.binariesFolder</x>
+           <div class="discreet topSpace">Disk usage</div>
+           <x>::cfg.getDiskInfo(cfg.binariesFolder)</x>
+       </td>
+      </tr>
       <tr><th>Last object ID</th><td>:root.lastId</td></tr>
       <tr><th>Last temp ID</th><td>:root.lastTempId</td></tr>
-      <tr><th>ZODB version</th><td>:cfg.getZodbVersion()</td></tr>
+      <tr><th>Conflict retries</th><td>:cfg.conflictRetries</td></tr>
      </table>
 
-     <x var="connections=handler.server.database.listConnections()">
-      <h2>Active connections <x>:'(%d)' % len(connections)</x></h2>
-      <table class="small">
-       <tr for="info in connections">
-        <th>:info['info']</th>
-        <td>
-         <div for="k,v in info.items()" if="k!='info'">
-          <b>:k</b> : <x>:v or '-'</x></div>
-        </td></tr>
-      </table></x>''')
+     <h2>Active connections <x>:f'({len(connections)})'</x></h2>
+     <table class="small">
+      <tr for="info in connections">
+       <th>:info['info']</th>
+       <td>
+        <div for="k,v in info.items()" if="k!='info'">
+         <b>:k</b> : <x>:v or '-'</x></div>
+       </td></tr>
+     </table>
+    </x>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

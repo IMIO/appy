@@ -67,6 +67,8 @@ class Config:
     # In order to enable Google Analytics on your app, place here an instance of
     # appy.utils.analytics.Analytics.
     analytics = None
+    # If you want to call Google Web Services, specify here a Google API key
+    googleApiKey = None
     # When using Ogone, place an instance of appy.model.fields.ogone.Config in
     # the field below.
     ogone = None

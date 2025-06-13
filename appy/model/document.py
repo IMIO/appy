@@ -68,16 +68,18 @@ class Document(Base):
 
     # When used in a carousel, elements may be specified, that must be shown
     # on top of the document.
+
     elementTypes = ('title', 'underTitle', 'buttonA', 'buttonB')
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                          Action "duplicate"
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    # This action creates a clone B from a document A, and adds B to A's
-    # container, at the end of the same Ref linking the container to A.
+    # [Carousel-specific] This action creates a clone B from a document A, and
+    #                     adds B to A's container, at the end of the same Ref
+    #                     linking the container to A.
 
-    def showDuplicate(self):
+    def showDocAction(self):
         '''Shows this action only to the user being allowed to edit the
            document's container.'''
         carousel = self.getCarousel()
@@ -90,14 +92,13 @@ class Document(Base):
         self.say(self.translate('action_done'))
         return True, self.referer
 
-    duplicate = Action(show=showDuplicate, action=doDuplicate,
-                       result='redirect', confirm=True, **do)
+    duplicate = Action(show=showDocAction, action=doDuplicate, confirm=True,
+                       result='redirect', **do)
 
     @classmethod
     def listElementTypes(class_, o):
         '''Lists the possible types for elements' entries'''
-        return [(type, o.translate('et_%s' % type)) \
-                for type in class_.elementTypes]
+        return [(typ, o.translate(f'et_{typ}')) for typ in class_.elementTypes]
 
     sub = (
       ('type', Select(validator=Selection(lambda o: o.listElementTypes(o)),
@@ -151,6 +152,40 @@ class Document(Base):
         return r
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                          Actions "(un)publish"
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # [Carousel-specific] Actions for (un)publishing a document in a carousel
+
+    pp = {'confirm': True, 'result': 'redirect', **do}
+
+    def showPublish(self, unpublish=False):
+        '''Show the "(un)publish" action to allowed users, when p_self is in the
+           appropriate ref.'''
+        container, name = self.getContainer(forward=True)
+        if container.class_.name != 'Carousel' or \
+           not container.allows('write'): return
+        ref = 'documents' if unpublish else 'unpublished'
+        return 'sub' if name == ref else None
+
+    def doPublish(self, unpublish=False):
+        '''(Un)publishes p_self'''
+        # Determine the source and target refs for moving p_self
+        if unpublish:
+            source = 'documents'
+            target = 'unpublished'
+        else:
+            source = 'unpublished'
+            target = 'documents'
+        self.container.relink(source, target, self)
+        self.say(self.translate('action_done'))
+        return True, self.referer
+
+    publish = Action(action=doPublish, show=showPublish, **pp)
+    unpublish = Action(action=lambda o: o.doPublish(unpublish=True),
+                       show=lambda o: o.showPublish(unpublish=True), **pp)
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                            Main methods
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -179,6 +214,6 @@ class Document(Base):
         return not container or container.allows('write')
 
     def mayDelete(self):
-        '''This document can be deleted if its container can be deleted, too'''
-        return self.container.allows('delete')
+        '''This document can be deleted if its container can be edited'''
+        return self.container.allows('write')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

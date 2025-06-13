@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -12,9 +10,13 @@ from xml.sax.handler import ContentHandler, ErrorHandler, feature_external_ges
 
 from appy.utils import asDict
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+SAX_ERR   = 'SAX error :: %s'
+SAX_ERR_F = 'SAX fatal error :: %s'
+
 # Constants  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 xmlPrologue = '<?xml version="1.0" encoding="utf-8" ?>\n'
-xhtmlPrologue = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" '\
+xhtmlPrologue = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" ' \
                 '"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
 
 # Self-closing XHTML tags  - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -153,12 +155,11 @@ class Parser(ContentHandler, ErrorHandler):
 
     def error(self, error):
         if self.raiseOnError: raise error
-        else: print('SAX error %s' % str(error))
+        else: print(SAX_ERR % str(error))
 
     def fatalError(self, error):
         if self.raiseOnError: raise error
-        else:
-            print('SAX fatal error %s on XML:' % str(error))
+        else: print(SAX_ERR_F % str(error))
 
     def warning(self, error): pass
 

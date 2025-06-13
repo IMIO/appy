@@ -4,6 +4,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import sys
+
 from persistent.list import PersistentList
 import traceback, mimetypes, subprocess, types
 
@@ -91,11 +93,47 @@ class MessageException(Exception):
     # we simply want to display nice, translated info about the problem in a 200
     # response.
 
-    def __init__(self, message, isLabel=False):
+    def __init__(self, message, isLabel=False, mapping=None, backLink=False):
         # p_message is a translated text if p_isLabel is False or a
         # to-be-translated label, if p_isLabel is True.
         super().__init__(message)
         self.isLabel = isLabel
+        # A mapping can be passed when the message is a label
+        self.mapping = mapping
+        # Must a link be added to the message, allowing the user to go back to
+        # the referer page ?
+        self.backLink = backLink
+
+    @classmethod
+    def getBackText(class_, handler):
+        '''Returns, as a string, a text and link allowing the user to go back to
+           the referer URL, when it is possible.'''
+        referer = handler.headers.get('referer')
+        if referer:
+            backText = handler.tool.translate('go_back')
+            r = f'<a href="{referer}">← {backText}</a>'
+        else:
+            r = ''
+        return r
+
+    def getText(self, text, handler):
+        '''Returns the complete text to dump, based on p_text being the raw text
+           as already retrieved from p_self.args.'''
+        if self.isLabel:
+            # p_text is a i18n label
+            r = handler.tool.translate(text, mapping=self.mapping)
+        else:
+            r = text or ''
+        # Add, if appropriate, a link allowing the user to go aback to some URL
+        back = self.backLink
+        if back:
+            if isinstance(back, str):
+                # The link has already been built
+                backText = back
+            else:
+                backText = self.getBackText(handler)
+            r = f'{r}<div class="topSpace">{backText}</div>'
+        return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class No:
@@ -106,7 +144,7 @@ class No:
        message.'''
     def __init__(self, msg): self.msg = msg
     def __bool__(self): return False
-    def __repr__(self): return f'<No: {self.msg}>'
+    def __repr__(self): return f'‹No: {self.msg}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def initMasterValue(v):
@@ -195,7 +233,7 @@ def getElementAt(l, cyclicIndex):
        to loop over the list until we reach this index.'''
     return l[cyclicIndex % len(l)]
 
-def flipDict(d, byChar=False):
+def flipDict(d, byChar=False, ignore=None):
     '''Flips dict p_d: keys become values, values become keys. p_d is left
        untouched: a new, flipped, dict is returned.'''
     # If p_byChar is True, p_d's values must be strings, and, for every entry
@@ -203,9 +241,14 @@ def flipDict(d, byChar=False):
     #                           'k': 'abcd'
     # the following entries are created:
     #               'a': 'k', 'b': 'k', 'c': 'k', 'd': 'k'
+    #
+    # If p_ignore is not None, it is a list of keys that will be ignored while
+    # walking p_d.
     r = {}
     # Browse dict p_d
     for k, v in d.items():
+        # Ignore this entry when appropriate
+        if ignore and k in ignore: continue
         if byChar:
             for char in v:
                 r[char] = k
@@ -249,7 +292,7 @@ class Traceback:
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def executeCommand(cmd, stdin=None, env=None, shell=False, stringOutput=True,
-                   wait=True):
+                   wait=True, input_=None):
     '''Executes command p_cmd'''
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # If p_wait | The function ...
@@ -272,9 +315,12 @@ def executeCommand(cmd, stdin=None, env=None, shell=False, stringOutput=True,
     # the remaining args being the parameters), but it can also be a string, too
     # (see subprocess.Popen doc).
     if wait:
+        stdin = subprocess.PIPE if input_ else stdin
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=stdin,
                                 stderr=subprocess.PIPE, env=env, shell=shell)
-        out, err = proc.communicate()
+        if input_ and isinstance(input_, str):
+            input_ = input_.encode()
+        out, err = proc.communicate(input=input_)
         # The output may be a binary file as well: p_stringOutput may need to be
         # False in that case.
         if stringOutput and isinstance(out, bytes):
@@ -302,25 +348,31 @@ class ImageMagick:
 
     @classmethod
     def convert(class_, path, options):
-        '''Calls the "convert" executable to apply some transform to an image
+        '''Calls the "magick" executable to apply some transform to an image
            whose p_path is passed.'''
         # p_options can be a list, or a string containing blank-separated
         # options.
         options = options.split() if isinstance(options, str) else options
-        # Build the command. p_path could be a Pathlib.Path instance.
+        # Build the command. p_path could be a Pathlib.Path object.
         path = str(path) if not isinstance(path, str) else path
-        cmd = ['convert', path] + options
+        cmd = ['magick', path] + options
         cmd.append(path)
         # Execute it
-        return class_.run(cmd)
+        try:
+            return class_.run(cmd)
+        except (FileNotFoundError, PermissionError):
+            # In previous versions, the "magick" program was named "convert"
+            cmd[0] = 'convert'
+            return class_.run(cmd)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def formatNumber(n, sep=',', precision=2, tsep=' ', removeTrailingZeros=False):
+def formatNumber(n, sep=',', precision=2, tsep=' ', removeTrailingZeros=False):
     '''Returns a string representation of number p_n, which can be a float
        or integer. p_sep is the decimal separator to use. p_precision is the
        number of digits to keep in the decimal part for producing a nice rounded
        string representation. p_tsep is the "thousands" separator.'''
     if n is None: return ''
+    if isinstance(n, str): return n # We suppose it was already formatted
     # Manage precision
     if precision is None:
         r = str(n)
@@ -334,13 +386,13 @@ def formatNumber(n, sep=',', precision=2, tsep=' ', removeTrailingZeros=False):
     r = ''
     if len(splitted[0]) < 4: r = splitted[0]
     else:
-        i = len(splitted[0])-1
+        i = len(splitted[0]) - 1
         j = 0
         while i >= 0:
             j += 1
-            r = splitted[0][i] + r
-            if (j % 3) == 0:
-                r = tsep + r
+            r = f'{splitted[0][i]}{r}'
+            if (j % 3) == 0 and i > 0:
+                r = f'{tsep}{r}'
             i -= 1
     # Add the decimal part if not 0
     if len(splitted) > 1:
@@ -445,4 +497,18 @@ class Function:
             o.log(message, type='warning')
             r = None
         return r
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def exeC(statement, name, context=None):
+    '''Executes, via the "exec" standard function, this Python p_statement,
+       whose objective is to produce a Python object (class, module, ...) having
+       this p_name. This object is then returned.'''
+    # p_context, if passed, must be a dict that will constitute a set of
+    # variables known by the p_statement (as locals).
+    if context is None:
+        context = {}
+    # Execute the p_statement
+    exec(statement, globals(), context)
+    # The statement has added a Python object named p_name in p_context
+    return eval(name, globals(), context)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

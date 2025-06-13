@@ -6,6 +6,7 @@ import datetime
 from base64 import decodebytes
 
 from DateTime import DateTime
+from DateTime.interfaces import SyntaxError as DTSyntaxError
 
 from appy.xml import Parser
 from appy.utils.path import getShownSize
@@ -129,9 +130,32 @@ class Unmarshaller(Parser):
             r[str(k)] = v
         return r
 
-    def getDatetime(self, value):
+    def getDateTime(self, value):
+        '''From this string p_value representing a date, produce a DateTime
+           object.'''
+        # No to confuse with getStandardDatetime (see below), that manipulates
+        # standard Python datetime objects.
+        try:
+            return DateTime(value)
+        except DTSyntaxError as err:
+            r = value.split()
+            if len(r) >= 2 and r[-1].isdigit():
+                # The year is possibly placed after the timezone: this cas has
+                # been encountered but is not managed by DateTime. Try to parse
+                # the date by inverting the 2 last elements.
+                last = r.pop()
+                previous = r.pop()
+                r.append(last)
+                r.append(previous)
+                return DateTime(' '.join(r))
+            else:
+                raise err
+
+    def getStandardDatetime(self, value):
         '''From this string p_value representing a date, produce an instance of
-           datetime.datime.'''
+           datetime.datetime.'''
+        # No to confuse with getDateTime (see above), that manipulates non-
+        # standard DateTime objects.
         r = value.split()
         # First part should be the date part
         year, month, day = r[0].split('/')
@@ -322,9 +346,9 @@ class Unmarshaller(Parser):
                     # Convert the string value to bytes
                     value = value.encode()
                 elif type == 'DateTime':
-                    value = DateTime(value)
+                    value = self.getDateTime(value)
                 elif type == 'datetime':
-                    value = self.getDatetime(value)
+                    value = self.getStandardDatetime(value)
                 elif type == 'base64':
                     value = decodebytes(e.currentContent.encode())
             # Store the value on the last container

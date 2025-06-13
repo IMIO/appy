@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -13,6 +11,7 @@ from appy.model.fields import Field
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 INV_M_VAL  = 'Multilingual field "%s" accepts a dict whose keys are in ' \
              'field.languages and whose values are strings.'
+VAL_KO     = '%s :: Multilingual field "%s" contains wrong value "%s".'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Multilingual:
@@ -41,7 +40,7 @@ class Multilingual:
     view = edit = cell = buttons = Px('''
      <x var="languages=field.getAttribute(o, 'languages');
              multi,value=field.renderMultilingual(o, languages, value, layout);
-             pxUni=getattr(field, '%sUni' % layout)">
+             pxUni=field.getUniPx(layout)">
 
       <!-- Display the uni-lingual version of the field -->
       <x if="not multi" var2="lg=None">:pxUni</x>
@@ -100,6 +99,12 @@ class Multilingual:
         r = self.getAttribute(o, 'languages')
         return ('_%s' % r[0]) if r and len(r) > 1 else ''
 
+    def getUniPx(self, layout):
+        '''Gets the PX allowing to render an invididual value on this
+           p_layout.'''
+        name = 'cell' if layout in Field.cellLayouts else layout
+        return getattr(self, f'{name}Uni')
+
     def renderMultilingual(self, o, languages, value, layout):
         '''Must p_value, expressed in these p_languages, be rendered as a
            multilingual value on this p_layout ?'''
@@ -113,7 +118,13 @@ class Multilingual:
                 else:
                     # Best choice: choose the content corresponding to the user
                     # language.
-                    r = value.get(o.guard.userLanguage)
+                    try:
+                        r = value.get(o.guard.userLanguage)
+                    except AttributeError:
+                        # Probably a monolingual value
+                        o.log(VAL_KO % (o.strinG(path=False), self.name,
+                                        str(value)), type='warning')
+                        r = '?'
                     if not r:
                         # Get the first non-empty value
                         for val in value.values():
@@ -233,7 +244,7 @@ class Multilingual:
         languages = self.getAttribute(o, 'languages')
         uni = self.getUniFormattedValue
         if len(languages) == 1 or isinstance(value, str):
-            # Normally, p_value should not be a string if there is a single
+            # Normally, p_value should not be a dict if there is a single
             # language. This can happen in exceptional cases, ie, in a
             # object's history (data change), when an object was transmitted
             # from one App1 to App2, where a field is unilingual in App1 and
@@ -258,7 +269,11 @@ class Multilingual:
         # "languages" below represents the content language(s) of this field.
         languages = self.getAttribute(o, 'languages')
         uni = self.getUniFormattedValue
-        if len(languages) == 1:
+        if len(languages) == 1 or isinstance(value, str):
+            # We should not check if the value is a string here; but if a field
+            # is changed from multi- to monolingual or inversely, we could find
+            # a database p_value that does not correspond to the expected value
+            # according to the field definition.
             return uni(o, value, layout, showChanges, language=language)
         if not value: return value
         # Manage a multilingual value. Try to propose the part that is in the

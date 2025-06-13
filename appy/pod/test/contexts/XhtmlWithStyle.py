@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''
 <p><meta http-equiv="CONTENT-TYPE" content="text/html; charset=utf-8" /><title></title><meta name="GENERATOR" content="OpenOffice.org 3.0 (Win32)" /><style type="text/css">
     &lt;!--

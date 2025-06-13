@@ -8,7 +8,7 @@ from appy.xml.escape import Escape
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 innerDiff = re.compile('<span name="(insert|delete)".*? title="(.*?)">' \
                        '(.*?)</span>')
-htmlTag = re.compile('<(?P<tag>\w+)( .*?)?>(.*)</(?P=tag)>')
+htmlTag = re.compile(r'<(?P<tag>\w+)( .*?)?>(.*)</(?P=tag)>')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Merger:

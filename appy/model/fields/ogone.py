@@ -72,7 +72,7 @@ class Config:
         # this is not a problem, they will be ignored. But if a single not-empty
         # parameter sent is not this list, the check with the SHA out key will
         # fail.
-        # ~~~
+        #
         # Do NOT include parameter "SHASIGN" in these parameters
         self.backParams = Config.defaultBackParams
 
@@ -138,14 +138,13 @@ class Ogone(Field):
       readPermission='read', writePermission='write', width=None, height=None,
       colspan=1, master=None, masterValue=None, focus=False, mapping=None,
       generateLabel=None, label=None, view=None, cell=None, buttons=None,
-      edit=None, xml=None, translations=None):
+      edit=None, custom=None, xml=None, translations=None):
         # Call the base constructor
-        Field.__init__(self, None, (0,1), None, None, show, renderable, page,
-          group, layouts, move, False, True, None, None, False, None,
-          readPermission, writePermission, width, height, None, colspan, master,
-          masterValue, focus, False, mapping, generateLabel, label, None, None,
-          None, None, False, False, view, cell, buttons, edit, xml,
-          translations)
+        super().__init__(None, (0,1), None, None, show, renderable, page, group,
+          layouts, move, False, True, None, None, False, None, readPermission,
+          writePermission, width, height, None, colspan, master, masterValue,
+          focus, False, mapping, generateLabel, label, None, None, None, None,
+          False, False, view, cell, buttons, edit, custom, xml, translations)
         # orderMethod must contain a method returning a dict containing info
         # about the order. Following keys are mandatory, among others:
         #   * orderID   An identifier for the order. Don't use the object ID
@@ -187,11 +186,11 @@ class Ogone(Field):
         keys.sort()
         r = []
         for key in keys:
-            r.append('%s=%s' % (key, values[key]))
+            r.append(f'{key}={values[key]}')
         r = (passphrase.join(r) + passphrase).encode()
         return hashlib.sha512(r).hexdigest()
 
-    def getValue(self, o, name=None, layout=None, single=None):
+    def getValue(self, o, name=None, layout=None, single=None, at=None):
         '''The "value" of the Ogone field is a dict that collects all the
            necessary info for making the payment.'''
         tool = o.tool
@@ -220,8 +219,7 @@ class Ogone(Field):
         r.CATALOGURL = r.HOMEURL = o.siteUrl
         # Add redirect URLs
         for t in self.urlTypes:
-            setattr(r, ('%surl' % t).upper(),
-                    '%s/%s/process' % (o.url, self.name))
+            setattr(r, f'{t}url'.upper(), f'{o.url}/{self.name}/process')
         # Compute a SHA-512 key as required by Ogone and add it to the result
         r.SHASIGN = self.createShaDigest(r, inKey)
         return r

@@ -38,7 +38,8 @@ class Px:
     METHOD = 2 # As a method that must return PX code
 
     def __init__(self, content, type=STRING, partial=True, template=None,
-                 hook=None, prologue=None, css=None, js=None, name=None):
+                 hook=None, prologue=None, css=None, js=None, cssVars=None,
+                 name=None):
         '''Creates a PX object'''
 
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -89,6 +90,14 @@ class Px:
         # PX-specific CSS and JS code
         self.css = self.compact(css)
         self.js = self.compact(js)
+        # Variables can be defined within self.css. When a CSS variables patcher
+        # is found in the PX context, at key "_css_", it is executed, to replace
+        # these variables by their actual values. The patcher uses a default
+        # base object from which it gets variables' values. You can specify an
+        # alternate object by setting, in p_cssVariables, an expression that
+        # will be evaluated wiith the current PX context and whose result must
+        # be this alternate object.
+        self.cssVars = cssVars
         # A PX can have a name
         self.name = name or ''
         # A PX can be profiled (see m_profile below)
@@ -146,6 +155,23 @@ class Px:
     def addCss(self, css): self.addCssJs(css, 'css')
     def addJs(self, js): self.addCssJs(js, 'js')
 
+    def getCss(self, context):
+        '''Returns the CSS code possibly defined on this PX. Perform variables
+           replacement when relevant.'''
+        css = self.css
+        if not css: return
+        # Return v_css as is if no patcher is found
+        if '_css_' not in context: return css
+        # Perform variables' replacements within v_css. But based on which
+        # object ?
+        cssVars = self.cssVars
+        if cssVars:
+            ctx = context if isinstance(context, dict) else context.d()
+            base = eval(cssVars, ctx)
+        else:
+            base = None # will be the Appy UI configuration (config.ui)
+        return context['_css_'](css, base=base, o=context.get('o'))
+
     def completeErrorMessage(self, parsingError):
         '''A p_parsingError occurred. Complete the error message with the
            erroneous line from self.content.'''
@@ -171,7 +197,7 @@ class Px:
         #    the PX template, and, at the hook, we must include the current PX,
         #    as is, without re-applying the template (else, an infinite
         #    recursion would occur).
-        # ~
+        #
         # Ensure PX-specific keys are in the context
         context['_ctx_'] = context
         context['_eval_'] = Evaluator
@@ -227,12 +253,8 @@ class Px:
                     pass
                 else:
                     if self.js: r = f'<script>{self.js}</script>{bn}{r}'
-                    css = self.css
-                    if css:
-                        # Patch CSS if a CSS patcher is found
-                        css = context['_css_'](css, context.get('o')) \
-                              if '_css_' in context else css
-                        r = f'<style>{css}</style>{bn}{r}'
+                    css = self.getCss(context)
+                    if css: r = f'<style>{css}</style>{bn}{r}'
             # Include the prologue
             if self.prologue:
                 r = self.prologue + r

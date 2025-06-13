@@ -54,10 +54,10 @@ class Mover(Base):
     # A rex matching attributes that can hold a URL
     hrefRex = re.compile('(href|src)=\"(.*?)\"')
 
-    # Texts to output or log (bool #1, true if output), depending on the dry run
-    # mode (bool #2, true if dry run) and actual effect (bool #3, true if
+    # Texts to *o*utput or **log (bool #1, true if output), depending on the dry
+    # run mode (bool #2, true if dry run) and actual effect (bool #3, true if
     # something actually happened).
-    texts = {
+    textsOL = {
      # UI   | Dry run  | Effect 
      True:  { False:   { True:  'Mover_done'  , False: 'action_null'},
               True:    { True:  'Mover_tested', False: 'action_null_test'}},
@@ -116,7 +116,7 @@ class Mover(Base):
         else:
             map = None
             parts = c.total
-        self.log(self.texts[False][dryRun][effect] % parts)
-        return True, self.translate(self.texts[True][dryRun][effect],
+        self.log(self.textsOL[False][dryRun][effect] % parts)
+        return True, self.translate(self.textsOL[True][dryRun][effect],
                                     mapping=map)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

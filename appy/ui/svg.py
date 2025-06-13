@@ -16,14 +16,14 @@ class Config:
 
     def __init__(self):
         # Color for the main elements in the SVG file
-        self.mainColor = '#002039'
+        self.mainColor = '#777777'
         # Color for element that must be drawn in a lighter color, made to be
         # visible on a dark as well as on a bright background.
         self.lightColor = '#cecece'
         # A more flashy color, for some specific elements
-        self.flashyColor = '#009ba4'
+        self.flashyColor = '#939393'
         # An alternate showy color
-        self.showyColor = '#dab823'
+        self.showyColor = '#abab4e'
         # Colors to apply so some (out)lines within the image
         self.drawColorA = '#c9c7c5'
         self.drawColorB = '#777777'

@@ -29,8 +29,7 @@ class Traversal:
     Error = NotFound
 
     # Correspondence between some URL parts and their PXs
-    layouts = {'default': 'view', 'view': 'view', 'edit': 'edit', 'xml' : 'xml',
-               'pxTied': 'cell', 'pxResult': 'cell', 'save': 'edit'}
+    layouts = {'edit': 'edit', 'xml': 'xml', 'pxResult':'cell', 'save':'edit'}
 
     # Let's define an URL as
     #               <protocol>://<domain name><path>
@@ -89,7 +88,7 @@ class Traversal:
         '''This p_o(bject) has just been encountered: reset the traversal,
            starting with this new object as base.'''
         # If p_o is None, this method is used to initialise a base traversal
-        # ~
+        #
         # The current result of traversing
         self.r = o
         # The current object being traversed
@@ -111,12 +110,12 @@ class Traversal:
            parent path.'''
         r = '/'.join(self.parts)
         if self.parent:
-            r += ' (from %s)' % self.parent.getPath()
+            r = f'{r} (from {self.parent.getPath()})'
         return r
 
     def __repr__(self):
         '''p_self's short string representation'''
-        return '<Traversal @%s>' % self.getPath()
+        return f'‹Traversal {self.getPath()}›'
 
     def createContext(self, layout='view'):
         '''Create and return a PX context for rendering p_o on p_layout'''
@@ -246,7 +245,7 @@ class Traversal:
                 if self.mode == Traversal.STANDARD:
                     # One may traverse it if he has the read permission on the
                     # related object.
-                    r = 'perm:%s' % current.readPermission
+                    r = f'perm:{current.readPermission}'
                 else:
                     # The field is not related to any instance. At this
                     # traversal level, no more security check can be performed.
@@ -382,10 +381,14 @@ class Traversal:
         '''Depending on the response type, the traversal p_r(esult) may need to
            be marshalled.'''
         if r is None: return r
-        if self.resp.contentType == 'xml':
-            # Currently, only XML marshalling is there
-            tag = r.class_.name if isinstance(r, Base) else self.parts[-1]
-            r = Marshaller(rootTag=rootTag or tag).marshall(r)
+        resp = self.resp
+        if resp.contentType == 'xml':
+            # Currently, only XML marshalling is there. Determine the name of
+            # the root tag.
+            tag = rootTag or resp.rootTag
+            if not tag:
+                tag = r.class_.name if isinstance(r, Base) else self.parts[-1]
+            r = Marshaller(rootTag=tag).marshall(r)
         return r
 
     def run(self):

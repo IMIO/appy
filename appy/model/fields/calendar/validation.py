@@ -4,6 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from DateTime import DateTime
 
+from appy.px import Px
 from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -75,9 +76,9 @@ class Validation:
     # This class holds information about this validation process. For more
     # information, see the Calendar constructor, parameter "validation".
 
-    def __init__(self, mayValidate, mapper, removeDiscarded=False, email=None,
-                 emailSubjectLabel=None, emailBodyLabel=None,
-                 dateFormat='%d/%m/%Y'):
+    def __init__(self, mayValidate, mapper, removeDiscardedDefault=False,
+                 onRemoveDiscarded=None, email=None, emailSubjectLabel=None,
+                 emailBodyLabel=None, dateFormat='%d/%m/%Y'):
 
         # p_mayValidate must hold a method as defined on the Appy class
         # containing the concerned Calendar field. This method accepts no arg
@@ -91,35 +92,43 @@ class Validation:
         # the method must return None.
         self.mapper = mapper
 
-        # When discarding events, must we simply let them there or remove them ?
-        # If you want to remove them, instead of giving the boolean value
-        # "True", you can specify a method. In this case, prior to removing
-        # every discarded event, the method will be called, with those args:
+        # When validating events, the user will be asked, via a checkbox, if he
+        # wants discarded events to be removed or not. Indeed, decision about
+        # discarding some events may be taken later on: it may have sense to let
+        # not-validated events as is, for potential validation in a future,
+        # additional round. The following attribute determines the default value
+        # for the checkbox.
+        self.removeDiscardedDefault = removeDiscardedDefault
+
+        # When an event is discarded, you may want to trigger some custom
+        # behaviour (ie, counting the number of discarded events for every
+        # user). If you specify a method in the following attribute, it will be
+        # called prior to removing the event, with those args:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #     o     | the target object. It can be the object onto which this
         #           | calendar is defined, or another object if we are
         #           | validating an event from an "other" calendar ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  calendar | the target calendar, that can be different from the one
-        #           | tied to this Validation instance if we are validating an
+        #           | tied to this Validation object if we are validating an
         #           | event from an "other" calendar ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #   event   | the event to remove (an instance of class
         #           | appy.model.fields.calendar.Event) ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #   date    | the event date, as a DateTime instance.
+        #   date    | the event date, as a DateTime object.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        self.removeDiscarded = removeDiscarded
+        self.onRemoveDiscarded = onRemoveDiscarded
 
         # When validation occurs, emails can be sent, explaining which events
         # have been validated or discarded. In the following attribute "email",
         # specify a method belonging to the object linked to this calendar. This
-        # method must accept no parameter and return a User instance, that will
-        # be used as email recipient. If we are on a month view, the method will
-        # be called once and a single email will be sent. For a timeline view,
-        # the method will be called for every "other" calendar for which events
-        # have been validated or rejected, on the object where the other
-        # calendar is defined.
+        # method must accept no parameter and return a User object, that will be
+        # used as email recipient. If we are on a month view, the method will be
+        # called once and a single email will be sent. For a timeline view, the
+        # method will be called for every "other" calendar for which events have
+        # been validated or rejected, on the object where the other calendar is
+        # defined.
         self.email = email
 
         # When email sending is enabled (see the above parameter), specify here
@@ -158,6 +167,16 @@ class Validation:
            to send when events are validated and/or discarded.'''
         return ValidationMailing(self, calendar, o)
 
+    def setFinalEventType(self, event, finalEventType, o, field, date):
+        '''In the context of validating this p_event, convert his type to the
+           final one as passed in p_finalEventType.'''
+        event.eventType = finalEventType
+        # Setting a new event type to the event is similar to creating a new
+        # event: call p_field.afterCreate when defined.
+        method = field.afterCreate
+        if method:
+            method(o, date, finalEventType, event.timeslot, 0)
+
     def manageMonthCB(self, o, calendar, info, action, mailing, counts):
         '''Manage p_info about a given checkbox, representing an event from a
            monthly, uni-personal p_calendar, that must be validated or discarded
@@ -168,7 +187,8 @@ class Validation:
         oDate = DateTime(f'{date[:4]}/{date[4:6]}/{date[6:]}')
         # Get the events defined at that date
         events = calendar.getEventsAt(o, date)
-        removeDiscarded = self.removeDiscarded
+        removeDiscarded = o.req.removeDiscarded == '1'
+        onRemove = self.onRemoveDiscarded
         i = len(events) - 1
         while i >= 0:
             # Get the event at that timeslot
@@ -180,13 +200,13 @@ class Validation:
                 # Validate or discard it
                 if action == 'validated':
                     # Validate it: convert the demand to a validated type
-                    event.eventType = self.getValidatedType(o, eventType)
-                else:
-                    # Discard it: remove it if appropriate
-                    if removeDiscarded:
-                        if callable(removeDiscarded):
-                            removeDiscarded(o, o, calendar, event, oDate)
-                        del events[i]
+                    finalEventType = self.getValidatedType(o, eventType)
+                    self.setFinalEventType(event, finalEventType, o, calendar,
+                                           oDate)
+                elif removeDiscarded:
+                    # Remove the event. Call a custom method if defined.
+                    if onRemove: onRemove(o, o, calendar, event, oDate)
+                    del events[i]
                 # Count this event and put it among email info
                 counts[action] += 1
                 if mailing:
@@ -206,10 +226,10 @@ class Validation:
         otherF = otherO.getField(name)
         # Get, on this calendar, the events defined at that date
         events = otherF.getEventsAt(otherO, date)
-        # Among them, validate or discard any impactable one
+        removeDiscarded = o.req.removeDiscarded == '1'
+        onRemove = self.onRemoveDiscarded
+        # Among these events, validate or discard any impactable one
         otherV = otherF.validation
-        # p_calendar will impose its own "removeDiscarded" on all sub-calendars
-        removeDiscarded = self.removeDiscarded
         i = len(events) - 1
         while i >= 0:
             event = events[i]
@@ -217,12 +237,12 @@ class Validation:
             finalEventType = otherV.getValidatedType(otherO, event.eventType)
             if finalEventType:
                 if action == 'validated':
-                    event.eventType = finalEventType
-                else:
-                    if removeDiscarded:
-                        if callable(removeDiscarded):
-                            removeDiscarded(o, otherO, otherF, event, oDate)
-                        del events[i]
+                    self.setFinalEventType(event, finalEventType, otherO,
+                                           otherF, oDate)
+                elif removeDiscarded:
+                    # Remove the event. Call a custom method if defined.
+                    if onRemove: onRemove(o, otherO, otherF, event, oDate)
+                    del events[i]
                 # Count this event and put it among email info
                 counts[action] += 1
                 if mailing:
@@ -239,16 +259,45 @@ class Validation:
         for action in ('validated', 'discarded'):
             if not req[action]: continue
             for info in req[action].split(','):
-                if req.render == 'month':
-                    self.manageMonthCB(o,calendar,info,action,mailing,counts)
-                elif req.render == 'timeline':
-                    self.manageTimelineCB(o,calendar,info,action,mailing,counts)
+                part = 'Timeline' if calendar.multiple else 'Month'
+                method = getattr(self, f'manage{part}CB')
+                method(o, calendar, info, action, mailing, counts)
         if not counts.validated and not counts.discarded:
             return o.translate('action_null')
-        part = '' if self.removeDiscarded else NOT_RM
+        part = '' if self.onRemoveDiscarded else NOT_RM
         calendar.log(o, FINAL_MSG % (counts.validated, counts.discarded, part))
         # Send the emails
         if self.email: mailing.send()
         o.resp.fleetingMessage = False
         return o.translate('validate_events_done', mapping=counts.d())
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                                  PXs
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # Confirmation popup for validating events
+    pxPopup = Px('''
+     <div class="popup" align="center" id=":f'{hook}_valPopup'">
+      <img class="iconM popupI" src=":svg('arrows')"/>
+      <form id=":f'{hook}_valForm'" data-sub="validateEvents">
+       <input type="hidden" name="month" value=":view.month"/>
+       <p class="appyConfirmText">::_('validate_events_confirm')</p>
+
+       <!-- Remove discarded events ? -->
+       <input type="checkbox" id="removeDiscarded" name="removeDiscarded"
+              checked=":field.validation.removeDiscardedDefault"/>
+       <label class="calSpan"
+              lfor="removeDiscarded">:_('validate_events_discard')</label>
+       <div class="discreet calSpan">::_('validate_events_discard_descr')</div>
+
+       <!-- Yes / no buttons -->
+       <div class="topSpace">
+        <div class="bottomSpaceS">:_('action_confirm')</div>
+        <input type="button" value=":_('yes')"
+               onclick=":'CalValidator.validate(%s)' % q(hook)"/>
+        <input type="button" value=":_('no')"
+               onclick=":'CalValidator.setPopup(%s,%s)' % (q(hook),q('none'))"/>
+       </div>
+      </form>
+     </div>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -4,10 +4,13 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import logging, sys, pathlib
+import logging, sys, re, pathlib
 
 from appy.px import Px
 from appy.model.utils import Object as O
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+L_CREA  = '%s created.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -38,27 +41,28 @@ class Config:
                  siteAttributes=('time', 'message'),
                  appAttributes=('time', 'level', 'message'),
                  # Add "agent" hereafter to get the browser's User-Agent string
-                 siteMessageParts=('ip', 'port', 'command', 'protocol',
+                 siteMessageParts=('ip', 'port', 'method', 'thread', 'protocol',
                                    'path', 'message'),
                  appMessageParts=('user', 'message'),
                  siteSep=' | ', appSep=' | '):
-        '''Initializes the logging configuration options.
-           - p_siteDateFormat and p_appDateFormat define the format of dates
-             dumped in log messages;
-           - p_siteAttributes and p_appAttributes store the list of attributes
-             that will be dumped in every log entry;
-           - p_siteMessageParts and p_appMessageParts store the list of
-             attributes contained within composite attribute "message";
-           - p_siteSep and p_appSep store the separators that will be inserted
-             between attributes.
-        '''
+        '''Initializes the logging configuration options'''
+
+        # - p_siteDateFormat and p_appDateFormat define the format of dates
+        #   dumped in log messages;
+        # - p_siteAttributes and p_appAttributes store the list of attributes
+        #   that will be dumped in every log entry;
+        # - p_siteMessageParts and p_appMessageParts store the list of
+        #   attributes contained within composite attribute "message";
+        # - p_siteSep and p_appSep store the separators that will be inserted
+        #   between attributes.
+
         # Create a sub-object for splitting site- and app-related configuration
         # options.
         for type in self.logTypes:
-            sub = O(dateFormat=eval('%sDateFormat' % type),# ~pathlib.Path~
-                    attributes=eval('%sAttributes' % type),
-                    messageParts=eval('%sMessageParts' % type),
-                    sep=eval('%sSep' % type))
+            sub = O(dateFormat=eval(f'{type}DateFormat'),# ~pathlib.Path~
+                    attributes=eval(f'{type}Attributes'),
+                    messageParts=eval(f'{type}MessageParts'),
+                    sep=eval(f'{type}Sep'))
             setattr(self, type, sub)
 
     def set(self, siteLogFolder, appLogFolder):
@@ -80,7 +84,7 @@ class Config:
         # Define the list of attributes to dump in every log entry
         attributes = []
         for name in sub.attributes:
-            attributes.append('%%(%s)s' % Config.logAttributes[name])
+            attributes.append(f'%({Config.logAttributes[name]})s')
         return logging.Formatter(sub.sep.join(attributes),
                                  datefmt=sub.dateFormat)
 
@@ -110,7 +114,7 @@ class Config:
         for handler in logger.handlers:
             handler.setFormatter(formatter)
         # Return the created logger
-        if created: logger.info('%s created.' % path)
+        if created: logger.info(L_CREA % path)
         return logger
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -125,28 +129,31 @@ class Viewer:
     # Possible modes are the following.
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # "tail" | The n last lines of the selected log file are displayed
+    # "full" | The complete file content is shown
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    modes = ('tail',)
+    modes = ('tail', 'full')
 
     # Attributes having sense in "tail" mode
     bounded = O( # Values having min and max bounds
-     n           = O(max=500, min=3, default=100), # Number of retrieved lines
-     refreshRate = O(max=30 , min=3, default=5)  , # Refresh rate (seconds)
+     n           = O(max=500, min=50, default=100), # Number of retrieved lines
+     refreshRate = O(max=30 , min=3, default=15) , # Refresh rate (seconds)
     )
     chunkSize   = 1024 # Number of bytes retrieved at a time
 
     # The main PX
     px = Px('''
      <!-- Controls -->
-     <form class="logControls" id="logForm" var="logType=req.logType or 'app'">
+     <form class="logControls" id="logForm"
+           var="logType=req.logType or 'app';
+                mode=req.mode or 'tail'">
 
       <!-- App or site log ? -->
       <div>
        <input type="radio" value="app"  name="logType" id="app"
-               checked=":logType == 'app'" onclick="refreshLogZone()"/>
+              checked=":logType == 'app'" onchange="refreshLogZone()"/>
        <label lfor="app">app</label>
        <input type="radio" value="site" name="logType" id="site"
-              checked=":logType == 'site'" onclick="refreshLogZone()"/>
+              checked=":logType == 'site'" onchange="refreshLogZone()"/>
        <label lfor="site">site</label>
       </div>
 
@@ -158,21 +165,46 @@ class Viewer:
       </select>
 
       <!-- Refresh every x seconds -->
-      <div class="textual">
-       <input name="refreshAuto" type="checkbox" style="with:2sm"
+      <div class="iflex1">
+       <input name="refreshAuto" id="refreshAuto" type="checkbox"
               checked=":req.refreshAuto in (None, '1')"/>
-       <span>Refresh every
-        <input var="b=viewer.bounded.refreshRate" name="refreshRate"
-               type="number" min=":b.min" max=":b.max" class="editNB rateR"
-               value=":viewer.getBounded(req, 'refreshRate')"/> seconds
-       </span>
+       <label lfor="refreshAuto" class="textual">Refresh every</label>
+       <input var="b=viewer.bounded.refreshRate" name="refreshRate"
+              type="number" min=":b.min" max=":b.max" step=":b.min"
+              class="editNB rateR"
+              value=":viewer.getBounded(req, 'refreshRate')"/>
+       <label class="textual">seconds</label>
       </div>
 
-      <!-- Tail mode: Get last x lines -->
-      <div class="textual">Get last
+      <!-- Mode (tail or full) -->
+      <div class="iflex1">
+
+       <!-- Tail mode -->
+       <input type="radio" value="tail"  name="mode" id="tail"
+              checked=":mode == 'tail'" onchange="refreshLogZone()"/>
+
+       <!-- Get last x lines -->
+       <label class="textual" lfor="tail">Get last</label>
        <input var="b=viewer.bounded.n" name="n" type="number" min=":b.min"
-              max=":b.max" class="editNB tailN"
-              value=":viewer.getBounded(req, 'n')"/> lines
+              max=":b.max" class="editNB tailN" step=":b.min"
+              value=":viewer.getBounded(req, 'n')"/>
+       <label class="textual">lines</label>
+
+       <!-- Full mode -->
+       <input type="radio" value="full"  name="mode" id="full"
+              checked=":mode == 'full'" onchange="showWholeFile(this)"/>
+       <label lfor="full" class="textual">Whole file</label>
+      </div>
+
+      <!-- Log HTTP headers for some requests ? -->
+      <div class="iflex1">
+       <label class="textual">Log HTTP headers for</label>
+       <input type="text" var="rex=tool.config.server.logHeadersStatic"
+              name="logHeadersStatic" placeholder="Static content regex"
+              value=":rex.pattern if rex else ''"/>
+       <input type="text" var="rex=tool.config.server.logHeadersDynamic"
+              name="logHeadersDynamic"  placeholder="Dynamic content regex"
+              value=":rex.pattern if rex else ''"/>
       </div>
 
       <!-- Refresh now -->
@@ -193,7 +225,13 @@ class Viewer:
         // Remove any existing timeout
         clearTimeoutField(hook);
         form2dict(f, params);
-        askField(hook, siteUrl+'/tool', 'view', params);
+        askField(hook, `${siteUrl}/tool`, 'view', params);
+      }
+
+      showWholeFile = function() {
+        // Uncheck the "refresh" box before refreshing the zone
+        document.getElementById('refreshAuto').checked = false;
+        refreshLogZone();
       }
 
       initViewer = function() {
@@ -210,16 +248,19 @@ class Viewer:
         content.scrollTop = content.scrollHeight;
       }''',
 
-     css='''.logControls { display:flex; align-items:center; gap:1em }
-            .logControls select { padding:0; margin:0; font-size:90% }
+     css='''.logControls { display:flex; align-items:center; gap:0.3em;
+                           flex-wrap:wrap }
+            .logControls select, .logControls input[type=text] {
+              padding:0; margin:0; font-size:90% }
+            .logControls input[type=text] { width:11em }
             .textual { display:flex; align-items:center; font-size:90%;
-                       color:grey }
+                       color:grey; text-transform:none }
             .logText { overflow:auto;width:65vw;height:55vh;font-size:90% }
             .editNB { margin:0 0.1em 0 0.3em; text-align:center }
-            .rateR { width:2.5em }
+            .rateR { width:2.5em; margin-right:0.4em }
             .tailN { width:4em; margin-right:0.4em }
             #logForm input[type=button] {
-              color:black; padding:0.3em 0.7em; text-transform:none;
+              color:inherit; padding:0.3em 0.7em; text-transform:none;
               font-size:80%; border:1px solid grey }''')
 
     def __init__(self, tool):
@@ -266,11 +307,38 @@ class Viewer:
         r = b''.join(reversed(chunks))
         return b'\n'.join(r.splitlines()[-n:]).decode()
 
+    def full(self, f):
+        '''Returns the full p_f(ile) content'''
+        return f.read()
+
+    def updateConfig(self):
+        '''Updates the RAM server config: parameters "logHeadersStatic" and/or
+           "logHeadersDynamic".'''
+        tool = self.tool
+        # Don't change anything if this is the initial request for displaying
+        # the whole page.
+        if not tool.H().isAjax(): return
+        req = tool.req
+        for part in ('Static', 'Dynamic'):
+            # Get the possibly UI-edited config
+            name = f'logHeaders{part}'
+            reqValue = req[name] or None
+            # Get the current server config (extract regex' patterns)
+            config = tool.config.server
+            value = getattr(config, name)
+            value = value.pattern if value else None
+            # Update the config if differences are detected
+            if reqValue != value:
+                newValue = re.compile(reqValue) if reqValue else None
+                setattr(config, name, newValue)
+
     def getContent(self):
         '''Returns the appropriate part of the content corresponding to the
            currently selected log file.'''
         tool = self.tool
         req = tool.req
+        # By the way, update, when appropriate, the server config
+        self.updateConfig()
         # What is the log file for which content must be shown ?
         logType = req.logType or 'app'
         if logType not in Config.logTypes:
@@ -297,10 +365,12 @@ class Viewer:
                 if not path.is_file():
                     r = LOG_F_KO % str(path)
                 else:
-                    # Open the log file. If the file is not opened in binary
-                    # mode, it is not possible to perfom seeks wwith a negative
-                    # offset being relative to the end of the file.
-                    with open(path, 'rb') as f:
+                    # Open the log file. In "tail" mode, if the file is not
+                    # opened in binary mode, it is not possible to perfom seeks
+                    # with a negative offset being relative to the end of the
+                    # file.
+                    modeF = 'rb' if mode == 'tail' else 'r'
+                    with open(path, modeF) as f:
                         # Call the method corresponding to the mode
                         r = getattr(self, mode)(f)
         # Call the main PX
@@ -310,7 +380,7 @@ class Viewer:
 
     def getAjaxData(self, c):
         '''Creates the Ajax data allowing to Ajax-refresh the log zone'''
-        return "new AjaxData('%s', 'GET', null, '1_logsViewer')" % c.tool.url
+        return f"new AjaxData('{c.tool.url}','GET',null,'1_logsViewer')"
 
     def listFiles(self, logType):
         '''Lists the existing log files of this p_logType'''
@@ -325,7 +395,7 @@ class Viewer:
             logFolder = bconfig.path / 'logs'
             if logFolder.is_dir():
                 r = []
-                for logFile in logFolder.glob('%s.*.log' % logType):
+                for logFile in logFolder.glob(f'{logType}.*.log'):
                     r.append((logFile.name, str(logFile)))
                 # Sort them in antichronological order
                 r.sort(key=lambda e: e[0], reverse=True)

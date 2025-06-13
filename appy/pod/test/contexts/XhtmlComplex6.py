@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''<div class="document">\n<p>Hallo?</p>\n</div>
 <table cellspacing="0" cellpadding="0" style="width:100%">
   <tbody>

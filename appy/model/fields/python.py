@@ -4,7 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Some of the imports below are just there to belong to the interpreter context
 
-import io
+import io, statistics
 from DateTime import DateTime
 from contextlib import redirect_stdout
 from persistent.list import PersistentList
@@ -16,7 +16,8 @@ from appy.xml.escape import Escape
 from appy.model.fields import Field
 from appy.model.fields.hour import Hour
 from appy.utils import string as sutils
-from appy.database.operators import or_, and_, in_
+from appy.model.utils import Object as O
+from appy.database.operators import or_, and_, in_, not_
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 COMMIT   = 'Committed from %d: %s'
@@ -25,6 +26,12 @@ COMMIT   = 'Committed from %d: %s'
 class Python(Field):
     '''Through-the-web Python interpreter'''
 
+    # Explain checkbox "Force commit"
+    cr = '&#013;'
+    FC_TEXT = f'This will force a database commit.{cr}{cr}Note that if you ' \
+              f'call a method that sets handler.commit to True,{cr}a commit ' \
+              f'will nevertheless be done even if the checkbox is unchecked.'
+
     # Some elements will be traversable
     traverse = Field.traverse.copy()
 
@@ -32,15 +39,17 @@ class Python(Field):
     # situations, only the "view" layout will be used.
     view = cell = buttons = edit = Px('''
      <div class="python"
-          var="prefix='%s_%s' % (o.iid, field.name);
-               hook='%s_output' % prefix">
+          var="prefix=f'{o.iid}_{field.name}';
+               hook=f'{prefix}_output'">
       <div id=":hook"></div>
       <div class="prompt">&gt;&gt;&gt;</div>
-      <input type="text" id=":'%s_input' % prefix" autocomplete="false"
+      <input type="text" id=":f'{prefix}_input'" autocomplete="false"
          onkeydown=":'if (event.keyCode==13) onPyCommand(%s, this)' % q(hook)"/>
       <div class="iactions">
-        <input type="checkbox" id=":'%s_commit' % prefix"/>
-        <label lfor=":'%s_commit' % prefix">Commit</label>
+        <input type="checkbox" id=":f'{prefix}_commit'"/>
+        <label lfor=":f'{prefix}_commit'">
+         <abbr title="::field.FC_TEXT">Force commit</abbr>
+        </label>
       </div>
       <script>:"document.getElementById('%s_input').focus();%s" %
                (prefix, field.getAjaxData(hook, o))</script>
@@ -95,14 +104,14 @@ class Python(Field):
       layouts=None, move=0, readPermission='read', writePermission='write',
       width=None, height=None, colspan=1, master=None, masterValue=None,
       focus=False, mapping=None, generateLabel=None, label=None, view=None,
-      cell=None, buttons=None, edit=None, xml=None, translations=None):
+      cell=None, buttons=None, edit=None, custom=None, xml=None,
+      translations=None):
         # Call the base constructor
-        Field.__init__(self, None, (0,1), None, None, show, renderable, page,
-          group, layouts, move, False, True, None, None, False, None,
-          readPermission, writePermission, width, height, None, colspan, master,
-          masterValue, focus, False, mapping, generateLabel, label, None, None,
-          None, None, False, False, view, cell, buttons, edit, xml,
-          translations)
+        super().__init__(None, (0,1), None, None, show, renderable, page, group,
+          layouts, move, False, True, None, None, False, None, readPermission,
+          writePermission, width, height, None, colspan, master, masterValue,
+          focus, False, mapping, generateLabel, label, None, None, None, None,
+          False, False, view, cell, buttons, edit, custom, xml, translations)
 
     def getAjaxData(self, hook, o):
         '''Initializes an AjaxData object on the DOM node corresponding to this
@@ -141,9 +150,12 @@ class Python(Field):
             r = ''
         return r
 
-    traverse['onCommand'] = 'user:admin'
+    traverse['onCommand'] = 'Manager'
     def onCommand(self, o):
         '''Evaluates the Python expression entered into the UI'''
+        # Security check
+        if o.user.login not in o.config.security.consoleUsers:
+            o.raiseUnauthorized()
         command = o.req.command
         # Redirect stdout to a StringIO
         with io.StringIO() as buf, redirect_stdout(buf):

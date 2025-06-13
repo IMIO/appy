@@ -28,8 +28,8 @@ class Float(Integer):
       mapping=None, generateLabel=None, label=None, sdefault=('',''),
       scolspan=1, swidth=None, sheight=None, fwidth=3, persist=True,
       precision=None, sep=(',', '.'), tsep=' ', inlineEdit=False, view=None,
-      cell=None, buttons=None, edit=None, xml=None, translations=None,
-      readonly=False, alignOnEdit='left', autoComplete=True):
+      cell=None, buttons=None, edit=None, custom=None, xml=None,
+      translations=None, readonly=False, alignOnEdit='left', autoComplete=True):
         # The precision is the number of decimal digits. This number is used
         # for rendering the float, but the internal float representation is not
         # rounded.
@@ -42,15 +42,17 @@ class Float(Integer):
             if sep not in Float.allowedDecimalSeps:
                 raise Exception(SEP_UNALLOWED % sep)
         self.tsep = tsep
-        Integer.__init__(self, validator, multiplicity, default, defaultOnEdit,
-          show, renderable, page, group, layouts, move, indexed, mustIndex,
+        # Call the base constructor
+        super().__init__(validator, multiplicity, default, defaultOnEdit, show,
+          renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, readPermission,
           writePermission, width, height, maxChars, colspan, master,
           masterValue, focus, historized, mapping, generateLabel, label,
           sdefault, scolspan, swidth, sheight, fwidth, persist, inlineEdit,
-          view, cell, buttons, edit, xml, translations, readonly, alignOnEdit,
-          autoComplete)
+          view, cell, buttons, edit, custom, xml, translations, readonly,
+          alignOnEdit, autoComplete)
         self.pythonType = float
+        self.storableTypes = (float, int)
 
     def getFormattedValue(self, obj, value, layout='view', showChanges=False,
                           language=None):
@@ -60,6 +62,9 @@ class Float(Integer):
     def replaceSeparators(self, value):
         '''Replaces, in p_value, separators "sep" and "tsep" in such a way that
            p_value may become a valid Python float literal.'''
-        for sep in self.sep: value = value.replace(sep, '.')
-        return value.replace(self.tsep, '')
+        # Remove any tsep within p_value
+        r = value.replace(self.tsep, '')
+        # Replace sep with the Python decimal separator (the dot)
+        for sep in self.sep: r = r.replace(sep, '.')
+        return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

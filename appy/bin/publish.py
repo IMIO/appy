@@ -16,20 +16,25 @@ from appy.utils import executeCommand
 from appy.utils.path import cleanFolder, getOsTempFolder, FolderDeleter
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Help messages
+bn = '\n'
+HELP_COM = 'Use this if you want to build the commercial version of Appy.'
+RUN_CMD  = 'Executing %s...'
+PUB_APPY = 'Publishing Appy %s for Python 2 & 3...'
+STATS_S  = '*** Stats for Appy (Python 3)...'
+STATS_E  = '***'
+UPLOAD_P = 'Upload %s on PyPI?'
+PROCEED  = 'Proceed ?'
+CLEAN_T  = 'Clean temp folder %s?'
+NO_PY2   = '%s not found :: Publication process aborted.'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#               Copyright information to inject in Python files
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-HELP_COMMERCIAL = 'Use this if you want to build the commercial version of ' \
-                  'Appy.'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Copyright information to inject in Python files
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-copyright = "Copyright (C) 2007-%d Gaetan Delannay" % time.localtime()[0]
+copyright = f"Copyright (C) 2007-{time.localtime()[0]} Gaetan Delannay"
 
 licenses = {
-  'commercial': '# %s' % copyright,
+  'commercial': f'# {copyright}',
   'libre': '''# %s
 
 # This file is part of Appy.
@@ -152,8 +157,8 @@ class Publisher(Program):
         '''Define the allowed arguments for this program'''
         parser = self.parser
         # Optional arguments
-        parser.add_argument('-c', '--commercial', help=HELP_COMMERCIAL,
-                            action='store_true')
+        add = parser.add_argument
+        add('-c', '--commercial', help=HELP_COM, action='store_true')
 
     def analyseArguments(self):
         '''Check and store arguments'''
@@ -180,7 +185,7 @@ class Publisher(Program):
 
     def executeCommand(self, cmd):
         '''Executes the system command p_cmd'''
-        print('Executing %s...' % cmd)
+        print(RUN_CMD % cmd)
         out, err = executeCommand(cmd)
         if out: print(out)
         if err: print(err)
@@ -216,7 +221,7 @@ class Publisher(Program):
             folder = self.tempFolder / py
             folder.mkdir()
             folder = folder / 'appy'
-            path = eval('%spath' % py)
+            path = eval(f'{py}path')
             shutil.copytree(path, folder)
             # Clean unwanted files and folders
             for name in self.unpublished[py][self.type]:
@@ -237,8 +242,8 @@ class Publisher(Program):
             self.applyLicense(folder)
             # Inject the Appy version in version.py
             with (folder / 'version.py').open('w') as f:
-                f.write('short = "%s"\n' % self.version)
-                f.write('verbose = "%s"' % self.versionLong)
+                f.write(f'short = "{self.version}"{bn}')
+                f.write(f'verbose = "{self.versionLong}"')
 
     def createDistutils(self):
         '''Creates a distutils package from p_self.tempFolder content'''
@@ -255,7 +260,7 @@ class Publisher(Program):
         distFolder = self.tempFolder / 'dist'
         name = os.listdir(distFolder)[0]
         # Upload it on PyPI ?
-        if self.ask('Upload %s on PyPI?' % name, default='no'):
+        if self.ask(UPLOAD_P % name, default='no'):
             self.executeCommand(['twine', 'upload', str(distFolder/name)])
 
     def run(self):
@@ -266,18 +271,24 @@ class Publisher(Program):
         with open(path3 / 'VERSION') as f:
             self.version = f.read().strip()
         # Long version includes release date and hour
-        self.versionLong = '%s (%s)' % (self.version,
-                                        time.strftime('%Y/%m/%d %H:%M'))
-        # Retrieve the path to Appy for Python 2
-        command = [self.python2, '-c', 'import appy; print(appy.__path__[0])']
-        out, err = executeCommand(command)
-        path2 = Path(out.strip())
-        print('Publishing Appy %s for Python 2 & 3...' % self.version)
+        timestamp = time.strftime('%Y/%m/%d %H:%M')
+        self.versionLong = f'{self.version} ({timestamp})'
         # As a preamble, count the number of lines of code within latest Appy
-        print('*** Stats for Appy (Python 3)...')
+        print(STATS_S)
         Counter(path3, spaces=' '*3).run()
-        print('***')
-        proceed = self.ask('Proceed ?')
+        print(STATS_E)
+        # Retrieve the path to Appy for Python 2
+        try:
+            command = [self.python2,'-c','import appy; print(appy.__path__[0])']
+            out, err = executeCommand(command)
+            path2 = Path(out.strip())
+        except FileNotFoundError:
+            # Python 2 is not here
+            print(NO_PY2 % self.python2)
+            return
+        # Start the publication process
+        print(PUB_APPY % self.version)
+        proceed = self.ask(PROCEED)
         if not proceed: sys.exit(1)
         # Clean Appy folders
         for path in (path2, path3): Cleaner(path).run(verbose=False)
@@ -286,7 +297,7 @@ class Publisher(Program):
         # Create a distutils package in this temp folder
         self.createDistutils()
         # Clean the temp folder
-        if self.ask('Clean temp folder %s?' % self.tempFolder, default='yes'):
+        if self.ask(CLEAN_T % self.tempFolder, default='yes'):
             FolderDeleter.delete(str(self.tempFolder))
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

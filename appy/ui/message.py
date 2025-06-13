@@ -98,12 +98,13 @@ class Message:
      css='''
       .message { position: fixed; bottom: 30px; right: 0px;
                  background-color: |fillColor|; color: |brightColor|;
-                 padding: 10px; z-index: 15; font-weight: bold }
+                 padding: 10px; z-index: 15; font-weight: bold;
+                 overflow-y:scroll; max-height:45em }
       .message a { color:|messageLinkColor| }
       .messageP { width: 80%; top: 35% }
       @media only screen and (hover:none) and (pointer:coarse) {
         .message { width:100%; bottom:0; text-align:center; padding:2em 0;
-                   font-size:160% }
+                   font-size:160%; overflow-y:scroll }
         .message img { margin:0 1em 0 0; width:2em }
       }
 

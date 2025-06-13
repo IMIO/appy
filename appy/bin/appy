@@ -8,7 +8,7 @@
 # lying in appy/bin.
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import sys
+import os, sys
 from pathlib import Path
 
 import appy
@@ -22,7 +22,7 @@ class MetaScript:
     '''Calls any script from appy/bin, using syntax: appy <script>'''
 
     # Script lying in appy/bin and being callable via this meta-script
-    scripts = ['make', 'oclean', 'ogrep', 'osub']
+    scripts = ['make', 'convert', 'oclean', 'ogrep', 'osub']
 
     # Doc for commands
     HELP_NO   = 'Welcome to %s !\nVersion: %%s\nInstalled in:%s\n\n' \
@@ -44,7 +44,20 @@ class MetaScript:
     def runCommand(self, command, showHelp=False):
         '''If p_showHelp is True, this method output help for this p_command.
            Else, it executes p_command, with args retrieved from sys.argv.'''
-        args = ['%s/bin/%s.py' % (appyPath, command)]
+        # Command "convert" has a non-standard location and name, in appy/pod
+        if command == 'convert':
+            part = 'pod'
+            name = 'converter'
+        else:
+            part = 'bin'
+            name = command
+        # setuptools does not seem to set permissions correctly on files. So,
+        # the <script>.py to run here may not have any "execute" permission.
+        # Consequently, we execute it as a parameter to the "python3"
+        # executable. That way, no execute permission is required on it.
+        args = ['python3', f'{appyPath}/{part}/{name}.py']
+        if os.name == 'posix':
+            args.insert(0, '/usr/bin/env')
         if showHelp:
             args.append('-h')
         else:

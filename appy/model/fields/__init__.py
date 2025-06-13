@@ -21,6 +21,10 @@ from appy.model.fields.group import Group, UiGroup
 # In this file, names "list" and "dict" refer to sub-modules. To use Python
 # builtin types, use __builtins__['list'] and __builtins__['dict']
 
+# Within a calendar field, CSS class "calicon" is used instead of "clickable".
+# Both classes have the same definition, but calendar icons must be
+# distinguished by CSS-based queries.
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 XSS_DETECTED = 'Detected Javascript in user input.'
 XSS_WARNING  = 'Your behaviour is considered a security attack. System ' \
@@ -28,8 +32,9 @@ XSS_WARNING  = 'Your behaviour is considered a security attack. System ' \
 UNINDEXED    = 'Field "%s": cannot retrieve catalog version of unindexed field.'
 AJAX_EDITED  = 'Ajax-edited %s%s on %s.'
 METH_ERROR   = 'Method %s:\n%s'
-DEF_ERR      = 'Field %d.%s: error. %s.'
+DEF_ERR      = 'Field %d.%s :: Error. %s'
 MUST_IDX_MET = 'Value for parameter "mustIndex" must be a method.'
+TYPE_KO      = 'Field %s :: Wrong type: %s (expected type: %s).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Show:
@@ -68,6 +73,9 @@ class Show:
     S   = ('edit', 'view', 'sub', 'xml')
     BS  = ('buttons', 'sub') # Both in pxButtons and within lists of objects
     BR  = ('buttons', 'result') # Appropriate for some fields like pods
+
+    # All standard layouts
+    STD = ('view', 'edit', 'result', 'xml')
 
     # All layouts but "view". To use typically when, on "view", the field value
     # is already shown as a part of some custom widget.
@@ -182,6 +190,63 @@ class Initiator:
         return True
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Validator:
+    '''Field-specific Validator class, used in the context of attribute
+       Field.validate (see Field constructor).'''
+
+    # Python < 3.7 does not have re.Pattern
+    try:
+        re.Pattern
+    except AttributeError:
+        re.Pattern = type(re.compile(''))
+
+    # All types of custom validators one may define in attribute Field.validator
+    types = (types.FunctionType, types.MethodType, re.Pattern)
+
+    # This class is not to be confused with the homonym class in package
+    # appy.ui.validator, used to validate data coming from an Appy object as
+    # rendered on the web UI.
+
+    def validate(self, value):
+        '''Return a translated error message if p_value is not valid, True
+           else.'''
+        return True
+
+    @classmethod
+    def evaluateCustom(class_, field, o, value):
+        '''Perform custom p_field validation on this p_value for this p_o(bject)
+           if a custom validator has been defined on p_field.validator.'''
+        # Do nothing if there is no valid custom validator defined on p_field
+        types = class_.types
+        validator = field.validator
+        if not validator or type(validator) not in types: return
+        # Get the storable value from the request p_value
+        value = field.getStorableValue(o, value)
+        if type(validator) == types[-1]:
+            # It is a regular expression
+            if not validator.match(value):
+                return o.translate('field_invalid')
+        else:
+            # It is a custom function: execute it
+            try:
+                valV = validator(o, value)
+                # If v_valV is a Validator object, delegate validation to its
+                # "validate" method.
+                if isinstance(valV, Validator):
+                    valV = valV.validate(o, value)
+                # Analyse the validation value v_valV
+                if isinstance(valV, str) and valV:
+                    # Validation failed: p_valV contains an error message
+                    return valV
+                else:
+                    if not valV:
+                        return o.translate('field_invalid')
+            except Exception as e:
+                return str(e)
+            except:
+                return o.translate('field_invalid')
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Field:
     '''Basic abstract class for defining any field'''
 
@@ -194,11 +259,9 @@ class Field:
 
     # Some global static variables
     nullValues = (None, '', [], {}, ())
-    validatorTypes = (types.FunctionType, types.MethodType,
-                      type(re.compile('')))
     labelTypes = ('label', 'descr', 'help')
     viewLayouts = ('view', 'cell')
-    cellLayouts = ('cell', 'query')
+    cellLayouts = ('cell', 'query', 'sub') # Cell-like layouts
 
     # Those attributes can be overridden by subclasses for defining,
     # respectively, names of CSS and Javascript files that are required by this
@@ -224,13 +287,17 @@ class Field:
     indexType = 'Index' # For most fields, the base Index class suits
 
     # By default, fields are supposed not to be "summable": they cannot be used
-    # to compute totals via appy/model/totals::Totals instances.
+    # to compute totals via appy/model/totals::Totals objects.
     summable = False
 
     # Most fields are not "freezable". Being freezable means: a field value,
     # normally produced via some computation, can store the "hard-coded"
     # (frozen) result of this computation.
     freezable = False
+
+    # Some fields may store files within object folders on the database-
+    # controlled file system. Those fields set the following attribute to True.
+    disk = False
 
     # Render a field. Optional vars:
     # * fieldName   can be given as different as field.name for fields included
@@ -242,11 +309,12 @@ class Field:
     #               (view, cell, etc), instead of layout.pxRender. While this
     #               disables some functions like master/slave relationships, it
     #               returns a more lightweight code.
+
     pxRender = Px('''<x var="minimal=minimal|False;
       showChanges=showChanges|req.showChanges == 'True';
       layout=layout|req.layout;
       isSearch=layout == 'search';
-      hostLayout=req.hostLayout;
+      hostLayout=hostLayout|req.hostLayout;
       name=fieldName or field.name|field.name;
       widgetName=f'w_{name}' if isSearch else name;
       rawValue=field.getValueIf(o, name, layout, disable=isSearch);
@@ -292,10 +360,7 @@ class Field:
            tied)">::ui.Title.get(o, target=target, baseUrl=url)</x>
        <x if="not selector and guard.mayAct(o)">:ifield.pxObjectActions</x>
       </x>
-      <div if="not mayView">
-       <img src=":svg('password')" class="iconS"/>
-       <x>:_('unauthorized')</x>
-      </div>
+      <div if="not mayView">🚫 <x>::mayView.msg | _('unconsultable')</x></div>
      </x>
 
      <!-- Any other field -->
@@ -309,11 +374,11 @@ class Field:
      <!-- The "title" field -->
      <x if="field.name == 'title'"
         var2="navInfo=mode.getNavInfo(currentNumber); target=mode.target;
-             showActions=not popup and uiSearch.showActions and guard.mayAct(o);
-            backHook=backHook|None; ohook=ohook|None">
+              backHook=backHook|None; ohook=ohook|None">
       <x if="mayView"
          var2="pageName=o.getDefaultPage('view');
-               selectJs=popup and uiSearch.initiator.jsSelectOne(q,cbId) or ''">
+               selectJs=uiSearch.initiator.jsSelectOne(q, cbId,
+                         req.onav) if popup else ''">
        <x if="hasattr(o, 'getSupTitle')">::o.getSupTitle(navInfo)</x>
        <x>::ui.Title.get(o, mode=uiSearch.getTitleMode(o, popup), nav=navInfo,
          target=target, page=pageName, popup=popup, selectJs=selectJs,
@@ -322,55 +387,9 @@ class Field:
        <span if="hasattr(o, 'getSubTitle')"
              style=":'display:%s'% ('inline' if mode.showSubTitles else 'none')"
              class="subTitle">::uiSearch.highlight(o.getSubTitle() or '')</span>
-
-       <!-- Actions -->
-       <div if="showActions" class=":class_.getSubCss(o, uiSearch)"
-            var2="layout='sub';
-                  toPopup=target and target.target != '_self';
-                  editable=guard.mayEdit(o) and not (popup and toPopup);
-                  iconsOnly=class_.getIconsOnly();
-                  locked=o.Lock.isSet(o, user, 'main')">
-
-        <!-- Fields on layout "sub" -->
-        <x if="not popup and uiSearch.showActions == 'all'"
-           var2="fields=o.getFields(layout); layout='cell'">
-         <!-- Call cell and not pxRender to avoid having a table -->
-         <x for="field in fields"
-            var2="name=field.name;
-                  value=field.getValueIf(o, name, layout)">:field.cell</x>
-        </x>
-
-        <!-- Transitions -->
-        <x if="class_.showTransitions(o, 'result')"
-           var2="workflow=o.getWorkflow()">:workflow.pxTransitions</x>
-
-        <!-- Edit -->
-        <div if="editable" class="ibutton" var2="text=_('object_edit')">
-         <a if="not locked" class="iflex1" target=":target.target"
-            onclick=":target.getOnClick(backHook or ohook)"
-            href=":o.getUrl(sub='edit', page=o.getDefaultPage('edit'),
-                            nav=navInfo, popup=toPopup)">
-          <img src=":svg('edit')" class="iconS" title=":text"/>
-         </a>
-         <x if="locked" var2="lockStyle='iconS'; page='main'">::o.Lock.px</x>
-         <div if="not iconsOnly" class="ibutton"
-              onclick="this.previousSibling.click()">:text</div>
-        </div>
-
-        <!-- Delete -->
-        <div if="not locked and guard.mayDelete(o)" class="ibutton"
-             var2="text=_('object_delete')">
-         <img class="clickable iconS" src=":svg('deleteS')" title=":text"
-              onclick=":o.class_.getDeleteConfirm(o, q, mode.hook)"/>
-         <div if="not iconsOnly" class="ibutton"
-              onclick="this.previousSibling.click()">:text</div>
-        </div>
-       </div>
+       <x if="mode.showActionsFor(o)">:mode.pxObjectActions</x>
       </x>
-      <x if="not mayView">
-       <img src=":svg('password')" class="iconS"/>
-       <x>:_('unauthorized')</x>
-      </x>
+      <div if="not mayView">🚫 <x>::mayView.msg | _('unconsultable')</x></div>
      </x>
      <!-- Any other field -->
      <x if="mayView and field.name != 'title' and field.isShowable(o, 'result')"
@@ -422,8 +441,8 @@ class Field:
     # Widgets for filtering objects (based on text) on search results
     pxFilterText = Px('''
      <div var="name=field.name;
-          filterId='%s_%s' % (mode.hook, name);
-          filterIdIcon='%s_icon' % filterId" class="fhead">
+          filterId=f'{mode.hook}_{name}';
+          filterIdIcon=f'{filterId}_icon'" class="fhead">
       <!-- Pressing the "enter" key in the field clicks the icon (onkeydown) -->
         <input type="text" size=":field.fwidth" id=":filterId"
           value=":mode.filters.get(name, '')"
@@ -447,22 +466,48 @@ class Field:
       emptyIndexValue, searchable, filterField, readPermission, writePermission,
       width, height, maxChars, colspan, master, masterValue, focus, historized,
       mapping, generateLabel, label, sdefault, scolspan, swidth, sheight,
-      persist, inlineEdit, view, cell, buttons, edit, xml, translations):
-        # The validator restricts which values may be defined. It can be an
-        # interval (1,None), a list of string values ['choice1', 'choice2'],
-        # a regular expression, a custom function, a Selection instance, etc.
+      persist, inlineEdit, view, cell, buttons, edit, custom, xml,
+      translations):
+
+        # The p_validator restricts which values may be defined. If p_validator
+        # is :
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # a method  | the method must accept the value to validate as unique
+        #           | arg, and must return True if the validation succeeds, or
+        #           | an error message if it fails. The error message must be a
+        #           | string containing a translated message. Alternately, the
+        #           | method may also return a Validator object (see the
+        #           | hereabove-defined Validator class). In that case, the
+        #           | method delegates the validation logic to the Validator
+        #           | object's "validate" method. This can be practical if the
+        #           | validation logic must be configured: validation parameters
+        #           | may be passed to the Validator constructor and used by the
+        #           | "validate" method.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # a regex   | validation will succeed if the regex matches the value ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # Some fields, like the Select field, define additional or alternate
+        # p_validator values, or define some predefined methods or Validator
+        # sub-classes. Check every Field sub-class for details.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.validator = validator
-        # Multiplicity is a 2-tuple indicating the minimum and maximum
+
+        # p_multiplicity is a 2-tuple indicating the minimum and maximum
         # occurrences of values.
         self.multiplicity = multiplicity
+
         # Is the field required or not ? (derived from multiplicity)
         self.required = self.multiplicity[0] > 0
+
         # Default value
         self.default = default
+
         # Default value on layout "edit". If None, self.default is used instead.
         self.defaultOnEdit = defaultOnEdit
+
         # Must the field be visible or not ?
         self.show = show
+
         # Is the field renderable on some layout ? If p_renderable is None,
         # default rules apply for determining what field (depending on its type)
         # can be rendered on what layout (see m_isRenderable below, overridden
@@ -471,23 +516,29 @@ class Field:
         # accept a single arg (the current layout) and must return True or
         # False.
         self.renderable = renderable
+
         # When displaying/editing the whole object, on what page and phase must
         # this field value appear ?
         self.setPage(page)
+
         # Within self.page, in what group of fields must this one appear?
         self.group = Group.get(group)
+
         # The following attribute allows to move a field back to a previous
         # position (useful for moving fields above predefined ones).
         self.move = move
+
         # If indexed is True, a database index will be set on the field for
         # fast access.
         self.indexed = indexed
+
         # If "mustIndex", True by default, is specified, it must be a method
         # returning a boolean value. Indexation will only occur when this value
         # is True.
         self.mustIndex = mustIndex
         if not mustIndex and not callable(mustIndex):
             raise Exception(MUST_IDX_MET)
+
         # For an indexed field, the value stored in the index is deduced from
         # the field value and type. If you want to store, in the index, a value
         # being transformed in some way, specify, in parameter "indexValue" a
@@ -497,6 +548,7 @@ class Field:
         # received data structure is a list of objects; the method must also
         # produce a list of objects.
         self.indexValue = indexValue
+
         # By default, an object having no value for this field will not be
         # indexed in the corresponding index (provided p_self is indexed). This
         # can be a problem if the index is used for sorting: in that case,
@@ -533,17 +585,21 @@ class Field:
         # (slighlty mis)used when sorting Ref objects. Indeed, starting with
         # Python 3, comparing value None to any other value raises an error.
         self.emptyIndexValue = emptyIndexValue
+
         # If specified "searchable", the field will be added to some global
         # index allowing to perform application-wide, keyword searches.
         self.searchable = searchable
+
         # You may need to specify another field for rendering a filter for
         # p_self. For example, by default in Appy, field "title" uses field
         # "searchable" as filter PX.
         self.filterField = filterField
+
         # The PX for filtering field values. If None, it means that the field is
         # not filterable. When a p_filterField is specified, its own filter PX
         # will be used for p_self instead of p_self.filterPx.
         self.filterPx = None
+
         # Normally, permissions to read or write every attribute in a class are
         # granted if the user has the global permission to read or write
         # instances of that class. Those global permissions are represented by
@@ -556,42 +612,67 @@ class Field:
         # list of roles that are granted this permission.
         self.readPermission = readPermission
         self.writePermission = writePermission
+
         # Widget width and height
         self.width = width
         self.height = height
+
         # While width and height refer to widget dimensions, maxChars hereafter
         # represents the maximum number of chars that a given input field may
         # accept (corresponds to HTML "maxlength" property). "None" means
         # "unlimited".
         self.maxChars = maxChars or ''
+
         # If the widget is in a group with multiple columns, the following
         # attribute specifies on how many columns to span the widget.
         self.colspan = colspan or 1
+
         # The list of slaves of this field, if it is a master
         self.slaves = []
+
         # The behaviour of this field may depend on another, "master" field
         self.setMaster(master, masterValue)
+
         # If a field must retain attention in a particular way, set focus=True.
         # It will be rendered in a special way.
         self.focus = focus
+
         # If we must keep track of changes performed on a field, "historized"
         # must be set to True.
         self.historized = historized
+
         # Mapping is a dict of contexts that, if specified, are given when
         # translating the label, descr or help related to this field.
         self.mapping = self.formatMapping(mapping)
+
+        # p_self's RAM id
         self.id = id(self)
+
+        # The name of this type
         self.type = self.__class__.__name__
-        self.pythonType = None # The True corresponding Python type
+
+        # The true Python type of the values stored form p_self
+        self.pythonType = None
+
+        # While p_self.pythonType defines the main type that will characterize
+        # most storable values, p_self.storableTypes can define more types. For
+        # example, the Float field has p_self.pythonType = float, and
+        # p_self.storableTypes = (float, int). If p_self.storableTypes is None,
+        # the only storable type will be p_self.pythonType.
+        self.storableTypes = None
+
         # Get the layouts. Consult layout.py for more info about layouts.
         self.layouts = layouts = Layouts.getFor(self, layouts)
+
         # Derive the following attributes from the layouts, determining the
         # presence of the various types of labels on this field.
         self.hasLabel = layouts.hasPart('l')
         self.hasDescr = layouts.hasPart('d')
         self.hasHelp  = layouts.hasPart('h')
+
         # Can this field have values that can be edited and validated?
         self.validable = True
+
         # By default, if the base label for a field is in use in at least one of
         # its layouts (in p_self.layouts), it will be generated automatically in
         # your app's .pot and .po files. That being said, if the base label is
@@ -599,6 +680,7 @@ class Field:
         # using it in some other, non standard place like a pod or a custom
         # report, set the following attribute to True.
         self.generateLabel = generateLabel
+
         # If you want to avoid generating translation labels for this field, and
         # use instead translations already defined on another field, use the
         # following attribute "label". A label is made of 2 parts: the prefix,
@@ -617,33 +699,46 @@ class Field:
         #                  |                 (None, name)
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.label = label
+
         # When you specify a default value "for search" (= "sdefault"), on a
         # search screen, in the search field corresponding to this field, this
         # default value will be present.
         self.sdefault = sdefault
+
         # Colspan for rendering the search widget corresponding to this field.
         self.scolspan = scolspan or 1
+
         # Width and height for the search widget
         self.swidth = swidth or width
         self.sheight = sheight or height
+
         # "persist" indicates if field content must be stored in the database.
         # For some fields it is not wanted (ie, fields used only as masters to
         # update slave's selectable values). If you place a method in attribute
         # "persist", similarly, field value will not be stored, but your method
         # will receive it and you will do whatever you want with it.
         self.persist = persist
+
         # Can the field be inline-edited (on "view" or "cell" layouts)? A method
         # can be specified. If "inlineEdit" is or returns True, a click within
         # the field value as shown on the "view" or "cell" layout will switch
         # the widget to "edit" mode. If it returns 'icon', Switching to "edit"
         # will be done via an "edit" icon.
         self.inlineEdit = inlineEdit
+
         # Any alternate PX defined in the following attributes will be used in
         # place of the standard ones.
         if view    is not None: self.view    = view
         if cell    is not None: self.cell    = cell
         if buttons is not None: self.buttons = buttons
         if edit    is not None: self.edit    = edit
+
+        # p_custom may hold a custom PX. It does not have a default PX (as is
+        # the case for the previous attributes), because it represents a
+        # completely custom addition one may define on a field, corresponding to
+        # letter "x" in a layout.
+        self.custom = custom
+
         # Standard marshallers are provided for converting values of this field
         # into XML. If you want to customize the marshalling process, you can
         # define a method in "xml" that will accept a field value and will
@@ -651,6 +746,7 @@ class Field:
         # of XML here! Simply return an alternate value, that will be
         # XML-marshalled.
         self.xml = xml
+
         # The standard system for getting field translations (label,
         # description, etc) is based on translations stored in persistent
         # Translation instances in tool.translations. But one may bypass this
@@ -684,7 +780,7 @@ class Field:
             self.descrId = f'{self.labelId}_descr'
             self.helpId  = f'{self.labelId}_help'
 
-    def __repr__(self, start='<', end='>'):
+    def __repr__(self, start='‹', end='›'):
         '''Short string representation for this field'''
         # If p_self's repr goes to the UI, using surrounding chars "<" and ">"
         # may cause XHTML escaping problems.
@@ -795,24 +891,31 @@ class Field:
            relationships.'''
         masterData = self.getMasterData()
         if not masterData: return True
-        else:
-            master, masterValue = masterData
-            if masterValue and callable(masterValue): return True
-            # Get the master value from the request
-            req = o.req
-            if (master.name not in req) and (self.name in req):
-                # The master is not there: we cannot say if the slave must be
-                # visible or not. But the slave is in the request. So we should
-                # not prevent this value from being taken into account.
-                return True
-            reqValue = master.getRequestValue(o)
-            # reqValue can be a list or not
-            if type(reqValue) not in utils.sequenceTypes:
-                return reqValue in masterValue
+        master, masterValue = masterData
+        if masterValue and callable(masterValue): return True
+        # Get the master value from the request
+        req = o.req
+        if (master.name not in req) and (self.name in req):
+            # The master is not there: we cannot say if the slave must be
+            # visible or not. But the slave is in the request. So we should
+            # not prevent this value from being taken into account.
+            return True
+        reqValue = master.getRequestValue(o)
+        # reqValue can be a list or not
+        if type(reqValue) not in utils.sequenceTypes:
+            # v_masterValue is standardized as a list. Consequently, if the
+            # request value is empty (materialized by an empty string), and
+            # v_masterValue is empty (materialized by an empty list), the master
+            # value matches.
+            if reqValue == '' and not masterValue:
+                r = True
             else:
-                for m in masterValue:
-                    for r in reqValue:
-                        if m == r: return True
+                r = reqValue in masterValue
+            return r
+        else:
+            for m in masterValue:
+                for r in reqValue:
+                    if m == r: return True
 
     def inGrid(self, layout='edit'):
         '''Is this field in a group with style "grid" ?'''
@@ -852,7 +955,7 @@ class Field:
             # layout PX).
             r = getattr(self, layout)
         else:
-            # Get the Layout instance related to p_layout and render its PX
+            # Get the Layout object related to p_layout and render its PX
             if layout in Field.cellLayouts:
                 table = self.Layouts.cell
             else:
@@ -879,7 +982,13 @@ class Field:
     def setMaster(self, master, masterValue):
         '''Initialises the master and the master value if any'''
         self.master = master
-        if master: self.master.slaves.append(self)
+        if master:
+            # Several masters are allowed in some cases
+            if isinstance(master, Field):
+                master.slaves.append(self)
+            else:
+                for mas in master:
+                    mas.slaves.append(self)
         # The semantics of attribute "masterValue" below is as follows:
         # - if "masterValue" is anything but a method, the field will be shown
         #   only when the master has this value, or one of it if multivalued;
@@ -920,9 +1029,29 @@ class Field:
         '''Returns True if p_self is an inner field within a container field'''
         return '*' in self.name
 
-    def getStoredValue(self, o, name=None, fromRequest=False):
+    def getValueAt(self, o, at):
+        '''Gets p_self's stored value on this p_o(bject), p_at this moment (a
+           DateTime object).'''
+        # Return None if p_o does not store any value for p_at
+        name = self.name
+        if name not in o.values: return
+        # Browse p_o's history (most recent first), looking for data changes
+        r = None
+        found = False # Will be True if a value has been found in p_o's history
+        for event in o.history.iter(eventType='Change'):
+            if event.date < at:
+                # What occurred before p_at is not interesting
+                break
+            # Is there a value for p_self on this change ? If yes, get it
+            elif event.hasField(name):
+                r = event.getValue(name)
+                found = True
+        # Return the historical value, if found, the currently stored value else
+        return r if found else o.values.get(name)
+
+    def getStoredValue(self, o, name=None, fromReq=False, at=None):
         '''Gets the value in its form as stored in the database, or in the
-           request if p_fromRequest is True. It differs from calling
+           request if p_fromReq is True. It differs from calling
            m_getRequestValue because here, in the case of an inner field, the
            request value is searched within the outer value build and stored on
            the request.'''
@@ -936,11 +1065,11 @@ class Field:
             if rowId == '-1': r = None # It is a template row
             else:
                 # Get the outer value
-                outerField = o.getField(outerName)
-                r = o.req[outerName] if fromRequest else outerField.getValue(o)
+                outer = o.getField(outerName)
+                r = o.req[outerName] if fromReq else outer.getValue(o, at=at)
                 # Access the inner value
                 if r:
-                    if outerField.outerType == PersistentList:
+                    if outer.outerType == PersistentList:
                         # The row ID is the index of an element from a list
                         rowId = int(rowId)
                         if rowId < len(r):
@@ -951,11 +1080,16 @@ class Field:
                         # The row ID is a key from a dict. Remove the -d- prefix
                         r = r.get(rowId[3:], None)
                         if r: r = r.get(name, None)
-            # Return an empty string if fromRequest is True
-            if fromRequest and r is None: r = ''
+            # Return an empty string if p_fromReq is True
+            if fromReq and r is None: r = ''
         else:
-            r = self.getRequestValue(o, self.name) if fromRequest \
-                else o.values.get(self.name)
+            # A standard, non-inner value
+            if fromReq:
+                r = self.getRequestValue(o, self.name)
+            elif at:
+                r = self.getValueAt(o, at)
+            else:
+                r = o.values.get(self.name)
         return r
 
     def getRequestValue(self, o, requestName=None):
@@ -995,7 +1129,7 @@ class Field:
            the suffix of the "main" HTML element.'''
         return ''
 
-    def getValue(self, o, name=None, layout=None, single=None):
+    def getValue(self, o, name=None, layout=None, single=None, at=None):
         '''Gets, on p_o(bject), the value for this field (p_self)'''
 
         # Possible values for parameters are described hereafter.
@@ -1019,8 +1153,13 @@ class Field:
         #         | is None or False, the retrieved value will be the whole
         #         | list or tuple.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # at      | This attribute may hold a DateTime object. If it is the
+        #         | case, m_getValue will get p_self's value on p_o at this
+        #         | precise date (using p_o's history and its potential data
+        #         | changes).
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Get the value from the database
-        value = self.getStoredValue(o, name)
+        value = self.getStoredValue(o, name, at=at)
         if self.isEmptyValue(o, value):
             # If there is no value, get the default value if any. Determine
             # which one must be used: p_self.default or p_self.defaultOnEdit.
@@ -1168,8 +1307,7 @@ class Field:
         inlineEdit = self.getAttribute(o, 'inlineEdit')
         if not inlineEdit: return value
         # Disable inline-edition if the user can't modify the value
-        if not o.allows(self.writePermission) or \
-           o.Lock.isSet(o, o.user, self.pageName):
+        if not o.allows(self.writePermission) or o.Lock.isSet(o, self.pageName):
             return value
         # Enable inline-edition, either via an additional icon or by clicking
         # in the value.
@@ -1198,7 +1336,7 @@ class Field:
         return eval(f'catalog.{r}') if class_ else r
 
     def getIndex(self, o):
-        '''Gets the Index instance corresponding to this field, or None if the
+        '''Gets the Index object corresponding to this field, or None if the
            field is not indexed.'''
         catalog = o.getCatalog(self.container)
         return catalog.get(self.name) if catalog else None
@@ -1260,6 +1398,24 @@ class Field:
            request is sufficient. But in some cases it may be more complex, ie
            for string multilingual fields.'''
         return (name or self.name) in req
+
+    def getMasterInRequest(self, fields, o, req):
+        '''Returns, among these p_fields, the first one having a value in the
+           p_req(uest).'''
+        # Is there a single master in p_fields ?
+        single = isinstance(fields, Field)
+        # Check first the presence of request key "_master_", being in the
+        # request if ajax-triggered.
+        masterName = req._master_
+        if masterName:
+            if single:
+                return fields if fields.name == masterName else None
+            else:
+                for field in fields:
+                    if field.name == masterName:
+                        return field
+        elif single:
+            return fields if fields.valueIsInRequest(o, req) else None
 
     def getStorableValue(self, o, value, single=False):
         '''p_value is a valid value initially computed through calling
@@ -1328,6 +1484,16 @@ class Field:
            it can be different (see Field sub-classes).'''
         return self.name
 
+    def getMasterCss(self, master, layout):
+        '''Get the CSS class(es) to set on a tag corresponding to a field having
+           this p_master.'''
+        r = f'slave*{master.getMasterTag(layout)}*'
+        if not callable(self.masterValue):
+            r += '*'.join(self.masterValue)
+        else:
+            r += '+'
+        return r
+
     def getTagCss(self, tagCss, layout):
         '''Gets the CSS class(es) that must apply to XHTML tag representing this
            field in the ui. p_tagCss may already give some base class(es).'''
@@ -1337,12 +1503,13 @@ class Field:
             # For an inner tag, it has no sense to "inherit" from p_tagCss
             r.append(tagCss)
         # Add a special class when this field is the slave of another field
-        if self.master:
-            css = f'slave*{self.master.getMasterTag(layout)}*'
-            if not callable(self.masterValue):
-                css += '*'.join(self.masterValue)
-            else:
-                css += '+'
+        master = self.master
+        if master:
+            if isinstance(master, Field):
+                # A single master
+                css = self.getMasterCss(master, layout)
+            else: # Several masters
+                css = ' '.join([self.getMasterCss(m, layout) for m in master])
             r.insert(0, css)
         # Define a base CSS class when the field is a sub-field in a List
         if isInner: r.append('no')
@@ -1412,40 +1579,35 @@ class Field:
         message = self.validateValue(o, value)
         if message: return message
         # Evaluate the custom validator if one has been specified
-        if self.validator and type(self.validator) in self.validatorTypes:
-            value = self.getStorableValue(o, value)
-            if type(self.validator) != self.validatorTypes[-1]:
-                # It is a custom function: execute it
-                try:
-                    validValue = self.validator(o, value)
-                    if isinstance(validValue, str) and validValue:
-                        # Validation failed; and p_validValue contains an error
-                        # message.
-                        return validValue
-                    else:
-                        if not validValue:
-                            return o.translate('field_invalid')
-                except Exception as e:
-                    return str(e)
-                except:
-                    return o.translate('field_invalid')
-            else:
-                # It is a regular expression
-                if not self.validator.match(value):
-                    return o.translate('field_invalid')
+        return Validator.evaluateCustom(self, o, value)
 
     def store(self, o, value):
-        '''Stores, on p_o, the p_value (produced by m_getStorableValue) that
-           complies to p_self's type definition.'''
+        '''Stores, on p_o, this p_value, that must comply to p_self's type
+           definition. When p_value is None, (a) if p_delete is False, the
+           stored value is left untouched; (b) if p_delete is True, the stored
+           value is deleted.'''
+        # When used by Appy itself, p_value is, in general, produced by
+        # m_getStorableValue.
         persist = self.persist
         if not persist: return
         elif callable(persist):
             # Do not store the value but let this method do whatever she wants
             # with it.
             self.persist(o, value)
-        else:
-            # Store the value on p_o
+            return
+        # Store p_value ...
+        if value is not None:
+            # Store the value on p_o. Perform a last type check if
+            # p_self.[storableTypes|pythonType] is defined.
+            type = self.storableTypes or self.pythonType
+            if type is not None and not isinstance(value, type):
+                typeS = type.__name__
+                wrongS = value.__class__.__name__
+                raise Exception(TYPE_KO % (self.name, wrongS, typeS))
             o.values[self.name] = value
+        # ... or delete it
+        elif self.name in o.values:
+            del o.values[self.name]
 
     def storeValueFromAjax(self, o, value, currentValues):
         '''Called by m_storeValueFromAjax to save p_value on p_o'''
@@ -1464,7 +1626,7 @@ class Field:
         req = o.req
         if req.cancel == 'True': return
         # Get the new value
-        reqValue = req.fieldContent
+        reqValue = self.getRequestValue(o, requestName='fieldContent')
         # Are we working on a normal or inner field ?
         if not self.isInner():
             # A normal field. Remember its previous value if it is historized.
@@ -1496,8 +1658,8 @@ class Field:
             value[i] = row.clone()
             # Store the complete value again on p_o
             o.values[outer.name] = value
-        # Update p_o's last modification date
-        o.modified = DateTime()
+        # Update p_o's last modification date and modifier
+        o.history.noteUpdate()
         o.reindex()
         o.log(AJAX_EDITED % (self.name, part, o.id))
 
@@ -1528,6 +1690,12 @@ class Field:
            value or the result of a method call on p_o.'''
         r = getattr(self, name)
         return self.callMethod(o, r, cache=cache) if callable(r) else r
+
+    def getDisabled(self, o):
+        '''For sub-classes that propose attribute "disabled", this method allows
+           to answer the question: must p_self be disabled on the "edit"
+           layout ?'''
+        return self.getAttribute(o, 'disabled', cache=False)
 
     def getGroup(self, layout):
         '''Gets the group into wich this field is on p_layout'''
@@ -1643,13 +1811,85 @@ class Field:
         prefix = 's' if isSearch else ''
         width = getattr(self, f'{prefix}width')
         if isinstance(width, int): return width
-        if isinstance(width, str) and width.endswith('px'):
-            return int(int(width[:-2]) / 5)
-        return 30 # Other units are currently not supported
+        r = 30
+        if isinstance(width, str):
+            if width.endswith('px'):
+                r = int(int(width[:-2]) / 5)
+            elif width.endswith('em'):
+                # "float" is hidden by module appy.model.fields.float
+                r = int(__builtins__['float'](width[:-2]) * 2)
+        return r # Other units are currently not supported
 
     def getListHeader(self, c):
         '''When p_self is used as inner-field, within a table-like rendered
            container field, this method returns the content of the header row
            corresponding to this inner field.'''
         return c._('label', field=self)
+
+    def getValueIfEmpty(self, o):
+        '''Get the value to display if the field is empty'''
+        # This is only available for fields defining non-standard attrbute
+        # "valueIfEmpty".
+        r = self.valueIfEmpty
+        if callable(r): r = r(o)
+        return r
+
+    def deleteFiles(self, o):
+        '''Deletes any potential file related to this field (p_self), that would
+           be stored in the disk folder for this p_o(bject).'''
+        # By default, a field does not store anything in object folders, so this
+        # base method does nothing. Fields that override this method must also
+        # set static attribute <SubField>.disk to True.
+
+    @classmethod
+    def asXhtml(class_, o, fields=None, css='small', ignoreEmpty=True,
+                custom=None, thWidth='40%'):
+        '''Renders a HTML table containing field values for this o_o(bject)'''
+        # If p_fields is not None, it contain names of fields that will be part
+        # of the result. If None, all p_o(bject) fields will be part of the
+        # result.
+        #
+        # p_css is the name of the CSS class that will be applied to the main
+        # "table" tag.
+        #
+        # If p_ignoreEmpty is True, any field whose value is empty on p_o will
+        # be ignored.
+        #
+        # If p_custom is passed, it is a dict of functions allowing to produce a
+        # custom rendering for some fields. If you want to produce a custom
+        # rendering for field named "f1", pass, in p_custom, a dict having a
+        # entry whose key is "f1" and whose value is a function. This latter
+        # must accept, as args, (1) the concerned object and (2) the Field
+        # object whose name is "f1", and must return a string containing a
+        # complete "tr" tag and sub-tags (as a string) that must represent the
+        # field label and its value, in any form. Note that a standard entry in
+        # the table has 2 cells: the first one (a "th") contains field labels
+        # and the second one (a "td") contains field values.
+        #
+        # Width for the 1st column is determined by p_thWidth.
+        rows = []
+        fields = fields or o.class_.fields.values()
+        first = True
+        for field in fields:
+            # p_field can be a Field object or the name of a field (as a string)
+            field = o.getField(field) if isinstance(field, str) else field
+            name = field.name
+            # Ignore empty values
+            if ignoreEmpty and o.isEmpty(name): continue
+            # Get the row content
+            thStyle = f' style="width:{thWidth}"' if first else ''
+            if custom and name in custom:
+                row = custom[name](o, field)
+            else:
+                # Standard content: dump 2 cells: one containing the field
+                # label, the second containing the field value.
+                text = o.translate('label', field=field)
+                value = o.getShownValue(name)
+                if isinstance(value, __builtins__['list']):
+                    value = ', '.join(value)
+                row = f'<tr><th{thStyle}>{text}</th><td>{value}</td></tr>'
+                first = False
+            rows.append(row)
+        rows = '\n'.join(rows)
+        return f'<table class="{css}">{rows}</table>'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

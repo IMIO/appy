@@ -9,7 +9,7 @@ from appy.utils import string as sutils
 from appy.model.utils import Object as O
 
 # Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-FIELD_NOT_FOUND = 'field %s::%s was not found.'
+FIELD_NF  = 'field %s::%s was not found.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Validator:
@@ -45,16 +45,15 @@ class Validator:
         self.saveConfirmed = saveConfirmed
 
     def intraFieldValidation(self, fields=None):
-        '''This method performs field-specific validation for every field from
-           the page being created or edited. For every field whose validation
-           generates an error, we add an entry in p_self.errors. For every
-           field, we add in p_self.values an entry with the "ready-to-store"
-           field value.
+        '''Performs field-specific validation for every field from the page
+           being created or edited.'''
+        # For every field whose validation generates an error, an entry is added
+        # in p_self.errors. For every field, we add in p_self.values an entry
+        # with the "ready-to-store" field value.
 
-           Il p_fields are given, we use them instead of getting currently
-           edited fields on the current page for p_self.o. ie, p_fields can be
-           fields from a switch.
-        '''
+        # Il p_fields are given, we use them instead of getting currently edited
+        # fields on the current page for p_self.o. ie, p_fields can be fields
+        # from a switch.
         o = self.o
         page = self.req.page or 'main'
         # Browse p_o's fields
@@ -72,7 +71,8 @@ class Validator:
             self.fields.append(field)
             self.fieldsByName[field.name] = field
             # Validate inner fields within outer fields
-            if field.outer: field.subValidate(o, value, self.errors)
+            if field.outer and value is not None:
+                field.subValidate(o, value, self.errors)
             # Validate fields inside switch fields
             if field.type == 'Switch':
                 fieldset, subFields = field.getChosenFields(o, fieldset=value)
@@ -104,7 +104,7 @@ class Validator:
            already stored in p_r are in dict p_messages.'''
         if message in messages:
             # We have already encountered this message
-            r[messages[message]][0] += '<br/>%s' % label
+            r[messages[message]][0] += f'<br/>{label}'
         else:
             r.append([label, message])
             messages[message] = len(r) - 1
@@ -141,7 +141,7 @@ class Validator:
             field = self.fieldsByName.get(name)
             if not field:
                 label = name
-                o.log(FIELD_NOT_FOUND % (o.class_.name, name), type='error')
+                o.log(FIELD_NF % (o.class_.name, name), type='error')
             else:
                 label = _('label', field=field)
             self.addMessage(r, messages, label, summaryMessage)
@@ -190,5 +190,5 @@ class Validator:
             array = sutils.getStringFrom(validator.errors.d())
         else:
             array = 'null'
-        return 'var errors = %s;' % array
+        return f'var errors = {array};'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

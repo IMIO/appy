@@ -33,10 +33,10 @@ class State:
         '''Lazy initialisation'''
         self.workflow = workflow
         self.name = name
-        self.labelId = '%s_%s' % (workflow.name, name)
+        self.labelId = f'{workflow.name}_{name}'
 
     def __repr__(self):
-        return '<state %s::%s>' % (self.workflow.name, self.name)
+        return f'‹State {self.workflow.name}::{self.name}›'
 
     def copyPerms(self):
         '''Gets a deep copy of this state's permissions dict'''
@@ -136,10 +136,11 @@ class State:
         if isinstance(roleNames, str): roleNames = (roleNames,)
         if isinstance(permissions, str): permissions = (permissions,)
         for perm in self.permissions:
-            if permissions and (perm not in permissions): continue
+            if permissions and perm not in permissions: continue
             roles = self.permissions[perm] = {}
-            for name in roleNames:
-                roles[name] = self.getRole(name)
+            if roleNames: # p_roleNames may be None
+                for name in roleNames:
+                    roles[name] = self.getRole(name)
 
     def replaceRole(self, oldRoleName, newRoleName, permissions=()):
         '''Replaces p_oldRoleName by p_newRoleName. If p_permissions is

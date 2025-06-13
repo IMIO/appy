@@ -29,26 +29,26 @@ class Switch(Field):
       writePermission='write', width=None, height=None, maxChars=None,
       colspan=1, master=None, masterValue=None, focus=False, mapping=None,
       generateLabel=None, label=None, scolspan=1, swidth=None, sheight=None,
-      inlineEdit=False, view=None, cell=None, buttons=None, edit=None, xml=None,
-      translations=None):
+      inlineEdit=False, view=None, cell=None, buttons=None, edit=None,
+      custom=None, xml=None, translations=None):
         # p_fields must be a tuple of fieldsets of the form
         #                        ~((s_name, fields),)~
-        # Within this tuple, every "fields" entry is itelf a tuple of the form
-        #                         ~((s_name, Field),)~
+        # Within this tuple, every "fields" entry is a dict of the form
+        #                         ~{s_name: Field}~
         self.fields = fields
         # Call the base Field constructor
-        Field.__init__(self, validator, (0,1), None, None, show, renderable,
-          page, group, layouts, move, False, True, None, None, False, None,
+        super().__init__(validator, (0,1), None, None, show, renderable, page,
+          group, layouts, move, False, True, None, None, False, None,
           readPermission, writePermission, width, height, None, colspan, master,
           masterValue, focus, False, mapping, generateLabel, label, False,
           scolspan, swidth, sheight, True, inlineEdit, view, cell, buttons,
-          edit, xml, translations)
+          edit, custom, xml, translations)
 
     def init(self, class_, name):
         '''Switch-specific lazy initialisation'''
         Field.init(self, class_, name)
         for case, fields in self.fields:
-            for sub, field in fields:
+            for sub, field in fields.items():
                 field.init(class_, sub)
 
     def getChosenFields(self, o, layout='view', fieldset=None):
@@ -76,19 +76,19 @@ class Switch(Field):
                     # one if the switch has not master.
                     fieldset = self.fields[0][0]
         # Return an empty list of fields if we haven't a fieldset
-        if not fieldset: return fieldset, ()
+        if not fieldset: return fieldset, {}
         # Get the list of fields corresponding to the chosen fieldset
         for name, fields in self.fields:
             if name == fieldset:
-                return fieldset, [field for name, field in fields]
-        return fieldset, ()
+                return fieldset, fields
+        return fieldset, {}
 
     def injectFields(self, meta, class_, r):
         '''Adds, in dict p_r, any switch sub-field'''
         # p_r is a dict of fields that will be stored on p_self's p_meta-class,
         # as attribute "switchFields".
         for case, fields in self.fields:
-            for name, field in fields:
+            for name, field in fields.items():
                 # Ensure this name can be used
                 meta.checkFieldName(class_, name)
                 r[name] = field

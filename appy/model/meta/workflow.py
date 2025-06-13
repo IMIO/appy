@@ -159,7 +159,7 @@ class Workflow(Meta):
         currentState = self.states[o.state]
         # Walk workflow transitions
         for transition in self.transitions.values():
-            # Filter transitions that do not have currentState as start state
+            # Filter transitions that do not have v_currentState as start state
             if not transition.hasState(currentState, True): continue
             # Check if the transition can be triggered
             mayTrigger = transition.isTriggerable(o)
@@ -206,7 +206,9 @@ class Workflow(Meta):
     # Displays transitions as icons or buttons for an object (variable "o")
     pxTransitions = Px('''
      <x var="transitions=transitions|workflow.getTransitions(o)"
-        if="transitions" var2="formId='trigger_%d' % o.iid">
+        if="transitions"
+        var2="formId=f'trigger_{o.iid}';
+              forceIcons=forceIcons|False">
       <form id=":formId" method="post" style="display:none"
             data-baseurl=":o.url">
        <input type="hidden" name="popup" value=":popup"/>

@@ -9,8 +9,8 @@ from appy.model.searches import Search
 from appy.model.fields.text import Text
 from appy.model.fields.date import Date
 from appy.model.fields import Field, Show
-from appy.ui.layout import Layouts, Layout
 from appy.model.fields.string import String
+from appy.ui.layout import Layouts, Layout, LayoutF
 
 # Error messages - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 UNFREEZ   = 'This field is unfreezable.'
@@ -28,6 +28,8 @@ class Computed(Field):
         gd = Layouts('f-drvl')
         # Idem, but with a help icon
         gdh = Layouts('f-dhrvl')
+        # Label and content on a *s*ingle line
+        s = Layouts(edit=LayoutF('lf'))
 
     # Values produced by a Computed fields may be summable
     summable = True
@@ -55,8 +57,9 @@ class Computed(Field):
       master=None, masterValue=None, focus=False, historized=False,
       mapping=None, generateLabel=None, label=None, sdefault='', scolspan=1,
       swidth=None, sheight=None, fwidth=4, context=None, view=None, cell=None,
-      buttons=None, edit=None, xml=None, translations=None, unfreezable=False,
-      validable=False, pythonType=None, matchDefault='precise'):
+      buttons=None, edit=None, custom=None, xml=None, translations=None,
+      unfreezable=False, validable=False, pythonType=None,
+      matchDefault='precise'):
         # The Python method used for computing the field value, or a PX
         self.method = method
         # A specific method for producing the formatted value of this field.
@@ -95,7 +98,7 @@ class Computed(Field):
         #                |     index and use a Ref field for storing lists of
         #                |     objects ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #   "DateIndex"  | ... if your field stores DateTime instances ;
+        #   "DateIndex"  | ... if your field stores DateTime objects ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #   "TextIndex"  | ... if your field stores raw text and you want to
         #                |     index words found in it ;
@@ -115,12 +118,12 @@ class Computed(Field):
         #                |     Integer, String or Select.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Call the base constructor
-        Field.__init__(self, None, multiplicity, default, defaultOnEdit, show,
+        super().__init__(None, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, filterField, readPermission,
           writePermission, width, height, None, colspan, master, masterValue,
           focus, historized, mapping, generateLabel, label, sdefault, scolspan,
-          swidth, sheight, False, False, view, cell, buttons, edit, xml,
+          swidth, sheight, False, False, view, cell, buttons, edit, custom, xml,
           translations)
         # When a custom widget is built from a computed field, its values are
         # potentially editable and validable, so "validable" must be True.
@@ -179,7 +182,7 @@ class Computed(Field):
         context = o.traversal.getContext()
         # Complete the context when relevant
         custom = self.context
-        custom = custom if not callable(custom) else custom(o)
+        custom = custom(o) if callable(custom) else custom
         if custom:
             context.update(custom)
         return px(context)
@@ -209,12 +212,12 @@ class Computed(Field):
         if isinstance(r, Search): return r
 
     def getValue(self, o, name=None, layout=None, single=None,
-                 forceCompute=False):
+                 forceCompute=False, at=None):
         '''Computes the field value on p_obj or get it from the database if it
            has been frozen.'''
         # Is there a database value ?
         if not self.unfreezable and not forceCompute:
-            r = o.values.get(self.name)
+            r = super().getValue(o, name, layout, single, at)
             if r is not None: return r
         # Compute the value
         meth = self.method

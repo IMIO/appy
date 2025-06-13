@@ -47,12 +47,19 @@ class Group(Base):
                    validator=validateLogin, **m)
 
     # Field allowing to determine which roles are granted to this group
-    roles = Select(validator=Selection(lambda o: o.model.getGrantableRoles(o)),
-                   render='checkbox', multiplicity=(0,None), **m)
+
+    def selectRoles(self):
+        '''Get the selectable roles'''
+        return self.model.getGrantableRoles(self, checkManager=True)
+
+    roles = Select(render='checkbox', multiplicity=(0,None),
+      validator=Selection(selectRoles,
+                  single=lambda o, role: o.translate(f'role_{role}')), **m)
 
     users = Ref(User, multiplicity=(0,None), add=False, link='popup',
       height=15, back=Ref(attribute='groups', show=User.showRoles,
-                          multiplicity=(0,None), label='User'),
+                          multiplicity=(0,None), label='User',
+                          group=User.baseGroup, render='links'),
       showHeaders=True, shownInfo=('title', 'login', 'state*100px|'),
       actionsDisplay='inline', label='Group', group=m['group'])
 

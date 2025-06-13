@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -277,7 +279,7 @@ class Converter:
                  stream='auto', pageStart=1, verbose=False):
         # The server and port where LibreOffice listens
         self.server = server
-        self.port = port
+        self.port = port or DEFAULT_PORT
         # The path to the document to convert
         self.docUrl, self.docPath = self.getFilePath(docPath)
         self.inputType = self.getInputType(docPath)
@@ -361,9 +363,8 @@ class Converter:
     def getCustomFunctions(self, script):
         '''Compiles and executes the Python p_script and returns a dict
            containing its namespace.'''
-        f = open(script)
-        content = f.read()
-        f.close()
+        with open(script) as f:
+            content = f.read()
         names = {}
         exec(compile(content, script, 'exec'), names)
         return names
@@ -587,6 +588,20 @@ class Converter:
         textCursor.PageDescName = 'Standard'
         textCursor.PageNumberOffset = self.pageStart
 
+    def updateOdsDocument(self):
+        '''Optimize column width if requested'''
+        if not self.optimalColumnWidths: return
+        # Browse sheets
+        log = self.log
+        for sheet in LoIter(self.doc.getSheets(), log):
+            # Compute the number of used columns
+            remains = len(sheet.getColumnDescriptions())
+            for column in LoIter(sheet.getColumns(), log):
+                # Stop if we have reached the last used column
+                if not remains: break
+                column.OptimalWidth = True
+                remains -= 1
+
     def updateOdtDocument(self):
         '''If the input file is an ODT document, we will perform those tasks:
            1) update all indexes;
@@ -606,10 +621,10 @@ class Converter:
         # documents in their entirery: because, with some early LO 6.x versions,
         # it could happen that resulting PDF results were truncated. But in some
         # rare cases, those lines caused LO to run 100% CPU in an infinite loop.
-        # ~~~
+        #
         # viewCursor.jumpToLastPage()
         # viewCursor.jumpToEndOfPage()
-        # ~~~
+        #
         # 1) Update indexes
         for index in LoIter(self.doc.getDocumentIndexes(), log):
             if index.ServiceName == 'com.sun.star.text.ContentIndex':
@@ -706,7 +721,10 @@ class Converter:
             self.log(' done.')
             # [ODT] Perform additional tasks
             isOdt = self.inputType == 'odt'
-            if isOdt: self.updateOdtDocument()
+            if isOdt:
+                self.updateOdtDocument()
+            elif self.inputType == 'ods':
+                self.updateOdsDocument()
             try:
                 self.doc.refresh()
             except AttributeError:
@@ -724,13 +742,6 @@ class Converter:
         # Available PDF options are documented @HELP_PDF_URL (see above)
         r = self.props(self.pdfOptions.items())
         return uno.Any("[]com.sun.star.beans.PropertyValue", r)
-        # Getting the LO's PDF configuration to update it does not work (tested
-        # with LO 5.3).
-        #path = '/org.openoffice.Office.Common/Filter/PDF/Export/'
-        #config = self.getConfig(path, update=True)
-        #config.setPropertyValue('ExportNotes', True)
-        # Or: config.ExportNotes = True
-        #config.commitChanges()
 
     def convertDocument(self):
         '''Calls LO to perform a document conversion. Note that the conversion
@@ -781,19 +792,25 @@ class Converter:
             self.log('Done in %.2f second(s).' % (time.time() - start))
 
 # ConverterScript constants  - - - - - - - - - - - - - - - - - - - - - - - - - -
-WRONG_NB_OF_ARGS = 'Wrong number of arguments.'
-ERROR_CODE = 1
-usage = '''usage: python3 converter.py fileToConvert output [options]
+
+ARGS_KO = 'Wrong nb of arguments. Run the command with -h option to get help.'
+ERR_COD = 1
+
+usage = f'''usage: appy convert fileToConvert output [options]
+ or  : python3 converter.py fileToConvert output [options]
 
    "fileToConvert" is the absolute or relative pathname of the file you
    want to convert (or whose content like indexes need to be refreshed)
    
-   "output" can be the output format, that must be one of: %s
+   "output" can be the output format, that must be one of:
+            {", ".join(FILE_TYPES)}
             or can be the absolute path to the result file, whose extension must
             correspond to a valid output format.
 
-   "python" should be a UNO-enabled Python interpreter (ie the one which is
-   included in the LibreOffice distribution).''' % str(FILE_TYPES.keys())
+   The Python interpreter running this command must be UNO-enabled (ie, the one
+   being included in the LibreOffice distribution).
+
+   LibreOffice must be running in server mode prior to running this command.'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ConverterScript:
@@ -830,10 +847,9 @@ class ConverterScript:
             metavar='PAGESTART', type='int', help=HELP_PAGE_START)
         options, args = optParser.parse_args()
         if len(args) != 2:
-            sys.stderr.write(WRONG_NB_OF_ARGS)
+            sys.stderr.write(ARGS_KO)
             sys.stderr.write('\n')
-            optParser.print_help()
-            sys.exit(ERROR_CODE)
+            sys.exit(ERR_COD)
         # Apply relevant type conversions to options
         optimize = options.optimalColumnWidths
         if optimize in ('True', 'False'): optimize = eval(optimize)
@@ -852,8 +868,7 @@ class ConverterScript:
         except Converter.Error as err:
             sys.stderr.write(str(err))
             sys.stderr.write('\n')
-            optParser.print_help()
-            sys.exit(ERROR_CODE)
+            sys.exit(ERR_COD)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if __name__ == '__main__':

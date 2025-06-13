@@ -21,11 +21,10 @@ from appy.model.fields.password import Password
 
 # Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 KO_LOG_TFM  = 'Invalid value "%s" for attribute "loginTransform".'
-KO_PERM     = '%s "%s": "%s" disallowed%s.'
+KO_PERM     = '%s ⛁ %s: « %s » disallowed%s.'
 AUTH_KO     = 'Authentication failed with login %s.'
 AUTH_OK     = 'Logged in.'
 LOGGED_OUT  = 'Logged out.'
-COOKIE_KO   = 'Unreadable cookie (%s).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -37,11 +36,18 @@ class Config:
     def __init__(self):
         # Activate or not the button on home page for asking a new password
         self.activateForgotPassword = True
+        # During the procedure for generating a new password, a security token
+        # is generated. Indicate here, in minutes, this token's validity.
+        self.forgotTokenValidity = 2
         # By default, when creating a local user, Appy generates a password for
         # him and tries to send him by email. If you want to disable this and
         # manage yourself, in your app's User.onEdit method, generation and
         # sending of passwords, set the following attribute to False.
         self.generatePassword = True
+        # By default, the action for resetting a user's password is available to
+        # anyone having write access to the user. If you want to restrict this
+        # action to Managers only, set the following attribute to True.
+        self.resetPasswordForManagers = False
         # On user log on, you may want to ask them to choose their
         # "authentication context" in a list. Such a context may have any
         # semantics, is coded as a string and will be accessible on the Handler
@@ -71,6 +77,9 @@ class Config:
         # "cookieWarning" must contain the name of an attribute on the tool,
         # that must store the URL of a page displaying the privacy policy.
         self.cookieWarning = False
+        # Who has access to the Python UI console ? In this set, place only
+        # logins of users having the Manager role.
+        self.consoleUsers = {'admin'}
 
     def getLdap(self):
         '''Returns the LDAP config if it exists'''
@@ -106,6 +115,12 @@ class Config:
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Unauthorized(Exception):
     '''Error that is raised when a security problem is encountered'''
+
+    def __init__(self, text, translated=None):
+        # p_text contains technical details about the error
+        super().__init__(text)
+        # p_translated contains a potentially translated, human-targeted message
+        self.translated = translated
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Guard:
@@ -218,6 +233,7 @@ class Guard:
         '''Has the user p_permission on p_o ?'''
         r = self.user.hasPermission(permission, o)
         if not r and raiseError:
+            # Raise an Unauthorized exception
             s = self.stringInfo(info)
             raise Unauthorized(KO_PERM % (o.class_.name, o.id, permission, s))
         return r
@@ -230,10 +246,13 @@ class Guard:
            will see an empty edit form.'''
         return multicall(o, 'mayAct', True)
 
-    def mayDelete(self, o):
+    def mayDelete(self, o, perm=True):
         '''May the currently logged user delete this p_o(bject) ?'''
-        r = self.allows(o, 'delete')
-        if not r: return
+        # Check the base p_perm(ission) if requested. It can be disabled if the
+        # caller knows that this permission has already been checked.
+        if perm:
+            r = self.allows(o, 'delete')
+            if not r: return
         # An additional, user-defined condition, may refine the base permission
         return multicall(o, 'mayDelete', True)
 
@@ -264,15 +283,19 @@ class Guard:
         '''May the user view this p_o(bject) ? p_permission can be a field-
            specific permission. If p_raiseError is True, if the user may not
            view p_o, an error is raised.'''
-        # Check m_mayEdit hereabove to know what p_info is all about
-        r = self.allows(o, permission, raiseError=raiseError, info=info)
-        if not r: return
+        # Standard p_permission check may already have been performed (ie, by
+        # the traversal); in that case, m_mayView could be called with
+        # p_permission being None.
+        if permission:
+            # Consult m_mayEdit hereabove to know what p_info is all about
+            r = self.allows(o, permission, raiseError=raiseError, info=info)
+            if not r: return
         # An additional, user-defined condition, may refine the base permission
         r = multicall(o, 'mayView', True)
         if not r and raiseError:
             method = f'{o.class_.name}::mayView'
             s = self.stringInfo(info)
-            raise Unauthorized(KO_PERM % (method, o.id, permission, s))
+            raise Unauthorized(KO_PERM % (method, o.id, permission or 'read',s))
         return r
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -367,72 +390,79 @@ class Guard:
     def askPasswordReinit(self, tool):
         '''A user (anonymous) does not remember its password. Send him a mail
            containing a link that will trigger password re-initialisation.'''
-        login = tool.req.rlogin
+        login = (tool.req.rlogin or '').strip()
         _ = tool.translate
         # All return messages must not be fleeting
         tool.resp.fleetingMessage = False
         if not login:
-            return tool.goto(message=_('action_ko'))
-        login = login.strip()
+            return tool.goto(message=_('missing_login'))
         user = tool.search1('User', login=login)
         message = _('reinit_mail_sent')
         if not user:
             # Return the message nevertheless. This way, malicious users can't
             # deduce information about existing users.
             return tool.goto(message=message)
-        # If login is an email, use it. Else, use user.email instead.
-        email = user.login
-        if not String.EMAIL.match(email):
-            email = user.email
-        if not email:
+        # Get the mail recipient for this user
+        recipient = user.getMailRecipient()
+        if not recipient:
             # Impossible to re-initialise the password
             return tool.goto(message=message)
         # Create a temporary file whose name is the user login and whose
         # content is a generated token.
         token = Password().generate()
-        with (Path(putils.getOsTempFolder()) / login).open('w') as f:
+        with (putils.getOsTempFolder(asPath=True) / login).open('w') as f:
             f.write(token)
         # Send an email
         urlI = f'{tool.url}/guard/doPasswordReinit?login={login}&token={token}'
         subject = _('reinit_password')
         map = {'url':urlI, 'siteUrl':tool.siteUrl}
         body= _('reinit_password_body', mapping=map, asText=True)
-        tool.sendMail(email, subject, body)
+        tool.sendMail(recipient, subject, body)
         return tool.goto(message=message)
 
     traverse['doPasswordReinit'] = True
     def doPasswordReinit(self, tool):
         '''Performs the password re-initialisation'''
+        siteUrl = tool.computeHomePage()
+        _ = tool.translate
+        # All return messages must not be fleeting
+        tool.resp.fleetingMessage = False
+        # This can only be triggered by the anonymous user
+        if not self.user.isAnon():
+            tool.goto(siteUrl, _('for_anon_only'))
+            return
         req = tool.req
         login = req.login
         token = req.token
-        _ = tool.translate
-        siteUrl = tool.computeHomePage()
-        # All return messages must not be fleeting
-        tool.resp.fleetingMessage = False
         # Stop if the URL was called with missing parameters
         if not login or not token:
             return tool.goto(siteUrl, _('wrong_password_reinit'))
-        # Check if such token exists in temp folder
-        tokenFile = Path(putils.getOsTempFolder()) / login
-        if tokenFile.exists():
+        # Check if such token exists and is still valid
+        tokenFile = putils.getOsTempFolder(asPath=True) / login
+        validity = tool.config.security.forgotTokenValidity
+        if tokenFile.exists() and putils.isLessThan(tokenFile, validity):
             with tokenFile.open() as f:
                 storedToken = f.read()
-                if storedToken == token:
-                    # A commit is required
+            if storedToken == token:
+                # Authenticate the user and take him to his "change
+                # password" page.
+                user = tool.search1('User', login=login)
+                if user and user.source == 'zodb':
+                    # A commit will be required
                     tool.H().commit = True
                     # Generate a new password for this user
-                    user = tool.search1('User', login=login)
                     newPassword = Password().generate()
                     user.password = newPassword
-                    # Send the new password by email
-                    recipient = user.getMailRecipient()
-                    subject = _('new_password')
-                    map = {'password': newPassword, 'siteUrl': tool.siteUrl}
-                    body = _('new_password_body', mapping=map, asText=True)
-                    tool.sendMail(recipient, subject, body)
+                    user.changePasswordAtNextLogin = True
+                    # Simulate an authentication
+                    req.authInfo = True
+                    req.login = user.login
+                    req.password = newPassword
+                    user = user.authenticate(self)
+                    backUrl = f'{user.url}/edit?page=password'
+                    # Delete the token file
                     tokenFile.unlink()
-                    return tool.goto(siteUrl, _('new_password_sent'))
+                    return tool.goto(backUrl, _('password_redefine'))
         # If here, something went wrong
         return tool.goto(siteUrl, _('wrong_password_reinit'))
 
@@ -444,22 +474,32 @@ class Guard:
     # content.
     pxLoginBottom = Px('')
 
-    def getLoginLogo(self, tool, discreet, url):
+    def getLoginLogo(self, tool, discreetBox, url):
         '''Returns the possibly clickable logo to include in the login box'''
         # Compute the "img" tag representing the logo
         r = f'<img src="{url("loginLogo")}"/>'
         # Wrap it, when appropriate, in a link allowing to go back to the public
         # or home page.
-        if discreet == 'home' and tool.defaultPage:
+        if discreetBox:
+            r = f'<a onclick="goto(siteUrl)" class="clickable">{r}</a>'
+        elif tool.defaultPage and tool.config.ui.discreetLogin == 'home':
             r = f'<a onclick="goto(siteUrl+\'/tool/public\')" ' \
                 f'class="clickable">{r}</a>'
-        elif discreet:
-            r = f'<a onclick="goto(siteUrl)" class="clickable">{r}</a>'
         return r
 
     def getLoginBoxCss(self, discreet):
         '''Get the CSS class(es) for the main login box tag'''
         return 'loginBox boxD' if discreet == True else 'loginBox'
+
+    # The link to open the login box, if we are in "discreet login" mode
+    pxLoginLink = Px('''
+     <div class="textIcon" id="loginIcon" name="loginIcon"
+          var2="loginUrl=guard.getLoginUrl(_ctx_)">
+      <a href=":loginUrl">
+       <img if="showLoginIcon" src=":svg('login')" class="icon textIcon"/>
+      </a>
+      <a href=":loginUrl"><span>:_('app_connect')</span></a>
+     </div>''')
 
     # The login form
     pxLogin = Px('''
@@ -470,10 +510,10 @@ class Guard:
             action=":f'{tool.url}/guard/askPasswordReinit'">
        <div align="center">
         <p>:_('app_login')</p>
-        <input type="text" size="35" name="rlogin" id="rlogin" value=""/>
+        <input type="text" size="35" name="rlogin" id="rlogin" value=""
+               required="required"/>
         <br/><br/>
-        <input type="button" onclick="doAskPasswordReinit()"
-               value=":_('ask_password_reinit')"/>
+        <input type="submit" value=":_('ask_password_reinit')"/>
         <input type="button" onclick="closePopup('askPasswordReinitPopup')"
                value=":_('object_cancel')"/>
        </div>
@@ -482,18 +522,17 @@ class Guard:
 
      <!-- The login box -->
      <div var="cfg=config.security;
-               discreet=config.ui.discreetLogin or
-                        (isAnon and _px_.name == 'public');
-               display='none' if discreet and not req.stay else 'block'"
-          class=":guard.getLoginBoxCss(discreet)"
+               discreetBox=showLoginBox == 'discreet';
+               display='none' if discreetBox and not req.stay else 'block'"
+          class=":guard.getLoginBoxCss(discreetBox)"
           style=":f'display:{display}'">
 
       <!-- Allow to hide the box when relevant -->
-      <img if="discreet == True" src=":svg('close')" style="float:right"
+      <img if="discreetBox" src=":svg('close')" style="float:right"
            onclick="toggleLoginBox(false)" class="clickable iconXS"/>
 
       <!-- A (possibly clickable) logo -->
-      <div align="center">::guard.getLoginLogo(tool, discreet, url)</div>
+      <div align="center">::guard.getLoginLogo(tool, discreetBox, url)</div>
 
       <h1>::_('app_name')</h1>
       <center class="sub">:_('please_connect')</center>
@@ -503,9 +542,11 @@ class Guard:
 
        <!-- Login fields  -->
        <center><input type="text" name="login" id="login" value=""
-                   placeholder=":_('app_login')"/></center>
+                placeholder=":_('app_login')" autofocus="autofocus"
+                required="required"/></center>
+
        <center><input type="password" name="password" id="password"
-                placeholder=":_('app_password')"/></center>
+                placeholder=":_('app_password')" required="required"/></center>
 
        <!-- The authentication context -->
        <x var="ctx=cfg.authContext"
@@ -540,19 +581,6 @@ class Guard:
       <!-- Custom zone -->
       <x>:guard.pxLoginBottom</x>
      </div>''',
-
-     js='''
-       // Function triggered when the user asks password reinitialisation
-       function doAskPasswordReinit() {
-         // Check that the user has typed a login
-         var f = document.getElementById('askPasswordReinitForm'),
-             login = f.rlogin.value.replace(' ', '');
-         if (!login) { f.rlogin.style.background = wrongTextInput; }
-         else {
-           closePopup('askPasswordReinitPopup');
-           f.submit();
-         }
-       }''',
 
      css='''
       .loginBox {

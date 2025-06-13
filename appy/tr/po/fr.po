@@ -28,6 +28,10 @@ msgstr "Commentaire"
 msgid "role_Manager"
 msgstr "Administrateur"
 
+#. Default: "Publisher"
+msgid "role_Publisher"
+msgstr "Publicateur"
+
 #. Default: "Anonymous"
 msgid "role_Anonymous"
 msgstr "Anonyme"
@@ -92,6 +96,10 @@ msgstr "[ choisissez ]"
 msgid "no_value"
 msgstr " - "
 
+#. Default: "-"
+msgid "no_choice"
+msgstr "Néant."
+
 #. Default: "[ Documents ]"
 msgid "choose_a_doc"
 msgstr "[ Documents ]"
@@ -115,6 +123,10 @@ msgstr "Trop d'éléments sont sélectionnés ici."
 #. Default: "-"
 msgid "no_ref"
 msgstr "-"
+
+#. Default: "Invalid value.\nIndividual values mus be separated by « ${sep} » chars.\nAn individual value must be a number between ${min} and ${max},\nor a range of 2 values separated by char « ${rangeSep} »."
+msgid "number_select_ko"
+msgstr "Valeur non valide.\nLes valeurs individuelles doivent être séparées par le caractère « ${sep} ».\nChacune d'entre elles doit être un nombre compris entre ${min} et ${max},\nou un intervalle de valeurs dont les 2 valeurs doivent être séparées par le caractère « ${rangeSep} »."
 
 #. Default: "There is currently no selectable element."
 msgid "no_selectable"
@@ -147,6 +159,14 @@ msgstr "Déplacer en dernière position"
 #. Default: "Update the hereabove number and click here to move this element to a new position."
 msgid "move_number"
 msgstr "Modifiez le numéro ci-dessus et cliquez ici pour déplacer l'élément à une nouvelle position."
+
+#. Default: "Stretch"
+msgid "stretch"
+msgstr "Élargir"
+
+#. Default: "Shrink"
+msgid "shrink"
+msgstr "Rétrécir"
 
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"
@@ -260,21 +280,33 @@ msgstr "Le contenu du champ n'est pas du XML valide. ${error}"
 msgid "invalid_text"
 msgstr "Contenu trouvé, considéré comme invalide ou incomplet: ${text}"
 
+#. Default: "The field contains ${found} characters · The maximum is ${max}."
+msgid "text_overflow"
+msgstr "Le champ contient ${found} caractères · Le maximum autorisé est ${max}."
+
 #. Default: "Choose a value between ${min} and ${max}."
 msgid "range_ko"
 msgstr "Choisissez une valeur entre ${min} et ${max}."
 
+#. Default: "Wrong or missing file extension. Valid extension(s) is (are): ${exts}."
+msgid "ext_ko"
+msgstr "Extension de fichier incorrecte ou manquante. La ou les extensions valides sont: ${exts}."
+
 #. Default: "(Un)select all"
 msgid "select_delesect"
-msgstr "Tout (dé)sélectionner"
+msgstr "Tout dé·sélectionner"
 
 #. Default: "Automatic (de)selection"
 msgid "select_auto"
-msgstr "(dé)sélection automatique"
+msgstr "Dé·sélection automatique"
 
 #. Default: "Unselect all"
 msgid "unselect_all"
 msgstr "Tout désélectionner"
+
+#. Default: "Clean all"
+msgid "clean_all"
+msgstr "Effacer"
 
 #. Default: "You must select at least one element."
 msgid "no_elem_selected"
@@ -314,7 +346,7 @@ msgstr "Supprimer la sélection"
 
 #. Default: "The element has been deleted."
 msgid "object_deleted"
-msgstr "L'élément a été supprimé."
+msgstr "La suppression a été réalisée."
 
 #. Default: "Remove"
 msgid "object_unlink"
@@ -331,6 +363,14 @@ msgstr "Insérer"
 #. Default: "Insert selection"
 msgid "object_link_many"
 msgstr "Insérer la sélection"
+
+#. Default: "Apply"
+msgid "filter_apply"
+msgstr "Appliquer"
+
+#. Default: "Clean"
+msgid "filter_clean"
+msgstr "Effacer"
 
 #. Default: "Duplicate (below)"
 msgid "row_clone"
@@ -368,6 +408,10 @@ msgstr "Le remplacer par un autre"
 msgid "action_confirm"
 msgstr "Êtes-vous sûr ?"
 
+#. Default: "Here we go ?"
+msgid "here_we_go"
+msgstr "On y va ?"
+
 #. Default: "⚠️ Are you sure you want to delete this ?"
 msgid "delete_confirm"
 msgstr "⚠️ Êtes-vous sûr de vouloir supprimer ceci ?"
@@ -388,6 +432,14 @@ msgstr "L'action n'a pu être réalisée pour ${nb} élément(s)."
 msgid "action_null"
 msgstr "L'action n'a eu aucun effet."
 
+#. Default: "⚠️ Missing login or email.\n\nPlease encode here a valid user login or email."
+msgid "missing_login"
+msgstr "⚠️ Nom d'utilisateur ou e-mail manquant.\n\nVeuillez encoder un nom d'utilisateur ou un e-mail valide."
+
+#. Default: "⚠️ This procedure can't be performed:\nyou are already logged into this site."
+msgid "for_anon_only"
+msgstr "⚠️ Cette procédure ne peut être effectuée: vous êtes déjà connecté·e."
+
 #. Default: "Action would have had no effect."
 msgid "action_null_test"
 msgstr "L'action n'aurait eu aucun effet."
@@ -398,11 +450,11 @@ msgstr "Cette action ne peut actuellement pas être exécutée."
 
 #. Default: "Are you sure you want to apply this change?"
 msgid "save_confirm"
-msgstr "Êtes-vous sûr de vouloir appliquer ce changement?"
+msgstr "Êtes-vous sûr de vouloir appliquer ce changement ?"
 
 #. Default: "Are you sure? You are going to permanently change the order of these elements, for all users."
 msgid "sort_confirm"
-msgstr "Êtes-vous sûr? Vous allez changer l'ordre de ces éléments de manière permanente, pour tous les utilisateurs."
+msgstr "Êtes-vous sûr ? Vous allez changer l'ordre de ces éléments de manière permanente, pour tous les utilisateurs."
 
 #. Default: "Go to ..."
 msgid "goto_link"
@@ -450,7 +502,7 @@ msgstr "Non"
 
 #. Default: "Field(s)"
 msgid "field_name"
-msgstr "Champ(s)"
+msgstr "Champ·s"
 
 #. Default: "Please fill this."
 msgid "field_required"
@@ -462,7 +514,7 @@ msgstr "L'information est manquante ou incorrecte."
 
 #. Default: "Please select a file."
 msgid "file_required"
-msgstr "Veuillez choisir un fichier."
+msgstr "Veuillez choisir un fichier, et qui plus est, ne soit pas vide."
 
 #. Default: "The uploaded file must be an image."
 msgid "image_required"
@@ -520,13 +572,13 @@ msgstr "Écraser par..."
 msgid "upload_invalid"
 msgstr "Veuillez uploader un fichier du même type."
 
-#. Default: "Made with <a href=\"http://appyframework.org\" target=\"_blank\">Appy</a>"
+#. Default: "Made with <a href=\"https://appyframe.work\" target=\"_blank\">Appy</a>"
 msgid "footer_text"
-msgstr "Fabriqué avec <a href=\"http://appyframework.org\" target=\"_blank\">Appy</a>"
+msgstr "Fabriqué avec <a href=\"https://appyframe.work\" target=\"_blank\">Appy</a>"
 
-#. Default: "Please type \"${text}\" (without the double quotes) in the field besides, but without the character at position ${number}."
+#. Default: "Please type “${text}” (without the double quotes) in the field besides, but without the character at position ${number}."
 msgid "captcha_text"
-msgstr "Tapez \"${text}\" (sans les guillemets) ci-contre, en omettant le caractère numéro ${number}."
+msgstr "Tapez « ${text} » (sans les guillemets) ci-contre, en omettant le caractère numéro ${number}."
 
 #. Default: "The code was not correct. Please try again."
 msgid "bad_captcha"
@@ -584,17 +636,29 @@ msgstr "L'authentification a échoué."
 msgid "login_ok"
 msgstr "Bienvenue! Vous êtes maintenant connecté∙e."
 
-#. Default: "Welcome! You are now logged in.<br/><br/><b>Before going further, please choose a new password.</b>"
+#. Default: "Welcome! You are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
 msgid "login_ok_change_password"
-msgstr "Bienvenue! Vous êtes maintenant connecté∙e.<br/><br/><b>Avant de continuer, choisissez un nouveau mot de passe.</b>"
+msgstr "Bienvenue! Vous êtes maintenant connecté∙e.\n\n<b>Avant de continuer, choisissez un nouveau mot de passe.</b>"
 
 #. Default: "You have been logged out."
 msgid "logout_ok"
 msgstr "Vous avez été déconnecté·e."
 
-#. Default: "Confirm here the password"
+#. Default: "Type your new password here"
+msgid "password_type_new"
+msgstr "Tapez le nouveau ici"
+
+#. Default: "Confirm your new password here"
 msgid "password_confirm"
-msgstr "Confirmez ici le mot de passe"
+msgstr "Confirmez-le ici"
+
+#. Default: "Show the password"
+msgid "password_show"
+msgstr "Montrer le mot de passe"
+
+#. Default: "Hide the password"
+msgid "password_hide"
+msgstr "Masquer le mot de passe"
 
 #. Default: "Passwords must contain at least ${nb} characters."
 msgid "password_too_short"
@@ -692,9 +756,13 @@ msgstr "Mot de passe oublié ?"
 msgid "ask_password_reinit"
 msgstr "Demander un nouveau mot de passe"
 
-#. Default: "Something went wrong. First possibility: you have already clicked on the link (maybe have you double-clicked?) and your password has already been re-initialized. Please check that you haven't received your new password in another email. Second possibility: the link that you received in your mailer was splitted on several lines. In this case, please re-type the link in one single line and retry. Third possibility: you have waited too long and your request has expired, or a technical error occurred. In this case, please try again to ask a new password from the start."
+#. Default: "️⚠️ Something went wrong.\n\nYou may have waited too long.\n\nPlease try again."
 msgid "wrong_password_reinit"
-msgstr "Une erreur s'est produite. Première possibilité: vous avez déjà cliqué sur le lien (peut-être avez-vous double-cliqué?) et votre mot de passe a déjà été réinitialisé. Veuillez vérifier que vous n'avez pas déjà reçu un second email avec votre nouveau mot de passe. Deuxième possibilité: le lien que vous avez reçu par email a été découpé sur plusieurs lignes. Dans ce cas, veuillez reformer le lien sur une seule ligne. Troisième possibilité: vous avez attendu trop longtemps ou une erreur technique est survenue. Dans ce cas, veuillez recommencer la procédure depuis le début."
+msgstr "️⚠️ Une erreur s'est produite.\n\nPeut-être avez-vous attendu trop longtemps.\n\nVeuillez réessayer."
+
+#. Default: "️✌ Welcome back !\n\nIn order to be able to use your profile again, please define a brand new password."
+msgid "password_redefine"
+msgstr "✌ Content de vous revoir parmi nous !\n\nPour accéder à votre profil, veuillez définir un nouveau mot de passe."
 
 #. Default: "A mail has been sent to you. Please follow the instructions from this email."
 msgid "reinit_mail_sent"
@@ -707,18 +775,6 @@ msgstr "Ré-initialisation de votre mot de passe"
 #. Default: "Hello,\n\nA password re-initialisation has been requested, tied to this email address, for the website ${siteUrl}. If you are not at the origin of this request, please ignore this email. Else, click on the link below to receive a new password.\n\n${url}"
 msgid "reinit_password_body"
 msgstr "Bonjour,\n\nUne ré-initialisation de mot de passe a été demandée, liée à votre adresse email, pour le site ${siteUrl}. Si vous n'êtes pas à l'origine de cette demande, veuillez ignorer ce message. Sinon, cliquez sur le lien ci-dessous pour ré-initialiser votre mot de passe.\n\n${url}"
-
-#. Default: "Your new password"
-msgid "new_password"
-msgstr "Votre nouveau mot de passe"
-
-#. Default: "Hello,\n\nThe new password you have requested for website ${siteUrl} is ${password}\n\nBest regards."
-msgid "new_password_body"
-msgstr "Bonjour,\n\nVotre nouveau mot de passe pour le site ${siteUrl} est ${password}\n\nCordialement."
-
-#. Default: "Your new password has been sent to you by email."
-msgid "new_password_sent"
-msgstr "Votre nouveau mot de passe vous a été envoyé par email."
 
 #. Default: "The password for this user is ${password}"
 msgid "new_password_text"
@@ -759,6 +815,14 @@ msgstr "Commentaire"
 #. Default: "Create from another object"
 msgid "create_from_predecessor"
 msgstr "Créer depuis un autre élément"
+
+#. Default: "Month"
+msgid "month"
+msgstr "Mois"
+
+#. Default: "Week"
+msgid "week"
+msgstr "Semaine"
 
 #. Default: "Mon"
 msgid "day_Mon_short"
@@ -858,7 +922,7 @@ msgstr "Jun"
 
 #. Default: "Jul"
 msgid "month_Jul_short"
-msgstr "Jui"
+msgstr "Jul"
 
 #. Default: "Aug"
 msgid "month_Aug_short"
@@ -936,9 +1000,9 @@ msgstr "Aujourd'hui"
 msgid "which_event"
 msgstr "Que voulez-vous ajouter ?"
 
-#. Default: "Extend the event on the following number of days (leave blank to create an event on the current day only):"
+#. Default: "Extend the event on the following number of days\n(leave blank to create an event on the current day only):"
 msgid "event_span"
-msgstr "Étendre l'événement sur le nombre de jours suivants<br/>(laissez vide pour créer un événement sur cet unique jour):"
+msgstr "Étendre l'événement sur le nombre de jours suivants\n(laissez vide pour créer un événement sur cet unique jour):"
 
 #. Default: "Also delete successive events of the same type."
 msgid "del_next_events"
@@ -956,17 +1020,25 @@ msgstr "Plage horaire"
 msgid "timeslot_main"
 msgstr "Unique"
 
-#. Default: "Cannot create such an event in the ${slot} slot."
+#. Default: "Cannot create such an event in slot « ${slot} »."
 msgid "timeslot_misfit"
-msgstr "Impossible de créer ce type d'événement dans la plage horaire ${slot}."
+msgstr "Impossible de créer ce type d'événement dans la plage horaire « ${slot} »."
 
 #. Default: "Validate events"
 msgid "validate_events"
 msgstr "Valider les événements"
 
-#. Default: "All the checked events will be confirmed, while the unchecked ones will be discarded.\n\nThe concerned user·s will be warned.\n\nAre you sure ?"
+#. Default: "Delete discarded events"
+msgid "validate_events_discard"
+msgstr "Supprimer les événements non validés"
+
+#. Default: "If this checkbox is checked, unselected events will left as-is, opening the possibility to validate them in a future, additional step. Else, unselected events will be removed and considered definitely rejected."
+msgid "validate_events_discard_descr"
+msgstr "Si cette case est décochée, les événements délésectionnés seront laissés tels quels, ouvrant la possibilité de les valider (ou pas) ultérieurement. Si elle est cochée, les événements désélectionnés seront effacés et considérés comme définitivement rejetés."
+
+#. Default: "Only checked events will be validated.\n\nThe concerned user·s will be warned."
 msgid "validate_events_confirm"
-msgstr "Tous les événements sélectionnés seront confirmés, tandis que ceux qui sont désélectionnés seront rejetés.\n\nLe ou les utilisateurs concernés seront prévenus.\n\nÊtes-vous sûr?"
+msgstr "Seuls les événements sélectionnés seront validés.\n\nLe ou les utilisateurs concernés seront prévenus."
 
 #. Default: "<table class=\"small\"><tr><th>Validated event·s</th><td align=\"center\">${validated}</td></tr><tr><th>Discarded event·s</th><td align=\"center\">${discarded}</td></tr></table>"
 msgid "validate_events_done"
@@ -974,11 +1046,11 @@ msgstr "<table class=\"small\"><tr><th>Événement·s validé·s</th><td align=
 
 #. Default: "validated"
 msgid "event_validated"
-msgstr "validé(e)"
+msgstr "validé·e"
 
 #. Default: "discarded"
 msgid "event_discarded"
-msgstr "refusé(e)"
+msgstr "non validé·e"
 
 #. Default: "Inserted by ${userName}"
 msgid "history_insert"
@@ -1012,9 +1084,13 @@ msgstr "Cette page n'existe pas ou vous n'êtes pas autorisé à la consulter."
 msgid "warn_leave_form"
 msgstr "Dans certaines situations, en quittant cette page de cette manière, vous pouvez perdre les données encodées ou empêcher d'autres utilisateurs de les éditer par la suite. Veuillez utilisez les boutons ad hoc."
 
-#. Default: "You are not allowed to consult this."
+#. Default: "You are not (or no longer) allowed to come here."
 msgid "unauthorized"
-msgstr "Vous n'êtes pas autorisé à consulter ceci."
+msgstr "Il semble que vous ne soyez pas ou plus autorisé·e à venir ici."
+
+#. Default: "You are not allowed to consult this."
+msgid "unconsultable"
+msgstr "Il semble que vous ne soyez pas ou plus autorisé·e à consulter ceci."
 
 #. Default: "Microsoft Internet Explorer is not supported.\nUsing it with site is risky and could lead to problems as severe as data loss.\n\nPlease use a modern web browser to consult this site."
 msgid "wrong_browser"
@@ -1042,7 +1118,7 @@ msgstr "${site} - ${title} - ${template}"
 
 #. Default: "Hello, this email that was sent to you via ${site}. Please consult the attached file(s)."
 msgid "podmail_body"
-msgstr "Bonjour,<br/><br/>Cet email vous est envoyé depuis ${site}.<br/><br/>Veuillez consulter le(s) fichier(s) joint(s)."
+msgstr "Bonjour,\n\nCet email vous est envoyé depuis ${site}.\n\nVeuillez consulter le·s fichier·s joint·s."
 
 #. Default: "List"
 msgid "result_mode_list"
@@ -1092,6 +1168,10 @@ msgstr "Tiret insécable (PC: Ctrl+-, Mac: Alt+Shift+-)"
 msgid "icon_dup"
 msgstr "Dupliquer (Ctrl+D)"
 
+#. Default: "Insert a smiley"
+msgid "icon_smiley"
+msgstr "Insérer un smiley"
+
 #. Default: "Lengthen (PC: Ctrl+_, Mac: Ctrl+!)"
 msgid "icon_lengthen"
 msgstr "Allonger (PC: Ctrl+_, Mac: Ctrl+!)"
@@ -1128,6 +1208,10 @@ msgstr "OK"
 msgid "cookie_read"
 msgstr "En savoir plus."
 
+#. Default: "unknown"
+msgid "unknown"
+msgstr "inconnu"
+
 #. Default: "Pay"
 msgid "pay"
 msgstr "Payer"
@@ -1152,11 +1236,18 @@ msgstr "Nous sommes désolés, mais une erreur est survenue durant le processus 
 msgid "standard_view"
 msgstr "Vue standard"
 
-#. Default: "It seems that you are not allowed to access this site, we are sorry."
+#. Default: "It seems that you (${login}) are not allowed to access this site, we are sorry."
 msgid "sso_user_blocked"
-msgstr "Il semble que vous ne soyez pas autorisé·e à consulter ce site, nous sommes désolés."
+msgstr "Il semble que vous (${login}) ne soyez pas autorisé·e à consulter ce site, nous sommes désolés."
 
-# ~~~~ Base-related labels ~~~~
+#. Default: "Darken"
+msgid "to_dark"
+msgstr "Assombrir"
+
+#. Default: "Lighten"
+msgid "to_light"
+msgstr "Éclaircir"
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Créé par"
@@ -1164,6 +1255,10 @@ msgstr "Créé par"
 #. Default: "On"
 msgid "Base_created"
 msgstr "Créé le"
+
+#. Default: "Last update by"
+msgid "Base_modifier"
+msgstr "Dernière modification par"
 
 #. Default: "Last updated on"
 msgid "Base_modified"
@@ -1178,6 +1273,10 @@ msgid "Base_searchable"
 msgstr "Mots-clé"
 
 #. Default: "History"
+msgid "Base_record"
+msgstr "Historique"
+
+#. Default: "History"
 msgid "Base_page_history"
 msgstr "Historique"
 
@@ -1185,7 +1284,6 @@ msgstr "Historique"
 msgid "Base_page_python"
 msgstr "Python"
 
-# ~~~~ User-related labels ~~~~
 #. Default: "User"
 msgid "User"
 msgstr "Utilisateur"
@@ -1222,6 +1320,10 @@ msgstr "Prénom"
 msgid "User_login"
 msgstr "Login"
 
+#. Default: "A login often, but not necessarily, corresponds to an email address."
+msgid "User_login_descr"
+msgstr "Un login correspond souvent, mais pas nécessairement, à une adresse mail."
+
 #. Default: "Email"
 msgid "User_email"
 msgstr "Email"
@@ -1254,7 +1356,6 @@ msgstr "Pages modifiables"
 msgid "User_editablePages_descr"
 msgstr "Voici la liste de toutes les pages de ce site que vous êtes autorisé·e à modifier."
 
-# ~~~~ Group-related labels ~~~~
 #. Default: "Group"
 msgid "Group"
 msgstr "Groupe"
@@ -1283,7 +1384,6 @@ msgstr "Rôles"
 msgid "Group_users"
 msgstr "Utilisateurs"
 
-# ~~~~ Translation-related labels ~~~~
 #. Default: "Translation"
 msgid "Translation"
 msgstr "Traduction"
@@ -1320,7 +1420,6 @@ msgstr ".po principaux"
 msgid "Translation_poCustom"
 msgstr ".po additionnels"
 
-# ~~~~ Page-related labels ~~~~
 #. Default: "Page"
 msgid "Page"
 msgstr "Page"
@@ -1461,7 +1560,6 @@ msgstr "Choisissez ici les personnes étant autorisées à modifier cette page a
 msgid "Page_parent"
 msgstr "Page parente"
 
-# ~~~~ Carousel-related labels ~~~~
 #. Default: "Carousel"
 msgid "Carousel"
 msgstr "Carrousel"
@@ -1598,9 +1696,13 @@ msgstr "Si vous uploadez ici une image de quelques pixels de haut, elle s'affich
 msgid "Carousel_page_documents"
 msgstr "Documents"
 
-#. Default: "Documents"
+#. Default: "Published documents"
 msgid "Carousel_documents"
-msgstr "Documents"
+msgstr "Documents publiés"
+
+#. Default: "Unpublished documents"
+msgid "Carousel_unpublished"
+msgstr "Documents non publiés"
 
 #. Default: "Preview"
 msgid "Carousel_page_preview"
@@ -1614,7 +1716,6 @@ msgstr "Prévisualisation"
 msgid "Carousel_pages"
 msgstr "Pages incorporant ce carrousel"
 
-# ~~~~ Document-related labels ~~~~
 #. Default: "Document"
 msgid "Document"
 msgstr "Document"
@@ -1646,6 +1747,22 @@ msgstr "Dupliquer"
 #. Default: "You are about to duplicate this document and add the copy the same list.\n\nAre you sure ?"
 msgid "Document_duplicate_confirm"
 msgstr "Vous êtes sur le point de dupliquer ce document et d'ajouter la copie à la fin de la même liste.\n\nÊtes-vous sûr ?"
+
+#. Default: "Publish"
+msgid "Document_publish"
+msgstr "Publier"
+
+#. Default: "You are about to publish this document.\n\nAre you sure ?"
+msgid "Document_publish_confirm"
+msgstr "Vous êtes sur le point de publier ce document.\n\nOn y va ?"
+
+#. Default: "Unpublish"
+msgid "Document_unpublish"
+msgstr "Dépublier"
+
+#. Default: "You are about to unpublish this document.\n\nAre you sure ?"
+msgid "Document_unpublish_confirm"
+msgstr "Vous êtes sur le point de dépublier ce document.\n\nOn y va ?"
 
 #. Default: "Elements"
 msgid "Document_elements"
@@ -1695,7 +1812,6 @@ msgstr "URL"
 msgid "Document_page"
 msgstr "Page"
 
-# ~~~~ Query-related labels ~~~~
 #. Default: "Query"
 msgid "Query"
 msgstr "Recherche"
@@ -1828,7 +1944,6 @@ msgstr "Quand vous consultez les résultats d'une recherche, la page principale 
 msgid "Query_pages"
 msgstr "Pages incorporant cette recherche"
 
-# ~~~~ Tool-related labels ~~~~
 #. Default: "Configuration"
 msgid "Tool"
 msgstr "Configuration"
@@ -1937,11 +2052,10 @@ msgstr "Si vous souhaitez incorporer, dans vos pages web, des résultats de rech
 msgid "Tool_calendar"
 msgstr "Calendrier"
 
-#. Default: " "
+#. Default: ""
 msgid "Tool_calendar_descr"
-msgstr " "
+msgstr ""
 
-# ~~~~ Move-related labels ~~~~
 #. Default: "Mover"
 msgid "Mover"
 msgstr "Déménageur"
@@ -1978,7 +2092,74 @@ msgstr "${replacements} remplacement·s fait·s dans ${updated}/${total} page·s
 msgid "Mover_tested"
 msgstr "${replacements} remplacement·s aurai·en·t été fait·s dans ${updated}/${total} page·s."
 
-# ~~~~ Standard workflow-related labels ~~~~
+#. Default: "Place"
+msgid "Place"
+msgstr "Adresse"
+
+#. Default: "Places"
+msgid "Place_plural"
+msgstr "Adresses"
+
+#. Default: "Place"
+msgid "Place_page_main"
+msgstr "Adresse"
+
+#. Default: "Name"
+msgid "Place_title"
+msgstr "Nom"
+
+#. Default: "Address"
+msgid "Place_group_address"
+msgstr "Adresse"
+
+#. Default: "This place is virtual"
+msgid "Place_virtual"
+msgstr "Ce lieu est virtuel"
+
+#. Default: "Street"
+msgid "Place_street"
+msgstr "Rue"
+
+#. Default: "Nb"
+msgid "Place_number"
+msgstr "N°"
+
+#. Default: "Box"
+msgid "Place_box"
+msgstr "Bte"
+
+#. Default: "Zip"
+msgid "Place_zip"
+msgstr "C.P."
+
+#. Default: "City"
+msgid "Place_city"
+msgstr "Localité"
+
+#. Default: "Country"
+msgid "Place_country"
+msgstr "Pays"
+
+#. Default: "URL"
+msgid "Place_placeUrl"
+msgstr "URL"
+
+#. Default: "Address"
+msgid "Place_address"
+msgstr "Adresse"
+
+#. Default: "Latitude"
+msgid "Place_latitude"
+msgstr "Latitude"
+
+#. Default: "Longitude"
+msgid "Place_longitude"
+msgstr "Longitude"
+
+#. Default: "Geolocalized"
+msgid "Place_geolocalized"
+msgstr "Géolocalisée"
+
 #. Default: "Active"
 msgid "Anonymous_active"
 msgstr "Actif∙ve"
@@ -1993,7 +2174,7 @@ msgstr "Actif∙ve"
 
 #. Default: "Inactive"
 msgid "Owner_inactive"
-msgstr "Inactif/ve"
+msgstr "Inactif·ve"
 
 #. Default: "Deactivate"
 msgid "Owner_deactivate"
@@ -2009,6 +2190,30 @@ msgstr "Réactiver"
 
 #. Default: "Are you sure ?"
 msgid "Owner_reactivate_confirm"
+msgstr "Êtes-vous sûr ?"
+
+#. Default: "Active"
+msgid "User_active"
+msgstr "Actif∙ve"
+
+#. Default: "Inactive"
+msgid "User_inactive"
+msgstr "Inactif·ve"
+
+#. Default: "Deactivate"
+msgid "User_deactivate"
+msgstr "Désactiver"
+
+#. Default: "Are you sure ?"
+msgid "User_deactivate_confirm"
+msgstr "Êtes-vous sûr ?"
+
+#. Default: "Reactivate"
+msgid "User_reactivate"
+msgstr "Réactiver"
+
+#. Default: "Are you sure ?"
+msgid "User_reactivate_confirm"
 msgstr "Êtes-vous sûr ?"
 
 #. Default: "Created"

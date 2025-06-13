@@ -7,9 +7,12 @@ from appy.model.utils import Object as O
 from appy.utils.string import produceNiceMessage
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 poHeaders = '''msgid ""
 msgstr ""
-"Project-Id-Version: Appy-%s\\n"
+"Project-Id-Version: %s\\n"
 "POT-Creation-Date: %s\\n"
 "MIME-Version: 1.0\\n"
 "Content-Type: text/plain; charset=utf-8\\n"
@@ -20,14 +23,15 @@ msgstr ""
 "Preferred-encodings: utf-8 latin1\\n"
 "Domain: %s\\n"
 %s
-
 '''
+
 fallbacks = {'en': 'en-us en-ca',
              'fr': 'fr-be fr-ca fr-lu fr-mc fr-ch fr-fr'}
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Message:
     '''Represents a i18n message (po format)'''
+
     def __init__(self, id, msg, default, fuzzy=False, comments=[],
                  niceDefault=False):
         self.id = id
@@ -79,11 +83,11 @@ class Message:
                 self.msg = newMsg.msg
             # For english, the the default value from a pot file can be used as
             # value for the po file.
-            if (language == 'en'):
+            if language == 'en':
                 if not self.msg:
                     # Put the default message into msg for english
                     self.msg = self.default
-                if self.fuzzy and (self.msg == oldDefault):
+                if self.fuzzy and self.msg == oldDefault:
                     # The message was equal to the old default value. It means
                     # that the user did not change it, because for English we
                     # fill by default the message with the default value (see
@@ -98,31 +102,44 @@ class Message:
 
     def generate(self):
         '''Produces myself as I must appear in a po(t) file'''
-        res = ''
+        r = []
+        add = r.append
         for comment in self.comments:
-            res += comment + '\n'
+            add(comment)
         if self.default is not None:
-            res = '#. Default: "%s"\n' % self.default
+            add(f'#. Default: "{self.default}"')
         if self.fuzzy:
-            res += '#, fuzzy\n'
-        res += 'msgid "%s"\n' % self.id
-        res += 'msgstr "%s"\n' % self.msg
-        return res
+            add('#, fuzzy')
+        add(f'msgid "{self.id}"')
+        add(f'msgstr "{self.msg}"')
+        return bn.join(r)
 
     def __repr__(self):
-        return '<i18n msg id="%s", msg="%s", default="%s">' % \
-               (self.id, self.msg, self.default)
+        return f'‹i18n msg id="{self.id}", msg="{self.msg}", ' \
+               f'default="{self.default}"›'
 
-    def get(self):
+    def get(self, escapeCrTo='<br/>'):
         '''Returns self.msg, but with some replacements'''
         # Basically, the main Appy interface is the web UI. So, when formatting
-        # needs to be integrated into messages as written in "po" files, we
+        # needs to be integrated into messages as written in .po files, we
         # expect them to be expressed in XHTML. With one exception: carriage
         # returns. Appy, for the sake of conciseness, tolerates the presence of
-        # "\n" and will replace them with an XHTML carriage return "<br/>".
+        # "\n" (precisely represented by "\\n" strings) and will replace them
+        # with an XHTML carriage return "<br/>" (p_escapeCrTo default).
+        r = self.msg
+        if escapeCrTo:
+            # When loading a translation into a translation object for the sole
+            # purpose of being translated, carriage returns must be converted to
+            # True ones: (in that case, set v_escapeCr to "\n"): '\\n' chars are
+            # converted to "\n" chars.
+            r = r.replace('\\n', escapeCrTo)
         # Moreover, because double quotes escaping is required due to the format
         # of "po" files, we perform such escaping too.
-        return self.msg.replace('\\n', '<br/>').replace('\\"', '"')
+        r = r.replace('\\"', '"')
+        return r
+        # Note: use then <br/> tags are used as a kind of Appy cheat. If you
+        # want to put XHTML formatting into messages, never use <br/>. Implement
+        # carriage returns by using <p> or <div> tags.
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Header:
@@ -133,11 +150,12 @@ class Header:
 
     def generate(self):
         '''Generates the representation of myself into a po(t) file'''
-        return '"%s: %s\\n"\n' % (self.name, self.value)
+        return f'"{self.name}: {self.value}\\n"{bn}'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class File:
     '''Represents a i18n "po" file'''
+
     def __init__(self, path, messages=None):
         self.path = path
         self.isPot = path.suffix == '.pot'
@@ -157,7 +175,7 @@ class File:
                 self.applicationName, self.domain = parts
         else:
             if len(parts) == 1:
-                self.applicationName = self.domain = ''
+                self.applicationName = self.domain = 'Appy'
                 self.language = parts[0]
             elif len(parts) == 2:
                 self.applicationName = self.domain = parts[0]
@@ -165,12 +183,12 @@ class File:
             else:
                 self.applicationName, self.domain, self.language = parts
         # This flag will become True during the generation process, once this
-        # file will have been generated
+        # file will have been generated.
         self.generated = False
 
     def __repr__(self):
         '''String representation'''
-        return '<%s: %d message(s)>' % (self.path.name, len(self.messages))
+        return f'‹{self.path.name}: {len(self.messages)} message(s)›'
 
     def addMessage(self, message, needsCopy=True):
         '''Adds p_message among this file's messages'''
@@ -237,7 +255,7 @@ class File:
             if not self.isPot:
                 # I must add fallbacks
                 if self.language in fallbacks:
-                    fb = '"X-is-fallback-for: %s\\n"' % fallbacks[self.language]
+                    fb = f'"X-is-fallback-for: {fallbacks[self.language]}\\n"'
             f.write(poHeaders % (self.applicationName, creationTime,
                                  self.language, self.language, self.domain, fb))
         else:
@@ -245,7 +263,6 @@ class File:
             f.write('msgid ""\nmsgstr ""\n')
             for header in self.headers.values():
                 f.write(header.generate())
-            f.write('\n')
 
     def generate(self, inFile=True):
         '''Generates the corresponding po(t) file on disk if p_inFile is True,
@@ -257,8 +274,9 @@ class File:
             f = io.StringIO()
         self.generateHeaders(f)
         for msg in self.messages.values():
+            f.write(bn)
             f.write(msg.generate())
-            f.write('\n')
+            f.write(bn)
         if inFile:
             f.close()
         self.generated = True
@@ -268,23 +286,24 @@ class File:
         '''Gets the name of the po file that corresponds to this pot file and
            the given p_language.'''
         if self.applicationName == self.domain:
-            r = '%s-%s.po' % (self.applicationName, language)
+            r = f'{self.applicationName}-{language}.po'
         else:
-            r = '%s-%s-%s.po' % (self.applicationName, self.domain, language)
+            r = f'{self.applicationName}-{self.domain}-{language}.po'
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Parser:
     '''Parse a translation file in po(t) format. The result is produced in
        self.res as a File instance.'''
+
     def __init__(self, path):
         self.res = File(path)
 
     # Regular expressions for msgIds, msgStrs and default values.
-    rexDefault = re.compile('#\.\s+Default\s*:\s*"(.*)"')
-    rexFuzzy = re.compile('#,\s+fuzzy')
-    rexId = re.compile('msgid\s+"(.*)"')
-    rexMsg = re.compile('msgstr\s+"(.*)"')
+    rexDefault = re.compile(r'#\.\s+Default\s*:\s*"(.*)"')
+    rexFuzzy = re.compile(r'#,\s+fuzzy')
+    rexId = re.compile(r'msgid\s+"(.*)"')
+    rexMsg = re.compile(r'msgstr\s+"(.*)"')
 
     def parse(self):
         '''Parse all i18n messages from the file and return the corresponding
@@ -343,7 +362,7 @@ def load(path=None, pot=True, languages=None):
     # Search "po" files only, or "po" and "pot" files
     suffix = '*' if pot else ''
     # Browse files
-    for poFile in path.glob('*.po%s' % suffix):
+    for poFile in path.glob(f'*.po{suffix}'):
         # Dismiss temp files, ie .po.swp
         if poFile.suffix not in ('.po', '.pot'): continue
         if languages:

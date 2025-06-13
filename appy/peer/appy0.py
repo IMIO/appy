@@ -8,8 +8,10 @@ from appy.peer import Peer
 from appy.peer.importer import Importer, UserImporter
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-LROLES_KO  = 'Instance of %s: no local roles found. Distant is: %s.'
+LROLES_KO  = '%s object: no local roles found. Distant is: %s.'
 E_LC_KO    = 'No local roles found on distant object.'
+ACT_MISS   = 'Distant object %s (for local %s) :: History contains an entry ' \
+             'without action. %s'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Importer0(Importer):
@@ -51,6 +53,11 @@ class Importer0(Importer):
             params = {'state': event.review_state, 'date': event.time,
                       'login': event.actor, 'comment': event.comments}
             action = event.action
+            if not action: # WTF
+                o = self.local
+                text = ACT_MISS % (self.distant.id, o.iid, str(event))
+                o.log(text, type='error')
+                continue
             if action == '_datachange_':
                 eventType = 'Change'
                 # Convert the "changes" dict to Appy 1

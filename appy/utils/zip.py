@@ -44,12 +44,12 @@ def subUnzip(folder, zipName, odf=False):
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def unzip(f, folder, odf=False, unzipSubZips=False, asBytes=True):
     '''Unzips file p_f into p_folder. p_f can be anything accepted by the
-       zipfile.ZipFile constructor. p_folder must exist.
+       zipfile.ZipFile constructor. p_folder must exist.'''
 
-       If p_odf is True, p_f is considered to be an odt or ods file and this
-       function will return a dict containing the content of content.xml,
-       styles.xml, meta.xml and metadata from the zipped file. These contents
-       will be bytes if p_asBytes is True, strings else.'''
+    # If p_odf is True, p_f is considered to be an odt or ods file and this
+    # function will return a dict containing the content of content.xml,
+    # styles.xml, meta.xml and metadata from the zipped file. These contents
+    # will be bytes if p_asBytes is True, strings else.
     zipFile = zipfile.ZipFile(f)
     r = {} if odf else None
     for zippedFile in zipFile.namelist():
@@ -129,9 +129,9 @@ def zip(f, folder, odf=False, encode=False):
         if not dirnames and not filenames:
             # This is an empty leaf folder. We must create an entry in the
             # zip for him.
-            folderName = dir[len(folder):]
-            zInfo = zipfile.ZipInfo("%s/" % folderName, time.localtime()[:6])
-            zInfo.external_attr = 48
+            folderName = dir[len(folder)+1:]
+            zInfo = zipfile.ZipInfo(f'{folderName}/', time.localtime()[:6])
+            zInfo.external_attr = 0o777 << 16
             zipFile.writestr(zInfo, '')
     zipFile.close()
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

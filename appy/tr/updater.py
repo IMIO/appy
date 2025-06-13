@@ -12,7 +12,10 @@ from appy.model.utils import Object as O
 from appy.model import Config as ModelConfig
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-WRONG_APP_NAME = 'Your app is named "%s", which is not allowed.'
+APP_N_KO  = 'Your app is named "%s": this is not allowed.'
+AR_MSGS   = '%s - %d %s message(s): %s.'
+TR_UPD    = 'Translation files updated - %d labels (%d automatic + %d custom)' \
+            ' - %d language(s).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Migrator:
@@ -23,7 +26,7 @@ class Migrator:
         '''Are i18n files loaded in the p_updater to the Appy 0.9.x format ?'''
         files = updater.translationFiles
         if 'Custom.pot' in files: return # There was no Custom.pot in Appy 0.9.x
-        potName = '%s.pot' % updater.appName
+        potName = f'{updater.appName}.pot'
         if potName not in files: return # There is no file at all
         pot = files[potName]
         projectName = pot.headers['Project-Id-Version'].value
@@ -43,8 +46,8 @@ class Migrator:
             # This prefix was used, in Appy 0.9, for all i18n messages related
             # to this workflow.
             moduleName = workflow.python.__module__.split('.')[-1]
-            oldPrefix = '%s_%s_%s_' % (self.appName, moduleName, workflow.name)
-            r[oldPrefix.lower()] = '%s_' % workflow.name
+            oldPrefix = f'{self.appName}_{moduleName}_{workflow.name}_'
+            r[oldPrefix.lower()] = f'{workflow.name}_'
         self.workflowNames = r
 
     def removeSearchPart(self, id):
@@ -67,7 +70,7 @@ class Migrator:
                 id = id.replace(prefix, name)
                 message.id = id
                 return message
-        if id.startswith('%s_' % self.appName):
+        if id.startswith(f'{self.appName}_'):
             # The ID starts with a class "package name" of the form
             #               "<appName>_<moduleName>_<className>"
             # With Appy 1.x, this prefix is simply replaced with
@@ -82,9 +85,9 @@ class Migrator:
             # In Appy 1.0, such labels simply start with
             #                     "<baseClassName>"
             for name in self.model.baseClasses:
-                prefix = '%s%s_' % (self.appName, name)
+                prefix = f'{self.appName}{name}_'
                 if id.startswith(prefix):
-                    id = id.replace(prefix, '%s_' % name)
+                    id = id.replace(prefix, f'{name}_')
                     id = self.removeSearchPart(id)
                     break
         # Set the potentially modified ID to the p_message and return it
@@ -118,14 +121,17 @@ class Migrator:
                     message = self.migrateMessage(message)
                     otherMessages[message.id] = message
             # Add the corresponding "Custom" file in "filesToAdd"
-            fileName = 'Custom.pot' if '-' not in name \
-                                    else 'Custom-%s' % name.split('-', 1)[1]
+            if '-' in name:
+                suffix = name.split('-', 1)[1]
+                fileName = f'Custom-{suffix}'
+            else:
+                fileName = 'Custom.pot'
             filesToAdd[fileName] = po.File(trFolder / fileName,
                                            messages=customMessages)
             # Replace poFile's message with the remaining, migrated messages
             poFile.messages = otherMessages
             # Set the "Appy 1.0" header
-            poFile.headers['Project-Id-Version'].value = 'Appy-%s'% self.appName
+            poFile.headers['Project-Id-Version'].value = f'Appy-{self.appName}'
         # Add "filesToAdd" in "files"
         for name, poFile in filesToAdd.items(): self.files[name] = poFile
 
@@ -133,10 +139,9 @@ class Migrator:
 class Updater:
     '''Creates or updates translation files for an app'''
 
-    # The updater is implemented as a visitor walking a appy.model.Model
-    # instance and producing the appropriate i18n labels for every model
-    # element. For every such element, a method named "visit<element>" is
-    # defined hereafter.
+    # The updater is implemented as a visitor walking a appy.model.Model object
+    # and producing the appropriate i18n labels for every model element. For
+    # every such element, a method named "visit<element>" is defined hereafter.
 
     # Default value for "confirm" labels
     CONFIRM = 'Are you sure ?'
@@ -150,7 +155,7 @@ class Updater:
         self.appName = self.appFolder.name
         if self.appName.lower() in Updater.unallowedAppNames:
             # This would clash with the translation file named Custom.pot
-            raise Exception(WRONG_APP_NAME % self.appName)
+            raise Exception(APP_N_KO % self.appName)
         # The list of i18n labels to generate
         self.labels = collections.OrderedDict()
         # Load the model in order to get all classes, fields, workflows, states
@@ -184,14 +189,14 @@ class Updater:
         if not group or (group in walkedGroups): return
         if not group.label:
             # Compute the prefix used as base label for all labels to produce
-            label = '%s_group_%s' % (class_.name, group.name)
+            label = f'{class_.name}_group_{group.name}'
             add = self.addLabel
             if group.hasLabel: add(label, group.name)
-            if group.hasDescr: add('%s_descr' % label, ' ', nice=False)
-            if group.hasHelp:  add('%s_help'  % label, ' ', nice=False)
+            if group.hasDescr: add(f'{label}_descr', '', nice=False)
+            if group.hasHelp:  add(f'{label}_help', '', nice=False)
             if group.hasHeaders:
                 for i in range(group.nbOfHeaders):
-                    add('%s_col%d' % (label, i+1), ' ', nice=False)
+                    add(f'{label}_col{i+1}', '', nice=False)
         # Visit group's parent
         walkedGroups.add(group)
         self.visitGroup(class_, group.group, walkedGroups)
@@ -202,25 +207,26 @@ class Updater:
             # The list of possible values is fixed. Generate one label for
             # every value.
             for value in field.validator:
-                self.addLabel('%s_list_%s' % (label, value), value)
+                self.addLabel(f'{label}_list_{value}', value)
 
     def visitBoolean(self, class_, field, label):
         '''Generate Boolean-specific labels'''
         if field.render == 'radios':
             for v in ('true', 'false'):
-                self.addLabel('%s_%s' % (label, v), field.yesNo[v])
+                self.addLabel(f'{label}_{v}', field.yesNo[v])
 
     def visitAction(self, class_, field, label):
         '''Generate Action-specific labels'''
         if field.confirm:
-            self.addLabel('%s_confirm' % label, self.CONFIRM, nice=False)
+            self.addLabel(f'{label}_confirm', self.CONFIRM, nice=False)
+
     visitPod = visitAction # Same labels for Pod field
 
     def visitRef(self, class_, field, label):
         '''Generate Ref-specific labels'''
         # Add the label for the confirm message when relevant
         if field.addConfirm:
-            self.addLabel('%s_addConfirm' % label, self.CONFIRM, nice=False)
+            self.addLabel(f'{label}_addConfirm', self.CONFIRM, nice=False)
 
     def visitList(self, class_, field, label):
         '''Generate List-specific labels'''
@@ -232,8 +238,9 @@ class Updater:
             if not self.mustGenerateLabels(sub): continue
             # We set "forceLabel" to True because we need a label to dump for
             # every sub-field, within List' column headers.
-            subLabel = '%s_%s' % (label, name)
+            subLabel = f'{label}_{name}'
             self.visitField(class_, sub, subLabel, walkedGroups,forceLabel=True)
+
     visitDict = visitList # Same labels for Dict field
 
     def visitCalendar(self, class_, field, label):
@@ -241,15 +248,15 @@ class Updater:
         eTypes = field.eventTypes
         if type(eTypes) not in (list, tuple): return
         for et in eTypes:
-            self.addLabel('%s_event_%s' % (label, et), et)
+            self.addLabel(f'{label}_event_{et}', et)
 
     def visitSwitch(self, class_, field, label):
         '''Generate Switch-specific labels'''
         walkedGroups = set()
         for fieldset, fields in field.fields:
-            for name, sub in fields:
+            for name, sub in fields.items():
                 if not self.mustGenerateLabels(sub): continue
-                subLabel = '%s_%s' % (class_.name, name)
+                subLabel = f'{class_.name}_{name}'
                 self.visitField(class_, sub, subLabel, walkedGroups,
                                 forceLabel=True)
 
@@ -265,19 +272,19 @@ class Updater:
             default = name.rsplit('*', 1)[-1] if '*' in name else name
             add(label, default)
         # A longer description and a help text
-        if field.hasDescr: add('%s_descr' % label, ' ', nice=False)
-        if field.hasHelp:  add('%s_help' % label, ' ', nice=False)
+        if field.hasDescr: add(f'{label}_descr', '', nice=False)
+        if field.hasHelp:  add(f'{label}_help', '', nice=False)
         # Generate additional labels via a field-specific "visit" method, when
         # relevant.
-        method = getattr(self, 'visit%s' % field.type, None)
+        method = getattr(self, f'visit{field.type}', None)
         if method: method(class_, field, label)
-            
+
     def visitSearch(self, class_, search, walkedGroups):
         '''Produce labels for a p_search in a p_class_'''
         # One label for the search name and one for a longer description
-        label = '%s_%s' % (class_.name, search.name)
+        label = f'{class_.name}_{search.name}'
         self.addLabel(label, search.name)
-        self.addLabel('%s_descr' % label, ' ', nice=False)
+        self.addLabel(f'{label}_descr', '', nice=False)
         # Produce labels for the group when relevant
         self.visitGroup(class_, search.group, walkedGroups)
 
@@ -286,11 +293,11 @@ class Updater:
         # Produce the label for this p_phase, excepted if it is the only phase
         # in the p_class_.
         if len(class_.phases) != 1:
-            self.addLabel('%s_phase_%s' % (class_.name, phase.name), phase.name)
+            self.addLabel(f'{class_.name}_phase_{phase.name}', phase.name)
         # Produce one label for every page
         for page in phase.pages.values():
             if page.label is None:
-                self.addLabel('%s_page_%s' % (class_.name,page.name), page.name)
+                self.addLabel(f'{class_.name}_page_{page.name}', page.name)
 
     def visitClass(self, name, class_):
         '''Produce labels for a p_class_'''
@@ -299,7 +306,7 @@ class Updater:
         if class_.type == 'app':
             # Class name, singular and plural
             self.addLabel(name, name)
-            self.addLabel('%s_plural' % name, name + 's')
+            self.addLabel(f'{name}_plural', f'{name}s')
         # While walking fields and searches, groups will be encountered. In
         # order to avoid generating labels several times for the same group,
         # remember the already walked groups.
@@ -311,7 +318,7 @@ class Updater:
         for field in class_.fields.values():
             # For some fields, labels must not be produced
             if self.mustGenerateLabels(field):
-                label = '%s_%s' % (name, field.name)
+                label = f'{name}_{field.name}'
                 self.visitField(class_, field, label, walkedGroups)
             # Produce labels for the field's group(s) when relevant
             for group in field.getGroups():
@@ -330,19 +337,19 @@ class Updater:
         # Generate a label for every state and transition
         for attribute in workflow.attributes:
             for element in getattr(workflow, attribute).values():
-                label = '%s_%s' % (name, element.name)
+                label = f'{name}_{element.name}'
                 add(label, element.name)
                 # Add a label for a transition that must be confirmed
                 if attribute == 'transitions' and element.confirm:
-                    add('%s_confirm' % label, self.CONFIRM, nice=False)
+                    add(f'{label}_confirm', self.CONFIRM, nice=False)
 
     def collectLabels(self):
         '''Collect all labels by visiting model elements'''
         # Roles, classes and workflows are sorted by name, in order to avoid
         # retrieving it in a different order from one machine to another.
         model = self.model
-        # Add a label for every role
-        for role in model.getRoles(base=None, sorted=True):
+        # Add a label for every non-standard role
+        for role in model.getRoles(base=False, sorted=True):
             self.addLabel(*role.getLabel(withDefault=False))
         # Browse model classes
         classes = list(model.classes.items())
@@ -369,7 +376,7 @@ class Updater:
         #               | by the app's developer.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         counts = {True: 0, False: 0} # Count automatic and custom labels
-        for pot in ('%s.pot' % self.appName, 'Custom.pot'):
+        for pot in (f'{self.appName}.pot', 'Custom.pot'):
             isCustom = pot == 'Custom.pot'
             # Get or create the pot file
             if pot not in self.translationFiles:
@@ -383,8 +390,8 @@ class Updater:
                 for move in ('added', 'removed'):
                     elems = getattr(moves, move)
                     if elems:
-                        print('%s - %d %s message(s): %s.' % \
-                             (pot.path.name, len(elems), move, ','.join(elems)))
+                        print(AR_MSGS % (pot.path.name, len(elems), move,
+                                         ','.join(elems)))
             pot.generate()
             # Create or update one "po" file for every language supported by the
             # app.
@@ -400,9 +407,8 @@ class Updater:
                 poFile.generate()
         # Output a summary about the operation
         total = counts[True] + counts[False]
-        print('Translation files updated - %d labels (%d automatic + %d ' \
-              'custom) - %d language(s).' % (total, counts[False], counts[True],
-                                             len(self.config.ui.languages)))
+        print(TR_UPD % (total, counts[False], counts[True],
+                        len(self.config.ui.languages)))
 
     def run(self):
         '''Create or update translation files in p_self.appFolder'''

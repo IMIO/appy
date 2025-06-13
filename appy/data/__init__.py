@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 '''This folder contains copies of external, "authentic" data, stored as text
    files, like ISO 3166-1 country codes. In this package, corresponding Python
    classes are available for accessing the data in the text files.'''
@@ -226,6 +224,7 @@ class Countries:
        ISO 3166-1. The file has been downloaded in March 2011 from
        http://www.iso.org/iso/country_codes/iso_3166_code_lists.htm
        (first line has been removed).'''
+
     # The single Countries instance will be stored here
     instance = None
 
@@ -242,9 +241,7 @@ class Countries:
         # This file has been downloaded from
         # http://www.iso.org/iso/country_codes.htm and converted to utf-8.
         self.path = Path(__file__).parent / 'Countries.Iso3166-1'
-        self.countryCodes = []
-        # Names of countries in English
-        self.countryNames = []
+        self.countries = {} # ~{s_code: s_nameInEnglish}~
         self.parseFile()
 
     def parseFile(self):
@@ -252,10 +249,9 @@ class Countries:
             for line in f:
                 if line.strip():
                     name, code = line.split(';')
-                    self.countryCodes.append(code.strip())
-                    self.countryNames.append(name.strip())
+                    self.countries[code.strip()] = name.strip()
 
     def exists(self, code):
-        '''Is p_code a valid 2-digits country code?'''
-        return code in self.countryCodes
+        '''Is p_code a valid 2-digits country code ?'''
+        return code in self.countries
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

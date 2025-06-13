@@ -35,7 +35,7 @@ class Cell:
             self.decode(content)
 
     def __repr__(self):
-        return '<Cell %s>' % self.content
+        return f'‹Cell {self.content}›'
 
     def decode(self, content):
         '''Decode this p_content, extracting digits to get p_self's basis'''
@@ -43,7 +43,7 @@ class Cell:
         for char in content:
             if char.isdigit():
                 digits += char
-            else: # It is a letter corresponding to a macro
+            else: # It is a letter corresponding to a PX
                 self.content.append(Layout.pxs.get(char, char))
         # Manage the basis
         if digits:
@@ -79,7 +79,7 @@ class Row:
         self.length = length
 
     def __repr__(self):
-        return '<Row %s (%d)>' % (str(self.cells), self.length)
+        return f'‹Row {str(self.cells)} ({self.length})›'
 
     def decodeCells(self, content, isHeader):
         '''Decodes the given chunk of layout string p_content containing
@@ -130,6 +130,8 @@ class Layout:
     #                     (if relevant; typically only used on "edit" layouts)
     #  f - "field"        The field value, or input for entering a value.
     #  c - "changes"      The button for displaying changes to a field
+    #  x - The unknown    A custom PX one may define on the field, in the
+    #                     attribute named "custom".
 
     # This dict defines the PXs to use to render every part as defined by the
     # hereabove letters.
@@ -138,7 +140,7 @@ class Layout:
       'e': 'pxHeader', 'w': 'pxFields', 'b': 'pxControls', 'p': 'pxPreamble',
       # Field-related elements
       'l': 'pxLabel', 'd': 'pxDescription', 'h': 'pxHelp', 'v': 'pxValidation',
-      'r': 'pxRequired', 'c': 'pxChanges'
+      'r': 'pxRequired', 'c': 'pxChanges', 'x': 'custom'
     }
 
     # Symbols to use within a layout string  - - - - - - - - - - - - - - - - - -
@@ -152,10 +154,6 @@ class Layout:
     # defines alignment for the previously defined cell.
     cellDelimiters = {'|': 'center', ';': 'left', '!': 'right'}
     cellDelms = ''.join(cellDelimiters.keys())
-
-    # Base layout attributes
-    baseAttributes = ('style', 'css', 'cellpadding', 'cellspacing', 'width',
-                      'align')
 
     # A layout can be derived from another one. The following dict defines the
     # letters to remove to define a simpler layout (view) from a more complex
@@ -178,7 +176,7 @@ class Layout:
        cellpadding=":table.cellpadding" cellspacing=":table.cellspacing"
        width=":'' if inTd else table.width"
        align=":'' if inTd else ui.Language.flip(table.align, dir)"
-       class=":('%s %s' % (tagCss, layoutCss)).strip() if tagCss else layoutCss"
+       class=":f'{tagCss} {layoutCss}'.strip() if tagCss else layoutCss"
        style=":table.style" id=":tagId" name=":tagName">
       <!-- The table header row -->
       <tr if="table.headerRow" valign=":table.headerRow.valign">
@@ -198,7 +196,17 @@ class Layout:
       </tr>
      </table>''')
 
-    def __init__(self, layoutString=None, style=None, css='',
+    # Base layout attributes, with their default values
+    baseAttributes = {
+      'style'       : None,
+      'css'         : None,
+      'cellpadding' : 0,
+      'cellspacing' : 0,
+      'width'       : '100%',
+      'align'       : 'left'
+    }
+
+    def __init__(self, layoutString=None, style=None, css=None,
                  cellpadding=0, cellspacing=0, width='100%', align='left',
                  other=None, derivedType=None):
         if other:
@@ -213,14 +221,23 @@ class Layout:
                                                   derivedType)
             else:
                 self.layoutString = other.layoutString
-            source = 'other.'
         else:
-            source = ''
             self.layoutString = layoutString
-        # Initialise simple params, either from the true params, or from
-        # the p_other Layout instance.
-        for param in Layout.baseAttributes:
-            setattr(self, param, eval(f'{source}{param}'))
+        # Initialise simple params, either from the true params, or from this
+        # p_other Layout object.
+        ctx = locals()
+        for param, default in Layout.baseAttributes.items():
+            val = eval(param, None, ctx)
+            if other:
+                # Set the value as defined on v_other, excepted if the parameter
+                # value differs from its default value.
+                if val != default:
+                    setattr(self, param, val)
+                else:
+                    setattr(self, param, getattr(other, param))
+            else:
+                # Set the passed value
+                setattr(self, param, val)
         # The following attribute will store a special Row instance used for
         # defining column properties.
         self.headerRow = None
@@ -245,7 +262,7 @@ class Layout:
         '''Adds a single or a group of p_css classes'''
         if not self.css: self.css = css
         else:
-            self.css += ' ' + css
+            self.css = f'{self.css} {css}'
             # Ensures that every class appears once
             self.css = ' '.join(set(self.css.split()))
 
@@ -312,7 +329,7 @@ class Layout:
                 content = self.rows[0].cells[0].content
                 content.insert(1, Layout.pxs['r'])
 
-    def __repr__(self): return f'<Layout {self.layoutString}>'
+    def __repr__(self): return f'‹Layout {self.layoutString}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class LayoutF(Layout):
@@ -320,11 +337,11 @@ class LayoutF(Layout):
        instead of a table.'''
 
     # Flex-specific row delimiters (vertical alignment)
-    rowDelimiters =  {'-':'center', '=':'start', '_':'end'}
+    rowDelimiters =  {'-':'center', '=':'baseline', '_':'end'}
     rowDelms = ''.join(rowDelimiters.keys())
 
-    # Mapping between cell's horizoontaal alignment and values for flex property
-    # "justify-contents"
+    # Mapping between cell's horizontal alignment and values for flex property
+    # "justify-contents".
     cellMap = {'left': 'start', 'center': 'center', 'right': 'end'}
 
     pxRender = Px('''
@@ -377,6 +394,8 @@ class LayoutF(Layout):
         '''Get the CSS class(es) to apply to the main tag's "class" attribute'''
         r = f'{c.tagCss or ""} {self.css or ""}'
         return r.strip()
+
+    def __repr__(self): return f'‹LayoutF {self.layoutString}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ColumnLayout:
@@ -469,6 +488,9 @@ class Layouts(dict):
     # Layouts corresponding to ranges of icons or buttons
     buttonLayouts = asDict(('buttons', 'sub', 'view', 'xml'))
 
+    # Layouts corresponding to cell content in a list of objects
+    cellLayouts = asDict(('cell', 'sub'))
+
     # Some layouts must be explicitly specified in order to be taken into
     # account, while, for most of them, this is implicit. For example, when
     # determining visibility of a field, boolean "True" implicitly denotes any
@@ -486,23 +508,28 @@ class Layouts(dict):
     def __init__(self, edit=None, view=None, search=None):
         '''Initialise layouts based on the specified attributes'''
         # Initalise dict keys based on constructor attributes
-        if edit: edit = self['edit'] = self.getLayoutFrom(edit)
-        if view: view = self['view'] = self.getLayoutFrom(view)
-        if search: search = self['search'] = self.getLayoutFrom(search)
+        self.init(edit, view, search)
         # Derive unspecified layouts from the existing ones, when possible
         if edit and not view:
+            edit = self['edit']
             class_ = edit.__class__
             view = self['view'] = class_(other=edit, derivedType='view')
         if view and not search:
             # Do not derive a search layout from a view: because most search
             # forms are similar, use a standard layout else.
-            class_ = view.__class__
-            self['search'] = Layout('l-f')
+            class_ = self['view'].__class__
+            self['search'] = class_('l-f')
+
+    def init(self, edit, view, search):
+        '''Stores, on p_self, the passed individual layouts'''
+        if edit: edit = self['edit'] = self.getLayoutFrom(edit)
+        if view: view = self['view'] = self.getLayoutFrom(view)
+        if search: search = self['search'] = self.getLayoutFrom(search)
 
     def getLayoutFrom(self, this):
         '''Gets a Layout instance from p_this'''
-        # If p_this is already a Table instance, it is simply returned. If it is
-        # a layout string, a Table instance is created from it.
+        # If p_this is already a Layout object, it is simply returned. If it is
+        # a layout string, a Layout object is created from it.
         return this if isinstance(this, Layout) else Layout(this)
 
     def isComplete(self):
@@ -511,17 +538,19 @@ class Layouts(dict):
             if base not in self:
                 return
 
-    def completeFrom(self, other):
+    def completeFrom(self, other, css=None):
         '''Complete p_self by cloning the missing elements from p_other'''
-        # p_other is supposed to be complete
         for base in Layouts.baseTypes:
-            if base not in self:
-                self[base] = Layout(other=other[base])
+            if base not in self and base in other:
+                # v_other[base].__class__ can be Layout or LayoutF
+                self[base] = other[base].__class__(other=other[base], css=css)
 
-    def clone(self):
-        '''Create a clone from p_self'''
+    def clone(self, css=None, edit=None, view=None, search=None):
+        '''Create a clone from p_self, possibly modified via the passed
+           parameters.'''
         r = Layouts()
-        r.completeFrom(self)
+        r.init(edit, view, search)
+        r.completeFrom(self, css=css)
         return r
 
     def hasPart(self, part):
@@ -549,11 +578,11 @@ class Layouts(dict):
     @classmethod
     def getDefault(class_, field):
         '''Returns the default layouts for this p_field'''
-        # ~~~
+        #
         # The default layout depends on the type of group into which the field
         # is. This method may be overridden by child Layouts classes as possibly
         # defined on every sub-field class.
-        # ~~~
+        #
         key = 'grid' if field.inGrid() else 'normal'
         return class_.defaults[key]
 
@@ -570,7 +599,7 @@ class Layouts(dict):
             r = Layouts(layouts)
             defaults = False
         else:
-            # p_layouts is already a Layouts instance. Complete it if necessary.
+            # p_layouts is already a Layouts object. Complete it if necessary.
             r = layouts
             if not r.isComplete():
                 r.completeFrom(field.Layouts.getDefault(field))
@@ -620,37 +649,44 @@ class Layouts(dict):
 # "c"  centered
 b = 'lrv-f'
 d = 'lrv-d-f'
+f = Layout('f')
 Layouts.b   = Layouts(Layout(b, width=None))
 Layouts.c   = Layouts(Layout('lrv|-f|', width=None, align='center'))
 Layouts.d   = Layouts(d)
-Layouts.dc  = Layouts(d + '|')
+Layouts.dc  = Layouts(f'{d}|')
+Layouts.dt  = Layouts(Layout(d, css='topSpace'))
+Layouts.db  = Layouts('lfrv-d2') # Description is placed *b*elow
 Layouts.h   = Layouts('lhrv-f')
 Layouts.n   = Layouts.b
 Layouts.nd  = Layouts(Layout(d, width=None))
 Layouts.w   = Layouts(Layout(b))
 # Layouts with content only (no label)
-Layouts.f   = Layouts(Layout('f', width=None))
-Layouts.fr  = Layouts(Layout('frv', width=None))
-Layouts.wf  = Layouts(Layout('f'))
-Layouts.fv  = Layouts(edit=Layout(b), view=Layout('f'))
-Layouts.fvd = Layouts(edit=Layout(d), view=Layout('f'))
+Layouts.f   = Layouts(LayoutF('f='))
+Layouts.fr  = Layouts(LayoutF('frv='))
+Layouts.wf  = Layouts(f)
+Layouts.fv  = Layouts(edit=Layout(b), view=f)
+Layouts.fvd = Layouts(edit=Layout(d), view=f)
 Layouts.g   = Layouts('frvl')
 # The *d*escription is visible, even on the *v*iew layout
 Layouts.dv  = Layouts(edit=d, view='l-d-f')
-Layouts.dvt = Layouts(edit=Layout(d, css='topSpace'),
-                      view=Layout('l-d-f', css='topSpace'))
+Layouts.dvt = Layouts.dv.clone(css='topSpace')
 # The *d*escription is shown on the *v*iew layout but not on *e*dit (=*s*imple)
 Layouts.dvs = Layouts(edit=b, view='l-d-f')
 # "Grid" group-related layouts
 Layouts.gn  = Layouts(Layout('f;rvl=', width=None))
 Layouts.gd  = Layouts(Layout('frvl-d', width='99%'))
 Layouts.dg  = Layouts(Layout('d-frvl', width='99%'))
-Layouts.gdn = Layouts(edit=Layout('d2-f;rvl=', width=None), view=Layout('f'))
+Layouts.gdn = Layouts(edit=Layout('d2-f;rvl=', width=None), view=f)
 Layouts.gh  = Layouts('fhrvl')
 Layouts.gdh = Layouts('fhrvl-d')
-# Base layouts, with space above
-Layouts.t = Layouts(Layout(b, width=None, css='topSpace'))
-Layouts.td = Layouts(Layout(d, css='topSpace'))
+# Base layouts, with space on *t*op of the field
+Layouts.t   = Layouts.b.clone(css='topSpace')
+Layouts.tw  = Layouts(Layout(b, css='topSpace'))
+Layouts.tf  = Layouts(LayoutF('f', css='topSpace'))
+Layouts.td  = Layouts.dt
+Layouts.te  = Layouts.b.clone(edit=Layouts.t['edit']) # Variant: no top on edit
+Layouts.ts  = Layouts.t.clone(css='topSpaceS') # Variant: less top space
+Layouts.tes = Layouts.b.clone(edit=Layouts.ts['edit'])
 
 # Fields being in groups having style "grid" deserve specific layouts. This why
 # there are 2 default layouts.

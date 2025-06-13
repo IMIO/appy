@@ -25,18 +25,18 @@ class Response:
 
     # Appy works with UTF-8
     encoding = 'utf-8'
-    charset = 'charset=%s' % encoding
+    charset = f'charset={encoding}'
 
-    # HTTP headers must be ISO-8859-1
+    # Encoding for response HTTP headers must be ISO-8859-1
     headersEncoding = 'iso-8859-1'
 
     # End of lines as written in HTTP responses
     eol = b'\r\n'
 
     # Types of dynamic responses a Appy server may produce
-    types = {'html': 'text/html;%s' % charset,
-             'xml' : 'text/xml;%s' % charset,
-             'json': 'application/json;%s' % charset}
+    types = {'html': f'text/html;{charset}',
+             'xml' : f'text/xml;{charset}',
+             'json': f'application/json;{charset}'}
 
     # MIME type of files stored on disk, that will be compressed. CSS files are
     # not there, because the Appy server loads it in RAM.
@@ -62,15 +62,10 @@ class Response:
     def __init__(self, handler):
         # A link to the p_handler
         self.handler = handler
-        # The HTTP code for the response, as a value of enum http.HTTPStatus
-        self.code = HTTPStatus.OK
-        # The phrase related to the code. Ie, phrase for code 200 is "OK".
-        self.codePhrase = None
-        # The message to be returned to the user
-        self.message = None
-        # Fill this message be fleeting ? (= will it disappear after some
-        # seconds in the UI ?)
-        self.fleetingMessage = True
+        # Specific initialisation section that is the object of a separate
+        # method because it will be reexecuted if the current transaction is
+        # replayed.
+        self.init()
         # Response base headers, returned for any response, be it static or
         # dynamic.
         if handler.fake:
@@ -85,19 +80,31 @@ class Response:
         # If the response content type is among Response.types, the
         # corresponding key in this dict is stored here.
         self.contentType = None
+        # If the response content is XML, the name of the root tag can be
+        # specified here. If no root tag is specified, a default one will be
+        # chosen by the traversal.
+        self.rootTag = None
         # The HTTP version string
         config = handler.server.config.server
         self.httpVersion = config.getProtocolString()
         # The "SameSite" attribute for cookies
         self.sameSite = config.sameSite
+
+    def init(self):
+        '''Part of the object constructor that will be reapplied when the
+           current transaction is replayed.'''
+        # The HTTP code for the response, as a value of enum http.HTTPStatus
+        self.code = HTTPStatus.OK
+        # The phrase related to the code. Ie, phrase for code 200 is "OK".
+        self.codePhrase = None
+        # The message to be returned to the user
+        self.message = None
+        # Fill this message be fleeting ? (= will it disappear after some
+        # seconds in the UI ?)
+        self.fleetingMessage = True
         # Has this response already been sent ? It may happen when producing
         # dynamic content whose result is a File.
         self.sent = False
-
-    def setContentType(self, type):
-        '''Sets the content type for this response'''
-        self.headers['Content-Type'] = Response.types.get(type) or type
-        self.contentType = type
 
     def initDynamic(self, contentType='html'):
         '''Complete p_self's headers with those being specific to a dynamic
@@ -109,6 +116,15 @@ class Response:
         # If it turns out that the dynamic content must be cached (it could
         # happen with File fields with cache=True), keys "Cache-Control" and
         # "Expires" will be removed afterwards.
+
+    def __repr__(self):
+        '''p_self's short string representation'''
+        return f'‹Response code={self.code}›'
+
+    def setContentType(self, type):
+        '''Sets the content type for this response'''
+        self.headers['Content-Type'] = Response.types.get(type) or type
+        self.contentType = type
 
     def setHeader(self, name, value):
         '''Adds (or replace) a HTTP header among response headers'''
@@ -138,12 +154,19 @@ class Response:
         '''Deletes the cookie having this p_name'''
         self.setCookie(name, 'deleted')
 
-    def addMessage(self, message, fleeting=None):
-        '''Adds a message to p_self.message'''
+    def addMessage(self, message, fleeting=None, first=False):
+        '''Appends (or prepends if p_first is True) a message to
+           p_self.message.'''
         if self.message is None:
             self.message = message
         else:
-            self.message = '%s<br/>%s' % (self.message, message)
+            if first:
+                pre = message
+                post = self.message
+            else:
+                pre = self.message
+                post = message
+            self.message = f'{pre}<br/>{post}'
         # Update fleetingness. If several messages were added with different
         # fleeting flavours, the last non-None p_fleeting value will override
         # any previous one.
@@ -177,17 +200,17 @@ class Response:
     def write(self, s):
         '''Writes part p_s of the response to the client socket. Returns True if
            an error occurred.'''
+        h = self.handler
         try:
-            self.handler.clientSocket.sendall(s)
+            h.clientSocket.sendall(s)
         except BrokenPipeError:
-            self.handler.log('app', 'error', BROKEN_PIPE % self.handler.path)
+            h.log('app', 'error', BROKEN_PIPE % h.path)
             return True
         except ConnectionResetError:
-            self.handler.log('app', 'error', CONN_RESET % self.handler.path)
+            h.log('app', 'error', CONN_RESET % h.path)
             return True
         except OSError as err:
-            self.handler.log('app', 'error', OS_ERROR % \
-                                             (str(err), self.handler.path))
+            h.log('app', 'error', OS_ERROR % (str(err), h.path))
 
     def writeFile(self, path):
         '''Writes the file lying on the file system @ path to the client socket.
@@ -330,7 +353,7 @@ class Response:
         # Log the error
         handler.log('app', 'error', RESP_ERR % (code, message))
         # Define a content when relevant
-        if (code > 200) and (code not in Response.noBodyCodes):
+        if code > 200 and code not in Response.noBodyCodes:
             content = Response.errorTemplate % code
         else:
             content = None

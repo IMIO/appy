@@ -22,24 +22,23 @@ class Group:
       labelCss=None, master=None, masterValue=None, cellpadding=1,
       cellspacing=1, cellgap='0.6em', label=None, translated=None):
         self.name = name
-        # In its simpler form, field "columns" below can hold a list or tuple
-        # of column widths expressed as strings, that will be given as is in
-        # the "width" attributes of the corresponding "td" tags. Instead of
-        # strings, within this list or tuple, you may give Column instances
-        # (see below).
+        # In its simpler form, field "columns" below can hold a list (not a
+        # tuple) of column widths expressed as strings, that will be given as is
+        # in the "width" attributes of the corresponding "td" tags. Instead of
+        # strings, within this list, you may give Column objects (see below).
         self.columns = columns
         self._setColumns(style)
         # If field "wide" below is True, the HTML table corresponding to this
         # group will have width 100%. You can also specify some string value,
         # which will be used for HTML param "width".
-        if wide == True:
+        if wide is True:
             self.wide = '100%'
         elif isinstance(wide, str):
             self.wide = wide
         else:
             self.wide = ''
         # Groups of various styles can be rendered. If "style" is:
-        # - 'sectionX'  (X can be 1, 2, 3...) 
+        # - 'sectionX'  (X can be 1, 2, 3...)
         #               the group will be rendered as a "section": the group
         #               title will be rendered in some style (depending on X)
         #               before the widgets;
@@ -92,15 +91,15 @@ class Group:
         self.master = master
         self.masterValue = utils.initMasterValue(masterValue)
         if master: master.slaves.append(self)
-        self.label = label # See similar attr of Type class
+        self.label = label # See similar attribute on the Field class
         # If a translated name is already given here, we will use it instead of
         # trying to translate the group label.
         self.translated = translated
 
     def __repr__(self):
         '''p_self's string representation'''
-        parent = ',parent=%s' % self.group.name if self.group else ''
-        return '<group %s%s>' % (self.name, parent)
+        parent = f',parent={self.group.name}' if self.group else ''
+        return f'‹Group {self.name}{parent}›'
 
     def _setColumns(self, style):
         '''Standardizes field "columns" as a list of Column instances. Indeed,
@@ -226,7 +225,7 @@ class UiGroup:
      </tr>
      <tr if="field.hasDescr">
       <td colspan=":len(field.columnsWidths)"
-          class="discreet">::_(field.descrId)</td>
+          class="discreet groupD">::_(field.descrId)</td>
      </tr>''')
 
     # Render the fields within a group in the most frequent cases:
@@ -416,6 +415,10 @@ class UiGroup:
         self.labelId = f'{prefix}_{labelName}'
         self.descrId = f'{self.labelId}_descr'
         self.helpId  = f'{self.labelId}_help'
+
+    def __repr__(self):
+        '''p_self's short string representation'''
+        return f'‹UiGroup name={self.name}›'
 
     def addElement(self, element):
         '''Adds p_element into self.elements. We try first to add p_element into

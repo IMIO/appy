@@ -29,11 +29,10 @@ class Template:
         if '</p>' in r: r = r[3:r.index('</p>')]
         # Add p_o's page title if found
         if o and 'page' in tool.req:
-            label = '%s_page_%s' % (o.class_.name, tool.req.page)
+            label = f'{o.class_.name}_page_{tool.req.page}'
             text = tool.translate(label, blankOnError=True)
             if text:
-                if r: r += ' :: '
-                r += text
+                r = f'{text} · {r}' if r else text
         return Px.truncateValue(r, width=100)
 
     # PX for which compact CSS must be used
@@ -56,21 +55,25 @@ class Template:
         return class_.zoneCss[zone][compact]
 
     @classmethod
-    def includeLoginBox(class_, c):
-        '''Must the login box be included in the current page ?'''
-        # The login box has no sense if the user is already authenticated or in
-        # the process of self-registering, or if browser incompatibility has
-        # been detected.
-        if not c.isAnon or c.o.isTemp() or c.bi: return
-        # Moreover, if we are on the public page and the authentication will be
-        # done by redirecting the user to tool/home, it is useless to include
-        # the login box in this case, too.
-        if c._px_.name == 'public' and c.cfg.discreetLogin == 'home':
-            return
-        # If we are on an error page, no login box
-        if c._px_.name == 'error': return
-        # Include it in any other case
-        return True
+    def showLoginBox(class_, c):
+        '''Must the login box be shown ?'''
+        # The return value may be:
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #   True     | The login box must be shown
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #   False    | The login box must not be shown at all (ie, the user is
+        #            | already authenticated)
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "discreet" | The login box must be included in the current page, but
+        #            | not directly visible. In that mose, a link allows to show
+        #            | the login box via a JS code.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # The login box has no sense if the user is already authenticated, if
+        # browser incompatibility has been detected, if the user is in the
+        # process of self-registering, or if we are in the popup.
+        if not c.isAnon or c.bi or c.popup or c.o.isTemp(): return
+        # Show it completely on the home page. Else, show it, but discreetly
+        return True if c._px_.isHome(c, orPublic=False) else 'discreet'
 
     @classmethod
     def getMainStyle(class_, c):
@@ -82,33 +85,34 @@ class Template:
         # set the main height to 100%: the portlet itself will get a reduced
         # height taking into account its specific footer.
         if c.showFooter and not c.showFooterP:
-            height = 'calc(100%% - %s)' % c.cfg.footerHeight
+            height = f'calc(100% - {c.cfg.footerHeight})'
         else:
-            height = '99%' if c.popup else '100%'
-        height = 'height:%s' % height
-        return '%s;%s' % (r, height) if r else height
+            # A visual bug occurs on "edit" if set to 100%
+            height = '99%' if c.popup or c.layout == 'edit' else '100%'
+        height = f'height:{height}'
+        return f'{r};{height}' if r else height
 
     @classmethod
     def getPayloadStyle(class_, c):
         '''Gets the CSS styles to apply to the "payload" zone'''
         # The payload zone is the block portlet / content / sidebar
-        # ~~~ Determine the background image
+        # ~ Determine the background image
         r = c.cfg.getBackground(c._px_, c, type='popup' if c.popup else 'base')
-        # ~~~ Determine the "top" property
+        # ~ Determine the "top" property
         showHeader = c.showHeader
         if c.showHeader in class_.showheaderNoTop or c.payloadCss.endswith('P'):
             top = '0'
         else:
             top = c.headerHeight
-        top = 'top:%s' % top
-        r = '%s;%s' % (r, top) if r else top
+        top = f'top:{top}'
+        r = f'{r};{top}' if r else top
         return r
 
     @classmethod
     def getIconsStyle(class_, c):
         '''Get CSS styles to apply to the block of icons in the page header'''
         margin = c.cfg.cget('headerMargin', c)
-        return 'margin-%s:auto' % margin
+        return f'margin-{margin}:auto'
 
     @classmethod
     def getContentStyle(class_, c):
@@ -120,33 +124,20 @@ class Template:
     @classmethod
     def getContent(class_, c):
         '''Returns the page content, with the sub-header when relevant'''
-        r = '<div id="appyContent" class="%s"%s>%s</div>' % \
-            (class_.getCssFor('content', c), class_.getContentStyle(c),
-             c.content(c, applyTemplate=False))
+        css = class_.getCssFor('content', c)
+        style = class_.getContentStyle(c)
+        content = c.content(c, applyTemplate=False)
+        r = f'<div id="appyContent" class="{css}"{style}>{content}</div>'
         # Add the burger button to expand the portlet. Indeed, when the header
         # is inlaid into the portlet, the burger button being within ths header
         # is unavailable.
         if c.inlaidHeader:
             c.cookie = 'appyPortlet'
             c.bcss = 'eburger'
-            r = '%s%s' % (class_.pxBurger(c), r)
+            r = f'{class_.pxBurger(c)}{r}'
         # Add the sub-header when appropriate
         if c.showHeader == 'sub':
-            r = '<div class="subbed">%s%s</div>' % (class_.pxHeader(c), r)
-        return r
-
-    @classmethod
-    def showConnect(class_, c):
-        '''Show the "connect" link for anons only, if discreet login is enabled
-           or if the login box is hidden, and if we are not already on a page
-           allowing to log in.'''
-        if not c.isAnon: return
-        if c.cfg.discreetLogin:
-            # Show it if we are not already on a page allowing to log in
-            r = not c._px_.isHome(c, orPublic=False)
-        else:
-            # Show it if we are on the public site, where there is no login box
-            r = c._px_.name == 'public'
+            r = f'<div class="subbed">{class_.pxHeader(c)}{r}</div>'
         return r
 
     # Hooks for defining PXs proposing additional links or icons, before and
@@ -162,7 +153,7 @@ class Template:
             r = 'none'
         else:
             r = 'block'
-        return 'display:%s' % r
+        return f'display:{r}'
 
     # PX for rendering a burger button
     pxBurger = Px('''
@@ -179,24 +170,15 @@ class Template:
 
     # Link to go to the tool
     pxTool = Px('''
-     <a href=":'%s/view' % tool.url" title=":_('Tool')">
+     <a href=":f'{tool.url}/view'" title=":_('Tool')">
       <img src=":svg('config')" class="icon"/></a>''')
-
-    # The link to open the login box, if we are in "discreet login" mode
-    pxLogin = Px('''
-     <div class="textIcon" id="loginIcon" name="loginIcon"
-          var2="loginUrl=guard.getLoginUrl(_ctx_)">
-      <a href=":loginUrl">
-       <img if="cfg.showLoginIcon" src=":svg('login')" class="icon textIcon"/>
-      </a>
-      <a href=":loginUrl"><span>:_('app_connect')</span></a>
-     </div>''')
 
     # The link to log out
     pxLogout = Px('''
      <div if="not isAnon" class=":'textIcon' if cfg.logoutText else ''"
-        var2="logoutText=_('app_logout');
-              logoutUrl=guard.getLogoutUrl(tool, user)">
+          id="logout"
+          var2="logoutText=_('app_logout');
+                logoutUrl=guard.getLogoutUrl(tool, user)">
       <a href=":logoutUrl" title=":logoutText">
        <img src=":svg('logout')" class="icon"/></a>
       <a if="cfg.logoutText" href=":logoutUrl"><span>:logoutText</span></a>
@@ -229,7 +211,8 @@ class Template:
         <img src=":svg('home')" class="icon"/></a>
 
       <!-- Connect link if discreet login -->
-      <x if="Template.showConnect(_ctx_)">:Template.pxLogin</x>
+      <x if="showLoginBox == 'discreet'"
+         var2="showLoginIcon=cfg.showLoginIcon">:guard.pxLoginLink</x>
 
       <!-- Root pages -->
       <x if="cfg.tget('showRootPages', tool)"
@@ -248,6 +231,9 @@ class Template:
        <!-- User link -->
        <x if="cfg.tget('showUserLink', tool)">:user.pxLink</x>
 
+       <!-- Normal / dark mode switcher -->
+       <x if="cfg.dark.enabled">:ui.Dark.switcher</x>
+
        <!-- Authentication context selector -->
        <x var="ctx=config.security.authContext" if="ctx">:ctx.pxLogged</x>
       </x>
@@ -256,7 +242,7 @@ class Template:
       <x>:Template.pxLinksAfter</x>
 
       <!-- The burger button for collapsing the sidebar -->
-      <x if="showSidebar" var2="cookie='appySidebar'">:Template.pxBurger</x>
+      <x if="sidebar" var2="cookie='appySidebar'">:Template.pxBurger</x>
 
       <!-- Logout -->
       <x if="not isAnon">:Template.pxLogout</x>
@@ -275,7 +261,7 @@ class Template:
     pxHeader = Px('''
      <div class="topBase"
           style=":cfg.getBackground(_px_, _ctx_, type='header')">
-      <div class="top" style=":'height:%s' % headerHeight">
+      <div class="top" style=":f'height:{headerHeight}'">
        <x>:Template.pxTemplateLinks</x>
       </div>
      </div>''',
@@ -290,7 +276,7 @@ class Template:
     # The template of all base PXs
     px = Px('''
      <html var="x=handler.customInit(); cfg=config.ui; Template=ui.Template"
-           dir=":dir">
+           dir=":dir" attrs="cfg.cget('htmlAttributes', _ctx_)">
 
       <head>
        <title>:Template.getPageTitle(tool, o or home)</title>
@@ -301,8 +287,9 @@ class Template:
       </head>
 
       <body class=":cfg.getClass('body', _px_, _ctx_)"
-            var="showPortlet=ui.Portlet.show(tool, _px_, _ctx_);
-                 showSidebar=ui.Sidebar.show(tool, o, layout, popup);
+            var="showLoginBox=Template.showLoginBox(_ctx_);
+                 showPortlet=ui.Portlet.show(tool, _px_, _ctx_);
+                 sidebar=ui.Sidebar.get(tool, o, layout, popup);
                  showHeader=cfg.showHeader(_px_, _ctx_, popup);
                  headerHeight=cfg.cget('headerHeight', _ctx_);
                  inlaidHeader=showHeader == 'portlet';
@@ -319,6 +306,9 @@ class Template:
        <!-- Popups -->
        <x>::ui.Globals.getPopups(tool, svg, _, dleft, dright, popup)</x>
 
+       <!-- The global ui variable -->
+       <script if="not popup">var ui = new UiState();</script>
+
        <div class=":cfg.getClass('main', _px_, _ctx_)"
             style=":Template.getMainStyle(_ctx_)">
 
@@ -329,7 +319,7 @@ class Template:
         <div height="0">:ui.Message.px</div>
 
         <!-- Login zone -->
-        <x if="Template.includeLoginBox(_ctx_)">:guard.pxLogin</x>
+        <x if="showLoginBox">:guard.pxLogin</x>
 
         <!-- Payload: portlet / content / sidebar -->
         <div id="payload" var="payloadCss=Template.getCssFor('payload', _ctx_)"
@@ -342,7 +332,7 @@ class Template:
          <x>::Template.getContent(_ctx_)</x>
 
          <!-- Sidebar -->
-         <x if="showSidebar">:ui.Sidebar.px</x>
+         <x if="sidebar">:sidebar.px</x>
         </div>
 
         <!-- Cookie warning -->

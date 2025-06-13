@@ -91,9 +91,9 @@ class Value:
     colorProperties = ('color', 'background-color')
 
     # Regular expressions for parsing (parts of) CSS values
-    valueRex = re.compile('(-?\d*(?:\.\d+)?)(%|px|cm|pt|em|ex)?')
-    rgbVal = '\s*([\d.]+)\s*'
-    rgbRex = re.compile('rgba?\(%s,%s,%s(?:,%s)?\)' % ((rgbVal,)*4))
+    valueRex = re.compile(r'(-?\d*(?:\.\d+)?)(%|px|cm|pt|em|ex)?')
+    rgbVal = r'\s*([\d.]+)\s*'
+    rgbRex = re.compile(r'rgba?\(%s,%s,%s(?:,%s)?\)' % ((rgbVal,)*4))
 
     def __init__(self, name, value):
         # p_value can be another Value instance
@@ -222,6 +222,9 @@ class Styles:
     # defined in the standard order.
     directions = ('top', 'right', 'bottom', 'left')
 
+    # Directions implied with *w*idth
+    directionsW = ('right', 'left')
+
     # Values, on combined attributes, that prevent splitting
     unsplittable = ('auto',)
 
@@ -297,13 +300,13 @@ class Styles:
         self.split()
 
     def __repr__(self):
-        r = '-=CSS'
+        r = '‹CSS'
         for name, value in self.__dict__.items():
             if name == 'classes':
                 if value: r = f'{r} {name}::{value}'
             else:
                 r = f'{r} {name}:{value}'
-        return f'{r}=-'
+        return f'{r}›'
 
     def __bool__(self):
         # Count all attributes but "classes" that is always present

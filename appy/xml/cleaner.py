@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
@@ -10,7 +8,11 @@ from appy.utils import asDict
 from appy.utils.css import Styles
 from appy.xml.escape import Escape
 from appy.xml import Parser, XHTML_SC
-from appy.utils.string import firstMatch
+from appy.utils import string as sutils
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+TFM_KO = 'Transform function %s :: Error while transforming: "%s" :: %s'
+IT_KO  = 'Error while trying to italicize text "%s" :: %s'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Cleaner(Parser):
@@ -60,7 +62,9 @@ class Cleaner(Parser):
                  tagsToIgnoreWithContent=tagsToIgnoreWithContent,
                  tagsToIgnoreKeepContent=tagsToIgnoreKeepContent,
                  attrsToIgnore=attrsToIgnore, propertiesToKeep=None,
-                 attrsToAdd=attrsToAdd, repair=False, invalidTexts=None):
+                 attrsToAdd=attrsToAdd, repair=False, invalidTexts=None,
+                 transformText=None, toItalicize=None,
+                 stripped=sutils.whitespace, logger=None):
         # Call the base constructor
         Parser.__init__(self, env, caller, raiseOnError)
         self.tagsToIgnoreWithContent = tagsToIgnoreWithContent
@@ -80,6 +84,27 @@ class Cleaner(Parser):
         # we are talking about non-exact matches here (ie, method regex.search
         # will be used, and not regex.match).
         self.invalidTexts = invalidTexts
+        # You may pass a function in p_transformText. It will be called
+        # everytime raw text is encountered and must be dumped into the result.
+        # The function must accept a string as unique arg and must return a
+        # string, being the parameter or a variant, transformed in some way.
+        self.transformText = transformText
+        # If passed, p_toItalicize must be, either:
+        # - a set of terms that, if found in field content, will be
+        #   italicized = surrounded by <i></i> tags, or
+        # - a regular expression (regex) that represents such a set, in the
+        #   form "word1|word2|...". Method Cleaner.getItalicizeRex produces such
+        #   a regex from a set of words.
+        self.toItalicize = self.getItalicizeRex(toItalicize)
+        # When stripping whitespace, it may be interesting to keep some types of
+        # whitespace chars, like non-breaking chars. p_stripped, by default,
+        # contains the list of all chars being considered whitespace. You may
+        # change this, and, for example, use appy.utils.string.whitespaceNB_
+        # instead, that does not include the non-breaking space.
+        self.stripped = stripped
+        # A logger object can be passed if the cleaner has something to say (ie,
+        # a p_transformText function produces an error).
+        self.logger = logger
 
     def startDocument(self):
         # The result will be cleaned XHTML, joined from self.r
@@ -88,6 +113,12 @@ class Cleaner(Parser):
 
     def endDocument(self):
         self.r = ''.join(self.r)
+
+    def log(self, text, type='info'):
+        '''Logs this p_text, if a p_self.logger is available'''
+        o = self.logger
+        if o:
+            o.log(text, type=type)
 
     def dump(self, something):
         '''Adds p_something to p_self.r'''
@@ -157,9 +188,37 @@ class Cleaner(Parser):
         '''Raises an InvalidText exception if p_content contains invalid text'''
         patterns = self.invalidTexts
         if not patterns: return
-        text = firstMatch(patterns, content)
+        text = sutils.firstMatch(patterns, content)
         if text:
             raise Cleaner.InvalidText(text)
+
+    @classmethod
+    def getItalicizeRex(class_, words):
+        '''Returns a regular expression made of all p_words to italicize'''
+        # Maybe, there is nothing to italicize
+        if not words: return
+        # Maybe, p_word is already a regex
+        if isinstance(words, re.Pattern): return words
+        # Convert p_words, supposedly being a set of strings, to a regex
+        r = []
+        for word in words:
+            r.append(re.escape(word))
+        # Get longer words first
+        r.sort(key=lambda word:-len(word))
+        # Prevent words being parts of longer words from being matched, by:
+        # (a) prefixing the regex by a negative lookbehind assertion ("the word
+        #     may not be preceded by any alphanumeric char");
+        alphaChar = r'[\w-]' # Include the dash
+        prefix = f'(?<!{alphaChar})'
+        # (b) suffixing the regex by a negative lookahead assertion ("the word
+        #     may not be followed by any alphanumeric char").
+        suffix = f'(?!{alphaChar})'
+        words = '|'.join(r)
+        return re.compile(f'{prefix}(?:{words}){suffix}')
+
+    def italicize(self, match):
+        '''This method surrounds, by an "i" tag, the p_match(ed) word'''
+        return f'<i>{match.group(0)}</i>'
 
     def dumpCurrentContent(self, beforeEnd=None):
         '''Dumps (if any) the current content as stored on p_self.env'''
@@ -170,9 +229,27 @@ class Cleaner(Parser):
         # If the current content must be dumped before closing an end tag
         # representing a paragraph (p_beforeEnd), right-strip the content.
         if beforeEnd and beforeEnd in Cleaner.lineBreakTags:
-            content = content.rstrip()
+            content = content.rstrip(self.stripped)
         # Ensure no invalid text is present
         self.checkInvalidText(content)
+        # Apply some transform to v_content when relevant
+        if self.transformText:
+            try:
+                content = self.transformText(content)
+            except Exception as err:
+                # This cleaner may be cleaning text to be stored in the
+                # database. Any exception raised during this process should not
+                # lead to text being lost.
+                self.log(TFM_KO % (str(self.transformText), content, str(err)),
+                         type='error')
+        # Italicize words if required (and not already done)
+        if self.toItalicize and not e.inI:
+            try:
+                content = self.toItalicize.sub(self.italicize, content)
+            except Exception as err:
+                # Same remark as hereabove: avoid losing data while saving the
+                # current Appy object.
+                self.log(IT_KO % (content, str(err)), type='error')
         # Add the current content to the result
         self.dump(content)
         # Reinitialise the current content to the empty string
@@ -195,8 +272,8 @@ class Cleaner(Parser):
         # Get the last dumped element
         prev, i = self.getPrevious(withIndex=True)
         if not prev: return
-        prev = prev.strip()
-        if (prev == '<%s>' % tag) or prev.startswith('<%s ' % tag):
+        prev = prev.strip(self.stripped)
+        if prev == f'<{tag}>' or prev.startswith(f'<{tag} '):
             del self.r[i]
             r = True
         else:
@@ -207,6 +284,8 @@ class Cleaner(Parser):
         e = self.env
         # Dump any previously gathered content if any
         self.dumpCurrentContent()
+        # Are we in a "i" tag ?
+        if tag == 'i': e.inI = True
         # Remember list tags
         self.updateIndexes(tag, True)
         # Manage tag conflicts, leading to repairs
@@ -228,22 +307,22 @@ class Cleaner(Parser):
             prev = self.getPrevious()
             if prev and prev[-1] != '\n':
                 prefix = '\n'
-        r = '%s<%s' % (prefix, tag)
+        r = f'{prefix}<{tag}'
         # Include the found attributes, excepted those that must be ignored
         for name, value in attrs.items():
             if name in self.attrsToIgnore: continue
             # Clean "style" attribute, according to p_self.propertiesToKeep
             if name == 'style':
                 value = self.cleanStyleAttribute(value)
-            r += ' %s="%s"' % (name, Escape.xml(value))
+            r = f'{r} {name}="{Escape.xml(value)}"'
         # Include additional attributes if required
         if tag in self.attrsToAdd:
             for name, value in self.attrsToAdd[tag].items():
                 if name in attrs: continue
-                r += ' %s="%s"' % (name, value)
+                r = f'{r} {name}="{value}"'
         # Close the tag if it is a no-end tag
         suffix = '/>' if tag in XHTML_SC else '>'
-        self.dump('%s%s' % (r, suffix))
+        self.dump(f'{r}{suffix}')
 
     def endElement(self, tag):
         e = self.env
@@ -279,9 +358,12 @@ class Cleaner(Parser):
                         prev = self.getPrevious()
                         if prev and not prev.endswith('\n'):
                             suffix = '\n'
-                    self.dump('</%s>%s' % (tag, suffix))
+                    self.dump(f'</{tag}>{suffix}')
         # Pop list tags
         self.updateIndexes(tag, False)
+        # Update flag p_e.inI
+        if tag == 'i':
+            e.inI = False
 
     def characters(self, content):
         e = self.env
@@ -289,7 +371,7 @@ class Cleaner(Parser):
         # Remove leading whitespace
         current = e.currentContent
         if not current or current[-1] == '\n':
-            toAdd = content.lstrip('\n\r\t')
+            toAdd = content.lstrip(sutils.whitespaceB_)
         else:
             toAdd = content
         # Re-transform XML special chars to entities
@@ -312,6 +394,8 @@ class Cleaner(Parser):
         # 'ignoreContent' is True if, within the currently ignored tag, we must
         # also ignore its content.
         e.ignoreContent = False
+        # Are we currently walking a "i" tag ?
+        e.inI = False
         # Repair-related data sructures
         if self.repair:
             # Remember the indexes, within p_self.r, where starting list tags
@@ -324,7 +408,7 @@ class Cleaner(Parser):
         # If p_wrap is False, p_s is expected to already have a root tag. Else,
         # it may contain a sequence of tags that must be surrounded by a root
         # tag.
-        s = '<x>%s</x>' % s if wrap else s
+        s = f'<x>{s}</x>' if wrap else s
         return self.parse(s)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -347,7 +431,7 @@ class StringCleaner:
            wrapped into p_wrap. Specify p_wrap = None for disabling such
            wrapping.'''
         # Wrap p_s if required
-        if wrap: s = '<%s>%s</%s>' % (wrap, s, wrap)
+        if wrap: s = f'<{wrap}>{s}</{wrap}>'
         try:
             Parser().parse(s)
             return True

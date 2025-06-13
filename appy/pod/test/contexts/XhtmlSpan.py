@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 xhtmlInput = '''<strong>A<strong>B</strong></strong>
   <p>Text "Hello" in the following span tag will be applied an
   inline style: <span class="Variable">Hello</span> end.</p>

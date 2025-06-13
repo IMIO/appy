@@ -28,7 +28,11 @@ HELP_PORT = 'The port where LibreOffice listens. Defaults to %d.' % DEFAULT_PORT
 HELP_TEST = 'The test to execute. Available tests are %s. ' \
             'Default test is "convertToPdf".' % \
             ', '.join(['"%s" (%s)' % (k, v) for k, v in TESTS.items()])
-TEST_NOT_FOUND = 'Test %s does not exist.'
+
+R_START = 'Rendering %s...'
+R_END   = 'Result produced in %s.'
+C_START = 'Running test "%s" on LO %s:%s...'
+TEST_KO = 'Test %s does not exist.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class LO(Program):
@@ -75,22 +79,21 @@ class LO(Program):
         renderer = Renderer(str(template), context, str(result),
                             ooServer=self.server, ooPort=self.port, stream=True,
                             overwriteExisting=True, forceOoCall=True)
-        print('Rendering %s...' % str(template))
+        print(R_START % str(template))
         renderer.run()
+        print(R_END % str(result))
         return True
-        print('Result produced in %s.' % str(result))
 
     def run(self):
         '''Contacts LO'''
-        print('Running test "%s" on LO %s:%s...' % \
-              (self.test, self.server, self.port))
+        print(C_START % (self.test, self.server, self.port))
         # Abort if the specified test does not exist
         if not hasattr(self, self.test):
-            print(TEST_NOT_FOUND % self.test)
+            print(TEST_KO % self.test)
             sys.exit(1)
         method = getattr(self, self.test)
         if not callable(method):
-            print(TEST_NOT_FOUND % self.test)
+            print(TEST_KO % self.test)
             sys.exit(1)
         # Get the path to the POD test files
         self.filesPath = Path(test.__file__).parent / 'templates'
