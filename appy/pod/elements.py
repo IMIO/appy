@@ -3,8 +3,8 @@
 from xml.sax.saxutils import quoteattr
 
 from appy.pod import PodError
-from appy.shared.xml_parser import XmlElement
 from appy.pod.odf_parser import OdfEnvironment as ns
+from appy.shared.xml_parser import XmlElement, Escape
 
 # ------------------------------------------------------------------------------
 class PodElement:
@@ -148,10 +148,11 @@ class Expression(PodElement):
         '''Gets the expression in its unevaluated form'''
         if not self.pod: return '' # Works just for pod
         wrap = self.metaWraps[self.metaWrap]
+        expr = Escape.xml(self.expr)
         res = '<text:conditional-text text:condition="ooow:%s%s%s" ' \
                'text:string-value-if-true="%s" ' \
                'text:string-value-if-false="">%s</text:conditional-text>' % \
-               (wrap, self.metaCondition, wrap, self.expr, self.expr)
+               (wrap, self.metaCondition, wrap, expr, expr)
         return res
 
     def _eval(self, context):
