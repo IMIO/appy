@@ -303,7 +303,7 @@ class Mailer:
                 if one:
                     m['To'] = to[0]
                 else:
-                    m['To'] = from_
+                    m['To'] = self.from_
                     m['Bcc'] = ', '.join(to)
                 r = server.send_message(m)
                 self.logShipment(r, start)

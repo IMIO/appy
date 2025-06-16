@@ -49,11 +49,12 @@ def getFolderSize(folder, nice=False, withCounts=False):
     return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def getOsTempFolder(sub=False, asPath=False):
+def getOsTempFolder(sub=False, asPath=False, prefix='Appy'):
     '''Gets the absolute path to the temp folder on this machine. If p_sub is
-       True, it creates a sub-folder within this temp folder and returns its
-       absolute path instead of the "root" temp folder path.'''
-    r = tempfile.mkdtemp(prefix='Appy') if sub else tempfile.gettempdir()
+       True, it creates a sub-folder within this temp folder (whose name starts
+       with this p_prefix) and returns its absolute path instead of the "root"
+       temp folder path.'''
+    r = tempfile.mkdtemp(prefix=prefix) if sub else tempfile.gettempdir()
     # Return, if p_asPath is True, the result as a pathlib.Path object
     return Path(r) if asPath else r
 
