@@ -68,7 +68,7 @@ class Show:
     # but cannot modify it. Also used for fields like some Ref fields that are
     # never manipulated via "edit" layouts.
     E_  = ('view', 'result', 'xml')
-    ER_ = ('view', 'xml') # A variant, without "result"
+    ER_ = VX = ('view', 'xml') # A variant, without "result"
     E_S = ('view', 'sub', 'xml') # A variant, with "sub" instead of "result"
     S   = ('edit', 'view', 'sub', 'xml')
     BS  = ('buttons', 'sub') # Both in pxButtons and within lists of objects
@@ -96,7 +96,6 @@ class Show:
     # This is, a.o., for custom widgets whose edit and view variants are not
     # that different, but that cannot be shown elsewhere (result, xml, etc).
     VE  = ('view'   , 'edit')
-    VX  = ('view'   , 'xml')
     BX  = ('buttons', 'xml')
     EX  = ('edit'   , 'xml')
 

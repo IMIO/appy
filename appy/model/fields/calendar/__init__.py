@@ -241,7 +241,7 @@ class Calendar(Field):
 
     def __init__(self, eventTypes=None, eventNameMethod=None,
       allowedEventTypes=None, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show=Show.ER_, renderable=None, page='main',
+      defaultOnEdit=None, show='view', renderable=None, page='main',
       group=None, layouts=None, move=0, readPermission='read',
       writePermission='write', width='100%', height=300, colspan=1, master=None,
       masterValue=None, focus=False, mapping=None, generateLabel=None,
@@ -1147,10 +1147,6 @@ class Calendar(Field):
                 selected.append((calendarObj, calendarDate))
         # Execute the action
         return action.action(o, selected, req.comment)
-
-    def getXmlValue(self, o, value):
-        '''Not implemented yet'''
-        return
 
     def store(self, o, value):
         '''Stores this complete p_value on p_o'''
