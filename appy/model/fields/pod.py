@@ -518,8 +518,8 @@ class Pod(Field):
         /* For a Calendar field, get the parameters allowing to retrieve the
            events currently shown in the calendar. */
         if (hook && hook.indexOf('_') === -1) {
-          const data = getNode(hook)['ajax'].params;
-          f.calParams.value = JSON.stringify(data);
+          const ajax = getNode(hook)['ajax'];
+          if (ajax) f.calParams.value = JSON.stringify(ajax.params);
         }
       }
 
