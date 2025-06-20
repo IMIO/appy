@@ -124,4 +124,37 @@ xhtmlInput = '''
     </tr>
   </tbody>
 </table>
+<!-- A simple caption -->
+<table border="1" cellpadding="1" cellspacing="1" style="width:500px" summary="Résumé">
+ <caption>Titre simple</caption>
+  <thead>
+   <tr>
+    <th scope="col">Head</th>
+   </tr>
+  </thead>
+  <tbody>
+   <tr>
+    <td>Body</td>
+   </tr>
+  </tbody>
+</table>
+<!-- A complex caption -->
+<table border="1" cellpadding="1" cellspacing="1" style="width:500px" summary="Et voici mon résumé">
+ <caption>
+  <p>&nbsp;</p>
+  <p><strong>Compte budgétaire</strong></p>
+ </caption>
+  <thead>
+   <tr>
+    <th scope="col">H1</th>
+    <th scope="col">H2</th>
+   </tr>
+  </thead>
+  <tbody>
+   <tr>
+    <td>B1</td>
+    <td>B2</td>
+   </tr>
+  </tbody>
+</table>
 '''
