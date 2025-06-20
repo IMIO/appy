@@ -72,6 +72,18 @@ class Config:
         # Seconds to wait before executing p_self.afterCommand
         self.afterCommandWait = 0
 
+        # Once the backup has been performed, if the server must be restarted
+        # (see p_self.restart below), it will use the standard Appy command
+        #
+        #                  <sitePath>/bin/site restart
+        #
+        # If you want to define an alternate command, specify it, as a list, in
+        # p_self.restartCommand, like in this example:
+        #
+        #              ['systemctl', 'restart', 'AppService']
+        #
+        self.restartCommand = None
+
         # The list of email recipients that will receive an email containing
         # details about the backup procedure.
         self.emails = []
@@ -339,5 +351,6 @@ class Backup:
         self.messages.append(DETAILS)
         if config.emails: self.sendMails()
         # Restart the Appy server if required
-        if config.restart: tool.restart(wait=config.restart)
+        if config.restart:
+            tool.restart(wait=config.restart, command=config.restartCommand)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

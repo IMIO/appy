@@ -47,7 +47,7 @@ from appy.server.context import AuthenticationContext
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 RS_FG_KO   = 'Server cannot be restarted if running in the foreground.'
-RESTART_S  = "Restarting server (wait %d'')..."
+RESTART_S  = "Restarting server via command: %s..."
 SRV_CONF   = 'Server %s (%s%s) configured.'
 USR_CREA   = 'User "%s" created.'
 GRP_CREA   = 'Group "admins" created.'
@@ -490,23 +490,35 @@ class Tool(Base):
         return dutils.Date.format(self, date, format, withHour, language,
                                   hourSep=hourSep, hourEnd=hourEnd)
 
-    def restart(self, wait=5):
+    def restart(self, wait=5, command=None):
         '''Restarts the currently running Appy server (S), by forking another
            process that will wait p_wait seconds before restarting S.'''
-        # This cannot be done for servers running in the foreground
+        # By default, the command used to restart the server is
+        #
+        #                 <sitePath>/bin/site restart
+        #
+        # If you want to use an alternate command, specify it, as a list, in
+        # p_command, like for example:
+        #
+        #             ['systemctl', 'restart', 'AppService']
+        #
+        # If a custom p_command is passed, p_wait is ignored.
+        #
+        # This method cannot be called within a server running in the foreground
         if self.H().server.mode == 'fg':
             self.log(RS_FG_KO, type='warning')
             return
-        # Fork a process that will launch a "./site restart" command. Waiting
-        # p_wait seconds may give enough time to the Appy server for committing
-        # ongoing transactions.
-        sitePath = self.config.server.sitePath
-        args = [str(sitePath / 'bin' / 'site'), 'restart']
-        if wait:
-            args.append('-w')
-            args.append(str(wait))
-        self.log(RESTART_S % wait)
-        subprocess.Popen(args, stdin=None, stdout=None, stderr=None)
+        # Fork a process that will launch the restart command. Waiting p_wait
+        # seconds may give enough time to the Appy server for committing ongoing
+        # transactions.
+        if not command:
+            sitePath = self.config.server.sitePath
+            command = [str(sitePath / 'bin' / 'site'), 'restart']
+            if wait:
+                command.append('--wait')
+                command.append(str(wait))
+        self.log(RESTART_S % ' '.join(command))
+        subprocess.Popen(command, stdin=None, stdout=None, stderr=None)
 
     def backup(self):
         '''Method allowing to trigger the backup of a Appy site'''
