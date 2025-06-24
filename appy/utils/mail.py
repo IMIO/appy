@@ -40,7 +40,7 @@ class Config:
     testable = False
 
     def __init__(self, fromName=None, fromEmail='info@appyframe.work',
-                 replyTo=None, server='localhost', port=25, secure=False,
+                 replyTo=None, server='localhost', port=None, secure=False,
                  login=None, password=None, enabled=True):
         # The name that will appear in the "from" part of the messages
         self.fromName = fromName
@@ -54,7 +54,11 @@ class Config:
             self.port = int(port)
         else:
             self.server = server
-            self.port = int(port) # That way, people can specify an int or str
+            if port:
+                port = int(port) # That way, people can specify an int or str
+            else:
+                port = 465 if secure else 25
+            self.port = port
         # Secure connection to the SMTP server ?
         self.secure = secure
         # Optional credentials to the SMTP server
@@ -72,10 +76,8 @@ class Config:
 
     def connect(self):
         '''Connects to the SMTP server and returns it'''
-        server = smtplib.SMTP(self.server, port=self.port)
-        if self.secure:
-            server.ehlo()
-            server.starttls()
+        class_ = smtplib.SMTP_SSL if self.secure else smtplib.SMTP
+        server = class_(self.server, port=self.port)
         if self.login:
             server.login(self.login, self.password)
         return server
@@ -84,7 +86,8 @@ class Config:
         '''Short string representation of this mail config, for logging and
            debugging purposes.'''
         auth = f' (login as {self.login})' if self.login else ''
-        r = f'‹MailConfig {self.server}:{self.port}{auth}›'
+        ssl = '·SSL' if self.secure else ''
+        r = f'‹MailConfig {self.server}:{self.port}{auth}{ssl}›'
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
