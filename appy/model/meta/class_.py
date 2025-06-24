@@ -314,6 +314,10 @@ class Class(Meta):
         self.fields[name] = field
         # Late-initialise it
         field.init(self, name)
+        if isinstance(field, Ref) and field.back:
+            back = field.back
+            if back and not hasattr(back, 'name'):
+                back.class_.meta.setField(back.attribute, back)
 
     def openHistories(self):
         '''Make histories on p_self's objects viewable by anyone having the
