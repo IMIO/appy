@@ -314,6 +314,7 @@ class Class(Meta):
         self.fields[name] = field
         # Late-initialise it
         field.init(self, name)
+        # For a Ref field, initialise the back Ref as well
         if isinstance(field, Ref) and field.back:
             back = field.back
             if back and not hasattr(back, 'name'):

@@ -417,7 +417,7 @@ class Mailer:
 
     def collectUsers(self, o, privilege, privilegeType):
         '''Collect users having this p_privilege on this p_o(bject). If
-           privilegeType is "role" or "permission", all active users are
+           p_privilegeType is "role" or "permission", all active users are
            returned; they will be filtered by the called method.'''
         # To be more precise, the return value is a tuple ([users], s_checkPR),
         # where s_checkPR indicates if the called method must further filter
@@ -452,13 +452,11 @@ class Mailer:
            mode, for every such recipient, it directly sends a mail.'''
         r = None
         split = self.split
+        checkRole = checkPR == 'role'
         for user in users:
-            # Evaluate the "exclude expression"
-            if eval(excludeExpression): continue
-            # Check if the user has p_privilege on this object (only applicable
-            # if the privilege does not represent a group).
+            # Check if the user has p_privilege on this object
             if checkPR:
-                has = user.hasRole if checkPR == 'role' else user.hasPermission
+                has = user.hasRole if checkRole else user.hasPermission
                 if isinstance(privilege, str):
                     # Check a single permission or role
                     if not has(privilege, o): continue
@@ -471,7 +469,9 @@ class Mailer:
                             hasOne = True
                             break
                     if not hasOne: continue
-            # Execute the "user method" when specified
+            # Evaluate the p_excludeExpression
+            if excludeExpression and eval(excludeExpression): continue
+            # Execute the p_userMethod when specified
             if userMethod and not getattr(user, userMethod)(o): continue
             # Get the mail recipient for this user
             recipient = user.getMailRecipient()
@@ -497,7 +497,7 @@ class Mailer:
         return r
 
     def sendIf(self, o, privilege, subject, body, attachments=None,
-               privilegeType='permission', excludeExpression='False',
+               privilegeType='permission', excludeExpression=None,
                userMethod=None, replyTo=None, split=False, variables=None):
 
         '''Sends a mail related to this p_o(bject) to any active user having
@@ -514,10 +514,10 @@ class Mailer:
         # 'user'       | user login(s)
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-        # p_excludeExpression will be evaluated on every selected user. Users
-        # for which the expression will produce True will not become mail
-        # recipients. The expression is evaluated with variable "user" in its
-        # context.
+        # p_excludeExpression, if passed, will be evaluated on every selected
+        # user. Users for which the expression will produce True will not become
+        # mail recipients. The expression is evaluated with variables "user" and
+        # "o" in its context.
 
         # p_userMethod may be the name of a method on class User. If specified,
         # beyond p_privilege checking, a user will receive a mail if this method
