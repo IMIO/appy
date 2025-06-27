@@ -11,6 +11,7 @@ from appy.pod import *
 from appy.utils import css
 from appy.xml.escape import Escape
 from appy.utils.inject import Injector
+from appy.utils.string import Normalize
 from appy.xml import Environment, Parser
 from appy.utils import formatNumber, addPair
 from appy.pod.odf_parser import OdfEnvironment
@@ -721,7 +722,7 @@ class XhtmlEnvironment(Environment):
 
     defaultListStyles = {'ul': 'podBulletedList', 'ol': 'podNumberedList'}
 
-    # For list styles, this dict maps values of HTML attrbute "type" to CSS
+    # For list styles, this dict maps values of HTML attribute "type" to CSS
     # property values for attribute "list-style-type".
     typeToListStyleType = {'1': 'decimal', 'a': 'lower-alpha',
       'A': 'upper-alpha', 'i': 'lower-roman', 'I': 'upper-roman',
@@ -903,10 +904,9 @@ class XhtmlEnvironment(Environment):
         # Determine the ListProperties class to use
         class_ = self.listClasses[elem]
         # Determine the format of bullets/numbers
-        formats = (name in self.listFormats) and self.listFormats[name] or \
-                  class_.defaultFormats
+        formats = self.listFormats.get(name) or class_.defaultFormats
         # Create the Properties instance
-        styleName = 'L-%s' % name
+        styleName = f'L-{name}'
         self.listProperties[styleName] = class_(formats=formats)
         return styleName
 
@@ -930,7 +930,7 @@ class XhtmlEnvironment(Environment):
         if hasattr(styles, 'liststyletype'):
             typeValue = styles.liststyletype.value
             if typeValue not in ('initial', 'inherit'):
-                res = typeValue
+                res = Normalize.text(typeValue, keepBlank=False)
         # Check HTML attribute "type"
         if not res and 'type' in attrs:
             res = self.typeToListStyleType.get(attrs['type'])
