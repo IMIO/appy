@@ -83,31 +83,15 @@ class Boolean(Field):
            class=":masterCss" value=":rawValue" name=":name" id=":name"/>''')
 
     edit = Px('''<x var="isTrue=field.isTrue(o, name, rawValue);
-                         visibleName=name + '_visible'">
+                         visibleName=f'{name}_visible'">
      <x if="field.render == 'checkbox'">
       <input type="checkbox" name=":visibleName" id=":name"
              class=":masterCss" checked=":isTrue"
              onclick=":field.getOnChange(o, layout)"/>
      </x>
      <x if="field.asRadios"
-        var2="falseId=f'{name}_false';
-              trueId=f'{name}_true';
-              disabled=field.getDisabled(o)">
-      <div class="flex1">
-       <input type="radio" name=":visibleName" id=":falseId" class=":masterCss"
-              value="False" checked=":not isTrue" disabled=":disabled"
-              onclick=":field.getOnChange(o, layout)"/>
-       <label lfor=":falseId"
-              class="subLabel">::_(f'{field.labelId}_false')</label>
-      </div>
-      <div class="flex1">
-       <input type="radio" name=":visibleName" id=":trueId" class=":masterCss"
-              value="True" checked=":isTrue" disabled=":disabled"
-              onclick=":field.getOnChange(o, layout)"/>
-       <label lfor=":trueId"
-              class="subLabel">::_(f'{field.labelId}_true')</label>
-      </div>
-     </x>
+        var2="disabled=field.getDisabled(o)">::field.getRadios(_ctx_)</x>
+
      <input type="hidden" name=":name" id=":f'{name}_hidden'"
             value=":'True' if isTrue else 'False'"/>
 
@@ -149,13 +133,21 @@ class Boolean(Field):
       colspan=1, master=None, masterValue=None, focus=False, historized=False,
       mapping=None, generateLabel=None, label=None, sdefault=False, scolspan=1,
       swidth=None, sheight=None, persist=True, render='checkbox',
-      inlineEdit=False, view=None, cell=None, buttons=None, edit=None,
-      custom=None, xml=None, translations=None, falseMeansEmpty=False,
-      disabled=False):
-        # By default, a boolean is edited via a checkbox. It can also be edited
-        # via 2 radio buttons (p_render="radios").
+      falseFirst=True, inlineEdit=False, view=None, cell=None, buttons=None,
+      edit=None, custom=None, xml=None, translations=None,
+      falseMeansEmpty=False, disabled=False):
+        # 2 p_render modes are available
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "checkbox" | (the default) The boolean field is render as a checkbox
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "radios"   | The field is rendered via 2 radio buttons, with custom
+        #            | labels corresponding to the 2 truth values.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.render = render
         self.asRadios = render == 'radios'
+        # When render is "radios", in what order should the buttons appear ?
+        self.falseFirst = falseFirst
+        # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, None, searchable, filterField, readPermission,
@@ -222,9 +214,38 @@ class Boolean(Field):
         return True if inRefs else Field.isSortable(self) # Sortable in Refs
 
     def isTrue(self, o, name, dbValue):
-        '''When rendering this field as a checkbox, must it be checked or
-           not?'''
+        '''When the UI widget is rendered, must it store True or False ?'''
         req = o.req
         # Get the value we must compare (from request or from database)
         return req[name] in self.trueValues if name in req else dbValue
+
+    # Template for a radio button
+    radioTemplate = '<div class="flex1"><input type="radio" name="%s" id="%s"' \
+                    ' class="%s" value="%s"%s%s onclick="%s"/><label for="%s"' \
+                    ' class="subLabel">%s</label></div>'''
+
+    def getRadioButton(self, c, value):
+        '''Renders a radio button for this p_value, being True or False'''
+        # Get the boolean p_value as a lowered string
+        o = c.o
+        sval = str(value).lower()
+        # Get the HTML input ID
+        widgetId = f'{c.name}_{sval}'
+        # Is the radio disabled ?
+        disabled = ' disabled="disabled"' if c.disabled else ''
+        # Is the radio checked ?
+        checked = value == c.isTrue
+        checked = ' checked="checked"' if checked else ''
+        label = f'{self.labelId}_{sval}'
+        # Produce the complete button
+        return self.radioTemplate % (c.visibleName, widgetId, c.masterCss,
+                                    str(value), checked, disabled,
+                                    self.getOnChange(o, c.layout), widgetId,
+                                    o.translate(label))
+
+    def getRadios(self, c):
+        '''Renders radio buttons for a boolean field with render = "radios"'''
+        true = self.getRadioButton(c, True)
+        false = self.getRadioButton(c, False)
+        return f'{false}{true}' if self.falseFirst else f'{true}{false}'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

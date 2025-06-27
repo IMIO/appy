@@ -151,12 +151,15 @@ class FolderDeleter:
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extsToClean = ('.pyc', '.pyo', '.fsz', '.deltafsz', '.dat', '.log')
+CLEAN_F_S = 'Cleaning folder %s...'
+RM_FILE   = 'Removing file %s...'
+RM_DIR    = 'Removing folder %s...'
 
 def cleanFolder(folder, exts=extsToClean, folders=(), verbose=False):
     '''This function allows to remove, in p_folder and subfolders, any file
        whose extension is in p_exts, and any folder whose name is in
        p_folders.'''
-    if verbose: print('Cleaning folder %s...' % folder)
+    if verbose: print(CLEAN_F_S % folder)
     # Remove files with an extension listed in p_exts
     if exts:
         for root, dirs, files in os.walk(folder):
@@ -164,7 +167,7 @@ def cleanFolder(folder, exts=extsToClean, folders=(), verbose=False):
                 ext = os.path.splitext(fileName)[1]
                 if (ext in exts) or ext.endswith('~'):
                     fileToRemove = os.path.join(root, fileName)
-                    if verbose: print('Removing file %s...' % fileToRemove)
+                    if verbose: print(RM_FILE % fileToRemove)
                     os.remove(fileToRemove)
     # Remove folders whose names are in p_folders.
     if folders:
@@ -172,7 +175,7 @@ def cleanFolder(folder, exts=extsToClean, folders=(), verbose=False):
             for folderName in dirs:
                 if folderName in folders:
                     toDelete = os.path.join(root, folderName)
-                    if verbose: print('Removing folder %s...' % toDelete)
+                    if verbose: print(RM_DIR % toDelete)
                     FolderDeleter.delete(toDelete)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
