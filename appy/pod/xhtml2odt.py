@@ -9,7 +9,8 @@ from appy.pod import *
 from appy.pod.odf_parser import OdfEnvironment
 from appy.shared.css import CssStyles, CssValue, px2cm
 from appy.shared.xml_parser import XmlEnvironment, XmlParser, Escape
-from appy.shared.utils import WhitespaceCruncher, formatNumber, addPair
+from appy.shared.utils import WhitespaceCruncher, formatNumber, addPair, \
+                              normalizeString
 from appy.pod.styles_manager import Style,BulletedProperties,NumberedProperties
 
 # Tags for which there is a direct correspondance between HTML and ODF
@@ -896,8 +897,7 @@ class XhtmlEnvironment(XmlEnvironment):
         # Determine the ListProperties class to use
         klass = self.listClasses[elem]
         # Determine the format of bullets/numbers
-        formats = (name in self.listFormats) and self.listFormats[name] or \
-                  klass.defaultFormats
+        formats = self.listFormats.get(name) or klass.defaultFormats
         # Create the Properties instance
         styleName = 'L-%s' % name
         self.listProperties[styleName] = klass(formats=formats)
@@ -923,7 +923,7 @@ class XhtmlEnvironment(XmlEnvironment):
         if hasattr(styles, 'liststyletype'):
             typeValue = styles.liststyletype.value
             if typeValue not in ('initial', 'inherit'):
-                res = typeValue
+                res = normalizeString(typeValue, usage='alphanum')
         # Check HTML attribute "type"
         if not res and attrs.has_key('type'):
             res = self.typeToListStyleType.get(attrs['type'])
