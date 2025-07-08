@@ -1555,6 +1555,10 @@ msgstr "Bearbeitbar von"
 msgid "Page_editors_descr"
 msgstr "Wählen Sie hier die Personen aus, die berechtigt sind, diese Seite sowie ggf. alle Unterseiten zu ändern."
 
+#. Default: "Navigation block"
+msgid "Page_navBlock"
+msgstr ""
+
 #. Default: "Parent"
 msgid "Page_parent"
 msgstr "Übergeordnete Seite"

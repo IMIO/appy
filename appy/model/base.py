@@ -582,10 +582,13 @@ class Base:
         # Return the appropriate result, depending on p_collect
         return r if not collect else page, r, css, js, phases
 
-    def isEmpty(self, name, value=None, fromParam=False):
+    def isEmpty(self, name, value=None, fromParam=False, raiseError=True):
         '''Returns True if value of field p_name is considered to be empty
            (or p_value if p_fromParam is True).'''
-        field = self.getField(name, raiseError=True)
+        field = self.getField(name, raiseError=raiseError)
+        # If p_field does not exist and we are here (no exception was raised),
+        # we consider this inexistent field being empty.
+        if not field: return True
         if not fromParam:
             value = field.getStoredValue(self, name)
         return field.isEmptyValue(self, value)
@@ -692,6 +695,15 @@ class Base:
         '''See docstring in the homonym method on appy/model/fields/ref::Ref'''
         return self.getField(name).getIndexOf(self, tied, raiseError=raiseError,
                                               notFoundValue=notFoundValue)
+
+    def getSibling(self, prev=True, tree=False):
+        '''Return p_self's (p_prev or next) sibling within p_self's container
+           object and ref.'''
+        # Get p_self's container
+        cont, name = self.getContainer(forward=True)
+        if cont is None: return
+        # The called method has complete documentation
+        return self.getField(name).getSibling(self, cont, prev=prev, tree=tree)
 
     def getPageIndexOf(self, name, tied):
         '''See docstring in the homonym method on appy/model/fields/ref::Ref'''

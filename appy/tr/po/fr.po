@@ -1556,6 +1556,10 @@ msgstr "Modifiable par"
 msgid "Page_editors_descr"
 msgstr "Choisissez ici les personnes étant autorisées à modifier cette page ainsi que toutes ses sous-pages, s'il y en a."
 
+#. Default: "Navigation block"
+msgid "Page_navBlock"
+msgstr "Bloc de navigation"
+
 #. Default: "Parent"
 msgid "Page_parent"
 msgstr "Page parente"

@@ -273,7 +273,7 @@ class PrettyPrinter:
             url = url.replace('&amp;', '&') # Unescape ampersands
             data = class_.getFromCache(url, o)
             if data is None:
-                content = Resource(url).get()
+                content = Resource(url, timeout=2).get()
                 data = getattr(content, 'body', None)
                 class_.cache(url, data, o)
             if not data:

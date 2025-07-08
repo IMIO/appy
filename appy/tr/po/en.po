@@ -1556,6 +1556,10 @@ msgstr "Editors"
 msgid "Page_editors_descr"
 msgstr "Choose here users that will be allowed to edit this page, and its sub-pages if any."
 
+#. Default: "Navigation block"
+msgid "Page_navBlock"
+msgstr "Navigation block"
+
 #. Default: "Parent"
 msgid "Page_parent"
 msgstr "Parent"

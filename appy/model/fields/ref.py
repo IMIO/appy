@@ -3138,6 +3138,86 @@ class Ref(Field):
                 return action
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                       Methods for a tree ref
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # A tree ref is a composite autoref whose forward ref has multiplicity
+    # (0,None) and whose back ref has multiplicity (0,1), allowing to define a
+    # tree of objects.
+
+    def getUpperSibling(self, o, prev=True):
+        '''Returns the p_prev(ious) or next sibling of p_o's container. If not
+           found, get it on container's container, and so on until found or
+           until the root of the tree has been reached.'''
+        # Return None if p_o has no container
+        cont = o.container
+        if not cont: return
+        r = cont.getSibling(prev=prev, tree=False)
+        return r or self.getUpperSibling(cont, prev=prev)
+
+    def getLeaf(self, o, last=True):
+        '''Get, via p_self being a tree ref, the (p_last or first) leaf found
+           from the node represented by this p_o(bject).'''
+        # Return p_o itself if it is already a leaf
+        children = o.values.get(self.name)
+        if not children: return o
+        i = len(children) - 1 if last else 0
+        return self.getLeaf(children[i], last=last)
+
+    def getSibling(self, o, cont, prev=True, tree=True):
+        '''Return the p_prev(ious) or next sibling of this p_o(ject), within
+           its p_cont(ainer).'''
+        if cont is None: return
+        # If p_self is a ref tree, and p_self's "tree sibling" must be found
+        # (p_tree is True), the next object to get is p_o's first child object,
+        # if it exists, prior to getting p_o's direct sibling in ref
+        # p_cont.<p_self.name>.
+        name = self.name
+        if tree and not prev and not o.isEmpty(name, raiseError=False):
+            r = getattr(o, name)[0]
+        else:
+            # Try first to get p_o's direct sibling
+            r = None
+            if cont.countRefs(name) != 1:
+                # Get p_o's direct siblings
+                siblings = getattr(cont, name)
+                i = siblings.index(o)
+                last = len(siblings) - 1
+                if (i == 0 and prev) or (i == last and not prev):
+                    # There is no direct sibling if p_o is the first one and we
+                    # need to get the previous sibling, or p_o is the last one
+                    # and we need to get the next sibling.
+                    pass
+                else:
+                    delta = -1 if prev else 1
+                    r = siblings[i + delta]
+                    # In tree mode, when getting the p_prev(ious) one, get the
+                    # last leaf from v_r before directly going to p_r itself.
+                    if tree and prev and not r.isEmpty(name, raiseError=False):
+                        r = self.getLeaf(r)
+            if not r and tree:
+                # If we are here, we need to get p_o's tree sibling, that could
+                # not be found at the same level as p_o.
+                if prev and cont.class_ == o.class_:
+                    # The previous tree sibling is p_o's container
+                    r = cont
+                else:
+                    # Get p_o's upper sibling
+                    upper = self.getUpperSibling(o, prev=prev)
+                    if not upper:
+                        # No direct nor upper sibling: p_o has no tree sibling
+                        return
+                    if prev:
+                        # Get the last leaf on this p_upper sibling
+                        r = self.getLeaf(upper)
+                    else:
+                        # p_upper is already p_o's (p_prev(ious) or next)
+                        # sibling.
+                        r = upper
+        # Don't return p_v if the sibling cannot be seen by the logged user
+        return r if r and r.allows('read') else None
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #      Representation of this field within a class-diagram' class box
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

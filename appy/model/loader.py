@@ -20,7 +20,7 @@ from appy.model.meta.workflow import Workflow
 
 # Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 NO_SEARCH = "Note that Appy classes and workflows are not searched within " \
-            "your app's __init__.py file, nor within sub-modules."
+            "your app's __init__.py file, nor within sub-sub-modules."
 NO_CLASS  = 'Warning: no Appy class was found in your app @%%s. %s' % NO_SEARCH
 DUP_NAME  = '2 or more Appy classes and/or workflows named "%s" have been ' \
             'found in your model. This is not allowed, even if they are in ' \

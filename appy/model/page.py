@@ -2,28 +2,28 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy.px import Px
-from appy.model.base import Base
-from appy.model.user import User
-from appy.model.fields import Show
-from appy.model.query import Query
-from appy.xml.escape import Escape
-from appy.model.fields.pod import Pod
-from appy.model.fields.rich import Rich
-from appy.model.fields.file import File
-from appy.model.fields.info import Info
-from appy.model.document import Document
-from appy.model.carousel import Carousel
-from appy.model.fields.group import Group
-from appy.ui.layout import Layout, Layouts
-from appy.model.fields.select import Select
-from appy.model.fields.string import String
-from appy.model.fields.boolean import Boolean
-from appy.model.fields.integer import Integer
-from appy.model.fields.ref import Ref, autoref
-from appy.model.fields.computed import Computed
-from appy.model.fields.phase import Page as FPage
-from appy.model.workflow.standard import Anonymous
+from ..px import Px
+from .base import Base
+from .user import User
+from .fields import Show
+from .query import Query
+from .fields.pod import Pod
+from .fields.rich import Rich
+from .fields.file import File
+from .fields.info import Info
+from .document import Document
+from .carousel import Carousel
+from ..xml.escape import Escape
+from .fields.group import Group
+from .fields.select import Select
+from .fields.string import String
+from .fields.boolean import Boolean
+from .fields.integer import Integer
+from .fields.ref import Ref, autoref
+from .fields.computed import Computed
+from .fields.phase import Page as FPage
+from ..ui.layout import Layout, Layouts
+from .workflow.standard import Anonymous
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 EXPR_ERR = 'Page "%s" (%s): error while evaluating page expression "%s" (%s).'
@@ -97,9 +97,9 @@ class Page(Base):
     warning = Info(show=lambda o: 'edit' if o.isTemp() else None,
                    focus=True, layouts=Info.Layouts.n, **pa)
 
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                           Linked carousel
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def showCarousel(self):
         '''Show field "carousel" if carousels are defined'''
@@ -123,9 +123,9 @@ class Page(Base):
                    viewCss=lambda o: o.viewCss, viewSingle=True,
                    layouts=Rich.Layouts.f, **pa)
 
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                           Linked search
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                            Linked search
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def showQuery(self):
         '''Show field "query" if queries are defined'''
@@ -169,9 +169,9 @@ class Page(Base):
     # or cell layouts.
     viewCss = String(default='xhtml', layouts=Layouts.d, show=Show.V_, **pa)
 
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                           Inner images
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                             Inner images
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # The images (or other documents) that may be included in field "content"
     documents = Ref(Document, add=True, link=False, multiplicity=(0,None),
@@ -180,9 +180,9 @@ class Page(Base):
       page=FPage('images', show=lambda o:'view' if o.allows('write') else None),
       rowAlign='middle', **pa)
 
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                         Background image
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                           Background image
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # In most cases, when a page is shown, like any other object, the background
     # image possibly applied is baseBG.jpg. On public root pages, no background
@@ -216,9 +216,9 @@ class Page(Base):
         # by the enclosing element.
         req.notGlobal = True
 
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                            Next page
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                              Next page
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # Pages can be chained, in order to produce a single, composite page.
     # Chained pages must all be in the same container object.
@@ -244,9 +244,9 @@ class Page(Base):
         next = self.next
         return r + next.getChain() if next else r
 
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                            Sub-pages
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                              Sub-pages
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # A page can contain sub-pages
     def showSubPages(self):
@@ -321,7 +321,7 @@ class Page(Base):
     # the parent page.
 
     def showToParent(self):
-        '''Show link "to parent" on for a sub-page being rendered via the
+        '''Show link "to parent" on a sub-page being rendered via the
            "public" PX.'''
         return 'view' if self.parent and self.inPublic() else None
 
@@ -333,9 +333,9 @@ class Page(Base):
 
     toParent = Computed(show=showToParent, method=getToParent, layouts='f')
 
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                                Editors
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # "Editors" are users being allowed to edit this page and its sub-pages.
     # These users are granted local role Owner on the page and its sub-pages. If
@@ -368,6 +368,39 @@ class Page(Base):
       **pa)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                               Navigation block
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+    # The navigation block allows to navigate from a given page to its siblings.
+    # Ths scope is wider than Ref navigation: the objective is to navigate into
+    # a complete tree of pages, having any depth level. For example, for a page 
+    # being the last one in a Ref::pages, the "next" button may still appear if
+    # the container page has a sibling.
+
+    def showNavBlock(self):
+        '''Must the navigation block be shown ?'''
+        # Not for a page being in a chain or rendered in the public PX
+        if self.next or self.previous or self.inPublic(): return
+        return 'view'
+
+    navPx = Px('''
+     <div class="navBlock">
+       <a var="sibling=o.getSibling(prev=True, tree=True)" if="sibling"
+          class="navIcon" var2="prefix=_('Page_previous')" href=":sibling.url"
+          title=":f'{prefix}: {sibling.getShownValue()}'">🢪</a>
+       <a var="sibling=o.getSibling(prev=False, tree=True)" if="sibling"
+          class="navIcon" var2="prefix=_('Page_next')" href=":sibling.url"
+          title=":f'{prefix}: {sibling.getShownValue()}'">🢩</a>
+     </div>''',
+
+     css='''.navBlock { position:fixed; bottom:0; right:0.8em;
+                        background-color:white; opacity:0.6 }
+            .navIcon { font-size:200%; padding:0.2em; cursor:pointer }
+        ''')
+
+    navBlock = Computed(show=showNavBlock, method=navPx, layouts='f')
+
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                               Main methods
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
@@ -390,16 +423,30 @@ class Page(Base):
         # currently consulted on the site or any of its parent pages.
         isSelected = self in selected
         # A specific CSS class wil be applied for a selected page
-        css = ' class="current"' if isSelected else ''
-        # If p_self has parents, we must render it with a margin-right
-        style = f' style="margin-left:{level*8}px"' if level else ''
+        css = ' class="currP"' if isSelected else ''
+        # Collect CSS classes to apply to the main "div" tag containing the page
+        # link.
+        divCss = []
+        if level:
+            # If p_self has parents, we must render it with a margin-left
+            divCss.append('pDelta')
         url = self.getAccessUrl()
         title = Escape.xhtml(self.getShownValue())
-        r = [f'<div{style}><a href="{url}"{css}>{title}</a></div>']
         if isSelected and not self.isEmpty('pages'):
-            for sub in self.pages:
-                r.append(sub.inPortlet(selected, level+1))
-        return ''.join(r)
+            subs = [sub.inPortlet(selected, level+1) for sub in self.pages]
+            subs = ''.join(subs)
+            # Add a CSS class indicating that this page is a *c*ontainer for
+            # sub-pages.
+            divCss.append('pageC')
+            onClick = ''
+        else:
+            subs = ''
+            # Clicking on the div triggers a click on the inner link
+            onClick = ' onclick="this.firstChild.click()"'
+        divCss = ' '.join(divCss)
+        divCss = f' class="{divCss}"' if divCss else ''
+        return f'<div{divCss}{onClick}><a href="{url}"{css}>{title}</a>' \
+               f'{subs}</div>'
 
     def isRoot(self):
         '''Is p_self a root page ?'''
@@ -435,7 +482,7 @@ class Page(Base):
         self.log(DELETED % self.id)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  PXs
+    #                                    PXs
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     # This selector allows to choose one root page among published tool.pages
@@ -464,17 +511,26 @@ class Page(Base):
 
     # PX showing all root pages in the portlet, when shown for pages
     portletBottom = Px('''
-     <div class="topSpaceS"
+     <div class="pageS"
           var="pages=tool.OPage.getRoot(tool, mobile, splitted=False)">
       <x if="pages"
          var2="selected=o.getParents() if o.class_.name == 'Page' else {}">
        <x for="page in pages">::page.inPortlet(selected)</x>
       </x>
       <i if="not pages">:_('no_page')</i>
-     </div>''')
+     </div>''',
+
+     css='''
+       .pageS { margin-top:0.5em }
+       .pageS div.pDelta { margin-left: 0.8em; font-size:95% }
+       .pageC { border-left: 1px dashed grey }
+       .pageS div:hover:not(.pageC) { background-color:|evenColor|;
+                                      cursor:pointer }
+       .currP { font-weight:bold; border-left:1px solid white; margin-left:-1px}
+     ''')
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #  Class methods
+    #                              Class methods
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     @classmethod

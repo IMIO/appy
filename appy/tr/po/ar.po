@@ -1555,6 +1555,10 @@ msgstr ""
 msgid "Page_editors_descr"
 msgstr ""
 
+#. Default: "Navigation block"
+msgid "Page_navBlock"
+msgstr ""
+
 #. Default: "Parent"
 msgid "Page_parent"
 msgstr ""

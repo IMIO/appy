@@ -1555,6 +1555,10 @@ msgstr "Bewerkbaar door"
 msgid "Page_editors_descr"
 msgstr "Kies hier de mensen die bevoegd zijn om deze pagina en alle eventuele subpagina's te wijzigen."
 
+#. Default: "Navigation block"
+msgid "Page_navBlock"
+msgstr "Navigatieblok"
+
 #. Default: "Parent"
 msgid "Page_parent"
 msgstr "Bovenliggende pagina"
