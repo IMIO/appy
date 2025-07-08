@@ -259,8 +259,6 @@ class Portlet:
                   width:|portletWidth|; min-width:|portletMinWidth|;
                   font-size:98%; background-color:|portletBgColor| }
        .portlet a, .portlet a:visited { color: |portletTextColor| }
-       .portletSearch a:hover { background-color:|portletHob|;
-                                color:|portletHoc| }
        .portletContent { padding-left: 18px; width: 100% }
        .portletTitle { padding:|portletTPadding|; text-transform:uppercase;
                        font-weight:|portletTWeight|; font-size:|portletTSize| }
@@ -275,6 +273,8 @@ class Portlet:
                     font-style:|gcFStyle| }
        .portletAdv { margin:|asMargin|; font-size:|asFSize| }
        .portletSearch { text-align:left }
+       .portletSearch:hover { background-color:|portletHob|; cursor:pointer }
+       .portletSearch:hover>a { color:|portletHoc| }
        .portletCurrent { font-weight:bold }
        .portletFooter { position:fixed; display:flex; bottom:0;
                         width:|portletFWidth|; height:|portletFHeight|;

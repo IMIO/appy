@@ -538,7 +538,8 @@ class Page(Base):
        .pageC { border-left: 1px dashed grey }
        .pageS div:hover:not(.pageC) { background-color:|evenColor|;
                                       cursor:pointer }
-       .currP { font-weight:bold; border-left:1px solid white; margin-left:-1px}
+       .currP { font-weight:bold; border-left:1px solid white; margin-left:-1px;
+                padding-top:2px }
      ''')
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -

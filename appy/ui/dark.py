@@ -63,8 +63,10 @@ class Dark:
        .dark .portlet a:visited, .dark label, .dark select,
        .dark input, .dark input.button, .dark input.buttonPortlet,
        .dark .phase .navText, .dark .portletGroup { color:|fontColor| }
-     .dark .portletSearch a:hover { background-color:|fontColorB|;
-                                    color:|bgColor| }
+     .dark .portletSearch:hover, .dark .pageS div:hover:not(.pageC) {
+       background-color:|fontColorB| }
+     .dark .portletSearch:hover>a, .dark .pageS div:hover:not(.pageC)>a {
+       color:|bgColor| }
      .dark select[multiple] option, .dark .navText { color:|fontColorL| }
      .dark .topBase { background-color:|sepColor| }
      .dark .language { color:|fontColor|; border-color:|sepColor| }
@@ -102,7 +104,8 @@ class Dark:
      .dark .lsSelected { background-color:|bgColorL| }
      .dark .toolbar { background-color:#7e7e7e}
      .dark .xhtmlE { background-color:|bgColor|}
-     .dark .navBlock { background-color:|bgColor| }''',
+     .dark .navBlock { background-color:|bgColor| }
+     .dark .currP { border-left:|bgColor|}''',
 
     # Use the Dark config as base object for CSS variables replacements, instead
     # of the global config object.

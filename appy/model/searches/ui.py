@@ -87,9 +87,8 @@ class UiSearch:
 
     # Rendering a search
     view = Px('''
-     <div class="portletSearch">
-      <a href=":'%s?className=%s&amp;search=%s' % \
-                 (queryUrl, className, search.name)"
+     <div class="portletSearch" onClick="this.firstChild.click()">
+      <a href=":f'{queryUrl}?className={className}&amp;search={search.name}'"
          class=":'current' if search.name == currentSearch else ''"
          onclick="clickOn(this)"
          title=":search.translatedDescr">:search.translated</a>
