@@ -64,6 +64,7 @@ class Sidebar:
     px = Px('''
      <div var="hostLayout=layout;
                layout='view';
+               inSidebar=True;
                page,grouped,css,js,phases=o.getGroupedFields('main','sidebar');
                collapse=ui.Collapsible.get('sidebar', dright, req)"
           id=":collapse.id" class="sidebar" style=":collapse.style">
@@ -85,7 +86,7 @@ class Sidebar:
 
      css='''.sidebar { padding:|sbPadding|; position:sticky; top:0;
                        overflow-y:auto; overflow-x:auto }
-            .sbContent { margin-left:8px }
+            .sbContent { margin:|sbMargin| }
             .sbResizer { position:absolute; top:0; width:8px; height:100%;
                          background-color:lightgrey; opacity:0.1 }
             .sbMask { position:absolute; top:0; left:8px;

@@ -406,6 +406,7 @@ class Config:
 
         # The sidebar (sb)
         self.sbPadding = '28px 8px 30px 0px'
+        self.sbMargin = '0 0 0 8px'
 
         # Advanced search link
         self.asMargin = '3px 0 10px 30px' # For link "*a*dvanced *s*earch"

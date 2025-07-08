@@ -1564,6 +1564,10 @@ msgstr "Navigation block"
 msgid "Page_parent"
 msgstr "Parent"
 
+#. Default: "Documentation"
+msgid "Page_sidePages"
+msgstr "Documentation"
+
 #. Default: "Carousel"
 msgid "Carousel"
 msgstr "Carousel"

@@ -1563,6 +1563,10 @@ msgstr ""
 msgid "Page_parent"
 msgstr "Übergeordnete Seite"
 
+#. Default: "Documentation"
+msgid "Page_sidePages"
+msgstr ""
+
 #. Default: "Carousel"
 msgid "Carousel"
 msgstr "Karussell"

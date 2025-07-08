@@ -55,8 +55,8 @@ class Dark:
      <script>dark.setMode()</script>''',
 
     css='''
-     .dark .content, .dark .dropdown, body.dark, .dark .lsSearch .dropdown {
-       background-color:|bgColor| }
+     .dark .content, .dark .dropdown, body.dark, .dark .lsSearch .dropdown,
+       .dark .sidebar { background-color:|bgColor| }
      .dark .portlet { background-color:|bgColorL|;
                       box-shadow:none; border-right: 4px solid |sepColor| }
      .dark, .dark .phase a, .dark a, .dark .portlet a, .dark a:visited,
@@ -101,7 +101,8 @@ class Dark:
      .dark .small>tbody>tr>th { border:1px solid |showyColor| }
      .dark .lsSelected { background-color:|bgColorL| }
      .dark .toolbar { background-color:#7e7e7e}
-     .dark .xhtmlE { background-color:|bgColor|}''',
+     .dark .xhtmlE { background-color:|bgColor|}
+     .dark .navBlock { background-color:|bgColor| }''',
 
     # Use the Dark config as base object for CSS variables replacements, instead
     # of the global config object.

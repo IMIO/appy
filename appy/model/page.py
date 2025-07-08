@@ -15,6 +15,7 @@ from .document import Document
 from .carousel import Carousel
 from ..xml.escape import Escape
 from .fields.group import Group
+from ..ui.sidebar import Sidebar
 from .fields.select import Select
 from .fields.string import String
 from .fields.boolean import Boolean
@@ -28,7 +29,7 @@ from .workflow.standard import Anonymous
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 EXPR_ERR = 'Page "%s" (%s): error while evaluating page expression "%s" (%s).'
 EDITED   = 'Page %d %s within %s.'
-DELETED  = 'Web page %s deleted.'
+DELETED  = '%s deleted.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Page(Base):
@@ -393,8 +394,8 @@ class Page(Base):
           title=":f'{prefix}: {sibling.getShownValue()}'">🢩</a>
      </div>''',
 
-     css='''.navBlock { position:fixed; bottom:0; right:0.8em;
-                        background-color:white; opacity:0.6 }
+     css='''.navBlock { position:fixed; bottom:0; right:0.8em; z-index:2;
+                        background-color:|brightColor|; opacity:0.6 }
             .navIcon { font-size:200%; padding:0.2em; cursor:pointer }
         ''')
 
@@ -413,7 +414,11 @@ class Page(Base):
         if self.config.ui.discreetLogin:
             public = forcePublic
         else:
-            public = self.user.isAnon()
+            ctx = self.traversal.context
+            if ctx and ctx.inSidebar:
+                public = False
+            else:
+                public = self.user.isAnon()
         return f'{self.tool.url}/public?rp={self.iid}' if public else self.url
 
     def inPortlet(self, selected, level=0):
@@ -453,7 +458,14 @@ class Page(Base):
         # A page created from the portlet (if class Page is declared as root)
         # has no container when under creation.
         container = self.container
-        return not container or container.class_.name != 'Page'
+        return not container or container.class_.python != Page
+
+    def getRootObject(self):
+        '''Returns the root object from which the tree of pages, that includes
+           self, starts.'''
+        cont = self.container
+        if not cont: return
+        return cont.getRootObject() if cont.class_.python == Page else cont
 
     def inPublic(self, orParent=False):
         '''Is p_self (or one of its parents if p_orParent is True) currently
@@ -479,7 +491,7 @@ class Page(Base):
 
     def onDelete(self):
         '''Log the page deletion'''
-        self.log(DELETED % self.id)
+        self.log(DELETED % self.strinG())
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                                    PXs
@@ -512,9 +524,9 @@ class Page(Base):
     # PX showing all root pages in the portlet, when shown for pages
     portletBottom = Px('''
      <div class="pageS"
-          var="pages=tool.OPage.getRoot(tool, mobile, splitted=False)">
+          var="pages=pages|tool.OPage.getRoot(tool, mobile, splitted=False)">
       <x if="pages"
-         var2="selected=o.getParents() if o.class_.name == 'Page' else {}">
+         var2="selected=o.getParents() if o.class_.python==tool.OPage else {}">
        <x for="page in pages">::page.inPortlet(selected)</x>
       </x>
       <i if="not pages">:_('no_page')</i>
@@ -528,6 +540,30 @@ class Page(Base):
                                       cursor:pointer }
        .currP { font-weight:bold; border-left:1px solid white; margin-left:-1px}
      ''')
+
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                                 Sidebar
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+    # Disabled by default, the page sidebar may be enabled by an app when it
+    # uses pages in a specific container object (for example, in a software
+    # forge, every project may define documentation pages). In that case, the
+    # sidebar will render the complete tree of pages on any of the contained
+    # pages, including sub-pages at any depth.
+
+    @classmethod
+    def getSidebar(class_, o, layout):
+        '''Render a sidebar on page p_o'''
+        if layout == 'view':
+            return Sidebar(width=320, maxWidth=420)
+
+    sidebar = None # Activate the sidebar by setting m_getSidebar here. If you
+                   # want to define your own dimensions for the sidebar, define
+                   # your own method.
+
+    sidePages = Computed(method=portletBottom, show='sidebar',
+                         context=lambda o: {'pages': o.getRootObject().pages},
+                         layouts=Layouts.w)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                              Class methods
@@ -545,8 +581,7 @@ class Page(Base):
         # Choosing which page to put in which list is determined by parameter
         # p_tool.config.expandedRootPages.
         #
-        # Return the cached version (for the p_splitted variant only), if
-        # available.
+        # Return the cached version if available
         key = 'appyRootPagesS' if splitted else 'appyRootPages'
         cache = tool.cache
         if key in cache: return cache[key]

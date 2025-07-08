@@ -1657,9 +1657,10 @@ class Field:
             value[i] = row.clone()
             # Store the complete value again on p_o
             o.values[outer.name] = value
-        # Update p_o's last modification date and modifier
-        o.history.noteUpdate()
-        o.reindex()
+        # Update p_o's last modification date and modifier (if p_o is not temp)
+        if not o.isTemp():
+            o.history.noteUpdate()
+            o.reindex()
         o.log(AJAX_EDITED % (self.name, part, o.id))
 
     def callMethod(self, o, method, cache=True):

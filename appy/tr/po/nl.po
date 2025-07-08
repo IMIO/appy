@@ -1563,6 +1563,10 @@ msgstr "Navigatieblok"
 msgid "Page_parent"
 msgstr "Bovenliggende pagina"
 
+#. Default: "Documentation"
+msgid "Page_sidePages"
+msgstr "Documentatie"
+
 #. Default: "Carousel"
 msgid "Carousel"
 msgstr "Carrousel"
