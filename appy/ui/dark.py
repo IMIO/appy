@@ -105,7 +105,7 @@ class Dark:
      .dark .toolbar { background-color:#7e7e7e}
      .dark .xhtmlE { background-color:|bgColor|}
      .dark .navBlock { background-color:|bgColor| }
-     .dark .currP { border-left:|bgColor|}''',
+     .dark .currP { border-left:1px solid |bgColor|}''',
 
     # Use the Dark config as base object for CSS variables replacements, instead
     # of the global config object.
