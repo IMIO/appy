@@ -447,21 +447,9 @@ def produceNiceMessage(msg):
     return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def lower(s):
-    '''French-accents-aware variant of string.lower'''
-    isUnicode = isinstance(s, unicode)
-    if not isUnicode: s = s.decode('utf-8')
-    res = s.lower()
-    if not isUnicode: res = res.encode('utf-8')
-    return res
-
-def upper(s):
-    '''French-accents-aware variant of string.upper'''
-    isUnicode = isinstance(s, unicode)
-    if not isUnicode: s = s.decode('utf-8')
-    res = s.upper()
-    if not isUnicode: res = res.encode('utf-8')
-    return res
+def capFirst(s):
+    '''Capitalizes the first letter of p_s and leave other chars untouched'''
+    return f'{s[0].upper()}{s[1:]}'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class WhitespaceCruncher:

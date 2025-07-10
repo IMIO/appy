@@ -202,6 +202,7 @@ div.rbutton { float:right }
 .addFormMenu { display:inline-flex; padding:0 5px 0 3px }
 .inline { display:inline }
 .inlineIcon { float:right; cursor:pointer; padding:0 3px 10px 0 }
+.inlineIconL { float:left; cursor:pointer; padding:2px 3px 10px 0 }
 .icon { width:35px }
 .iconL { width:35px }
 .iconM { width:24px }

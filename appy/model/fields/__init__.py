@@ -722,7 +722,8 @@ class Field:
         # can be specified. If "inlineEdit" is or returns True, a click within
         # the field value as shown on the "view" or "cell" layout will switch
         # the widget to "edit" mode. If it returns 'icon', Switching to "edit"
-        # will be done via an "edit" icon.
+        # will be done via a right-aligned "edit" icon. If it returns 'iconL',
+        # the icon will be left-aligned.
         self.inlineEdit = inlineEdit
 
         # Any alternate PX defined in the following attributes will be used in
@@ -1312,12 +1313,13 @@ class Field:
         # in the value.
         suffix = f'_{language}' if language else ''
         hook = f'{o.iid}_{name or self.name}{suffix}'
-        onClick= f'onclick="askField(\'{hook}\',\'{o.url}\',\'edit:{layout}\')"'
-        if inlineEdit == 'icon':
+        onClick= f'onclick="askField(`{hook}`,`{o.url}`,`edit:{layout}`)"'
+        if isinstance(inlineEdit, str): # An "edit" icon must be rendered
             iconUrl = o.buildSvg('editS')
             iconText = o.translate('object_edit')
-            r = f'<img src="{iconUrl}" title="{iconText}" class="inlineIcon ' \
-                f'iconS" {onClick}/>{value}'
+            css = f'inline{sutils.capFirst(inlineEdit)} iconS'
+            r = f'<img src="{iconUrl}" title="{iconText}" class="{css}" ' \
+                f'{onClick}/>{value}'
         else:
             r = f'<span class="editable" {onClick}>{value}</span>'
         return r
