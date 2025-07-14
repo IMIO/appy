@@ -168,6 +168,18 @@ class SoapDataEncoder:
         return r.encode()
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class JsonDataEncoder:
+    '''Allows to encode JSON data for sending it through a HTTP request'''
+
+    def __init__(self, data):
+        # The Python dict to be encoded as a stringified JSON dict
+        self.data = data
+
+    def encode(self):
+        '''Converts Python dict p_self.data into stringified JSON data'''
+        return str(self.data)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DigestRealm:
     '''Represents information delivered by a server requiring Digest-based
        HTTP authentication.'''
@@ -618,7 +630,7 @@ class Resource:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "form"      | the method of encoding will be:
         #             |        application/x-www-form-urlencoded
-        #             | and p_data must be a dict containing for parameters as
+        #             | and p_data must be a dict containing form parameters as
         #             | key/value pairs ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "multi"     | the method of encoding will be:
@@ -662,6 +674,18 @@ class Resource:
             r = self.get(r.data, headers=headers, timeout=timeout)
             if self.measure: r.duration += duration
         return r
+
+    def json(self, data, path=None, headers=None):
+        '''Posts JSON data to this resource'''
+        path = path or self.path
+        # Prepare the data to send
+        data = JsonDataEncoder(data).encode()
+        if headers is None: headers = {}
+        # Set content type, if not done yet
+        if 'Content-Type' not in headers:
+            headers['Content-Type'] = 'application/json; charset=utf-8'
+        r = self.post(data, path, headers=headers, encode=None)
+        return r.data
 
     def soap(self, data, path=None, headers=None, namespace=None,
              soapAction=None):

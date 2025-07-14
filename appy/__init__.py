@@ -69,11 +69,11 @@ class Config:
     analytics = None
     # If you want to call Google Web Services, specify here a Google API key
     googleApiKey = None
-    # When using Ogone, place an instance of appy.model.fields.ogone.Config in
-    # the field below.
-    ogone = None
+    # When using Worldline for online payments, place an instance of class
+    # appy.model.fields.worldline.Config in the field below.
+    worldline = None
     # When using POD fields for producing documents with appy.pod, place here an
-    # instance of appy.model.fields.pod.Config
+    # instance of appy.model.fields.pod.Config.
     pod = None
     # When the app has an extension, the name of this latter will be stored
     # in the following attribute. Do not set it directly: it must be done via
