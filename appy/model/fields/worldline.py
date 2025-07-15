@@ -27,10 +27,10 @@ class Config:
     # Generic URL for the Worldline endpoints. The dynamic part (%s) will be
     # replaced by the URL part corresponding to the precise environment, as
     # determined by dict v_urlParts below.
-    baseUrl = "https://payment.%s.direct.worldline-solutions.com"
+    baseUrl = "https://payment%s.direct.worldline-solutions.com"
 
     # URL part, depending on the target environment (test or prod)
-    urlParts = {'test': 'preprod', 'prod': 'prod'}
+    urlParts = {'test': '.preprod', 'prod': ''}
 
     # The base path for non-JS calls
     baseSuffix = 'v2'
@@ -38,7 +38,8 @@ class Config:
     # The date format to use for transmitting dates (RFC1123)
     dateFormat = '%a, %d %b %Y %H:%M:%S %Z'
 
-    def __init__(self, env='test', pspid=None, apiKey=None, apiSecret=None):
+    def __init__(self, env='test', pspid=None, apiKey=None, apiSecret=None,
+                 algo='sha256'):
         # self.env refers to the target environment: can be "test" or "prod"
         self.env = env
         # You merchant Worldline ID
@@ -46,6 +47,8 @@ class Config:
         # Your Worldline API key and secret
         self.apiKey = apiKey
         self.apiSecret = apiSecret
+        # Hash algorithm to use
+        self.algo = algo
         # Default language
         self.language = 'en_UK'
 
@@ -72,9 +75,9 @@ class Config:
            Worldline p_endpoint.'''
         # Get the string to hash, made of various parts
         s = self.getStringToHash(endpoint, now, method)
-        print('String to hash is', s)
         # The API secret and p_s must be converted to bytes
-        hash_ = hmac.new(self.apiSecret.encode(), s.encode(), hashlib.sha512)
+        algo = getattr(hashlib, self.algo)
+        hash_ = hmac.new(self.apiSecret.encode(), s.encode(), algo)
         return base64.b64encode(hash_.digest()).decode('utf-8')
 
     def __repr__(self):
@@ -88,12 +91,19 @@ class Worldline(Field):
     # Some elements will be traversable
     traverse = Field.traverse.copy()
 
-    def __init__(self, show='view',
-      renderable=None, page='main', group=None, layouts=None, move=0,
-      readPermission='read', writePermission='write', width=None, height=None,
-      colspan=1, master=None, masterValue=None, focus=False, mapping=None,
-      generateLabel=None, label=None, view=None, cell=None, buttons=None,
-      edit=None, custom=None, xml=None, translations=None):
+    def show(self, o):
+        '''Show the payment widget only if initialisation data has been stored
+           on the corresponding object.'''
+        # Normally, this method is supposed to belong to the object, not to the
+        # field. Consequently, p_self is the object and p_o is the field.
+        return None if self.isEmpty(o.name) else 'view'
+
+    def __init__(self, show=show, renderable=None, page='main', group=None,
+      layouts=None, move=0, readPermission='read', writePermission='write',
+      width=None, height=None, colspan=1, master=None, masterValue=None,
+      focus=False, mapping=None, generateLabel=None, label=None, view=None,
+      cell=None, buttons=None, edit=None, custom=None, xml=None,
+      translations=None):
 
         # Call the base constructor
         super().__init__(None, (0,1), None, None, show, renderable, page, group,
@@ -121,29 +131,57 @@ class Worldline(Field):
                    'Date': now, 'Content-Type': config.getContentType(method)}
         if method == 'POST':
             # Data to post is in dict p_data
-            print('Headers are', headers)
-            print('Data is', data)
-            print('URL is', url)
             r = server.json(data, url, headers=headers)
         else:
             r = server.get(url, headers=headers)
         return r
 
-    def createHostedTokenization(self, o):
+    def addXhtmlRow(self, rows, name=None, value=None):
+        '''Add, to this current list of XHTML p_rows, a new one rendering this
+           p_value for an attribute having this p_name.'''
+        if name: # A standard row
+            value = value or '?'
+            row = f'<tr><th>{name}</th><td>{value}</td></tr>'
+        else: # A separator row
+            row = f'<tr><th colspan="2">· • ·</th></tr>'
+        rows.append(row)
+
+    def getErrorDetails(self, o, error, withTitle=True):
+        '''Returns a XHTML table containing all details about the p_error that
+           occurred while contacting the Worldline API.'''
+        add = self.addXhtmlRow
+        rows = []
+        for k, v in error.items():
+            if isinstance(v, list):
+                # Sub-info: render every sub-item as a sub-table
+                subs = []
+                for sub in v:
+                    subs.append(self.getErrorDetails(o, sub, withTitle=False))
+                add(rows, k, bn.join(subs))
+            else:
+                add(rows, k, v)
+        if withTitle:
+            title = o.translate('error_name')
+            rows.insert(0, f'<tr><th colspan="2">{title}</th></tr>')
+        return f'<table class="small">{bn.join(rows)}</table>'
+
+    def initialise(self, o):
         '''Call endpoint "hostedtokenizations", as a preamble to display the
-           payment iframe, to retrieve a "hosted tokenization URL" that will be
-           used by the Wordline form being shown in the iframe.'''
+           payment iframe. The endpoint returns a "hosted tokenization URL" that
+           will be used by the Wordline form being shown in the iframe.'''
         # API documentation: https://docs.direct.worldline-solutions.com/en/
         #                     api-reference#tag/HostedTokenization/operation/
         #                     CreateHostedTokenizationApi
-        data = {'locale': o.guard.userLanguage or 'en',
-                'variant': '', 'tokens': ''}
-        r = self.call(o, 'hostedtokenizations', data=data)
-        breakpoint()
-        # Example of returned error:
-        # ‹O errorId='ee4bdfcc-128f-4e2b-addd-3318bc05e9df'
-        #    errors=[‹O code='9007' id='ACCESS_TO_MERCHANT_NOT_ALLOWED'
-        #               category='DIRECT_PLATFORM_ERROR'
-        #               message='ACCESS_TO_MERCHANT_NOT_ALLOWED'
-        #               httpStatusCode=403›] status=403›
+        data = {'locale': o.guard.userLanguage or 'en', 'variant': '',
+                'tokens': ''}
+        resp = self.call(o, 'hostedtokenizations', data=data)
+        if resp.errors:
+            r = False
+            message = self.getErrorDetails(o, resp)
+        else:
+            r = True
+            message = 'OK'
+            # Store, as field value, the complete endpoint response
+            o.values[self.name] = resp
+        return r, message
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
