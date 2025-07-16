@@ -211,9 +211,15 @@ class Updater:
 
     def visitBoolean(self, class_, field, label):
         '''Generate Boolean-specific labels'''
-        if field.render == 'radios':
+        render = field.render
+        if render == 'radios':
             for v in ('true', 'false'):
                 self.addLabel(f'{label}_{v}', field.yesNo[v])
+        elif render == 'switch':
+            if field.confirm:
+                for v in ('true', 'false'):
+                    self.addLabel(f'{label}_confirm_{v}', self.CONFIRM,
+                                  nice=False)
 
     def visitAction(self, class_, field, label):
         '''Generate Action-specific labels'''

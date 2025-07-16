@@ -78,13 +78,21 @@ class Boolean(Field):
     indexType = 'BooleanIndex'
 
     view = cell = buttons = Px('''
-    <x>::field.getInlineEditableValue(o, value, layout, name=name)</x>
+    <x var="asSwitch=field.renderAsSwitch(_ctx_)">
+     <x if="not asSwitch">::field.getInlineEditableValue(o, value, layout,
+                                                         name=name)</x>
+     <x if="asSwitch">
+      <img var="icon=field.getSwitchIcon(_ctx_); newVal=not rawValue"
+           src=":svg(icon)" class="clickable iconL"
+           onclick=":field.getJsSwitch(_ctx_)"/>
+     </x>
+    </x>
     <input type="hidden" if="masterCss|None"
            class=":masterCss" value=":rawValue" name=":name" id=":name"/>''')
 
     edit = Px('''<x var="isTrue=field.isTrue(o, name, rawValue);
                          visibleName=f'{name}_visible'">
-     <x if="field.render == 'checkbox'">
+     <x if="not field.asRadios">
       <input type="checkbox" name=":visibleName" id=":name"
              class=":masterCss" checked=":isTrue"
              onclick=":field.getOnChange(o, layout)"/>
@@ -135,18 +143,33 @@ class Boolean(Field):
       swidth=None, sheight=None, persist=True, render='checkbox',
       falseFirst=True, inlineEdit=False, view=None, cell=None, buttons=None,
       edit=None, custom=None, xml=None, translations=None,
-      falseMeansEmpty=False, disabled=False):
-        # 2 p_render modes are available
+      falseMeansEmpty=False, disabled=False, confirm=False):
+
+        # The following p_render modes are available.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "checkbox" | (the default) The boolean field is render as a checkbox
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # "radios"   | The field is rendered via 2 radio buttons, with custom
         #            | labels corresponding to the 2 truth values.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "switch"   | The field is rendered as a checkbox on the edit layout,
+        #            | but as a clickable, button-like "on/off" switch on the
+        #            | view/cell layout (for those having write permission).
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.render = render
         self.asRadios = render == 'radios'
         # When render is "radios", in what order should the buttons appear ?
         self.falseFirst = falseFirst
+        # When render is "switch", the field may be rendered on button layouts
+        if renderable is None and render == 'switch':
+            renderable = Layouts.onButtons
+        # When render is "switch", and p_self.confirm is True, when clicking on
+        # the switch, a confirmation popup will appear first. In that case, 2
+        # i18n labels will be generated: one as confirmation text before
+        # switching to False, another as confirmation text for switching to
+        # True. Setting p_self.confirm to True for a Boolean field whose render
+        # mode is not "switch" has no effect.
+        self.confirm = confirm
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
@@ -248,4 +271,28 @@ class Boolean(Field):
         true = self.getRadioButton(c, True)
         false = self.getRadioButton(c, False)
         return f'{false}{true}' if self.falseFirst else f'{true}{false}'
+
+    def renderAsSwitch(self, c):
+        '''Must p_self be rendered as a switch ?'''
+        # Yes, if we are not on the edit layout and the user has write access to
+        # p_self.
+        return c.layout != 'edit' and c.o.allows(c.field.writePermission)
+
+    def getSwitchIcon(self, c):
+        '''Returns the switch icon to show, depending on p_self's value on this
+           p_o(bject).'''
+        return 'on' if c.rawValue else 'off'
+
+    def getJsSwitch(self, c):
+        '''Get the JS code to execute for switching the field value'''
+        newVal = str(c.newVal)
+        r = f"askField('{c.tagId}','{c.o.url}','cell'," \
+            f"{{'action':'storeFromAjax','fieldContent':'{str(c.newVal)}'}})"
+        if self.confirm:
+            # Compute the confirmation text
+            suffix = newVal.lower()
+            text = c._(f'{self.labelId}_confirm_{suffix}')
+            # Wrap the call into a askConfirm
+            r = f"askConfirm('script',`{r}`,{c.q(text)})"
+        return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

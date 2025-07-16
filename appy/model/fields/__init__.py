@@ -73,6 +73,7 @@ class Show:
     S   = ('edit', 'view', 'sub', 'xml')
     BS  = ('buttons', 'sub') # Both in pxButtons and within lists of objects
     BR  = ('buttons', 'result') # Appropriate for some fields like pods
+    BE  = ('buttons', 'edit')
 
     # All standard layouts
     STD = ('view', 'edit', 'result', 'xml')
