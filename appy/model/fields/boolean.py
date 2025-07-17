@@ -158,8 +158,10 @@ class Boolean(Field):
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.render = render
         self.asRadios = render == 'radios'
+
         # When render is "radios", in what order should the buttons appear ?
         self.falseFirst = falseFirst
+
         # When render is "switch", the field may be rendered on button layouts
         if renderable is None and render == 'switch':
             renderable = Layouts.onButtons
@@ -170,6 +172,7 @@ class Boolean(Field):
         # True. Setting p_self.confirm to True for a Boolean field whose render
         # mode is not "switch" has no effect.
         self.confirm = confirm
+
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
@@ -179,8 +182,10 @@ class Boolean(Field):
           swidth, sheight, persist, inlineEdit, view, cell, buttons, edit,
           custom, xml, translations)
         self.pythonType = bool
+
         # Must value False be interpreted as an empty value or not ?
         self.nullValues = Boolean.nullValuesVariants[falseMeansEmpty]
+
         # Must p_self be shown, on "edit", in "disabled" mode? It works only if
         # p_self is rendered as a radio buttons.
         self.disabled = disabled
