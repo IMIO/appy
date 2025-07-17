@@ -81,9 +81,12 @@ class Boolean(Field):
     <x var="asSwitch=field.renderAsSwitch(_ctx_)">
      <x if="not asSwitch">::field.getInlineEditableValue(o, value, layout,
                                                          name=name)</x>
-     <x if="asSwitch">
+     <x if="asSwitch"
+        var2="disabled=field.getDisabled(o);
+              css='unallowed' if disabled else 'clickable'">
       <img var="icon=field.getSwitchIcon(_ctx_); newVal=not rawValue"
-           src=":svg(icon)" class="clickable iconL"
+           src=":svg(icon)" class=":f'{css} iconL'"
+           title=":disabled if disabled else ''"
            onclick=":field.getJsSwitch(_ctx_)"/>
      </x>
     </x>
@@ -165,6 +168,7 @@ class Boolean(Field):
         # When render is "switch", the field may be rendered on button layouts
         if renderable is None and render == 'switch':
             renderable = Layouts.onButtons
+
         # When render is "switch", and p_self.confirm is True, when clicking on
         # the switch, a confirmation popup will appear first. In that case, 2
         # i18n labels will be generated: one as confirmation text before
@@ -186,8 +190,21 @@ class Boolean(Field):
         # Must value False be interpreted as an empty value or not ?
         self.nullValues = Boolean.nullValuesVariants[falseMeansEmpty]
 
-        # Must p_self be shown, on "edit", in "disabled" mode? It works only if
-        # p_self is rendered as a radio buttons.
+        # Must the edit widget, for p_self, be rendered as a disabled widget ?
+        # It it only applicable:
+        # - when render mode is "radios", on the "edit" layout,
+        # - when render mode is "switch", when the switch is actually rendered.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # When render | p_disabled must be ...
+        # mode is ... |
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "radios"    | a boolean value or a method computing it ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "switch"    | a method returning False or None if the widget must be
+        #             | enabled, or returning a translated text if the widget
+        #             | must be enabled. This text will appear as a tooltip on
+        #             | on the switch.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.disabled = disabled
 
     def getValue(self, o, name=None, layout=None, single=None, at=None):
@@ -290,6 +307,7 @@ class Boolean(Field):
 
     def getJsSwitch(self, c):
         '''Get the JS code to execute for switching the field value'''
+        if c.disabled: return
         newVal = str(c.newVal)
         r = f"askField('{c.tagId}','{c.o.url}','cell'," \
             f"{{'action':'storeFromAjax','fieldContent':'{str(c.newVal)}'}})"
