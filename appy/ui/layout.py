@@ -116,7 +116,7 @@ class Layout:
     #      workflow transitions.
     #  w - The fields (= *w*idgets) to render on some page for some object
     #  p - The object *p*reamble, containing its class name, navigation and pod
-    #      fields
+    #      fields.
 
     # Letters for a field  - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

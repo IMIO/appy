@@ -454,7 +454,7 @@ class History(PersistentList):
 
          <!-- State -->
          <x> &mdash; <x>:_('Base_state')</x> : 
-            <b>:_(o.getLabel(o.state, field=False))</b></x>
+            <b>:o.getLabel(o.state, field=False)</b></x>
 
          <!-- Initial comment -->
          <div if="createComment" class="topSpace">::createComment</div>
