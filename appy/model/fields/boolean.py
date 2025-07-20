@@ -298,7 +298,8 @@ class Boolean(Field):
         '''Must p_self be rendered as a switch ?'''
         # Yes, if we are not on the edit layout and the user has write access to
         # p_self.
-        return c.layout != 'edit' and c.o.allows(c.field.writePermission)
+        return self.render == 'switch' and c.layout != 'edit' and \
+               c.o.allows(c.field.writePermission)
 
     def getSwitchIcon(self, c):
         '''Returns the switch icon to show, depending on p_self's value on this

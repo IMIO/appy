@@ -66,7 +66,8 @@ class Config:
         # useful, in combination with p_self.protocol, to generate site URLs
         # when the server is not solicited by a browser. Indeed, in that case,
         # request info (containing host and port) is absent. This can happen,
-        # ie, when a job or a night method is ran.
+        # ie, when a job or a night method is ran. Note that the domain may
+        # already include a leading path, ie: www.my.domain.be/leading/path.
         self.domain = None
         # The version of HTTP in use, as a float value. Currently, 1.0 and 1.1
         # are supported.
