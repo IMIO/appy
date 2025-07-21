@@ -1183,7 +1183,7 @@ class Pod(Field):
     def getValue(self, o, name=None, layout=None, template=None, format=None,
                  result=None, queryData=None, computeCustomContext=None,
                  secure=True, executeAction=True, single=None, crumb=None,
-                 at=None):
+                 at=None, raiseError=False):
         '''For a pod field, getting its value means computing a pod document or
            returning a frozen one.'''
         # A pod field differs from other field types because there can be
@@ -1287,10 +1287,13 @@ class Pod(Field):
             renderer.run()
         except PodError as pe:
             if not os.path.exists(result):
-                # In some cases, when OO returns an error, the result is
+                # In some cases, when LO returns an error, the result is
                 # nevertheless generated.
                 o.log(str(pe).strip(), type='error')
-                return POD_ERROR
+                if raiseError:
+                    raise pe
+                else:
+                    return POD_ERROR
         # Give a friendly name for this file
         fileName = self.getDownloadName(o, template, fmt, queryData)
         # Execute the tied action when relevant
