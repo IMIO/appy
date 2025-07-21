@@ -2,8 +2,9 @@
 UNREADABLE = 'Unreadable JSON string: %s'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy.utils.string import Normalize
-from appy.model.utils import Object as O
+from . import sequenceTypes
+from .string import Normalize
+from ..model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Decoder:
@@ -60,4 +61,74 @@ class Decoder:
                 return class_.convertValue(eval(jsonData, class_.context))
             except SyntaxError as err:
                 raise SyntaxError(UNREADABLE % jsonData)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Encoder:
+    '''Converts Python data structures to JSON'''
+
+    def __init__(self, d):
+        # The Python object or dict to encode
+        self.d = d.__dict__ if hasattr(d, '__dict__') else d
+        # The result, as a list of string tokens
+        self.r = []
+
+    def encodeString(self, s):
+        '''Encodes this p_s(tring)'''
+        # The JSON standard requires strings to be surrounded by double quotes,
+        # not single quotes.
+        self.r.append(f'"{s}"')
+
+    def encodeList(self, l):
+        '''Encodes list or tuple p_l as a JSON string'''
+        r = self.r
+        r.append('[')
+        i = -1
+        last = len(l) - 1 # Index of the last item in p_d
+        for e in l:
+            i += 1
+            # Encode v_elem
+            self.encodeValue(e)
+            if i < last:
+                r.append(',')
+        r.append(']')
+        return r
+
+    def encodeDict(self, d):
+        '''Encodes dict p_d as a JSON string'''
+        # Browse items in p_d
+        r = self.r
+        r.append('{')
+        i = -1
+        last = len(d) - 1 # Index of the last item in p_d
+        for k, v in d.items():
+            i += 1
+            # Encode the key and value
+            self.encodeString(k)
+            r.append(':')
+            self.encodeValue(v)
+            if i < last:
+                r.append(',')
+        r.append('}')
+
+    def encodeValue(self, v):
+        '''Encodes this Python p_v(alue) into its JSON equivalent and add it
+           into p_self.r.'''
+        if isinstance(v, str):
+            self.encodeString(v)
+        elif isinstance(v, dict):
+            self.encodeDict(v)
+        elif isinstance(v, sequenceTypes):
+            self.encodeList(v)
+        else:
+            r = self.r
+            if isinstance(v, bool):
+                r.append(str(v).lower())
+            else:
+                # Perform a simple string conversion
+                r.append(str(r))
+
+    def encode(self):
+        '''Encode the root dict p_self.d'''
+        self.encodeDict(self.d)
+        return ''.join(self.r)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

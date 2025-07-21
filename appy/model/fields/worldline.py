@@ -6,6 +6,7 @@ import datetime, hmac, hashlib, base64
 
 from appy.model.fields import Field
 from appy.utils.client import Resource
+from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bn = '\n'
@@ -165,6 +166,9 @@ class Worldline(Field):
             rows.insert(0, f'<tr><th colspan="2">{title}</th></tr>')
         return f'<table class="small">{bn.join(rows)}</table>'
 
+    # Currently supported locales
+    locales = {'en': 'UK', 'fr': 'BE', 'nl': 'BE'}
+
     def initialise(self, o):
         '''Call endpoint "hostedtokenizations", as a preamble to display the
            payment iframe. The endpoint returns a "hosted tokenization URL" that
@@ -172,8 +176,9 @@ class Worldline(Field):
         # API documentation: https://docs.direct.worldline-solutions.com/en/
         #                     api-reference#tag/HostedTokenization/operation/
         #                     CreateHostedTokenizationApi
-        data = {'locale': o.guard.userLanguage or 'en', 'variant': '',
-                'tokens': ''}
+        lang = o.guard.userLanguage or 'en'
+        locale = f'{lang}-{self.locales.get(lang) or "BE"}'
+        data = O(locale=locale, variant='', tokens='', askConsumerConsent=False)
         resp = self.call(o, 'hostedtokenizations', data=data)
         if resp.errors:
             r = False

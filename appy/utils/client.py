@@ -177,7 +177,7 @@ class JsonDataEncoder:
 
     def encode(self):
         '''Converts Python dict p_self.data into stringified JSON data'''
-        return str(self.data)
+        return json.Encoder(self.data).encode()
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DigestRealm:
