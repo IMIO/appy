@@ -78,8 +78,9 @@ class Config:
         s = self.getStringToHash(endpoint, now, method)
         # The API secret and p_s must be converted to bytes
         algo = getattr(hashlib, self.algo)
-        hash_ = hmac.new(self.apiSecret.encode(), s.encode(), algo)
-        return base64.b64encode(hash_.digest()).decode('utf-8')
+        enc = 'utf-8'
+        hash_ = hmac.new(self.apiSecret.encode(enc), s.encode(enc), algo)
+        return base64.b64encode(hash_.digest()).decode(enc).rstrip(bn)
 
     def __repr__(self):
         '''p_self's short representation'''
@@ -178,7 +179,7 @@ class Worldline(Field):
         #                     CreateHostedTokenizationApi
         lang = o.guard.userLanguage or 'en'
         locale = f'{lang}-{self.locales.get(lang) or "BE"}'
-        data = O(locale=locale, variant='', tokens='', askConsumerConsent=False)
+        data = O(locale=locale, askConsumerConsent=False)
         resp = self.call(o, 'hostedtokenizations', data=data)
         if resp.errors:
             r = False

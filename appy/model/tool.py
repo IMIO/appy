@@ -490,6 +490,12 @@ class Tool(Base):
         return dutils.Date.format(self, date, format, withHour, language,
                                   hourSep=hourSep, hourEnd=hourEnd)
 
+    def formatDateS(self, date, format=None, language=None):
+        '''Equivalent to calling m_formatDate(withHour=False)'''
+        # *S* stands for *S*hort
+        if not date: return
+        return dutils.Date.format(self, date, format, False, language)
+
     def restart(self, wait=5, command=None):
         '''Restarts the currently running Appy server (S), by forking another
            process that will wait p_wait seconds before restarting S.'''

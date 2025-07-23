@@ -747,7 +747,7 @@ class Ref(Field):
       <option for="tied in objects" if="tied"
        var2="id=str(tied.iid);
              title=field.getReferenceLabel(o, tied, unlimited=True)"
-       selected=":field.valueIsSelected(id,inRequest,ids,requestValue)"
+       selected=":field.valueIsSelected(id, inRequest, ids, requestValue)"
        value=":id" title=":title">:Px.truncateValue(title, charsWidth)</option>
       <option value="" if="not isMultiple and not noFirst"
               selected=":noSelected">:noLabel</option>
@@ -1205,9 +1205,9 @@ class Ref(Field):
 
         # [Back ref only]
         #
-        # If p_disabled is True, p_self's back ref, if it exists, will not be
-        # updated and will stay empty. This is useful for Refs representing some
-        # "category" or other concept being used, via a forward Ref, by a huge
+        # If p_disabled is True, p_self, being a back ref, will not be updated
+        # and will stay empty. This is useful for Refs representing some
+        # category or other concept being used, via a forward Ref, by a huge
         # number of objects. Indeed, in such cases, the back ref would contain a
         # large number of objects, but being a persistent list, this could lead
         # to performance problems.

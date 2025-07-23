@@ -1093,6 +1093,7 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
       let slaveId = slave.id,
           slaveName = slaveId.split('_')[1],
           params = getFormData();
+          if (slaveName in params) delete params[slaveName];
           masterName = master.id || master.name;
           if (masterName.startsWith('w_')) masterName = masterName.substr(2);
           params['_master_'] = masterName;
