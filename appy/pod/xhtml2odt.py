@@ -172,6 +172,9 @@ class HtmlElement(Element):
 
     def setConflictual(self):
         '''Note p_self as conflictual'''
+        # A conflict occurs when a child tag is illegally included in a parent
+        # tag. In that case, this is the parent tag that is noted as being
+        # "conflictual".
         self.isConflictual = True
         return self
 
@@ -795,6 +798,23 @@ class XhtmlEnvironment(XmlEnvironment):
                 res = res.parent
         return res
 
+    def getCurrentBuffer(self):
+        '''Returns the current buffer: the global buffer p_self.res or a sub-
+           buffer tied to the currently walked table.'''
+        # The result is a 3-tuple containing:
+        # (1) the base object onto which the buffer is defined ;
+        # (2) the name of the attribute storing the buffer ;
+        # (3) the buffer value.
+        if self.currentTables:
+            base = self.currentTables[-1]
+            name = base.inCaption and 'captionRes' or 'tempRes'
+            value = getattr(base, name)
+        else:
+            base = self
+            name = 'res'
+            value = self.res
+        return base, name, value
+
     def anElementIsMissing(self, previous, current):
         return previous and (previous.elem in OUTER_TAGS) and \
                ((not current) or (current.elem in INNER_TAGS))
@@ -1276,9 +1296,10 @@ class XhtmlParser(XmlParser):
         if current.isConflictual:
             # Compute the start tag, with potential styles applied
             startTag = e.getTags((current,), start=True)
-        if current.isConflictual and e.res.endswith(startTag):
+        base, name, value = e.getCurrentBuffer()
+        if current.isConflictual and value.endswith(startTag):
             # We will not dump it, it would constitute a silly empty tag
-            e.res = e.res[:-len(startTag)]
+            setattr(base, name, value[:-len(startTag)])
             if current.elem in STYLE_ONLY_TAGS:
                 e.mergedCount -= 1
         else:
@@ -1286,7 +1307,7 @@ class XhtmlParser(XmlParser):
             if elem == 'footnote':
                 dump('</text:note-body></text:note>')
             elif elem in XHTML_LISTS:
-                if current.parent and (current.parent.elem in XHTML_LISTS):
+                if current.parent and current.parent.elem in XHTML_LISTS:
                     # We were in an inner list. So we must close the list-item
                     # tag that surrounds it.
                     endTag = '%s</text:list-item>' % endTag
@@ -1296,24 +1317,24 @@ class XhtmlParser(XmlParser):
                     # v_endTag, preventing to dump it.
                     endTag = e.removeEmptyList(endTag)
             if endTag and not current.removeTag and \
-               (current.dumpStatus != 'waiting'):
+               current.dumpStatus != 'waiting':
                 dump(endTag)
-                if elem == 'caption':
-                    e.currentTables[-1].inCaption = False
                 current.show(e, prefix='>')
             # Manage the end of a styled inner tag
             if elem in STYLE_ONLY_TAGS:
                 # Unmix styles corresponding to this end tag
                 e.updateMergedStyles('delete', current)
                 parent = current.parent
-                if e.mergedCount and (parent.elem in STYLE_ONLY_TAGS):
+                if e.mergedCount and parent.elem in STYLE_ONLY_TAGS:
                     # Possibly reopen a tag. The parent is already loaded with
                     # merged styles.
                     parent.dumpStatus = 'waiting'
-            elif (elem not in INNER_TAGS) and not current.inInnerTag():
+            elif elem not in INNER_TAGS and not current.inInnerTag():
                 # We are not in an "inner" zone anymore
                 e.mergedCount = 0
-        if elem in IGNORABLE_TAGS:
+        if elem == 'caption':
+            e.currentTables[-1].inCaption = False
+        elif elem in IGNORABLE_TAGS:
             e.ignore = False
         if elemsToReopen:
             dump(e.getTags(elemsToReopen, start=True, ignoreWaiting=True))
