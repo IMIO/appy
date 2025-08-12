@@ -32,7 +32,10 @@ RECOMP_OK  = 'Index %s::%s successfully recomputed.<br/><br/>' \
              '#Values went from %s to %d.<br/>#Objects went from %s to %d.'
 IISET_ERR  = f'{CI_PRE} IITreeSet at value "%s" was corrupted and deleted.'
 IBV_KO     = f'{CI_PRE} Error while getting value "%s" from "byValue" ' \
-             f'OOBTree :: Index is corrupted and must be completely recomputed (%s).'
+             f'OOBTree :: Index is corrupted and must be completely ' \
+             f'recomputed (%s).'
+ISBV_KO    = f'{CI_PRE} Error while setting value "%s" in "byValue" at key ' \
+             f'"%s" (%s).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Index(persistent.Persistent):
@@ -208,7 +211,7 @@ class Index(persistent.Persistent):
         else:
             self.removeByValueEntry(value, id, o)
 
-    def addEntry(self, id, value, byValueOnly=False):
+    def addEntry(self, id, value, o=None, byValueOnly=False):
         '''Add, in this index, an entry with this p_id and p_value.
 
            If p_byValueOnly is True, it updates p_self.byValue but not
@@ -221,14 +224,22 @@ class Index(persistent.Persistent):
             self.byObject[id] = value
             # Add one entry for every single value in p_self.byValue
             for v in value:
-                self.addEntry(id, v, byValueOnly=True)
+                self.addEntry(id, v, o=o, byValueOnly=True)
         else:
             # A single value. Add it to p_self.byObject when relevant.
             if not byValueOnly:
                 self.byObject[id] = value
             # Add it in p_self.byValue
             if value in self.byValue:
-                self.byValue[value].insert(id)
+                try:
+                    self.byValue[value].insert(id)
+                except SystemError as err:
+                    # Log the error if an p_o(bject) is available
+                    if o:
+                        o.log(ISBV_KO % (self.catalog.name, self.name,
+                                         str(value), str(id), str(err)),
+                                         type='error')
+                    raise err
             else:
                 self.byValue[value] = IITreeSet((id,))
 
@@ -248,7 +259,7 @@ class Index(persistent.Persistent):
                 # This value must be indexed
                 if id not in self.byObject:
                     # No trace from this object in the index, add an entry
-                    self.addEntry(id, value)
+                    self.addEntry(id, value, o)
                 else:
                     # The object is already indexed. Get the currently indexed
                     # value.
@@ -257,7 +268,7 @@ class Index(persistent.Persistent):
                     if self.valueEquals(value, current): return
                     # Remove the current entry and replace it with the new one
                     self.removeEntry(id, o)
-                    self.addEntry(id, value)
+                    self.addEntry(id, value, o)
             except Exception as err:
                 o.log(INDEX_ERR % (o.iid, o.getShownValue(), o.class_.name,
                                    self.name), type='error')
