@@ -442,22 +442,20 @@ class Select(Field):
         master = self.master
         if not ignoreMasterValues and master and callable(self.masterValue):
             # This field is an ajax-updatable slave. Get the master value...
-            if master.valueIsInRequest(o, req):
+            inReq = self.getMasterInRequest(master, o, req)
+            if inReq:
                 # ... from the request if available
-                requestValue = master.getRequestValue(o)
-                masterValues = master.getStorableValue(o, requestValue,
-                                                       single=True)
+                requestVal = inReq.getRequestValue(o)
+                masterVals = inReq.getStorableValue(o, requestVal, single=True)
             elif not className:
                 # ... or from the database if we are editing an object
-                masterValues = master.getValue(o, single=True)
+                inDb = master if isinstance(master, Field) else master[0]
+                masterVals = inDb.getValue(o, single=True)
             else:
                 # We don't have any master value
-                masterValues = None
+                masterVals = None
             # Get possible values by calling self.masterValue
-            if masterValues:
-                values = self.masterValue(o, masterValues)
-            else:
-                values = []
+            values = self.masterValue(o, masterVals) if masterVals else []
             # Manage parameter p_withTranslations
             if not withTranslations: r = values
             else:

@@ -31,11 +31,11 @@ REC_CONF_S = f'{REC_BASE}<br/><br/>Do it ?'
 RECOMP_OK  = 'Index %s::%s successfully recomputed.<br/><br/>' \
              '#Values went from %s to %d.<br/>#Objects went from %s to %d.'
 IISET_ERR  = f'{CI_PRE} IITreeSet at value "%s" was corrupted and deleted.'
+IDX_CORR   = f'Index is corrupted and must be completely recomputed (%s).'
 IBV_KO     = f'{CI_PRE} Error while getting value "%s" from "byValue" ' \
-             f'OOBTree :: Index is corrupted and must be completely ' \
-             f'recomputed (%s).'
+             f'OOBTree :: {IDX_CORR}'
 ISBV_KO    = f'{CI_PRE} Error while setting value "%s" in "byValue" at key ' \
-             f'"%s" (%s).'
+             f'"%s" :: {IDX_CORR}'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Index(persistent.Persistent):

@@ -2102,12 +2102,12 @@ class Ref(Field):
                 # A filter will not get any master. We need to display all the
                 # slave values from all the master values the user may see.
                 objects = None
-                for masterValue in master.getPossibleValues(o):
+                for masterVal in master.getPossibleValues(o):
                     if objects is None:
-                        objects = self.masterValue(o, masterValue)
+                        objects = self.masterValue(o, masterVal)
                     else:
                         # Ensure there is no duplicate among collected objects
-                        for mo in self.masterValue(o, masterValue):
+                        for mo in self.masterValue(o, masterVal):
                             if mo not in objects:
                                 objects.append(mo)
                 objects = objects or []
@@ -2116,20 +2116,17 @@ class Ref(Field):
                 inReq = self.getMasterInRequest(master, o, req)
                 if inReq:
                     # ... from the request if available
-                    requestValue = inReq.getRequestValue(o)
-                    masterValues = inReq.getStorableValue(o, requestValue,
-                                                          single=True)
+                    requestVal = inReq.getRequestValue(o)
+                    masterVals = inReq.getStorableValue(o, requestVal,
+                                                        single=True)
                 elif usage == Ref.PV_EDIT:
                     # ... or from the database if we are editing an object
                     inDb = master if isinstance(master, Field) else master[0]
-                    masterValues = inDb.getValue(o, layout='edit')
+                    masterVals = inDb.getValue(o, layout='edit')
                 else: # usage is PV_SEARCH and we don't have any master value
-                    masterValues = None
+                    masterVals = None
                 # Get the possible values by calling self.masterValue
-                if masterValues:
-                    objects = self.masterValue(o, masterValues)
-                else:
-                    objects = []
+                objects = self.masterValue(o, masterVals) if masterVals else []
         else:
             # Get the possible values from the appropriate attribute
             select = getattr(self, Ref.pvMap[usage])
