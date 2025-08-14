@@ -24,7 +24,7 @@ def split(url):
         else:
             r[name] = None
     # Re-build the URL parts into an URL, but without params
-    url = '%s://%s%s' % (parsed.scheme, parsed.netloc, parsed.path)
+    url = f'{parsed.scheme}://{parsed.netloc}{parsed.path}'
     return url, r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -36,10 +36,11 @@ def encode(params, ignoreNoneValues=True):
     r = []
     for name, value in params.items():
         # Ignore entries whose value is None when appropriate
-        if ignoreNoneValues and (value is None): continue
+        if ignoreNoneValues and value is None: continue
         # Convert the value to a str if not done yet
         value = value if isinstance(value, str) else str(value)
         # Add the encoded entry to the result
-        r.append('%s=%s' % (name, value))
+        value = urllib.parse.quote(value)
+        r.append(f'{name}={value}')
     return '&'.join(r)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
