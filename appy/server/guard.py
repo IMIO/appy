@@ -125,6 +125,7 @@ class Unauthorized(Exception):
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Guard:
     '''Implements security-related functionality'''
+
     Error = Unauthorized
     Cookie = Cookie
     traverse = {}
@@ -148,6 +149,11 @@ class Guard:
 
     def initUser(self, user=None):
         '''Initialise guard attributes related to the current user'''
+        # The following attribute will be, as several other user-related
+        # attributes, set by m_cache. By defining this one as soon as now, if a
+        # translation method is called by the following lines of code, we avoid
+        # a crash.
+        self.userLanguage = None
         # Authenticate the currently logged user and get its User instance
         if user is None:
             self.user = User.authenticate(self)
@@ -176,7 +182,12 @@ class Guard:
         self.userLogins = u.getLogins(compute=True, guard=self)
         self.userRoles = u.getRoles(compute=True, guard=self)
         self.userAllowed = u.getAllowedFrom(self.userRoles, self.userLogins)
-        self.userLanguage = u.getLanguage() if not self.handler.fake else 'en'
+        self.userLanguage = u.getLanguage() if not self.handler.fake \
+                                            else self.config.ui.fallbackLanguage
+
+    def getUserLanguage(self):
+        '''Return the user language or a fallback'''
+        return self.userLanguage or self.config.ui.fallbackLanguage
 
     # In the remaining of this class, when talking about "the user", we mean
     # "the currently logged user".

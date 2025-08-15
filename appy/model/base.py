@@ -1283,7 +1283,8 @@ class Base:
         # In what language must we get the translation ?
         if not language:
             guard = handler.guard
-            language = guard.userLanguage if guard else 'en'
+            language = guard.getUserLanguage() if guard \
+                       else self.config.ui.fallbackLanguage
         # Get the label name, and the field-specific mapping if any
         if field:
             if field.type != 'group':
