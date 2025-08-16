@@ -1324,11 +1324,6 @@ class Base:
         # Manage carriage returns, depending on the desired format
         return r.replace('<br/>', '\n') if asText else r
 
-    def callOnView(self):
-        '''Call "onView" method if present'''
-        method = getattr(self, 'onView', None)
-        if method: method()
-
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                               XML export
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1378,6 +1373,13 @@ class Base:
       <script>:mode.getAjaxDataRow(o, ohook, currentNumber=currentNumber,
                cbChecked=cbId)</script></tr>''')
 
+    def callOnView(self):
+        '''Call "onView" method if present'''
+        # The "onView" method may be defined on an Appy class and will be
+        # executed when web page o/view is rendered in the browser.
+        method = getattr(self, 'onView', None)
+        if method: method()
+
     # Base PX for viewing object fields from a given page
     view = Px('''
      <x var="x=guard.mayView(o, raiseError=True);
@@ -1420,6 +1422,15 @@ class Base:
     # traversal is the "view" PX.
     default = view
 
+    def callPrepareEdit(self):
+        '''Call "prepareEdit" method if present'''
+        # m_prepareEdit may be defined on an Appy class and will be executed
+        # when web page o/edit is rendered in the browser. Not to confuse with
+        # m_beforeEdit, m_onEditEarly and m_onEdit, being called by Appy once
+        # data has been posted to the Appy server.
+        method = getattr(self, 'prepareEdit', None)
+        if method: method()
+
     # Base PX for editing object fields from a given page
     edit = Px('''
      <x var="x=guard.mayEdit(o, raiseError=True);
@@ -1435,7 +1446,7 @@ class Base:
       <!-- Warn the user that the form should be left via buttons -->
       <script>protectAppyForm()</script>
       <form id="appyForm" name="appyForm" method="post"
-            enctype="multipart/form-data" action=":'%s/save' % o.url">
+            enctype="multipart/form-data" action=":f'{o.url}/save'">
        <input type="hidden" name="action" value=""/>
        <input type="hidden" name="popup" value=":popup"/>
        <input type="hidden" name="page" value=":page"/>
@@ -1450,10 +1461,10 @@ class Base:
        <input type="hidden" name="confirmed" value="False"/>
        <input type="hidden" name="confirmedData" value=""/>
        <x var="tagId='pageLayout'; tagName=''; tagCss='';
-               layoutTarget=o">:table.pxRender</x>
+               layoutTarget=o; x=o.callPrepareEdit()">:table.pxRender</x>
       </form>
-      <script if="confirmText">::'askConfirm(%s,%s,%s,null,%d)' % \
-        (q('script'), q('postConfirmedEditForm(comment)'), q(confirmText), \
+      <script if="confirmText">::'askConfirm(%s,%s,%s,null,%d)' %
+        (q('script'), q('postConfirmedEditForm(comment)'), q(confirmText),
          o.class_.getConfirmPopupWidth(popup))</script>
       <x>::ui.Globals.getScripts(tool, q, layout)</x>
      </x>''',
