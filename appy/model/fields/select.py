@@ -204,9 +204,9 @@ class Select(Field):
     search = Px('''
      <!-- The "and" / "or" radio buttons -->
      <x if="field.multiplicity[1] != 1"
-        var2="operName='o_%s' % name;
-              orName='%s_or' % operName;
-              andName='%s_and' % operName">
+        var2="operName=f'o_{name}';
+              orName=f'{operName}_or';
+              andName=f'{operName}_and'">
       <input type="radio" name=":operName" id=":orName"
              checked="checked" value="or"/>
       <label lfor=":orName">:_('search_or')</label>

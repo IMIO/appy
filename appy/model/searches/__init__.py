@@ -640,9 +640,9 @@ class Search:
        <input if="refInfo" type="hidden" name="ref" value=":refInfo"/>
 
        <!-- The search fields -->
-       <div style=":gridder.getContainerStyle() + ';margin-bottom: 1em'">
+       <div style=":f'{gridder.getContainerStyle()};margin-bottom:1em'">
          <div for="field in fields"
-            style=":'grid-column:span %d' %field.scolspan">:field.pxRender</div>
+             style=":f'grid-column:span {field.scolspan}'">:field.pxRender</div>
        </div>
 
        <!-- Submit -->

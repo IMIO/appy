@@ -650,6 +650,7 @@ class Layouts(dict):
 b = 'lrv-f'
 d = 'lrv-d-f'
 f = Layout('f')
+ls = {'search': 'l-f'}
 Layouts.b   = Layouts(Layout(b, width=None))
 Layouts.c   = Layouts(Layout('lrv|-f|', width=None, align='center'))
 Layouts.d   = Layouts(d)
@@ -661,8 +662,8 @@ Layouts.n   = Layouts.b
 Layouts.nd  = Layouts(Layout(d, width=None))
 Layouts.w   = Layouts(Layout(b))
 # Layouts with content only (no label)
-Layouts.f   = Layouts(LayoutF('f='))
-Layouts.fr  = Layouts(LayoutF('frv='))
+Layouts.f   = Layouts(LayoutF('f='), **ls)
+Layouts.fr  = Layouts(LayoutF('frv='), **ls)
 Layouts.wf  = Layouts(f)
 Layouts.fv  = Layouts(edit=Layout(b), view=f)
 Layouts.fvd = Layouts(edit=Layout(d), view=f)
@@ -682,7 +683,7 @@ Layouts.gdh = Layouts('fhrvl-d')
 # Base layouts, with space on *t*op of the field
 Layouts.t   = Layouts.b.clone(css='topSpace')
 Layouts.tw  = Layouts(Layout(b, css='topSpace'))
-Layouts.tf  = Layouts(LayoutF('f', css='topSpace'))
+Layouts.tf  = Layouts(LayoutF('f', css='topSpace'), **ls)
 Layouts.td  = Layouts.dt
 Layouts.te  = Layouts.b.clone(edit=Layouts.t['edit']) # Variant: no top on edit
 Layouts.ts  = Layouts.t.clone(css='topSpaceS') # Variant: less top space
