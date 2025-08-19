@@ -24,6 +24,10 @@ class Picker(Calendar):
     # The format allowing to produce a key representing a day
     dayKey = '%Y%m%d'
 
+    # Block the possibility to switch from the mont to the week view. Indeed, on
+    # a week view, there is nothing (yet) to pick.
+    switchViews = False
+
     def __init__(self, calendarInfo, validator=None, multiplicity=(0, None),
       default=None, defaultOnEdit=None, show=True, renderable=None, page='main',
       group=None, layouts=None, move=0, readPermission='read',
@@ -155,7 +159,7 @@ class Picker(Calendar):
                     # Add one
                     date = DateTime(dateS)
                     calendar.Event.create(o, calendar, date, eventType, slotId,
-                                          log=False)
+                                          log=False, say=False)
             else:
                 # No event of this v_eventType must be defined at this date and
                 # v_slotId.
@@ -163,7 +167,7 @@ class Picker(Calendar):
                     # Delete it
                     date = DateTime(dateS)
                     calendar.deleteEvent(o, date, slotId, handleEventSpan=False,
-                                         say=False)
+                                         log=False, say=False)
 
     def mustExclude(self, o, date, cache):
         '''Must we prevent this p_date from being picked ?'''

@@ -33,7 +33,10 @@ class Month(View):
     def getOthers(self):
         '''Returns the names of the other views the user may switch to from this
            one.'''
-        # Currently, the only view to switch to is "month"
+        # All calendars do not allow switching between views (ie, the Picker
+        # doesn't allow it).
+        if not self.field.switchViews: return
+        # Currently, the only view to switch to is "week"
         return [('week', {'day': self.monthDayOne.strftime('%Y-%m-%d')})]
 
     def getInfo(self, first):

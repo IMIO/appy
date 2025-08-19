@@ -155,6 +155,9 @@ class Calendar(Field):
     IterSub = utils.IterSub
     Validation = Validation
 
+    # Allow switching from one calendar view to the other ?
+    switchViews = True
+
     traverse['Totals'] = 'perm:read'
     Totals = Totals
 
