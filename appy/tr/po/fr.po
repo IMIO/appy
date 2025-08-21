@@ -1216,6 +1216,10 @@ msgstr "inconnu"
 msgid "pay"
 msgstr "Payer"
 
+#. Default: "Please proceed with the payment via the “<b>${pay}</b>” button."
+msgid "please_pay"
+msgstr "Veuillez procéder au paiement via le bouton « <b>${pay}</b> »."
+
 #. Default: "Your payment was successful."
 msgid "payment_accepted"
 msgstr "Votre paiement effectué avec succès."

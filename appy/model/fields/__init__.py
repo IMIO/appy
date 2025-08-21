@@ -67,38 +67,38 @@ class Show:
     # All layouts but "edit". To use for users that can consult the field value
     # but cannot modify it. Also used for fields like some Ref fields that are
     # never manipulated via "edit" layouts.
-    E_  = ('view', 'result', 'xml')
-    ER_ = VX = ('view', 'xml') # A variant, without "result"
-    E_S = ('view', 'sub', 'xml') # A variant, with "sub" instead of "result"
-    S   = ('edit', 'view', 'sub', 'xml')
-    BS  = ('buttons', 'sub') # Both in pxButtons and within lists of objects
-    BR  = ('buttons', 'result') # Appropriate for some fields like pods
-    BE  = ('buttons', 'edit')
+    E_  = 'view', 'result', 'xml'
+    ER_ = VX = 'view', 'xml' # A variant, without "result"
+    E_S = 'view', 'sub', 'xml' # A variant, with "sub" instead of "result"
+    S   = 'edit', 'view', 'sub', 'xml'
+    BS  = 'buttons', 'sub' # Both in pxButtons and within lists of objects
+    BR  = 'buttons', 'result' # Appropriate for some fields like pods
+    BE  = 'buttons', 'edit'
 
     # All standard layouts
-    STD = ('view', 'edit', 'result', 'xml')
+    STD = 'view', 'edit', 'result', 'xml'
 
     # All layouts but "view". To use typically when, on "view", the field value
     # is already shown as a part of some custom widget.
-    V_  = ('edit', 'result', 'xml')
-    V_B = ('edit', 'result', 'xml', 'buttons')
+    V_  = 'edit', 'result', 'xml'
+    V_B = 'edit', 'result', 'xml', 'buttons'
 
     # All layouts but "view" and "edit'. To use when you need both E_ and V_.
-    RX = VE_ = ('result', 'xml')
+    RX = VE_ = 'result', 'xml'
     RXB = VE_B = RX + ('buttons',) # The same + "buttons"
 
     # This set is used for showing workflow transitions in lists of objects
-    TR = ('view', 'result')
+    TR = 'view', 'result'
 
     # Show it on "pre" instead of "view", "result" also allowed
-    PR  = ('pre', 'result')
-    PRS = ('pre', 'result', 'sub')
+    PR  = 'pre', 'result'
+    PRS = 'pre', 'result', 'sub'
 
     # This is, a.o., for custom widgets whose edit and view variants are not
     # that different, but that cannot be shown elsewhere (result, xml, etc).
-    VE  = ('view'   , 'edit')
-    BX  = ('buttons', 'xml')
-    EX  = ('edit'   , 'xml')
+    VE  = 'view'   , 'edit'
+    BX  = 'buttons', 'xml'
+    EX  = 'edit'   , 'xml'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Initiator:
@@ -258,10 +258,10 @@ class Field:
     Layouts = Layouts
 
     # Some global static variables
-    nullValues = (None, '', [], {}, ())
-    labelTypes = ('label', 'descr', 'help')
-    viewLayouts = ('view', 'cell')
-    cellLayouts = ('cell', 'query', 'sub') # Cell-like layouts
+    nullValues = None, '', [], {}, ()
+    labelTypes = 'label', 'descr', 'help'
+    viewLayouts = 'view', 'cell'
+    cellLayouts = 'cell', 'query', 'sub' # Cell-like layouts
 
     # Those attributes can be overridden by subclasses for defining,
     # respectively, names of CSS and Javascript files that are required by this

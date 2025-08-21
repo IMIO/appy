@@ -4,11 +4,15 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import datetime, hmac, hashlib, base64
 
+from appy.px import Px
 from appy.model.fields import Field
 from appy.utils.client import Resource
 from appy.model.utils import Object as O
+from appy.ui.layout import LayoutF, Layouts
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+API = 'Worldline API ::'
+WL_HT_AUTH = f'{API} %s :: Got tokenization ID %s'
 bn = '\n'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -82,6 +86,10 @@ class Config:
         hash_ = hmac.new(self.apiSecret.encode(enc), s.encode(enc), algo)
         return base64.b64encode(hash_.digest()).decode(enc).rstrip(bn)
 
+    def getBaseUrl(self):
+        '''Get the base URL for the Worldline API'''
+        return Config.baseUrl % Config.urlParts[self.env]
+
     def __repr__(self):
         '''p_self's short representation'''
         return f'‹{self.env}@Worldline - PSPID {self.pspid}›'
@@ -92,6 +100,45 @@ class Worldline(Field):
 
     # Some elements will be traversable
     traverse = Field.traverse.copy()
+
+    class Layouts(Layouts):
+        '''Worldline-specific layouts'''
+
+        f = Layouts(view=LayoutF('f=', direction='column'))
+        defaults = {'normal': f, 'grid': f}
+
+    # The ID of the div tag containing the iframe
+    divId = 'div-hosted-tokenization'
+
+    # This PX includes the Worldline iframe
+    view = Px('''
+     <!-- This div will host the iframe -->
+     <div id=":field.divId" class="divWL"></div>
+
+     <!-- Submit the form -->
+     <input type="button" class="buttonFixed button" value=":_('pay')"
+            onclick="submitWLForm()"/>
+
+     <!-- This JS file contains the methods needed for tokenization -->
+     <script var="baseUrl=config.worldline.getBaseUrl()"
+             src=":f'{baseUrl}/hostedtokenization/js/client/tokenizer.min.js'">
+     </script>
+
+     <!-- Get the JS code that will initialise the iframe -->
+     <script>::field.getFrameInit(o)</script>''',
+
+     css=''' .divWL { margin: 1em 0.2em }''',
+
+     js = '''
+       function submitWLForm(){
+         tokenizer.submitTokenization().then((result) => {
+           if (result.success) {
+             /* Proceed by storing the result.hostedTokenizationId from our
+                platform to be used in subsequent steps */
+           } else { // displayErrorMessage(result.error.message);
+           }
+         });
+       }''')
 
     def show(self, o):
         '''Show the payment widget only if initialisation data has been stored
@@ -124,7 +171,7 @@ class Worldline(Field):
         # Create a Resource object representing the distant server
         config = o.config.worldline
         base = config.baseUrl % config.urlParts[config.env]
-        url = f'{base}/{config.baseSuffix}/{endpoint}'
+        url = f'{base}/{config.baseSuffix}/{config.pspid}/{endpoint}'
         server = Resource(url)
         # Define headers, including the authorization header
         now = config.getNow()
@@ -170,6 +217,16 @@ class Worldline(Field):
     # Currently supported locales
     locales = {'en': 'UK', 'fr': 'BE', 'nl': 'BE'}
 
+    def getLocale(self, o):
+        '''Returns the locale to use while calling the Worldline API'''
+        lang = o.guard.getUserLanguage()
+        locales = self.locales
+        if lang in locales:
+            r = f'{lang}_{locales[lang]}'
+        else:
+            r = 'en_UK'
+        return r
+
     def initialise(self, o):
         '''Call endpoint "hostedtokenizations", as a preamble to display the
            payment iframe. The endpoint returns a "hosted tokenization URL" that
@@ -177,17 +234,30 @@ class Worldline(Field):
         # API documentation: https://docs.direct.worldline-solutions.com/en/
         #                     api-reference#tag/HostedTokenization/operation/
         #                     CreateHostedTokenizationApi
-        lang = o.guard.userLanguage or 'en'
-        locale = f'{lang}-{self.locales.get(lang) or "BE"}'
-        data = O(locale=locale, askConsumerConsent=False)
+        data = O(locale=self.getLocale(o), askConsumerConsent=False)
         resp = self.call(o, 'hostedtokenizations', data=data)
         if resp.errors:
             r = False
             message = self.getErrorDetails(o, resp)
         else:
             r = True
-            message = 'OK'
+            _ = o.translate
+            payText = _('pay')
+            message = _('please_pay', mapping={'pay': payText})
             # Store, as field value, the complete endpoint response
             o.values[self.name] = resp
+            tid = resp.hostedTokenizationId
+            o.log(WL_HT_AUTH % (o.strinG(path=False), tid))
         return r, message
+
+    def getFrameInit(self, o):
+        '''Get the JS code allowing to initialise the iframe'''
+        # Create a Tokenizer object. Retrieve the hosted tokenization URL from
+        # p_self's value on this p_o(bject)
+        url = getattr(o, self.name).hostedTokenizationUrl
+        # Invoking tokenizer.initialize() will add the <iframe> inside the
+        # div tag whose ID is p_self.divId.
+        return f"var tokenizer=new Tokenizer('{url}','{self.divId}'," \
+               f" {{hideCardholderName:false}});{bn}tokenizer.initialize()" \
+               f".then(() => {{}}).catch(reason => {{}})"
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
