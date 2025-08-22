@@ -347,6 +347,10 @@ msgstr "Verwijder de selectie"
 msgid "object_deleted"
 msgstr "Het item is verwijderd."
 
+#. Default: "🚫 The deletion could not occur."
+msgid "object_deleted_ko"
+msgstr "🚫 Het verwijderen kon niet worden uitgevoerd."
+
 #. Default: "Remove"
 msgid "object_unlink"
 msgstr "Intrekken"

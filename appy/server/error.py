@@ -117,7 +117,10 @@ class Error:
         if ajax:
             resp.code = HTTPStatus.OK
             # Add a link to the referer, if any
-            suffix = MessageException.getBackText(handler)
+            if error and isinstance(error, MessageException) and error.backLink:
+                suffix = '' # The back link has already been dumped
+            else:
+                suffix = MessageException.getBackText(handler)
             # Thanks to the DOCTYPE preamble, the Ajax subsystem will understand
             # we are in a special context and will take care of rendering the
             # message appropriately.

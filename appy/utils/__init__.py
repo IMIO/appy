@@ -124,7 +124,7 @@ class MessageException(Exception):
             r = handler.tool.translate(text, mapping=self.mapping)
         else:
             r = text or ''
-        # Add, if appropriate, a link allowing the user to go aback to some URL
+        # Add, if appropriate, a link allowing the user to go back to some URL
         back = self.backLink
         if back:
             if isinstance(back, str):
