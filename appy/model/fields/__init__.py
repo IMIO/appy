@@ -408,17 +408,20 @@ class Field:
     # Displays a field help (UiGroup has exaclty the same PX)
     pxHelp = UiGroup.pxHelp
 
+    # Template for a validation error
+    validationError = '<div class="dropdownMenu fdrop" onmouseover=' \
+      '"toggleDropdown(this)" onmouseout="toggleDropdown(this,\'none\')">' \
+      '⚠️<div class="dropdown vdown fadeIn">%s</div>'
+
     # Displays validation-error-related info about a field
     def validationPx(c):
         '''Python implementation of validation PX'''
-        url = c.svg('warning')
         if c.error:
-            r = f'<abbr title="{c.error}"><img src="{url}" class="iconS"/>' \
-                f'</abbr>'
+            r = Field.validationError % c.error
         else:
-            r = f'<img src="{url}" class="iconS" style="visibility:hidden"/>'
+            r = '<span style="visibility:hidden">⚠️</span>'
         return r
-    
+
     pxValidation = Px(validationPx)
 
     # Displays the fact that a field is required
