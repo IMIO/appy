@@ -1849,8 +1849,8 @@ class Field:
 
     @classmethod
     def asXhtml(class_, o, fields=None, css='small', ignoreEmpty=True,
-                custom=None, thWidth='40%'):
-        '''Renders a HTML table containing field values for this o_o(bject)'''
+                custom=None, thWidth='40%', values=None):
+        '''Renders a HTML table containing field values for this p_o(bject)'''
         # If p_fields is not None, it contain names of fields that will be part
         # of the result. If None, all p_o(bject) fields will be part of the
         # result.
@@ -1865,14 +1865,19 @@ class Field:
         # custom rendering for some fields. If you want to produce a custom
         # rendering for field named "f1", pass, in p_custom, a dict having a
         # entry whose key is "f1" and whose value is a function. This latter
-        # must accept, as args, (1) the concerned object and (2) the Field
-        # object whose name is "f1", and must return a string containing a
-        # complete "tr" tag and sub-tags (as a string) that must represent the
-        # field label and its value, in any form. Note that a standard entry in
-        # the table has 2 cells: the first one (a "th") contains field labels
-        # and the second one (a "td") contains field values.
+        # must accept, as args, (1) the concerned object, (2) the Field object
+        # whose name is "f1" and (3) the field value (may be the one stored on
+        # the object, or an alternative). For a Ref field, the field value is
+        # always a list. It must return a string containing a complete "tr" tag
+        # and sub-tags (as a string) that must represent the field label and its
+        # value, in any form. Note that a standard entry in the table has 2
+        # cells: the first one (a "th") contains field labels and the second one
+        # (a "td") contains field values.
         #
         # Width for the 1st column is determined by p_thWidth.
+        #
+        # If p_values is passed, object values are to be retrieved from this
+        # object instead of p_o.
         rows = []
         fields = fields or o.class_.fields.values()
         first = True
@@ -1880,17 +1885,21 @@ class Field:
             # p_field can be a Field object or the name of a field (as a string)
             field = o.getField(field) if isinstance(field, str) else field
             name = field.name
+            # Get the field value
+            value = field.getValue(o, single=False) \
+                    if values is None else getattr(values, name, None)
             # Ignore empty values
-            if ignoreEmpty and o.isEmpty(name): continue
+            if ignoreEmpty and o.isEmpty(name, value=value, fromParam=True):
+                continue
             # Get the row content
             thStyle = f' style="width:{thWidth}"' if first else ''
             if custom and name in custom:
-                row = custom[name](o, field)
+                row = custom[name](o, field, value)
             else:
                 # Standard content: dump 2 cells: one containing the field
                 # label, the second containing the field value.
                 text = o.translate('label', field=field)
-                value = o.getShownValue(name)
+                value = o.getShownValue(name, value=value)
                 if isinstance(value, __builtins__['list']):
                     value = ', '.join(value)
                 row = f'<tr><th{thStyle}>{text}</th><td>{value}</td></tr>'

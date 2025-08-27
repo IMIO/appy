@@ -379,6 +379,14 @@ class Select(Field):
             value = list(value)
         return value
 
+    def getCopyValue(self, o):
+        '''Gets the value of this field on p_o as with m_getValue above. But
+           if this value is mutable, get a copy of it.'''
+        r = self.getValue(o)
+        if isinstance(r, list):
+            r = r[:]
+        return r
+
     def getTranslatedValue(self, o, value, language=None):
         '''Get the translated text for p_value, when p_value is one of p_self's
            authorized "static" values according to its p_self.validator (being a
