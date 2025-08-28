@@ -409,7 +409,7 @@ class Field:
     pxHelp = UiGroup.pxHelp
 
     # Template for a validation error
-    validationError = '<div class="dropdownMenu fdrop" onmouseover=' \
+    validationError = '<div class="dropdownMenu fdrop help" onmouseover=' \
       '"toggleDropdown(this)" onmouseout="toggleDropdown(this,\'none\')">' \
       '⚠️<div class="dropdown vdown fadeIn">%s</div>'
 

@@ -144,7 +144,7 @@ div.rbutton { float:right }
 .disabled { opacity:0.3 }
 .unclickable { pointer-events:none; cursor:default }
 .editable { cursor:crosshair !important }
-.help { cursor:help }
+.help { cursor:help !important}
 .unallowed { cursor:not-allowed }
 .refLink { font-style:italic; padding-left:5px; font-size:90%; color:#555555 }
 .refSel { font-size:95%; padding:2px 20px; margin:0 10px;
