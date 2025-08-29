@@ -15,18 +15,18 @@ except ImportError:
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Days of the week
-weekDaysR = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri')
-weekEndDays = ('Sat', 'Sun')
+weekDaysR = 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'
+weekEndDays = 'Sat', 'Sun'
 weekDays  = weekDaysR + weekEndDays
 weekDays_ = weekDays + ('Off',)
 weekDaysD = {'Mon':0, 'Tue':1, 'Wed':2, 'Thu':3, 'Fri':4, 'Sat':5, 'Sun':6}
 
 # School days that last a complete day (at least in Belgium)
-weekDaysC = ('Mon', 'Tue', 'Thu', 'Fri')
+weekDaysC = 'Mon', 'Tue', 'Thu', 'Fri'
 
 # Months
-months = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
+months = 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', \
+         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 S_E_KO   = 'End date cannot be prior to start date.'

@@ -337,7 +337,7 @@ class LayoutF(Layout):
        instead of a table.'''
 
     # Flex-specific row delimiters (vertical alignment)
-    rowDelimiters =  {'-':'center', '=':'baseline', '_':'end'}
+    rowDelimiters =  {'-':'center', '=':'flex-start', '_':'end'}
     rowDelms = ''.join(rowDelimiters.keys())
 
     # Mapping between cell's horizontal alignment and values for flex property
@@ -663,6 +663,7 @@ Layouts.nd  = Layouts(Layout(d, width=None))
 Layouts.w   = Layouts(Layout(b))
 # Layouts with content only (no label)
 Layouts.f   = Layouts(LayoutF('f='), **ls)
+Layouts.fc  = Layouts(view=LayoutF('f=', direction='column'), **ls)
 Layouts.fr  = Layouts(LayoutF('frv='), **ls)
 Layouts.wf  = Layouts(f)
 Layouts.fv  = Layouts(edit=Layout(b), view=f)
