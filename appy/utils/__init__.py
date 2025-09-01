@@ -4,7 +4,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import sys
+import sys, re
 
 from persistent.list import PersistentList
 import traceback, mimetypes, subprocess, types
@@ -15,6 +15,7 @@ def asDict(seq):
     return {elem: None for elem in seq}
 
 # Global variables - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 listTypes = (list, PersistentList)
 sequenceTypes = listTypes + (tuple,)
 commercial = False
@@ -60,6 +61,11 @@ mimeTypesExts = {
   f'{ms2}-excel.sheet.macroEnabled.12'            : 'xlsm',
   f'{ms2}-powerpoint.presentation.macroEnabled.12': 'pptm'
 }
+
+# Chars being illegal in ODS sheet names. The apostrophe is legal inside the
+# name, but not as first or last char; for the sake of simplicity, we declare it
+# here as completely unallowed.
+notInSheet = re.compile(r"[\[\]\*\?\:\\/']")
 
 def getMimeType(fileName, default='application/octet-stream'):
     '''Tries to guess mime type from p_fileName'''

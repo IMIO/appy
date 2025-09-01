@@ -222,6 +222,7 @@ class DayIterator:
             self.current = self.end
 
     def __iter__(self): return self
+
     def __next__(self):
         '''Returns the next day'''
         if self.finished:
