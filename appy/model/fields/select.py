@@ -407,7 +407,7 @@ class Select(Field):
         if isinstance(self.validator, Selection):
             # Value(s) come from a dynamic vocabulary
             val = self.validator
-            if self.isMultiValued():
+            if self.isMultiValued() or isinstance(value, utils.sequenceTypes):
                 r = [val.getText(o, v, self, language) for v in value]
             else:
                 r = val.getText(o, value, self, language)
