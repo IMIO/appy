@@ -393,19 +393,19 @@ for tag in ('p', 'ul', 'ol'): HtmlElement.protos[tag] = HtmlElement(tag)
 
 # ------------------------------------------------------------------------------
 class HtmlTable(Element):
-    '''Represents an HTML table, and also a sub-buffer. When parsing elements
-       corresponding to an HTML table (<table>, <tr>, <td>, etc), we can't dump
-       corresponding ODF elements directly into the global result buffer
-       (XhtmlEnvironment.res). Indeed, when dumping an ODF table, we must
-       dump columns declarations at the beginning of the table. So before
-       dumping rows and cells, we must know how much columns will be present
-       in the table. It means that we must first parse the first <tr> entirely
-       in order to know how much columns are present in the HTML table before
-       dumping the ODF table. So we use this class as a sub-buffer that will
-       be constructed as we parse the HTML table; when encountering the end
-       of the HTML table, we will dump the result of this sub-buffer into
-       the parent buffer, which may be the global buffer or another table
-       buffer.'''
+    '''Represents an HTML table, and also a sub-buffer'''
+
+    # When parsing elements corresponding to an HTML table (<table>, <tr>, <td>,
+    # etc), we can't dump corresponding ODF elements directly into the global
+    # result buffer (XhtmlEnvironment.res). Indeed, when dumping an ODF table,
+    # we must dump columns declarations at the beginning of the table. So before
+    # dumping rows and cells, we must know how much columns will be present in
+    # the table. It means that we must first parse the first <tr> entirely in
+    # order to know how much columns are present in the HTML table before
+    # dumping the ODF table. So we use this class as a sub-buffer that will be
+    # constructed as we parse the HTML table; when encountering the end of the
+    # HTML table, we will dump the result of this sub-buffer into the parent
+    # buffer, which may be the global buffer or another table buffer.
 
     def __init__(self, env, xhtmlElem, attrs):
         self.env = env
@@ -435,7 +435,8 @@ class HtmlTable(Element):
         self.borderSpacing = None
         # Get the TableProperties instance. There is always one.
         self.props = props = env.findStyle(self)
-        self.style, self.widthInPx, self.originalWidthInPx =self.setTableStyle()
+        self.style, self.widthInPx, self.originalWidthInPx, self.widthInCm = \
+          self.setTableStyle()
         # Patch the table name when columns must be modified by LO
         modifier = props.columnModifier
         if modifier:
@@ -554,11 +555,11 @@ class HtmlTable(Element):
                 rel, self.tableNs, align, self.tableNs, align, margins, kwn,
                 unbreak, s)
         self.env.stylesManager.dynamicStyles.add('content', decl)
-        return self.name, tableWidthPx, originalTableWidthPx
+        return self.name, tableWidthPx, originalTableWidthPx, tableWidth
 
     def setColumnWidth(self, width):
         '''A p_width is defined for the current cell. Store it in
-           self.columnWidths'''
+           self.columnWidths.'''
         # But first, ensure self.columnWidths is long enough
         widths = self.columnWidths
         while (len(widths)-1) < self.cellIndex: widths.append(None)
@@ -610,7 +611,7 @@ class HtmlTable(Element):
                 elif width.unit == '%':
                     widthAsPc = width.value / 100
                 else:
-                    # "cm" or "pt". Ignore this for the moment.
+                    # "cm" or "pt": ignore this for the moment
                     widthAsPc = None
                 # Ignore the computed width if wrong
                 if (widthAsPc <= minCellWidth) or (widthAsPc >= maxCellWidth):
@@ -694,13 +695,12 @@ class HtmlTable(Element):
                         # Reduce this value by a part of the surplus
                         widths[i] = widths[i][0] - (surplus / remainingCount)
             i += 1
-        # Multiply widths (as percentages) by a predefined number, in order to
-        # get a LibreOffice-compliant column width.
+        # Get column widths in cms
         i = 0
-        total = 65534.0
         while i < self.nbOfColumns:
-            # Compute the width of this column, relative to "total"
-            widths[i] = int(widths[i] * total)
+            # Compute, in cm, the width of this column w.r.t the table width,
+            # also expressed in cm.
+            widths[i] = widths[i] * self.widthInCm
             i += 1
         # Compute style declaration corresponding to every column
         s = self.styleNs
@@ -709,8 +709,8 @@ class HtmlTable(Element):
         for width in widths:
             i += 1
             decl = '<%s:style %s:name="%s.%d" %s:family="table-column">' \
-                   '<%s:table-column-properties %s:rel-column-width="%d*"' \
-                   '/></%s:style>' % (s, s, self.name, i, s, s, s, width, s)
+                   '<%s:table-column-properties %s:column-width="%.2fcm"/>' \
+                   '</%s:style>' % (s, s, self.name, i, s, s, s, width, s)
             dynamic.add('content', decl)
 
 # ------------------------------------------------------------------------------
@@ -884,8 +884,8 @@ class XhtmlEnvironment(XmlEnvironment):
                 xhtmlElem.cssStyles.add('border-spacing', '%.2fcm' % value)
         else:
             parent = xhtmlElem.parent
-            if parent and (parent.elem in ('td', 'th')) and \
-               (xhtmlElem.elem in PARA_TAGS):
+            if parent and parent.elem in ('td', 'th') and \
+               xhtmlElem.elem in PARA_TAGS:
                 # The enclosed "p" must get the td's inner styles
                 if parent.innerStyle:
                     xhtmlElem.cssStyles.addClass(parent.innerStyle,

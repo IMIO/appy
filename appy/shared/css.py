@@ -175,7 +175,7 @@ class CssValue:
 
     def __repr__(self): return self.__str__()
 
-    def cm(self, formatted=True, value=None, ratio=px2cm):
+    def cm(self, formatted=True, value=None, ratio=px2cm, ptRatio=1.0):
         '''Returns p_self.value (or the given p_value) expressed in cm'''
         unit = self.unit
         if not unit: return
@@ -190,8 +190,9 @@ class CssValue:
             if unit == 'ex': ratio = ratio * 1.6
             r = (r / ratio) * 10
         elif unit == 'pt':
-            # Use a specific ratio
-            r *= 0.0352778
+            # Use a specific ratio. The ratio may be fine-tuned by applying a
+            # p_ptRatio.
+            r *= 0.0352778 * ptRatio
         elif unit != 'cm':
             r = None
         if formatted and (r is not None):
@@ -316,7 +317,7 @@ class CssStyles:
         classes = self.classes
         if not classes: return
         # Yes. Keep only the last one if requested.
-        if last and (' ' in classes):
+        if last and ' ' in classes:
             classes = classes.split()[-1]
         return classes
 
