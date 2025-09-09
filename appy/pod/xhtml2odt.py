@@ -46,9 +46,9 @@ SIMPLE_TAGS = XHTML_HEADINGS + ('p', 'div', 'blockquote', 'address', 'caption',
 
 INNER_TAGS_NO_BR = STYLE_ONLY_TAGS + ('sub','sup','a','acronym','abbr','img')
 INNER_TAGS = INNER_TAGS_NO_BR + ('br',)
-TABLE_CELL_TAGS = ('td', 'th')
+TABLE_CELL_TAGS = 'td', 'th'
 TABLE_COL_TAGS = TABLE_CELL_TAGS + ('col',)
-TABLE_ROW_TAGS = ('tr', 'colgroup')
+TABLE_ROW_TAGS = 'tr', 'colgroup'
 OUTER_TAGS = TABLE_CELL_TAGS + ('li',)
 PARA_TAGS = 'p', 'div', 'blockquote', 'address', 'caption'
 
@@ -996,10 +996,10 @@ class XhtmlEnvironment(Environment):
         return conflictElems
 
     def dumpString(self, s):
-        '''Dumps arbitrary content p_s.
-           If the table stack is not empty, we must dump p_s into the buffer
-           corresponding to the last parsed table. Else, we must dump p_s
-           into the global buffer (self.res).'''
+        '''Dumps arbitrary content p_s into the appropriate buffer'''
+        # If the table stack is not empty, we must dump p_s into the buffer
+        # corresponding to the last parsed table. Else, we must dump p_s into
+        # the global buffer (self.res).
         if self.currentTables:
             currentTable = self.currentTables[-1]
             if currentTable.inCaption:
@@ -1066,7 +1066,7 @@ class XhtmlEnvironment(Environment):
             if not table.firstRowParsed:
                 table.nbOfColumns += colspan
             styles = current.cssStyles
-            if hasattr(styles, 'width') and (colspan == 1):
+            if hasattr(styles, 'width') and colspan == 1:
                 table.setColumnWidth(styles.width)
             # Determine the styles to apply to inner-cell paragraphs
             if elem == 'td':
