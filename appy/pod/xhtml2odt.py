@@ -35,8 +35,8 @@ HTML_2_ODF = {
 for ht in XHTML_HEADINGS: HTML_2_ODF[ht] = h
 
 # Inner tags whose presence is only useful for specifying style information
-STYLE_ONLY_TAGS = ('b', 'strong', 'i', 'em', 'strike', 's', 'u', 'span', 'q',
-                   'code', 'font', 'samp', 'kbd', 'var', 'label', 'abbr')
+STYLE_ONLY_TAGS = 'b', 'strong', 'i', 'em', 'strike', 's', 'u', 'span', 'q', \
+                  'code', 'font', 'samp', 'kbd', 'var', 'label', 'abbr'
 
 for tag in STYLE_ONLY_TAGS: HTML_2_ODF[tag] = 'text:span'
 
@@ -50,14 +50,14 @@ TABLE_CELL_TAGS = ('td', 'th')
 TABLE_COL_TAGS = TABLE_CELL_TAGS + ('col',)
 TABLE_ROW_TAGS = ('tr', 'colgroup')
 OUTER_TAGS = TABLE_CELL_TAGS + ('li',)
-PARA_TAGS = ('p', 'div', 'blockquote', 'address', 'caption')
+PARA_TAGS = 'p', 'div', 'blockquote', 'address', 'caption'
 
 # The following elements can't be rendered inside paragraphs
 NOT_INSIDE_P = XHTML_HEADINGS + XHTML_LISTS + ('table',)
 NOT_INSIDE_P_OR_P = NOT_INSIDE_P + PARA_TAGS + ('li',)
-NOT_INSIDE_LI =  XHTML_HEADINGS + ('table',) + PARA_TAGS
-NOT_INSIDE_LIST = ('table',)
-IGNORABLE_TAGS = ('meta', 'title', 'style', 'script')
+NOT_INSIDE_LI = XHTML_HEADINGS + ('table',) + PARA_TAGS
+NOT_INSIDE_LIST = 'table',
+IGNORABLE_TAGS = 'meta', 'title', 'style', 'script'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Element:
@@ -258,12 +258,12 @@ class HtmlElement(Element):
                 styleName = None
                 if odtStyle:
                     if odtStyle.name == 'podItemKeepWithNext':
-                        itemStyle += '_kwn'
+                        itemStyle = f'{itemStyle}_kwn'
                     else:
                         if css == 'podItemKeepWithNext':
                             # We ignore the odtStyle. To improve: merge
                             # keep-with-next functionality with this style.
-                            styleName = env.itemStyles[itemStyle + '_kwn']
+                            styleName = env.itemStyles[f'{itemStyle}_kwn']
                         else:
                             styleName = css
                 styleName = styleName or env.itemStyles[itemStyle]
@@ -395,19 +395,19 @@ for tag in ('p', 'ul', 'ol'): HtmlElement.protos[tag] = HtmlElement(tag)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class HtmlTable(Element):
-    '''Represents an HTML table, and also a sub-buffer. When parsing elements
-       corresponding to an HTML table (<table>, <tr>, <td>, etc), we can't dump
-       corresponding ODF elements directly into the global result buffer
-       (XhtmlEnvironment.res). Indeed, when dumping an ODF table, we must
-       dump columns declarations at the beginning of the table. So before
-       dumping rows and cells, we must know how much columns will be present
-       in the table. It means that we must first parse the first <tr> entirely
-       in order to know how much columns are present in the HTML table before
-       dumping the ODF table. So we use this class as a sub-buffer that will
-       be constructed as we parse the HTML table; when encountering the end
-       of the HTML table, we will dump the result of this sub-buffer into
-       the parent buffer, which may be the global buffer or another table
-       buffer.'''
+    '''Represents an HTML table, and also a sub-buffer'''
+
+    # When parsing elements corresponding to an HTML table (<table>, <tr>, <td>,
+    # etc), we can't dump corresponding ODF elements directly into the global
+    # result buffer (XhtmlEnvironment.res). Indeed, when dumping an ODF table,
+    # we must dump columns declarations at the beginning of the table. So before
+    # dumping rows and cells, we must know how much columns will be present in
+    # the table. It means that we must first parse the first <tr> entirely in
+    # order to know how much columns are present in the HTML table before
+    # dumping the ODF table. So we use this class as a sub-buffer that will be
+    # constructed as we parse the HTML table; when encountering the end of the
+    # HTML table, we will dump the result of this sub-buffer into the parent
+    # buffer, which may be the global buffer or another table buffer.
 
     def __init__(self, env, xhtmlElem, attrs):
         self.env = env
@@ -438,7 +438,8 @@ class HtmlTable(Element):
         self.borderSpacing = None
         # Get the TableProperties instance. There is always one.
         self.props = props = env.findStyle(self)
-        self.style, self.widthInPx, self.originalWidthInPx =self.setTableStyle()
+        self.style, self.widthInPx, self.originalWidthInPx, self.widthInCm = \
+          self.setTableStyle()
         # Patch the table name when columns must be modified by LO
         modifier = props.columnModifier
         if modifier:
@@ -555,11 +556,11 @@ class HtmlTable(Element):
                f'{self.tableNs}:table-align="{align}" {self.tableNs}:align=' \
                f'"{align}"{margins}{kwn}{unbreak}/></{s}:style>'
         self.env.stylesManager.dynamicStyles.add('content', decl)
-        return self.name, tableWidthPx, originalTableWidthPx
+        return self.name, tableWidthPx, originalTableWidthPx, tableWidth
 
     def setColumnWidth(self, width):
         '''A p_width is defined for the current cell. Store it in
-           self.columnWidths'''
+           self.columnWidths.'''
         # But first, ensure self.columnWidths is long enough
         widths = self.columnWidths
         while (len(widths)-1) < self.cellIndex: widths.append(None)
@@ -611,7 +612,7 @@ class HtmlTable(Element):
                 elif width.unit == '%':
                     widthAsPc = width.value / 100
                 else:
-                    # "cm" or "pt". Ignore this for the moment.
+                    # "cm" or "pt": ignore this for the moment
                     widthAsPc = None
                 # Ignore the computed width if wrong
                 if (widthAsPc is not None) and \
@@ -696,13 +697,12 @@ class HtmlTable(Element):
                         # Reduce this value by a part of the surplus
                         widths[i] = widths[i][0] - (surplus / remainingCount)
             i += 1
-        # Multiply widths (as percentages) by a predefined number, in order to
-        # get a LibreOffice-compliant column width.
+        # Get column widths in cms
         i = 0
-        total = 65534.0
         while i < self.nbOfColumns:
-            # Compute the width of this column, relative to "total"
-            widths[i] = int(widths[i] * total)
+            # Compute, in cm, the width of this column w.r.t the table width,
+            # also expressed in cm.
+            widths[i] = widths[i] * self.widthInCm
             i += 1
         # Compute style declaration corresponding to every column
         s = self.styleNs
@@ -712,7 +712,7 @@ class HtmlTable(Element):
             i += 1
             decl = f'<{s}:style {s}:name="{self.name}.{i}" {s}:family=' \
                    f'"table-column"><{s}:table-column-properties ' \
-                   f'{s}:rel-column-width="{width}*"/></{s}:style>'
+                   f'{s}:column-width="{width:.2f}cm"/></{s}:style>'
             dynamic.add('content', decl)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -892,8 +892,8 @@ class XhtmlEnvironment(Environment):
                 xhtmlElem.cssStyles.add('border-spacing', '%.2fcm' % value)
         else:
             parent = xhtmlElem.parent
-            if parent and (parent.elem in ('td', 'th')) and \
-               (xhtmlElem.elem in PARA_TAGS):
+            if parent and parent.elem in ('td', 'th') and \
+               xhtmlElem.elem in PARA_TAGS:
                 # The enclosed "p" must get the td's inner styles
                 if parent.innerStyle:
                     xhtmlElem.cssStyles.addClass(parent.innerStyle,append=False)
@@ -1374,9 +1374,9 @@ class XhtmlPreprocessor:
        it uses a SAX parser to do its job. This preprocessor ensures it is the
        case, by applying some modifications to this input.'''
 
-    # Regular expression representing an HTML void tag
-    voidTags = ('area', 'base', 'br', 'col', 'hr', 'img', 'input', 'link',
-                'meta', 'param', 'command', 'keygen', 'source')
+    # Regular expression representing any HTML void tag
+    voidTags = 'area', 'base', 'br', 'col', 'hr', 'img', 'input', 'link', \
+               'meta', 'param', 'command', 'keygen', 'source'
     voidTag = re.compile(r'<(%s)([^>]*?)(/)?\s*>' % '|'.join(voidTags), re.S)
 
     # Regular expression representing a "pre" tag

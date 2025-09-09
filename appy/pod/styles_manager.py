@@ -977,10 +977,11 @@ class Css2odf:
             return
         # Standardize the attribute for use within an ODF document
         unit = value.unit or ''
-        if unit and (unit != '%'):
+        if unit and unit != '%':
             ratio = self.px2cmRatios.get(name, css.px2cm)
+            ptRatio = 0.66 if name == 'textindent' else 1.0
             try:
-                val = value.cm(value=val, ratio=ratio)
+                val = value.cm(value=val, ratio=ratio, ptRatio=ptRatio)
                 unit = 'cm'
             except TypeError: # Prevent crash when the value is invalid
                 return
@@ -1694,6 +1695,33 @@ class StylesManager:
         name = name.replace('_', '_5f_')
         return self.styles.get(name)
 
+    def cleanCssClasses(self, xhtmlElem, stylesMap=None):
+        '''Clean CSS classes potentially mentioned on this p_xhtmlElem and that
+           would be useless.'''
+        # Do it only if more than 1 CSS class is defined on this p_xhtmlElem.
+        # Indeed, the objective is to avoid, in m_findStyle, using a silly CSS
+        # class that would prevent us from using a real one.
+        styles = xhtmlElem.cssStyles
+        if not styles: return
+        classes = styles.classes
+        if not classes or ' ' not in classes: return
+        # Several CSS classes are defined: remove any silly one
+        classes = classes.split(' ')
+        i = len(classes) - 1
+        deleted = False
+        while i >= 0:
+            csS = classes[i]
+            if (stylesMap and csS in stylesMap) or \
+               csS in self.stylesMapping or self.getLoStyle(csS) or \
+               csS in self.podSpecificStyles:
+                pass # The style is in use, keep it
+            else:
+                del classes[i]
+                deleted = True
+            i -= 1
+        if deleted:
+            styles.classes = ' '.join(classes)
+
     def findStyle(self, xhtmlElem, localStylesMapping, stylesStore=None):
         '''Finds the ODT style that must be applied to this p_xhtmlElem (as a
            xhtml2odt:HtmlElement object).'''
@@ -1721,6 +1749,8 @@ class StylesManager:
 
         r = None
         elem = xhtmlElem.elem
+        # Clean unused CSS classes mentioned on this p_xhtmlElem
+        self.cleanCssClasses(xhtmlElem, stylesMap=localStylesMapping)
         css = xhtmlElem.getClass(last=True)
         # (1)
         if css in localStylesMapping:
