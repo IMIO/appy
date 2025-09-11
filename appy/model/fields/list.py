@@ -610,12 +610,11 @@ class List(Field):
         # Return an empty value if the p_value is inexistent
         if not value: return empty
         # Create a fake object, for hosting this p_value
-        req = o.req
-        fake = self.getFakeObject(value, req)
+        fake = self.getFakeObject(value, o)
         # Simulate p_self rendering on this p_fake object, on the "cell" layout
         ctx = O(name=self.name, o=fake, layout='cell', field=self, value=value,
                 _=o.translate, inRequest=False, requestValue=None,
-                showChanges=False, hostLayout=None, req=req)
+                showChanges=False, hostLayout=None, req=o.req)
         return self.pxTable(ctx)
 
     def getCss(self, o, layout, r):

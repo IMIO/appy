@@ -180,14 +180,18 @@ class Fake:
     # stored in an object's history, because this value is not directly related
     # to the object itself anymore, as are the current values of its fields.
 
-    def __init__(self, field, value, req):
+    def __init__(self, field, value, o):
         # The field whose value must be manipulated
         self.field = field
         # The value for this field will be stored in a dict named "values", in
         # order to mimic a standard Appy instance.
         self.values = {field.name: value}
+        # The initial object
+        self.o = o
         # Other useful standard attributes
-        self.req = req
+        self.req = o.req
+        self.config = o.config
+        self.tool = o.tool
         self.id = 0
         self.iid  = 0
 
@@ -201,9 +205,9 @@ class Fake:
         # We don't have enough information for producing this
         return 'Fake'
 
-    def translate(self, label, field=None):
+    def translate(self, label, field=None, language=None):
         '''Fake variant for Base::translate'''
-        return self.field.name
+        return self.o.translate(label, field=field, language=language)
 
     def allows(self, perm): return True
 

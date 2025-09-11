@@ -225,7 +225,7 @@ class Dict(List):
            differences with this p_old version.'''
         # Return the p_old value as-is, if the p_new version is None
         if not new:
-            fake = self.getFakeObject(old, o.req)
+            fake = self.getFakeObject(old, o)
             return self.doRender('view', fake)
         # Update the old value by replacing every modified sub-value (w.r.t
         # p_new) with a diff between the old and the new sub-value.
@@ -249,7 +249,7 @@ class Dict(List):
                     diffVal = self.getDiffSubValue(val, None, texts)
                     setattr(diffSub, name, diffVal)
         # Produce a fake object containing the diff
-        fake = self.getFakeObject(diff, o.req)
+        fake = self.getFakeObject(diff, o)
         # Render the diff
         return self.doRender('view', o, minimal=True, specific={'alto': fake})
 

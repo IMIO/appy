@@ -1328,10 +1328,10 @@ class Field:
             r = f'<span class="editable" {onClick}>{value}</span>'
         return r
 
-    def getFakeObject(self, value, req):
+    def getFakeObject(self, value, o):
         '''Returns a fake object, to mimic an object storing this p_value for
            field p_self.'''
-        return Fake(self, value, req)
+        return Fake(self, value, o)
 
     def getIndexType(self, class_=False):
         '''Returns the name of the class corresponding to the index used to

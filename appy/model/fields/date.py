@@ -297,8 +297,8 @@ class Date(Field):
         # If p_showYear is False, the list for choosing a year will not be
         # shown. The stored DateTime object will get the current year as year.
         self.showYear = showYear
-        # If no p_dateFormat/p_hourFormat is specified, the application-wide
-        # tool.dateFormat/tool.hourFormat is used instead.
+        # If no p_dateFormat (p_hourFormat) is specified, the application-wide
+        # config.ui.dateFormat (config.ui.hourFormat) is used instead.
         self.dateFormat = dateFormat
         self.hourFormat = hourFormat
         # In the context of a Date, the max hour is always 23. But it can be
