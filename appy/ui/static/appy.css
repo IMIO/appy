@@ -196,7 +196,7 @@ div.rbutton { float:right }
 .dropdownMenu { cursor:pointer; position:relative; display:flex;
                 align-items:center; gap:0.2em }
 .dropdownMenu .dropdown { font-size:100% }
-.dropdownMenu .vdown { font-size:90% }
+.dropdownMenu .vdown { font-size:90%; min-width:17em }
 .dropdown a:hover { text-decoration:underline }
 .rmenu { display:flex; gap:0.3em }
 .addForm { display:inline-flex; flex-wrap:wrap }
