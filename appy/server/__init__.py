@@ -29,7 +29,8 @@ RUNNING_APP   = 'Running app::%s'
 STOP_CLASSIC  = ':: %s:%s stopped ::'
 STOP_CLEAN    = ':: Clean end ::'
 STOP_RUN      = ':: Run end ::'
-APPY_VERSION  = 'Appy is "%s".'
+PY_VERSION    = 'Python version :: %s.'
+APPY_VERSION  = 'Appy version :: %s.'
 RAM_LOAD      = '%d CSS + %d SVG files loaded in RAM (%s).'
 POLLING       = 'Polling (registered client sockets = %d)...'
 NEW_CLI       = 'Server socket accepted new client %s::%s'
@@ -429,6 +430,9 @@ class Server:
             text = START_RUN % method
         logger = self.loggers.app
         logger.info(text)
+        # Dump the Python version
+        logger.info(PY_VERSION % sys.version)
+        # Dump the Appy version
         logger.info(APPY_VERSION % version.verbose)
 
     def logShutdown(self):
