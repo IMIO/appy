@@ -60,7 +60,8 @@ class Col:
        <div class="thead">
 
         <!-- Sort icons -->
-        <div if="not selector" class="iflex1">:field.pxSortIcons</div>
+        <div if="not selector" var2="refField=refField.filterField or refField"
+             class="iflex1">:field.pxSortIcons</div>
 
         <!-- Toggle descriptions' visibility -->
         <x if="ui.Title.showToggleSub(tiedClass, refField,

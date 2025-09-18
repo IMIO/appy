@@ -50,12 +50,12 @@ class Boolean(Field):
         dh  = Layouts(edit=Layout('flhv-d',  width=None),   view='lf')
         gd  = Layouts(edit=Layout('f;dv-',   width=None),   view='fl')
 
-        # The base layout, plus bottom space
-        bs = Layouts(edit=Layout(es, width=None, css='bottomSpaceS'), view='lf')
-
         # The "long" version of the previous layout (if the description is
         # long), with vertical alignment on top instead of middle.
         gdl = Layouts(edit=Layout('f;dv=',   width=None),   view='fl')
+
+        # The base layout, plus bottom space
+        bs = Layouts(edit=Layout(es, width=None, css='bottomSpaceS'), view='lf')
 
         # Centered layout, no description
         c   = Layouts(edit='flrv|',                         view='lf|')
