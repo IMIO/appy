@@ -62,7 +62,7 @@ class ValidationMailing:
         # Send one email for every entry in self.emails
         for login in self.emails:
             user, details = self.emails[login]
-            mapping['toUser'] = user.getTitle()
+            mapping['toUser'] = user.getFirstName()
             mapping['details'] = '\n'.join(details)
             body = _(validation.emailBodyLabel, mapping=mapping, asText=True)
             tool.sendMail(user.getMailRecipient() or login, subject, body)
@@ -137,8 +137,9 @@ class Validation:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # ${fromUser} | is the name of the user that triggered validation ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # ${toUser}   | is the name of user to which the email is sent (deduced
-        #             | from calling method in parameter "email" hereabove) ;
+        # ${toUser}   | is the first name of user to which the email is sent
+        #             | (deduced from calling method in parameter "email"
+        #             | hereabove) ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # ${details}  | is the list of relevant events. In this list, the
         #             | following information will appear, for every event:
@@ -149,7 +150,7 @@ class Validation:
         self.emailSubjectLabel = emailSubjectLabel
         self.emailBodyLabel = emailBodyLabel
 
-        # Date format at will appear in the emails
+        # Dates being dumped in the emails will be formatted with this format
         self.dateFormat = dateFormat
 
     def getValidatedType(self, o, eventType):

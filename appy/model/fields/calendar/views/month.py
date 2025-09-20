@@ -346,8 +346,8 @@ class Month(View):
      <td var="events=field.getEventsAt(o, date, typeInfo=typeInfo);
               single=events and len(events) == 1;
               spansDays=field.hasEventsAt(o, date+1, events);
-              mayCreate=mayEdit and not field.dayIsFull(o, date, events,
-                                                        timeslots);
+              mayCreate=mayEdit and allowedEventTypes and not field.dayIsFull(o,
+                          date, events, timeslots);
               mayDelete=mayEdit and events and field.mayDelete(o, events);
               mayAppyCreate=view.mayAppyCreate(_ctx_);
               js='itoggle(this)' if mayEdit or mayAppyCreate else ''"

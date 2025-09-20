@@ -444,6 +444,14 @@ class Year:
            default).'''
         return 366 if Year.isLeap(year) else 365
 
+    @classmethod
+    def getInterval(class_, year, startHour='00:00', endHour='23:59'):
+        '''Returns a tuple of DateTime objects (start, end) representing the
+           start and end days for this p_year.'''
+        start = DateTime(f'{year}/01/01 {startHour}')
+        end = DateTime(f'{year}/12/31 {endHour}')
+        return start, end
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Seconds:
     '''Manipulates or renders seconds'''
