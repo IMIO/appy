@@ -66,7 +66,7 @@ class Class(Meta):
     # Fields being unwanted on search fields, although being indexed. Field
     # "title" is not really "unsearchable", but in most cases, it is preferable
     # to use field "searchable".
-    unsearchableFields = ('title', 'allowed', 'cid')
+    unsearchableFields = 'title', 'allowed', 'cid'
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Model-construction-time methods
@@ -673,15 +673,40 @@ class Class(Meta):
                 r.append(elem)
         return r
 
+    def getRefs(self, class_=None, forward=True, names=False):
+        '''Returns, among p_self.fields, those being Ref fields'''
+        # If p_class_ contains the name of a class, only Refs pointing to
+        # instances of this class are part of the result. If p_forward is :
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # True  | Only forward refs are returned
+        # False | Only backward refs are returned
+        # None  | both refs are returned
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # The method returns a list of Field objets, or a list of field names if
+        # p_names is True.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        r = []
+        for field in self.fields.values():
+            # Ignore non-ref fields
+            if not isinstance(field, Ref): continue
+            # Manage p_forward
+            if forward is not None and forward == field.isBack: continue
+            # Manage p_class_
+            if class_ and field.class_.__name__ != class_: continue
+            # Add this v_field to the result
+            elem = field.name if names else field
+            r.append(elem)
+        return r
+
     def getFieldSets(self, o, fields=None):
         '''Beyond p_self.fields, p_self.python may define additional, dynamic
            fields.'''
         # If p_fields are passed, return these fields and nothing else
-        if fields: return (fields,)
+        if fields: return fields,
         # Complete standard fields with dynamic fields if found
         fields = self.fields
-        if not hasattr(self.python, 'getDynamicFields'): return (fields,)
-        return (fields, self.python.getDynamicFields(o))
+        if not hasattr(self.python, 'getDynamicFields'): return fields,
+        return fields, self.python.getDynamicFields(o)
 
     def getDynamicSearches(self, tool):
         '''Gets the dynamic searches potentially defined on this class'''
@@ -751,7 +776,7 @@ class Class(Meta):
         return r
 
     def getField(self, name, o=None):
-        '''Gets p_self's field having thie p_name. Return None if the field is
+        '''Gets p_self's field having this p_name. Return None if the field is
            not found.'''
         r = self.fields.get(name)
         if r is None and self.switchFields:

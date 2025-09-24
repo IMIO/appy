@@ -157,6 +157,10 @@ class Col:
         # placeholders.
         self.phLabel = phLabel
 
+    def __repr__(self):
+        '''p_self's as a short string'''
+        return f'‹Col {self.name} width={self.width}›'
+
     def init(self, o, oclass):
         '''Lazy initialisation: initialises p_self.field. Return None if a
            problem occurred.'''

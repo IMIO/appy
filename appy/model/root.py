@@ -18,17 +18,17 @@ class Model:
     # and standard workflows defined in package appy.model.workflows.standard.
     # These classes and workflows are injected into any app's model.
 
-    baseClasses = ('Page', 'User', 'Group', 'Tool', 'Translation', 'Carousel',
-                   'Document', 'Query', 'Mover', 'Place')
+    baseClasses = 'Page', 'User', 'Group', 'Tool', 'Translation', 'Carousel', \
+                  'Document', 'Query', 'Mover', 'Place'
 
-    baseWorkflows = ('Anonymous','Authenticated','Owner','User','TooPermissive')
+    baseWorkflows = 'Anonymous', 'Authenticated', 'Owner', 'User', \
+                    'TooPermissive'
 
     # Appy standard global roles
-    globalRoles = ('Manager', 'Publisher')
+    globalRoles = 'Manager', 'Publisher'
 
     def __init__(self, config, classes, workflows):
-        '''The unique Model instance is created by the
-           appy.model.loader.Loader.'''
+        '''The unique Model object is created by the appy.model.loader.Loader'''
         # The app's global config
         self.config = config
         # All Appy classes, keyed by their name
@@ -46,7 +46,7 @@ class Model:
            - "workflow": only Appy workflows are iterated.
         '''
         if type is None:
-            attributes = ('classes', 'workflows')
+            attributes = 'classes', 'workflows'
         else:
             attributes = ('classes',) if (type == 'class') else ('workflows',)
         # Build the result list
