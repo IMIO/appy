@@ -7,7 +7,7 @@ from DateTime import DateTime
 import io, os, os.path, time, shutil, base64
 
 from appy.px import Px
-from appy import utils
+from appy import utils, n
 from appy.ui.layout import Layouts
 from appy.model.fields import Field
 from appy.model.utils import Object
@@ -48,7 +48,7 @@ class FileInfo:
     # Fields to copy when cloning a FileInfo object
     clonable = ('uploadName', 'size', 'mimeType', 'modified')
 
-    def __init__(self, fsPath, inDb=True, uploadName=None):
+    def __init__(self, fsPath, inDb=True, uploadName=n):
         '''FileInfo constructor. p_fsPath is the path of the file on disk.'''
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If p_inDb | This FileInfo
@@ -115,7 +115,7 @@ class FileInfo:
            filesystem ?'''
         return bool(self.fsName)
 
-    def getTempFilePath(self, o, folder=None):
+    def getTempFilePath(self, o, folder=n):
         '''Return the path to the copy, made in the OS temp folder, of the file
            corresponding to p_self (see m_getFilePath).'''
         # Return None if p_self is a not-in-db file
@@ -196,7 +196,7 @@ class FileInfo:
             dest.write(chunk)
         return size
 
-    def getBase64(self, o=None, asString=False):
+    def getBase64(self, o=n, asString=False):
         '''Returns the file content, as base64-encoded bytes, or string if
            p_asString is True.'''
         path = self.getFilePath(o) if o else self.fsPath
@@ -214,7 +214,7 @@ class FileInfo:
             if len(parts) > 1:
                 return parts[-1][1:]
 
-    def writeResponse(self, handler, path=None, disposition='attachment',
+    def writeResponse(self, handler, path=n, disposition='attachment',
                       cache=False):
         '''Returns the content the file in the HTTP response'''
         if not self.fsName:
@@ -272,7 +272,7 @@ class FileInfo:
                 self.size = self.replicateFile(content, f)
         f.close()
 
-    def writeFile(self, name, value, folder, config=None, hash=None):
+    def writeFile(self, name, value, folder, config=n, hash=n):
         '''Writes a file to the filesystem, from p_value that can be:
            - an Object instance (coming from a HTTP post);
            - another ("not-in-DB") FileInfo instance;
@@ -341,7 +341,7 @@ class FileInfo:
         self.modified = DateTime()
         self.size = os.stat(fsName).st_size
 
-    def dump(self, o, filePath=None, format=None):
+    def dump(self, o, filePath=n, format=n):
         '''Exports this file to disk (outside the db-controlled filesystem).
            The tied p_o(bject) is required. If p_filePath is specified, it
            is the path name where the file will be dumped; folders mentioned in
@@ -485,17 +485,16 @@ class File(Field):
             r = True
         return r
 
-    def __init__(self, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
-      layouts=None, move=0, readPermission='read', writePermission='write',
-      width=None, height=None, inputWidth=None, maxChars=None, colspan=1,
-      master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, isImage=False,
-      downloadAction=None, sdefault='', scolspan=1, swidth=None, sheight=None,
-      view=None, cell=None, buttons=None, edit=None, custom=None, xml=None,
-      xmlLocation=None, translations=None, render=None, icon='paperclip',
-      disposition='attachment', nameStorer=None, cache=False, resize=False,
-      thumbnail=None, viewWidth=None, hash='md5'):
+    def __init__(self, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, show=True, renderable=n, page='main', group=n,
+      layouts=n, move=0, readPermission='read', writePermission='write',
+      width=n, height=n, inputWidth=n, maxChars=n, colspan=1, master=n,
+      masterValue=n, masterSnub=n, focus=False, historized=False, mapping=n,
+      generateLabel=n, label=n, isImage=False, downloadAction=n, sdefault='',
+      scolspan=1, swidth=n, sheight=n, view=n, cell=n, buttons=n, edit=n,
+      custom=n, xml=n, xmlLocation=n, translations=n, render=n,
+      icon='paperclip', disposition='attachment', nameStorer=n, cache=False,
+      resize=False, thumbnail=n, viewWidth=n, hash='md5'):
         # This boolean is True if the file is an image
         self.isImage = isImage
         # "downloadAction" can be a method called every time the file is
@@ -559,11 +558,11 @@ class File(Field):
         self.hash = hash
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
-          renderable, page, group, layouts, move, False, True, None, None,
-          False, None, readPermission, writePermission, width, height, None,
-          colspan, master, masterValue, focus, historized, mapping,
-          generateLabel, label, sdefault, scolspan, swidth, sheight, True,
-          False, view, cell, buttons, edit, custom, xml, translations)
+          renderable, page, group, layouts, move, False, True, n, n, False, n,
+          readPermission, writePermission, width, height, n, colspan, master,
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, sdefault, scolspan, swidth, sheight, True, False, view, cell,
+          buttons, edit, custom, xml, translations)
         # On the XML layout, when binary content is not dumped into the XML
         # content, but a location to the file on disk is dumped instead (see
         # config.model.marshallBinaries), this location defaults to the absolute
@@ -573,7 +572,7 @@ class File(Field):
         # a string.
         self.xmlLocation = xmlLocation
 
-    def getRequestValue(self, o, requestName=None):
+    def getRequestValue(self, o, requestName=n):
         name = requestName or self.name
         return o.req[f'{name}_file']
 
@@ -614,7 +613,7 @@ class File(Field):
             return layout not in Layouts.topLayouts
         return super().isRenderableOn(layout)
 
-    def getDownloadLink(self, o, layout='view', name=None):
+    def getDownloadLink(self, o, layout='view', name=n):
         '''Gets the HTML code for downloading the file as stored in field
            named p_name on p_o.'''
         name = name or self.name

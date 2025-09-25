@@ -3,7 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
-from appy import ui, utils
+from appy import ui, utils, n
 
 # Error messages - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TB_COLS_ERR = 'A tabs-style group must have a single column.'
@@ -16,11 +16,11 @@ G_COLS_ERR  = 'For a grid-style group, you must specify an even number of ' \
 class Group:
     '''Used for grouping fields or searches'''
 
-    def __init__(self, name, columns=None, wide=True, style='section2',
+    def __init__(self, name, columns=n, wide=True, style='section2',
       hasLabel=True, hasDescr=False, hasHelp=False, hasHeaders=False,
-      group=None, colspan=1, align='center', valign='top', css=None,
-      labelCss=None, master=None, masterValue=None, cellpadding=1,
-      cellspacing=1, cellgap='0.6em', label=None, translated=None):
+      group=n, colspan=1, align='center', valign='top', css=n,
+      labelCss=n, master=n, masterValue=n, masterSnub=n, cellpadding=1,
+      cellspacing=1, cellgap='0.6em', label=n, translated=n):
         self.name = name
         # In its simpler form, field "columns" below can hold a list (not a
         # tuple) of column widths expressed as strings, that will be given as is
@@ -91,6 +91,7 @@ class Group:
         self.master = master
         self.masterValue = utils.initMasterValue(masterValue)
         if master: master.slaves.append(self)
+        self.masterSnub = masterSnub
         self.label = label # See similar attribute on the Field class
         # If a translated name is already given here, we will use it instead of
         # trying to translate the group label.

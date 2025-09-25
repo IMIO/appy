@@ -3,14 +3,15 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import os.path
+
 from appy.px import Px
-from appy import utils
+from appy import utils, n
 from appy.ui import LinkTarget
 from appy.ui.layout import Layouts
 from appy.model.searches import Search
 from appy.model.fields import Field, Initiator, Show
 
-# Constants  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 CONF_ERR  = 'When using options, a popup will already be shown, with the ' \
             'possibility to cancel the action, so it has no sense to ask a ' \
             'confirmation via attribute "confirm".'
@@ -162,17 +163,15 @@ class Action(Field):
     # It is not possible to edit an action, not to search it
     edit = search = ''
 
-    def __init__(self, validator=None, multiplicity=(1,1), default=None,
-      defaultOnEdit=None, show=Show.TR, renderable=None, page='main',
-      group=None, layouts=None, move=0, readPermission='read',
-      writePermission='write', width=None, height=None, maxChars=None,
-      colspan=1, action=None, result='computation',
-      downloadDisposition='attachment', confirm=False, master=None,
-      masterValue=None, focus=False, historized=False, mapping=None,
-      generateLabel=None, label=None, icon=None, sicon=None, view=None,
-      cell=None, buttons=None, edit=None, custom=None, xml=None,
-      translations=None, render='button', iconOut=False, iconCss='iconS',
-      iconSize=None, options=None, fake=False):
+    def __init__(self, validator=n, multiplicity=(1,1), default=n,
+      defaultOnEdit=n, show=Show.TR, renderable=n, page='main', group=n,
+      layouts=n, move=0, readPermission='read', writePermission='write',
+      width=n, height=n, maxChars=n, colspan=1, action=n, result='computation',
+      downloadDisposition='attachment', confirm=False, master=n, masterValue=n,
+      masterSnub=n, focus=False, historized=False, mapping=n, generateLabel=n,
+      label=n, icon=n, sicon=n, view=n, cell=n, buttons=n, edit=n, custom=n,
+      xml=n, translations=n, render='button', iconOut=False, iconCss='iconS',
+      iconSize=n, options=n, fake=False):
         # Attribute "action" must hold a method or a list/tuple of methods.
         # In most cases, every method will be called without arg, but there are
         # exceptions (see parameters "options" and "confirm").
@@ -254,12 +253,13 @@ class Action(Field):
         self.sicon, self.siconBase, self.siconRam = utils.iconParts(sicon)
 
         # Call the base constructor
-        super().__init__(None, (0,1), default, defaultOnEdit, show, renderable,
-          page, group, layouts, move, False, True, None, None, False, None,
-          readPermission, writePermission, width, height, None, colspan, master,
-          masterValue, focus, historized, mapping, generateLabel, label, None,
-          None, None, None, False, False, view, cell, buttons, edit, custom,
+        super().__init__(n, (0,1), default, defaultOnEdit, show, renderable,
+          page, group, layouts, move, False, True, n, n, False, n,
+          readPermission, writePermission, width, height, n, colspan, master,
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, n, n, n, n, False, False, view, cell, buttons, edit, custom,
           xml, translations)
+
         self.validable = False
 
         # There are various ways to render the action in the ui:

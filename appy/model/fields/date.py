@@ -7,6 +7,7 @@ import time
 from DateTime import DateTime
 from DateTime.interfaces import DateError, SyntaxError
 
+from appy import n
 from appy.px import Px
 from appy.utils import dates
 from appy.model.fields import Field
@@ -43,7 +44,7 @@ class Date(Field):
     nativeFormats = {WITH_HOUR: '%Y-%m-%dT%H:%M', WITHOUT_HOUR: '%Y-%m-%d'}
 
     # Default value on the search screen
-    searchDefault = (None, None, None)
+    searchDefault = n, n, n
 
     # Precision of the indexed value, in minutes
     indexPrecision = 1
@@ -266,20 +267,20 @@ class Date(Field):
       .matchD label { text-transform:none; text-align:left; padding:0.2em 0.3em}
      ''')
 
-    def __init__(self, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, format=WITH_HOUR, dateFormat=None, hourFormat=None,
+    def __init__(self, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, format=WITH_HOUR, dateFormat=n, hourFormat=n,
       calendar=True, startYear=time.localtime()[0]-10,
       endYear=time.localtime()[0]+10, reverseYears=False, minutesPrecision=5,
-      show=True, renderable=None, page='main', group=None, layouts=None, move=0,
-      indexed=False, mustIndex=True, indexValue=None, emptyIndexValue=0,
-      searchable=False, filterField=None, readPermission='read',
-      writePermission='write', width=None, height=None, maxChars=None,
-      colspan=1, master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, sdefault=None, scolspan=1,
-      swidth=None, sheight=None, persist=True, view=None, cell=None,
-      buttons=None, edit=None, custom=None, xml=None, translations=None,
-      showDay=True, defaultDay=1, showYear=True, searchHour=False, native=False,
-      empty='-', matchDefault='precise', disabled=False):
+      show=True, renderable=n, page='main', group=n, layouts=n, move=0,
+      indexed=False, mustIndex=True, indexValue=n, emptyIndexValue=0,
+      searchable=False, filterField=n, readPermission='read',
+      writePermission='write', width=n, height=n, maxChars=n, colspan=1,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, sdefault=n, scolspan=1, swidth=n,
+      sheight=n, persist=True, view=n, cell=n, buttons=n, edit=n, custom=n,
+      xml=n, translations=n, showDay=True, defaultDay=1, showYear=True,
+      searchHour=False, native=False, empty='-', matchDefault='precise',
+      disabled=False):
         self.format = format
         self.calendar = calendar
         self.startYear = startYear
@@ -333,10 +334,10 @@ class Date(Field):
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, filterField, readPermission,
-          writePermission, width, height, None, colspan, master, masterValue,
-          focus, historized, mapping, generateLabel, label, sdefault, scolspan,
-          swidth, sheight, persist, False, view, cell, buttons, edit, custom,
-          xml, translations)
+          writePermission, width, height, n, colspan, master, masterValue,
+          masterSnub, focus, historized, mapping, generateLabel, label,
+          sdefault, scolspan, swidth, sheight, persist, False, view, cell,
+          buttons, edit, custom, xml, translations)
         # Define the filter PX when appropriate
         if self.indexed:
             self.filterPx = 'pxFilter'
@@ -365,7 +366,7 @@ class Date(Field):
             return o.translate('bad_date')
 
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
-                          language=None):
+                          language=n):
         if self.isEmptyValue(o, value): return ''
         # Get the applicable date format
         ui = o.config.ui
@@ -402,7 +403,7 @@ class Date(Field):
             raise Exception(DEF_DAY_KO)
         return str(r).zfill(2)
 
-    def getRequestValue(self, o, requestName=None):
+    def getRequestValue(self, o, requestName=n):
         req = o.req
         name = requestName or self.name
         # Manage a native date
@@ -536,7 +537,7 @@ class Date(Field):
         return r
 
     @classmethod
-    def getSearchPart(class_, field, req, to=False, value=None,searchHour=None):
+    def getSearchPart(class_, field, req, to=False, value=n, searchHour=n):
         '''Gets the search value from p_req corresponding to the "from" or "to"
            part (depending on boolean p_to).'''
         name = field.name
@@ -561,14 +562,14 @@ class Date(Field):
         return Date.getDateFromSearchValue(year, month, day, hour, not to)
 
     @classmethod
-    def computeSearchValue(class_, field, req, value=None, searchHour=False):
+    def computeSearchValue(class_, field, req, value=n, searchHour=False):
         '''Converts raw search values from p_req into an interval of dates'''
         # p_value may already be a ready-to-use interval
         if isinstance(value, in_): return value
         return in_(Date.getSearchPart(field, req, False, value, searchHour),
                    Date.getSearchPart(field, req, True , value, searchHour))
 
-    def getSearchValue(self, req, value=None):
+    def getSearchValue(self, req, value=n):
         '''See called method's docstring'''
         return Date.computeSearchValue(self, req, value=value,
                                        searchHour=self.searchHour)

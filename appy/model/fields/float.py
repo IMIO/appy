@@ -2,7 +2,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy import utils
+from appy import utils, n
 from appy.model.fields.integer import Integer
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -10,8 +10,10 @@ SEP_UNALLOWED = 'Char "%s" is not allowed as decimal separator.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Float(Integer):
+    '''Field allowing to store float values'''
+
     # Allowed chars for being used as decimal separators
-    allowedDecimalSeps = (',', '.')
+    allowedDecimalSeps = ',', '.'
 
     # Precision of the indexed value, in number of decimals
     indexPrecision = 2
@@ -19,17 +21,17 @@ class Float(Integer):
     # The name of the index class storing values of this field in the catalog
     indexType = 'FloatIndex'
 
-    def __init__(self, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
-      layouts=None, move=0, indexed=False, mustIndex=True, indexValue=None,
-      emptyIndexValue=None, searchable=False, readPermission='read',
-      writePermission='write', width=5, height=None, maxChars=13, colspan=1,
-      master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, sdefault=('',''),
-      scolspan=1, swidth=None, sheight=None, fwidth=3, persist=True,
-      precision=None, sep=(',', '.'), tsep=' ', inlineEdit=False, view=None,
-      cell=None, buttons=None, edit=None, custom=None, xml=None,
-      translations=None, readonly=False, alignOnEdit='left', autoComplete=True):
+    def __init__(self, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, show=True, renderable=n, page='main', group=n,
+      layouts=n, move=0, indexed=False, mustIndex=True, indexValue=n,
+      emptyIndexValue=n, searchable=False, readPermission='read',
+      writePermission='write', width=5, height=n, maxChars=13, colspan=1,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, sdefault=('',''), scolspan=1,
+      swidth=n, sheight=n, fwidth=3, persist=True, precision=n, sep=(',', '.'),
+      tsep=' ', inlineEdit=False, view=n, cell=n, buttons=n, edit=n, custom=n,
+      xml=n, translations=n, readonly=False, alignOnEdit='left',
+      autoComplete=True):
         # The precision is the number of decimal digits. This number is used
         # for rendering the float, but the internal float representation is not
         # rounded.
@@ -47,15 +49,15 @@ class Float(Integer):
           renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, readPermission,
           writePermission, width, height, maxChars, colspan, master,
-          masterValue, focus, historized, mapping, generateLabel, label,
-          sdefault, scolspan, swidth, sheight, fwidth, persist, inlineEdit,
-          view, cell, buttons, edit, custom, xml, translations, readonly,
-          alignOnEdit, autoComplete)
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, sdefault, scolspan, swidth, sheight, fwidth, persist,
+          inlineEdit, view, cell, buttons, edit, custom, xml, translations,
+          readonly, alignOnEdit, autoComplete)
         self.pythonType = float
-        self.storableTypes = (float, int)
+        self.storableTypes = float, int
 
     def getFormattedValue(self, obj, value, layout='view', showChanges=False,
-                          language=None):
+                          language=n):
         return utils.formatNumber(value, sep=self.sep[0],
                                   precision=self.precision, tsep=self.tsep)
 

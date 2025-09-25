@@ -5,6 +5,7 @@
 import copy
 from persistent.list import PersistentList
 
+from appy import n
 from appy.px import Px
 from appy.model.fields import Field
 from appy.model.totals import Totals
@@ -31,12 +32,12 @@ class List(Field):
     # An empty persistent list (or persistent mapping for a Dict) is not
     # considered a null value: when such a value is stored, no default value
     # will be computed for it.
-    nullValues = (None,)
+    nullValues = n,
 
     class Layouts(Layouts):
         '''List-specific layouts'''
         # No label on "edit" (*e*dit *m*inimalist)
-        em = Layouts(edit=Layout('f;rv=', width=None))
+        em = Layouts(edit=Layout('f;rv=', width=n))
         g = Layouts(edit=em['edit'], view='fl')
         gd = Layouts(edit=LayoutF('d100;frv=', wrap=True))
         gdv = Layouts(edit=LayoutF('d100;frv=', wrap=True),
@@ -336,23 +337,22 @@ class List(Field):
 
     search = ''
 
-    def __init__(self, fields, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
-      layouts=None, move=0, readPermission='read', writePermission='write',
-      width='', height=None, maxChars=None, colspan=1, master=None,
-      masterValue=None, focus=False, historized=False, mapping=None,
-      generateLabel=None, label=None, subLayouts=Layouts.sub, widths=None,
-      view=None, cell=None, buttons=None, edit=None, custom=None, xml=None,
-      translations=None, deleteConfirm=False, totalRows=None, totalCols=None,
-      rowClass=O, headerAlign='middle', contentAlign='top', listCss=None,
-      valueIfEmpty='-', numbered=False):
+    def __init__(self, fields, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, show=True, renderable=n, page='main', group=n,
+      layouts=n, move=0, readPermission='read', writePermission='write',
+      width='', height=n, maxChars=n, colspan=1, master=n, masterValue=n,
+      masterSnub=n, focus=False, historized=False, mapping=n, generateLabel=n,
+      label=n, subLayouts=Layouts.sub, widths=n, view=n, cell=n, buttons=n,
+      edit=n, custom=n, xml=n, translations=n, deleteConfirm=False, totalRows=n,
+      totalCols=n, rowClass=O, headerAlign='middle', contentAlign='top',
+      listCss=n, valueIfEmpty='-', numbered=False):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
-         renderable, page, group, layouts, move, False, True, None, None, False,
-         None, readPermission, writePermission, width, height, None, colspan,
-         master, masterValue, focus, historized, mapping, generateLabel, label,
-         None, None, None, None, True, False, view, cell, buttons, edit, custom,
-         xml, translations)
+         renderable, page, group, layouts, move, False, True, n, n, False, n,
+         readPermission, writePermission, width, height, n, colspan, master,
+         masterValue, masterSnub, focus, historized, mapping, generateLabel,
+         label, n, n, n, n, True, False, view, cell, buttons, edit, custom, xml,
+         translations)
         self.validable = True
         # Tuple of elements of the form (name, Field object) determining the
         # format of every element in the list. It can also be a method returning
@@ -481,7 +481,7 @@ class List(Field):
         for n, field in self.fields:
             if n == name: return field
 
-    def getSubFields(self, o, layout=None):
+    def getSubFields(self, o, layout=n):
         '''Returns the sub-fields, as a list of tuples ~[(s_name, Field)]~,
            being showable, among p_self.fields on this p_layout. Fields that
            cannot appear in the result are nevertheless present as a tuple
@@ -501,7 +501,7 @@ class List(Field):
             r.append((n, f))
         return r
 
-    def getEntryName(self, sub, row, name=None, suffix=''):
+    def getEntryName(self, sub, row, name=n, suffix=''):
         '''Gets the name of the request entry corresponding to the value of
            this p_sub-field at this p_row.'''
         name = name or self.name
@@ -510,7 +510,7 @@ class List(Field):
         prefix = f'{name}*{sub}' if isinstance(sub, str) else sub.name
         return f'{prefix}*{suffix}{row}'
 
-    def getRequestValue(self, o, requestName=None):
+    def getRequestValue(self, o, requestName=n):
         '''Concatenates the list from distinct form elements in the request'''
         req = o.req
         name = requestName or self.name # A List may be into another List (?)
@@ -552,7 +552,7 @@ class List(Field):
                        # found in the request.
         return r
 
-    def setRequestValue(self, o, force=None):
+    def setRequestValue(self, o, force=n):
         '''Sets in the request, the field value on p_o in its "request-
            carriable" form.'''
         value = self.getValue(o) if force is None else force
@@ -605,7 +605,7 @@ class List(Field):
         r = getattr(o, self.name, None)
         if r: return copy.deepcopy(r)
 
-    def getHistoryValue(self, o, value, i, language=None, empty='-'):
+    def getHistoryValue(self, o, value, i, language=n, empty='-'):
         '''Render a nice previous p_value'''
         # Return an empty value if the p_value is inexistent
         if not value: return empty

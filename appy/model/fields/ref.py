@@ -7,7 +7,7 @@ import sys, re, os.path
 from persistent.list import PersistentList
 
 from appy.px import Px
-from appy import ui, utils
+from appy import ui, utils, n
 from appy.ui import LinkTarget
 from appy.ui.colset import ColSet
 from appy.model.batch import Batch
@@ -138,7 +138,7 @@ class Separator:
        separator(s). If you need this, specify, in attribute Ref.separator, a
        method that will return an instance of this class.'''
 
-    def __init__(self, label=None, translated=None, css=None):
+    def __init__(self, label=n, translated=n, css=n):
         # If some text must be shown within the separator, you can specify an
         # i18n p_label for it, or a translated text in p_translated. If
         # p_translated is provided, p_label will be ignored.
@@ -163,8 +163,8 @@ class Ref(Field):
         # The unique, static cell layout
         cell = Layout('f|', width='100%', css='no')
         # Layouts for a Ref with link=True
-        l = Layouts(edit=Layout(base, width=None), view=Layout('l-f'))
-        gld = Layouts(edit=Layout('d2-lf;rv=', width=None), view='f')
+        l = Layouts(edit=Layout(base, width=n), view=Layout('l-f'))
+        gld = Layouts(edit=Layout('d2-lf;rv=', width=n), view='f')
         # Wide layout for a Ref with add=True: it must be 100% wide
         # "t": with *t*op space
         t = Layouts(Layout(base, css='topSpace'))
@@ -176,7 +176,7 @@ class Ref(Field):
         wdb = Layouts(view=Layout(baseW, css='bottomSpace')) # *b*ottom
         wdtb = Layouts(view=Layout(baseW, css='tbSpace')) # *t*op + *b*ottom
         # Wide, but not on edit
-        w_e = Layouts(edit=Layout(base, width=None), view=Layout(base))
+        w_e = Layouts(edit=Layout(base, width=n), view=Layout(base))
 
         @classmethod
         def getDefault(class_, field):
@@ -857,30 +857,36 @@ class Ref(Field):
     edit = Px('''<x>:field.editPx</x>''')
 
     search = Px('''
-     <!-- The "and" / "or" radio buttons -->
-     <x if="field.multiplicity[1] != 1"
-        var2="operName='o_%s' % name;
-              orName='%s_or' % operName;
-              andName='%s_and' % operName">
-      <input type="radio" name=":operName" id=":orName" checked="checked"
-             value="or"/>
-      <label lfor=":orName">:_('search_or')</label>
-      <input type="radio" name=":operName" id=":andName" value="and"/>
-      <label lfor=":andName">:_('search_and')</label><br/>
-     </x>
-     <!-- The list of values -->
-     <select var="objects=field.getPossibleValues(tool, usage=field.PV_SEARCH);
-                  charsWidth=field.getWidthInChars(True)"
-             name=":widgetName" multiple="multiple"
-             size=":field.getSelectSize(True, True)"
-             style=":field.getSelectStyle(True, True)"
-             onchange=":field.getOnChange(tool, 'search', className)">
-      <option if="field.emptyIndexValue is not None"
-              value=":field.emptyIndexValue">:_('no_object')</option>
-      <option for="tied in objects" value=":getattr(tied, field.indexAttribute)"
-              var2="title=field.getReferenceLabel(o, tied, unlimited=True)"
-              title=":title">:Px.truncateValue(title, charsWidth)</option>
-     </select>''')
+     <div class="flex1">
+
+      <!-- The list of values -->
+      <select var="objects=field.getPossibleValues(tool, usage=field.PV_SEARCH,
+                                           ignoreMasterValues=field.masterSnub);
+                   charsWidth=field.getWidthInChars(True)"
+              name=":widgetName" multiple="multiple"
+              size=":field.getSelectSize(True, True)"
+              style=":field.getSelectStyle(True, True)"
+              onchange=":field.getOnChange(tool, 'search', className)">
+       <option if="field.emptyIndexValue is not None"
+               value=":field.emptyIndexValue">:_('no_object')</option>
+       <option for="tied in objects"
+               value=":getattr(tied, field.indexAttribute)"
+               var2="title=field.getReferenceLabel(o, tied, unlimited=True)"
+               title=":title">:Px.truncateValue(title, charsWidth)</option>
+      </select>
+
+      <!-- The and/or radio buttons -->
+      <div if="field.multiplicity[1] != 1"
+           var2="operName=f'o_{name}';
+                 orName=f'{operName}_or';
+                 andName=f'{operName}_and'">
+       <input type="radio" name=":operName" id=":orName" checked="checked"
+              value="or"/>
+       <label lfor=":orName">:_('search_or')</label><br/>
+       <input type="radio" name=":operName" id=":andName" value="and"/>
+       <label lfor=":andName">:_('search_and')</label><br/>
+      </div>
+     </div>''')
 
     # Widget for filtering object values on search results
 
@@ -921,36 +927,33 @@ class Ref(Field):
       </div>
      </div>''')
 
-    def __init__(self, class_=None, attribute=None, validator=None,
-      composite=False, multiplicity=(0,1), default=None, defaultOnEdit=None,
-      add=False, addConfirm=False, delete=None, createVia='form', viaPopup=None,
-      creators=None, link=True, unlink=None, linkMethod=None,
-      unlinkElement=None, unlinkConfirm=True, insert=None, beforeLink=None,
-      afterLink=None, afterUnlink=None, back=None, backSecurity=True,
-      disabled=False, show=True, renderable=None, page='main', group=None,
-      layouts=None, showHeaders=False, shownInfo=None, fshownInfo=None,
-      select=None, maxPerPage=30, move=0, indexed=False, mustIndex=True,
-      indexValue=None, emptyIndexValue=0, indexAttribute='iid',
-      searchable=False, filterField=None, readPermission='read',
-      writePermission='write', width=None, height=5, maxChars=None, colspan=1,
-      master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, queryable=False,
-      queryFields=None, queryNbCols=1, searches=None, navigable=False,
-      changeOrder=True, numbered=False, checkboxes=True,
-      checkboxesDefault=False, sdefault='', scolspan=1, swidth=None,
-      sheight=None, fwidth='7em', fheight='14em', sselect=None, fselect=None,
-      persist=True, render='list', renderMinimalSep=', ', target=None,
-      listCss=None, menuIdMethod=None, menuInfoMethod=None, menuUrlMethod=None,
-      menuCss=None, dropdownCss=None, menuItemWrap=False, view=None, cell=None,
-      buttons=None, edit=None, custom=None, xml=None, translations=None,
-      showActions='all', actionsDisplay='block', showGlobalActions=True,
-      collapsible=False, titleMode='link', viewAdded=True,
-      noValueLabel='choose_a_value', noValueFirst=True, noObjectLabel='no_ref',
-      noSelectableLabel='no_selectable', addLabel='object_add',
-      addFromLabel='object_add_from', addIcon='add.svg', iconOut=False,
-      iconCss='iconS', filterable=True, supTitle=None, subTitle=None,
-      toggleSubTitles=None, separator=None, rowAlign='top', showControls=True,
-      actions=None, checkAll=True):
+    def __init__(self, class_=n, attribute=n, validator=n, composite=False,
+      multiplicity=(0,1), default=n, defaultOnEdit=n, add=False,
+      addConfirm=False, delete=n, createVia='form', viaPopup=n, creators=n,
+      link=True, unlink=n, linkMethod=n, unlinkElement=n, unlinkConfirm=True,
+      insert=n, beforeLink=n, afterLink=n, afterUnlink=n, back=n,
+      backSecurity=True, disabled=False, show=True, renderable=n, page='main',
+      group=n, layouts=n, showHeaders=False, shownInfo=n, fshownInfo=n,
+      select=n, maxPerPage=30, move=0, indexed=False, mustIndex=True,
+      indexValue=n, emptyIndexValue=0, indexAttribute='iid', searchable=False,
+      filterField=n, readPermission='read', writePermission='write', width=n,
+      height=5, maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n,
+      focus=False, historized=False, mapping=n, generateLabel=n, label=n,
+      queryable=False, queryFields=n, queryNbCols=1, searches=n,
+      navigable=False, changeOrder=True, numbered=False, checkboxes=True,
+      checkboxesDefault=False, sdefault='', scolspan=1, swidth=n, sheight=n,
+      fwidth='7em', fheight='14em', sselect=n, fselect=n, persist=True,
+      render='list', renderMinimalSep=', ', target=n, listCss=n, menuIdMethod=n,
+      menuInfoMethod=n, menuUrlMethod=n, menuCss=n, dropdownCss=n,
+      menuItemWrap=False, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
+      translations=n, showActions='all', actionsDisplay='block',
+      showGlobalActions=True, collapsible=False, titleMode='link',
+      viewAdded=True, noValueLabel='choose_a_value', noValueFirst=True,
+      noObjectLabel='no_ref', noSelectableLabel='no_selectable',
+      addLabel='object_add', addFromLabel='object_add_from', addIcon='add.svg',
+      iconOut=False, iconCss='iconS', filterable=True, supTitle=n, subTitle=n,
+      toggleSubTitles=n, separator=n, rowAlign='top', showControls=True,
+      actions=n, checkAll=True):
 
         # The class whose tied objects will be instances of
         self.class_ = class_
@@ -1631,10 +1634,11 @@ class Ref(Field):
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, filterField, readPermission,
-          writePermission, width, height, None, colspan, master, masterValue,
-          focus, historized, mapping, generateLabel, label, sdefault, scolspan,
-          swidth, sheight, persist, False, view, cell, buttons, edit, custom,
-          xml, translations)
+          writePermission, width, height, n, colspan, master, masterValue,
+          masterSnub, focus, historized, mapping, generateLabel, label,
+          sdefault, scolspan, swidth, sheight, persist, False, view, cell,
+          buttons, edit, custom, xml, translations)
+
         self.validable = bool(self.link)
 
         # Initialise filterPx when relevant. If you want to disable filtering
@@ -1915,8 +1919,8 @@ class Ref(Field):
                 r = id in dbValue
         return r
 
-    def getValue(self, o, name=None, layout=None, single=True, start=None,
-                 batch=False, maxPerPage=None, at=None):
+    def getValue(self, o, name=n, layout=n, single=True, start=n, batch=False,
+                 maxPerPage=n, at=n):
         '''Returns the objects linked to p_o through this Ref field'''
         # * If p_start is None, it returns all referred objects;
         # * if p_start is a number, it returns p_maxPerPage objects (or
@@ -1973,7 +1977,7 @@ class Ref(Field):
         return self.getCopyValue(o)
 
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
-                          language=None):
+                          language=n):
         '''Return p_value's string representation'''
         # Use m_renderMinimal to achieve the result
         return self.renderMinimal(o, value, False)
@@ -1989,7 +1993,7 @@ class Ref(Field):
            string-encoded int.'''
         return int(val) if val.isdigit() else val
 
-    def getSearchValue(self, req, value=None):
+    def getSearchValue(self, req, value=n):
         '''Values from a search form are tied object's IIDS encoded as strings,
            or another attribute as defined in p_self.indexAttribute. If IIDS,
            convert them to integers and manage an and/or operator.'''
@@ -2014,7 +2018,7 @@ class Ref(Field):
             val.append((tied.iid, tied.getShownValue()))
         values[self.name] = val
 
-    def getHistoryValue(self, o, value, i, language=None, empty='-'):
+    def getHistoryValue(self, o, value, i, language=n, empty='-'):
         '''Returns p_self's p_value, as stored in p_o's history at index p_i, as
            must be shown in the UI.'''
         # Return p_empty if p_value is empty
@@ -2068,8 +2072,8 @@ class Ref(Field):
             r.init(self.class_.meta)
         return r
 
-    def getPossibleValues(self, o, start=None, batch=False, removeLinked=False,
-                          maxPerPage=None, usage=PV_EDIT):
+    def getPossibleValues(self, o, start=n, batch=False, removeLinked=False,
+                         maxPerPage=n, usage=PV_EDIT, ignoreMasterValues=False):
         '''This method returns the list of all objects that can be selected
            to be linked as references to p_o via p_self.'''
 
@@ -2096,7 +2100,7 @@ class Ref(Field):
         maxPerPage = maxPerPage or self.getAttribute(o, 'maxPerPage')
         isSearch = False
         master = self.master
-        if master and callable(self.masterValue):
+        if not ignoreMasterValues and master and callable(self.masterValue):
             # This field is an ajax-updatable slave
             if usage == Ref.PV_FILTER:
                 # A filter will not get any master. We need to display all the
@@ -2258,7 +2262,7 @@ class Ref(Field):
         bg = '18px 18px' if asBG else False
         return url(icon, ram=icon.endswith('.svg'), bg=bg)
 
-    def getColSets(self, o, tiedClass, usage=None, addNB=False, addCB=False):
+    def getColSets(self, o, tiedClass, usage=n, addNB=False, addCB=False):
         '''Gets the ColSet instances corresponding to every showable set of
            columns.'''
         attr = 'fshownInfo' if usage == 'filter' else 'shownInfo'
@@ -2314,7 +2318,7 @@ class Ref(Field):
                 return r[0], target
         return tied.getUrl(nav='no'), target
 
-    def getMenuCss(self, zone, o, menu, base=None):
+    def getMenuCss(self, zone, o, menu, base=n):
         '''Gets the CSS class that will be applied to this p_zone'''
         # Return only this p_base CSS class if no custom CSS is specified
         css = getattr(self, f'{zone}Css')
@@ -2373,7 +2377,7 @@ class Ref(Field):
             return o.translate('max_ref_violated')
 
     def linkObject(self, o, p, back=False, secure=False, executeMethods=True,
-                   at=None, reindex=False, reindexBack=None):
+                   at=n, reindex=False, reindexBack=n):
         '''Links object p_p (which can be a list of objects) to object p_o
            through this Ref field.'''
         # When linking 2 objects via a Ref, m_linkObject must be called twice:
@@ -2469,7 +2473,7 @@ class Ref(Field):
         return 1
 
     def unlinkObject(self, o, p, back=False, secure=False, executeMethods=True,
-                     reindex=False, reindexBack=None):
+                     reindex=False, reindexBack=n):
         '''Unlinks p_p (which can be a list of objects) from p_o through this
            Ref field and return the number of objects truly unlinked.'''
         # For an explanation about parameters p_back, p_secure and
@@ -2775,7 +2779,7 @@ class Ref(Field):
 
     xhtmlToText = re.compile('<.*?>', re.S)
 
-    def getReferenceLabel(self, o, tied, unlimited=False, usage=None):
+    def getReferenceLabel(self, o, tied, unlimited=False, usage=n):
         '''Only works for a Ref with link=True. Displays, on an edit view, the
            p_tied object in the select field allowing the user to choose which
            object(s) to link through the Ref. The information to display may
@@ -2802,7 +2806,7 @@ class Ref(Field):
             r = Px.truncateValue(r, maxWidth)
         return r
 
-    def getIndexOf(self, o, tied, raiseError=True, notFoundValue=None):
+    def getIndexOf(self, o, tied, raiseError=True, notFoundValue=n):
         '''Gets the position of p_tied object within this field on p_o'''
         # If the object is not found, the method will raise an error, excepted
         # if p_raiseError is False: in that case, it will return

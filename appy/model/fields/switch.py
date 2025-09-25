@@ -2,6 +2,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from appy import n
 from appy.px import Px
 from appy.model.fields import Field
 
@@ -24,23 +25,23 @@ class Switch(Field):
 
     search = ''
 
-    def __init__(self, fields, validator=None, show=True, renderable=None,
-      page='main', group=None, layouts=None, move=0, readPermission='read',
-      writePermission='write', width=None, height=None, maxChars=None,
-      colspan=1, master=None, masterValue=None, focus=False, mapping=None,
-      generateLabel=None, label=None, scolspan=1, swidth=None, sheight=None,
-      inlineEdit=False, view=None, cell=None, buttons=None, edit=None,
-      custom=None, xml=None, translations=None):
+    def __init__(self, fields, validator=n, show=True, renderable=n,
+      page='main', group=n, layouts=n, move=0, readPermission='read',
+      writePermission='write', width=n, height=n, maxChars=n, colspan=1,
+      master=n, masterValue=n, masterSnub=n, focus=False, mapping=n,
+      generateLabel=n, label=n, scolspan=1, swidth=n, sheight=n,
+      inlineEdit=False, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
+      translations=n):
         # p_fields must be a tuple of fieldsets of the form
         #                        ~((s_name, fields),)~
         # Within this tuple, every "fields" entry is a dict of the form
         #                         ~{s_name: Field}~
         self.fields = fields
         # Call the base Field constructor
-        super().__init__(validator, (0,1), None, None, show, renderable, page,
-          group, layouts, move, False, True, None, None, False, None,
-          readPermission, writePermission, width, height, None, colspan, master,
-          masterValue, focus, False, mapping, generateLabel, label, False,
+        super().__init__(validator, (0,1), n, n, show, renderable, page, group,
+          layouts, move, False, True, n, n, False, n, readPermission,
+          writePermission, width, height, n, colspan, master, masterValue,
+          masterSnub, focus, False, mapping, generateLabel, label, False,
           scolspan, swidth, sheight, True, inlineEdit, view, cell, buttons,
           edit, custom, xml, translations)
 
@@ -51,7 +52,7 @@ class Switch(Field):
             for sub, field in fields.items():
                 field.init(class_, sub)
 
-    def getChosenFields(self, o, layout='view', fieldset=None):
+    def getChosenFields(self, o, layout='view', fieldset=n):
         '''Returns, among self.fields, the chosen sub-set, as a "flat" list of
            Field instances.'''
         # More precisely, r_ is a tuple (name, fields), "name" being the name of

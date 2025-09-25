@@ -10,6 +10,7 @@ from contextlib import redirect_stdout
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
+from appy import n
 from appy.px import Px
 from appy.utils import Traceback
 from appy.xml.escape import Escape
@@ -100,18 +101,17 @@ class Python(Field):
     # There is no possibility to render this field on layout "search"
     search = ''
 
-    def __init__(self, show='view', renderable=None, page='main', group=None,
-      layouts=None, move=0, readPermission='read', writePermission='write',
-      width=None, height=None, colspan=1, master=None, masterValue=None,
-      focus=False, mapping=None, generateLabel=None, label=None, view=None,
-      cell=None, buttons=None, edit=None, custom=None, xml=None,
-      translations=None):
+    def __init__(self, show='view', renderable=n, page='main', group=n,
+      layouts=n, move=0, readPermission='read', writePermission='write',
+      width=n, height=n, colspan=1, master=n, masterValue=n, masterSnub=n,
+      focus=False, mapping=n, generateLabel=n, label=n, view=n, cell=n,
+      buttons=n, edit=n, custom=n, xml=n, translations=n):
         # Call the base constructor
-        super().__init__(None, (0,1), None, None, show, renderable, page, group,
-          layouts, move, False, True, None, None, False, None, readPermission,
-          writePermission, width, height, None, colspan, master, masterValue,
-          focus, False, mapping, generateLabel, label, None, None, None, None,
-          False, False, view, cell, buttons, edit, custom, xml, translations)
+        super().__init__(n, (0,1), n, n, show, renderable, page, group, layouts,
+          move, False, True, n, n, False, n, readPermission, writePermission,
+          width, height, n, colspan, master, masterValue, masterSnub, focus,
+          False, mapping, generateLabel, label, n, n, n, n, False, False, view,
+          cell, buttons, edit, custom, xml, translations)
 
     def getAjaxData(self, hook, o):
         '''Initializes an AjaxData object on the DOM node corresponding to this

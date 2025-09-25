@@ -4,6 +4,7 @@
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import random, hashlib, binascii
 
+from appy import n
 from appy.px import Px
 from appy.model.fields import Field
 from appy.model.utils import Object as O
@@ -93,15 +94,14 @@ class Password(Field):
       'figure' : (48, 57) , 'special': specialChars
     }
 
-    def __init__(self, validator=None, multiplicity=(0,1), show=True,
-      renderable=None, page='main', group=None, layouts=None, move=0,
-      readPermission='read', writePermission='write', width='25em', height=None,
-      maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
-      historized=False, mapping=None, generateLabel=None, label=None,
-      sdefault='', scolspan=1, swidth=None, sheight=None, persist=True,
-      placeholder=None, view=None, cell=None, buttons=None, edit=None,
-      custom=None, xml=None, translations=None, minLength=8, occurrences=None,
-      autofocus=False):
+    def __init__(self, validator=n, multiplicity=(0,1), show=True,
+      renderable=n, page='main', group=n, layouts=n, move=0,
+      readPermission='read', writePermission='write', width='25em', height=n,
+      maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n, focus=False,
+      historized=False, mapping=n, generateLabel=n, label=n, sdefault='',
+      scolspan=1, swidth=n, sheight=n, persist=True, placeholder=n, view=n,
+      cell=n, buttons=n, edit=n, custom=n, xml=n, translations=n, minLength=8,
+      occurrences=n, autofocus=False):
         # The minimum length for this password
         self.minLength = minLength
         # The minimum number of occurrences for each group of chars
@@ -109,12 +109,12 @@ class Password(Field):
         # Must the first input field automatically receive focus on edit ?
         self.autofocus = autofocus
         # Call the base constructor
-        super().__init__(validator, multiplicity, None, None, show, renderable,
-          page, group, layouts, move, False, True, None, None, False, None,
+        super().__init__(validator, multiplicity, n, n, show, renderable,
+          page, group, layouts, move, False, True, n, n, False, n,
           readPermission, writePermission, width, height, maxChars, colspan,
-          master, masterValue, focus, historized, mapping, generateLabel, label,
-          sdefault, scolspan, swidth, sheight, persist, False, view, cell,
-          buttons, edit, custom, xml, translations)
+          master, masterValue, masterSnub, focus, historized, mapping,
+          generateLabel, label, sdefault, scolspan, swidth, sheight, persist,
+          False, view, cell, buttons, edit, custom, xml, translations)
         # A potential placeholder (see homonym attribute in string.py)
         self.placeholder = placeholder
 
@@ -203,7 +203,7 @@ class Password(Field):
         # Check occurrences
         return self.validateOccurrences(o, password)
 
-    def encrypt(self, password, prefix=True, salt=None):
+    def encrypt(self, password, prefix=True, salt=n):
         '''Encrypt clear p_password with the SSHA scheme. If p_prefix is True,
            the password is prefixed with the SSHA scheme ("${SSHA}"). If p_salt
            is not given, it will be computed.'''
@@ -243,7 +243,7 @@ class Password(Field):
         '''Generate a password of at most m_maxLength chars'''
         return PasswordGenerator.get(self.minLength, maxLength)
 
-    def set(self, o, password=None, log=True, maxLength=9):
+    def set(self, o, password=n, log=True, maxLength=9):
         '''Sets a p_password on p_o for this password field. If p_password is
            not given, a password will be generated, made of at most p_maxLength
            chars. This method returns the generated password (or simply

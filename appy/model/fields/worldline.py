@@ -4,6 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import datetime, hmac, hashlib, base64
 
+from appy import n
 from appy.px import Px
 from appy.model.fields import Field
 from appy.utils.client import Resource
@@ -11,8 +12,10 @@ from appy.model.utils import Object as O
 from appy.ui.layout import LayoutF, Layouts
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-API = 'Worldline API ::'
+API        = 'Worldline API ::'
 WL_HT_AUTH = f'{API} %s :: Got tokenization ID %s'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bn = '\n'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -43,7 +46,7 @@ class Config:
     # The date format to use for transmitting dates (RFC1123)
     dateFormat = '%a, %d %b %Y %H:%M:%S %Z'
 
-    def __init__(self, env='test', pspid=None, apiKey=None, apiSecret=None,
+    def __init__(self, env='test', pspid=n, apiKey=n, apiSecret=n,
                  algo='sha256'):
         # self.env refers to the target environment: can be "test" or "prod"
         self.env = env
@@ -147,21 +150,20 @@ class Worldline(Field):
         # field. Consequently, p_self is the object and p_o is the field.
         return None if self.isEmpty(o.name) else 'view'
 
-    def __init__(self, show=show, renderable=None, page='main', group=None,
-      layouts=None, move=0, readPermission='read', writePermission='write',
-      width=None, height=None, colspan=1, master=None, masterValue=None,
-      focus=False, mapping=None, generateLabel=None, label=None, view=None,
-      cell=None, buttons=None, edit=None, custom=None, xml=None,
-      translations=None):
+    def __init__(self, show=show, renderable=n, page='main', group=n, layouts=n,
+      move=0, readPermission='read', writePermission='write', width=n, height=n,
+      colspan=1, master=n, masterValue=n, masterSnub=n, focus=False, mapping=n,
+      generateLabel=n, label=n, view=n, cell=n, buttons=n, edit=n, custom=n,
+      xml=n, translations=n):
 
         # Call the base constructor
-        super().__init__(None, (0,1), None, None, show, renderable, page, group,
-          layouts, move, False, True, None, None, False, None, readPermission,
-          writePermission, width, height, None, colspan, master, masterValue,
-          focus, False, mapping, generateLabel, label, None, None, None, None,
-          False, False, view, cell, buttons, edit, custom, xml, translations)
+        super().__init__(n, (0,1), n, n, show, renderable, page, group, layouts,
+          move, False, True, n, n, False, n, readPermission, writePermission,
+          width, height, n, colspan, master, masterValue, masterSnub, focus,
+          False, mapping, generateLabel, label, n, n, n, n, False, False, view,
+          cell, buttons, edit, custom, xml, translations)
 
-    def call(self, o, endpoint, method='POST', data=None):
+    def call(self, o, endpoint, method='POST', data=n):
         '''Calls this Worldline p_endpoint, with this HTTP m_method, in the
            context of a payment about this p_o(bject), that represents a
            shopping basket or registration.'''
@@ -185,7 +187,7 @@ class Worldline(Field):
             r = server.get(url, headers=headers)
         return r
 
-    def addXhtmlRow(self, rows, name=None, value=None):
+    def addXhtmlRow(self, rows, name=n, value=n):
         '''Add, to this current list of XHTML p_rows, a new one rendering this
            p_value for an attribute having this p_name.'''
         if name: # A standard row

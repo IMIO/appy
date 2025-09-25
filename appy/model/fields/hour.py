@@ -4,6 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import time
 
+from appy import n
 from appy.px import Px
 from appy.model.fields import Field
 
@@ -39,15 +40,14 @@ class Hour(Field):
     # Default separator between "hour" and "minute" parts
     defaultSep = ':'
 
-    def __init__(self, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, hourFormat=None, maxHour=23, minutesPrecision=5,
-      show=True, renderable=None, page='main', group=None, layouts=None, move=0,
-      readPermission='read', writePermission='write', width=None, height=None,
-      maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
-      historized=False, mapping=None, generateLabel=None, label=None,
-      sdefault=None, scolspan=1, swidth=None, sheight=None, persist=True,
-      view=None, cell=None, buttons=None, edit=None, custom=None, xml=None,
-      translations=None, editSep=defaultSep):
+    def __init__(self, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, hourFormat=n, maxHour=23, minutesPrecision=5, show=True,
+      renderable=n, page='main', group=n, layouts=n, move=0,
+      readPermission='read', writePermission='write', width=n, height=n,
+      maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n, focus=False,
+      historized=False, mapping=n, generateLabel=n, label=n, sdefault=n,
+      scolspan=1, swidth=n, sheight=n, persist=True, view=n, cell=n, buttons=n,
+      edit=n, custom=n, xml=n, translations=n, editSep=defaultSep):
         # If no p_hourFormat is specified, the application-wide tool.hourFormat
         # is used instead.
         self.hourFormat = hourFormat
@@ -64,20 +64,20 @@ class Hour(Field):
         self.editSep = editSep
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
-          renderable, page, group, layouts, move, False, True, None, None,
-          False, None, readPermission, writePermission, width, height, None,
-          colspan, master, masterValue, focus, historized, mapping,
-          generateLabel, label, sdefault, scolspan, swidth, sheight, persist,
-          False, view, cell, buttons, edit, custom, xml, translations)
+          renderable, page, group, layouts, move, False, True, n, n, False, n,
+          readPermission, writePermission, width, height, n, colspan, master,
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, sdefault, scolspan, swidth, sheight, persist, False, view,
+          cell, buttons, edit, custom, xml, translations)
 
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
-                          language=None):
+                          language=n):
         if self.isEmptyValue(o, value): return ''
         format = self.hourFormat or o.config.ui.hourFormat
         hour, minute = [str(part).zfill(2) for part in value]
         return format.replace('%H', hour).replace('%M', minute)
 
-    def getRequestValue(self, o, requestName=None):
+    def getRequestValue(self, o, requestName=n):
         req = o.req
         name = requestName or self.name
         r = []

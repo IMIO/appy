@@ -2,6 +2,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from appy import n
 from appy.px import Px
 from appy.model.fields import Field
 from appy.ui.layout import Layouts, Layout
@@ -19,8 +20,8 @@ class Boolean(Field):
     # In some situations, if may be appropriate to consider False as an empty
     # value for a boolean field.
     nullValuesVariants = {
-      True:  (None, False), # False is considered to represent emptiness
-      False: (None,)        # False does not represent emptiness
+      True:  (n, False), # False is considered to represent emptiness
+      False: (n,)        # False does not represent emptiness
     }
 
     class Layouts(Layouts):
@@ -31,10 +32,10 @@ class Boolean(Field):
 
         # Default layout (render = "checkbox") ("b" stands for "base"), followed
         # by the "grid" variant (if the field is in a group with "grid" style).
-        b   = Layouts(edit=Layout(es,        width=None),   view='lf')
-        g   = Layouts(edit=Layout('frvl',    width=None),   view='fl')
-        d   = Layouts(edit=Layout(ds,        width=None),   view='lf')
-        t   = Layouts(edit=Layout(es, width=None, css='topSpace'), view='lf')
+        b   = Layouts(edit=Layout(es,        width=n),   view='lf')
+        g   = Layouts(edit=Layout('frvl',    width=n),   view='fl')
+        d   = Layouts(edit=Layout(ds,        width=n),   view='lf')
+        t   = Layouts(edit=Layout(es, width=n, css='topSpace'), view='lf')
 
         # With bottom space
         bP  = {'css': 'bottomSpaceS'}
@@ -45,17 +46,17 @@ class Boolean(Field):
         dv = Layouts(edit=d['edit'], view='lf-d')
 
         # *d*escription, with *t*op space
-        dt  = Layouts(edit=Layout(ds, width=None, css='topSpace'), view='lf')
-        h   = Layouts(edit=Layout('flhv',    width=None),   view='lf')
-        dh  = Layouts(edit=Layout('flhv-d',  width=None),   view='lf')
-        gd  = Layouts(edit=Layout('f;dv-',   width=None),   view='fl')
+        dt  = Layouts(edit=Layout(ds, width=n, css='topSpace'), view='lf')
+        h   = Layouts(edit=Layout('flhv',    width=n),   view='lf')
+        dh  = Layouts(edit=Layout('flhv-d',  width=n),   view='lf')
+        gd  = Layouts(edit=Layout('f;dv-',   width=n),   view='fl')
 
         # The "long" version of the previous layout (if the description is
         # long), with vertical alignment on top instead of middle.
-        gdl = Layouts(edit=Layout('f;dv=',   width=None),   view='fl')
+        gdl = Layouts(edit=Layout('f;dv=',   width=n),   view='fl')
 
         # The base layout, plus bottom space
-        bs = Layouts(edit=Layout(es, width=None, css='bottomSpaceS'), view='lf')
+        bs = Layouts(edit=Layout(es, width=n, css='bottomSpaceS'), view='lf')
 
         # Centered layout, no description
         c   = Layouts(edit='flrv|',                         view='lf|')
@@ -65,7 +66,7 @@ class Boolean(Field):
         rl  = Layouts(edit='l-f',                           view='lf')
         rld = Layouts(edit='l-d-f',                         view='lf')
         grl = Layouts(edit='fl',                            view='fl')
-        gdr = Layouts(edit=Layout('d-fv=',   width=None),   view='fl')
+        gdr = Layouts(edit=Layout('d-fv=',   width=n),      view='fl')
         rt = r.clone(css='topSpace')
 
         @classmethod
@@ -136,17 +137,16 @@ class Boolean(Field):
        <label lfor=":valueId">:_('whatever')</label>
       </x><br/>''')
 
-    def __init__(self, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
-      layouts=None, move=0, indexed=False, mustIndex=True, indexValue=None,
-      searchable=False, filterField=None, readPermission='read',
-      writePermission='write', width=None, height=None, maxChars=None,
-      colspan=1, master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, sdefault=False, scolspan=1,
-      swidth=None, sheight=None, persist=True, render='checkbox',
-      falseFirst=True, inlineEdit=False, view=None, cell=None, buttons=None,
-      edit=None, custom=None, xml=None, translations=None,
-      falseMeansEmpty=False, disabled=False, confirm=False):
+    def __init__(self, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
+      move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
+      filterField=n, readPermission='read', writePermission='write', width=n,
+      height=n, maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n,
+      focus=False, historized=False, mapping=n, generateLabel=n, label=n,
+      sdefault=False, scolspan=1, swidth=n, sheight=n, persist=True,
+      render='checkbox', falseFirst=True, inlineEdit=False, view=n, cell=n,
+      buttons=n, edit=n, custom=n, xml=n, translations=n, falseMeansEmpty=False,
+      disabled=False, confirm=False):
 
         # The following p_render modes are available.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -180,11 +180,12 @@ class Boolean(Field):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, None, searchable, filterField, readPermission,
-          writePermission, width, height, None, colspan, master, masterValue,
-          focus, historized, mapping, generateLabel, label, sdefault, scolspan,
-          swidth, sheight, persist, inlineEdit, view, cell, buttons, edit,
-          custom, xml, translations)
+          indexValue, n, searchable, filterField, readPermission,
+          writePermission, width, height, n, colspan, master, masterValue,
+          masterSnub, focus, historized, mapping, generateLabel, label,
+          sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
+          buttons, edit, custom, xml, translations)
+
         self.pythonType = bool
 
         # Must value False be interpreted as an empty value or not ?
@@ -207,7 +208,7 @@ class Boolean(Field):
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.disabled = disabled
 
-    def getValue(self, o, name=None, layout=None, single=None, at=None):
+    def getValue(self, o, name=n, layout=n, single=n, at=n):
         '''Do not return "None": return "True" or "False", even if "None" is
            stored in the DB (or no value is stored), excepted if render is
            "radios".'''
@@ -230,14 +231,14 @@ class Boolean(Field):
         return self.yesNo[bool(value)]
 
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
-                          language=None):
+                          language=n):
         return o.translate(self.getValueLabel(value), language=language)
 
     def getMasterTag(self, layout):
         '''The tag driving slaves is the hidden field'''
         return f'{self.name}_hidden' if layout == 'edit' else self.name
 
-    def getOnChange(self, o, layout, className=None):
+    def getOnChange(self, o, layout, className=n):
         '''Updates the hidden field storing the actual UI value for the field'''
         r = 'updateHiddenBool(this)'
         # Call the base behaviour
@@ -250,7 +251,7 @@ class Boolean(Field):
             r = eval(value)
             return r
 
-    def getSearchValue(self, req, value=None):
+    def getSearchValue(self, req, value=n):
         '''Converts the raw search value from p_form into a boolean value'''
         return eval(Field.getSearchValue(self, req, value=value))
 

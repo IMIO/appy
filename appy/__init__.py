@@ -5,8 +5,12 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import pathlib
+
 # Store here the path to the Appy root package, it is often requested
 path = pathlib.Path(__file__).parent
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+n = None
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -41,49 +45,49 @@ class Config:
 
     # Place here a appy.server.Config instance defining the configuration
     # of the Appy HTTP server.
-    server = None
+    server = n
     # Place here a appy.server.guard.Config instance defining security options
-    security = None
+    security = n
     # Place here a appy.database.Config instance defining database options
-    database = None
+    database = n
     # Place here a appy.database.log.Config instance defining logging options
-    log = None
+    log = n
     # Place here a appy.model.Config instance defining the application model
-    model = None
+    model = n
     # Place here a appy.ui.Config instance defining user-interface options
-    ui = None
+    ui = n
     # When using a SMTP mail server for sending emails from your app, place an
     # instance of class appy.utils.mail.Config in the field below.
-    mail = None
+    mail = n
     # Place here a appy.server.scheduler.Config instance, defining cron-like
     # actions being automatically triggered.
-    jobs = None
+    jobs = n
     # Place here an instance of appy.server.backup.Config if you want to backup
     # data and logs from a Appy site.
-    backup = None
+    backup = n
     # Place here a appy.deploy.Config instance defining how to deploy this app
     # on distant servers.
-    deploy = None
+    deploy = n
     # In order to enable Google Analytics on your app, place here an instance of
     # appy.utils.analytics.Analytics.
-    analytics = None
+    analytics = n
     # If you want to call Google Web Services, specify here a Google API key
-    googleApiKey = None
+    googleApiKey = n
     # When using Worldline for online payments, place an instance of class
     # appy.model.fields.worldline.Config in the field below.
-    worldline = None
+    worldline = n
     # When using POD fields for producing documents with appy.pod, place here an
     # instance of appy.model.fields.pod.Config.
-    pod = None
+    pod = n
     # When the app has an extension, the name of this latter will be stored
     # in the following attribute. Do not set it directly: it must be done via
     # method m_declareExt below. If you use script appy/bin/make to create an
     # ext, a call to declareExt will be present in the generated ext's
     # __init__.py file.
-    ext = None
+    ext = n
     # An Appy site may communicate with peer sites. Defining peer sites is done
     # by placing, in the following attribute, an instance of appy.peer.Config.
-    peers = None
+    peers = n
 
     @classmethod
     def declareExt(class_, path):

@@ -4,8 +4,8 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import re, random, sys, time
 
-from appy import utils
 from appy.px import Px
+from appy import utils, n
 from appy.data import Countries
 from appy.utils.string import Normalize
 from appy.xml.cleaner import StringCleaner
@@ -121,8 +121,8 @@ class String(Multilingual, Field):
 
     class Layouts(Layouts):
         '''String-specific layouts'''
-        g  = Layouts(Layout('f;rv=',  width=None))
-        gd = Layouts(Layout('f;rv=d', width=None))
+        g  = Layouts(Layout('f;rv=',  width=n))
+        gd = Layouts(Layout('f;rv=d', width=n))
 
     # Use this constant to say that there is no maximum size for a string field
     NO_MAX = sys.maxsize
@@ -245,7 +245,7 @@ class String(Multilingual, Field):
         return String.MODULO_97_COMPLEMENT(o, niss)
 
     @staticmethod
-    def EURO_ZIP(o, value, maxChars=None):
+    def EURO_ZIP(o, value, maxChars=n):
         '''Returns True if p_value contains a valid European postal code'''
         # This code validates the minimal set of rules common to all european
         # countries: having at least 4 digits, whose integer value is >1000.
@@ -317,18 +317,17 @@ class String(Multilingual, Field):
     # A Validator sub-class that may be used as validator
     NumberSelect = NumberSelect
 
-    def __init__(self, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
-      layouts=None, move=0, indexed=False, mustIndex=True, indexValue=None,
-      emptyIndexValue='-', searchable=False, filterField=None,
-      readPermission='read', writePermission='write', width=None, height=None,
-      maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
-      historized=False, mapping=None, generateLabel=None, label=None,
-      sdefault='', scolspan=1, swidth=None, fwidth=10, sheight=None,
-      persist=True, transform='none', placeholder=None, languages=('en',),
-      languagesLayouts=None, viewSingle=False, inlineEdit=False, view=None,
-      cell=None, buttons=None, edit=None, custom=None, xml=None,
-      translations=None, readonly=False, stripped=True, alignOnEdit='left'):
+    def __init__(self, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
+      move=0, indexed=False, mustIndex=True, indexValue=n, emptyIndexValue='-',
+      searchable=False, filterField=n, readPermission='read',
+      writePermission='write', width=n, height=n, maxChars=n, colspan=1,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, sdefault='', scolspan=1, swidth=n,
+      fwidth=10, sheight=n, persist=True, transform='none', placeholder=n,
+      languages=('en',), languagesLayouts=n, viewSingle=False, inlineEdit=False,
+      view=n, cell=n, buttons=n, edit=n, custom=n, xml=n, translations=n,
+      readonly=False, stripped=True, alignOnEdit='left'):
         # Does this field store an URL ?
         self.isUrl = validator == String.URL
         # "placeholder", similar to the HTML attribute of the same name, allows
@@ -359,9 +358,9 @@ class String(Multilingual, Field):
           show, renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, filterField, readPermission,
           writePermission, width, height, maxChars, colspan, master,
-          masterValue, focus, historized, mapping, generateLabel, label,
-          sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
-          buttons, edit, custom, xml, translations)
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, sdefault, scolspan, swidth, sheight, persist, inlineEdit, view,
+          cell, buttons, edit, custom, xml, translations)
         # Default width, height and maxChars
         if width is None:
             self.width  = 30
@@ -387,7 +386,7 @@ class String(Multilingual, Field):
         return not self.isMultilingual(None, True)
 
     def getUniFormattedValue(self, o, value, layout='view', showChanges=False,
-                             language=None, contentLanguage=None):
+                             language=n, contentLanguage=n):
         '''Returns the formatted variant of p_value. If p_contentLanguage is
            specified, p_value is the p_contentLanguage part of a multilingual
            value.'''
@@ -415,7 +414,7 @@ class String(Multilingual, Field):
         return in_(prefix, f'{prefix}z')
 
     @classmethod
-    def computeSearchValue(class_, field, req, value=None):
+    def computeSearchValue(class_, field, req, value=n):
         '''Potentially apply a transform to search value in p_req and possibly
            define an interval of search values.'''
         r = Field.getSearchValue(field, req, value=value).strip()
@@ -426,7 +425,7 @@ class String(Multilingual, Field):
         # Define a range if the search term ends with a *
         return class_.getRange(r)
 
-    def getSearchValue(self, req, value=None):
+    def getSearchValue(self, req, value=n):
         '''See called method's docstring'''
         return String.computeSearchValue(self, req, value=value)
 

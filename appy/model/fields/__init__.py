@@ -310,6 +310,10 @@ class Field:
     #               disables some functions like master/slave relationships, it
     #               returns a more lightweight code.
 
+    # Possible values for attribute::masterSnub
+    MS_NEVER  = None # Never snub the master
+    MS_SEARCH = 1    # Ignore it on the search form
+
     pxRender = Px('''<x var="minimal=minimal|False;
       showChanges=showChanges|req.showChanges == 'True';
       layout=layout|req.layout;
@@ -329,7 +333,7 @@ class Field:
       tagCss=field.getTagCss(tagCss, layout);
       o=o or tool;
       tagId=f'{o.iid}_{name}';
-      tagName='slave' if field.master else '';
+      tagName='slave' if field.hasMaster(isSearch) else '';
       layoutTarget=field">:field.getPx(_ctx_)</x>''')
 
     def doRender(self, layout, o, name=None, minimal=False, tagCss=None,
@@ -467,9 +471,9 @@ class Field:
     def __init__(self, validator, multiplicity, default, defaultOnEdit, show,
       renderable, page, group, layouts, move, indexed, mustIndex, indexValue,
       emptyIndexValue, searchable, filterField, readPermission, writePermission,
-      width, height, maxChars, colspan, master, masterValue, focus, historized,
-      mapping, generateLabel, label, sdefault, scolspan, swidth, sheight,
-      persist, inlineEdit, view, cell, buttons, edit, custom, xml,
+      width, height, maxChars, colspan, master, masterValue, masterSnub, focus,
+      historized, mapping, generateLabel, label, sdefault, scolspan, swidth,
+      sheight, persist, inlineEdit, view, cell, buttons, edit, custom, xml,
       translations):
 
         # The p_validator restricts which values may be defined. If p_validator
@@ -635,6 +639,9 @@ class Field:
 
         # The behaviour of this field may depend on another, "master" field
         self.setMaster(master, masterValue)
+
+        # Must the master, if set, be ignored in some situations ?
+        self.masterSnub = masterSnub
 
         # If a field must retain attention in a particular way, set focus=True.
         # It will be rendered in a special way.
@@ -1000,6 +1007,12 @@ class Field:
         #   be returned by this method, depending on the master value(s) that
         #   are given to it, as its unique parameter.
         self.masterValue = utils.initMasterValue(masterValue)
+
+    def hasMaster(self, isSearch):
+        '''Has p_self a master that must not be snubbed ?'''
+        if not self.master: return
+        # p_self has a master. Must it be snubbed ?
+        return not isSearch or not self.masterSnub
 
     def setPage(self, page):
         '''Puts p_self into this p_page. If p_page is None, p_self will be

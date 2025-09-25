@@ -3,7 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
-from appy import utils
+from appy import utils, n
 from appy.model.fields import Field
 from appy.ui.layout import Layouts, Layout
 from appy.database.operators import Operator
@@ -24,7 +24,7 @@ class Selection:
     '''If you want to have dynamically computed possible values for a Select
        field, use a Selection object.'''
 
-    def __init__(self, method, single=None):
+    def __init__(self, method, single=n):
         # p_method must be a method that will be called every time Appy will
         # need to get the list of possible values for the related field.
         #  - p_method can be the method object in itself, or the method name.
@@ -59,7 +59,7 @@ class Selection:
         # returned by p_method anymore.
         self.single = single
 
-    def getText(self, o, value, field, language=None):
+    def getText(self, o, value, field, language=n):
         '''Gets the text that corresponds to p_value'''
         # Use method p_single if specified
         single = self.single
@@ -77,7 +77,7 @@ class Selection:
             if v == value: return text
         return value
 
-    def getValues(self, o, className=None):
+    def getValues(self, o, className=n):
         '''Gets the translated values in this selection'''
         method = self.method
         # Call self.method for getting the (dynamic) values
@@ -117,17 +117,17 @@ class Select(Field):
 
     class Layouts(Layouts):
         '''Select-specific layouts'''
-        d  = Layouts(Layout('d2-lrv-f', width=None))
+        d  = Layouts(Layout('d2-lrv-f', width=n))
         # With a description, but no label
-        dn = Layouts(Layout('d-frv=', width=None))
+        dn = Layouts(Layout('d-frv=', width=n))
         # Within grid groups
-        ed = Layout('f;rv=', width=None)
-        g  = Layouts(edit=ed, view=Layout('fl', width=None))
-        f  = Layouts(edit=ed, view=Layout('f', width=None))
+        ed = Layout('f;rv=', width=n)
+        g  = Layouts(edit=ed, view=Layout('fl', width=n))
+        f  = Layouts(edit=ed, view=Layout('f', width=n))
         # Variants
-        gd = Layouts(edit=Layout('d;rv=-f2=', width=None),
-                     view=Layout('fl', width=None))
-        gh = Layouts(edit=Layout('f;hrv=', width=None), view=gd['view'])
+        gd = Layouts(edit=Layout('d;rv=-f2=', width=n),
+                     view=Layout('fl', width=n))
+        gh = Layouts(edit=Layout('f;hrv=', width=n), view=gd['view'])
 
         @classmethod
         def getDefault(class_, field):
@@ -202,30 +202,34 @@ class Select(Field):
 
     # On the search form, show a multi-selection widget with a "AND/OR" selector
     search = Px('''
-     <!-- The "and" / "or" radio buttons -->
-     <x if="field.multiplicity[1] != 1"
-        var2="operName=f'o_{name}';
-              orName=f'{operName}_or';
-              andName=f'{operName}_and'">
-      <input type="radio" name=":operName" id=":orName"
-             checked="checked" value="or"/>
-      <label lfor=":orName">:_('search_or')</label>
-      <input type="radio" name=":operName" id=":andName" value="and"/>
-      <label lfor=":andName">:_('search_and')</label><br/>
-     </x>
+     <div class="flex1">
 
-     <!-- The list of values -->
-     <select var="preSelected=field.sdefault;
-                  charsWidth=field.getWidthInChars(True)"
-       name=":widgetName" multiple="multiple"
-       size=":field.getSelectSize(True, True)"
-       style=":field.getSelectStyle(True, True)"
-       onchange=":field.getOnChange(tool, 'search', className)">
-      <option for="val, text in field.getPossibleValues(tool, \
-            withTranslations=True, withBlankValue=False, className=className)"
-        selected=":val in preSelected" value=":val"
-        title=":text">:Px.truncateValue(text, charsWidth)</option>
-     </select><br/>''')
+      <!-- The list of values -->
+      <select var="preSelected=field.sdefault;
+                   charsWidth=field.getWidthInChars(True)"
+        name=":widgetName" multiple="multiple"
+        size=":field.getSelectSize(True, True)"
+        style=":field.getSelectStyle(True, True)"
+        onchange=":field.getOnChange(tool, 'search', className)">
+       <option for="val, text in field.getPossibleValues(tool,
+             withTranslations=True, withBlankValue=False, className=className,
+             ignoreMasterValues=field.masterSnub)"
+         selected=":val in preSelected" value=":val"
+         title=":text">:Px.truncateValue(text, charsWidth)</option>
+      </select>
+
+     <!-- The and/or radio buttons -->
+      <div if="field.multiplicity[1] != 1"
+         var2="operName=f'o_{name}';
+               orName=f'{operName}_or';
+               andName=f'{operName}_and'">
+       <input type="radio" name=":operName" id=":orName"
+              checked="checked" value="or"/>
+       <label lfor=":orName">:_('search_or')</label><br/>
+       <input type="radio" name=":operName" id=":andName" value="and"/>
+       <label lfor=":andName">:_('search_and')</label>
+      </div>
+     </div>''')
 
     # Widget for filtering object values on search results
     pxFilter = Px('''
@@ -249,18 +253,17 @@ class Select(Field):
        </div>
      </div>''')
 
-    def __init__(self, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
-      layouts=None, move=0, indexed=False, mustIndex=True, indexValue=None,
-      emptyIndexValue='-', searchable=False, filterField=None,
-      readPermission='read', writePermission='write', width=None, height=None,
-      maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
-      historized=False, mapping=None, generateLabel=None, label=None,
-      sdefault='', scolspan=1, swidth=None, sheight=None, fwidth='7em',
-      fheight=None, persist=True, inlineEdit=False, view=None, cell=None,
-      buttons=None, edit=None, custom=None, xml=None, translations=None,
+    def __init__(self, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
+      move=0, indexed=False, mustIndex=True, indexValue=n, emptyIndexValue='-',
+      searchable=False, filterField=n, readPermission='read',
+      writePermission='write', width=n, height=n, maxChars=n, colspan=1,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, sdefault='', scolspan=1, swidth=n,
+      sheight=n, fwidth='7em', fheight=n, persist=True, inlineEdit=False,
+      view=n, cell=n, buttons=n, edit=n, custom=n, xml=n, translations=n,
       noValue=True, noValueLabel='choose_a_value', render='select',
-      svalidator=None, checkAll=True, disabled=False):
+      svalidator=n, checkAll=True, disabled=False):
 
         # When choosing a value in a select widget, must an entry representing
         # no value at all be inserted ?
@@ -310,35 +313,45 @@ class Select(Field):
           renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, filterField, readPermission,
           writePermission, width, height, maxChars, colspan, master,
-          masterValue, focus, historized, mapping, generateLabel, label,
-          sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
-          buttons, edit, custom, xml, translations)
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, sdefault, scolspan, swidth, sheight, persist, inlineEdit, view,
+          cell, buttons, edit, custom, xml, translations)
+
         # Default value on the *s*earch form. It must be a list of values.
         self.sdefault = sdefault or []
+
         # Validator to use on the *s*earch form. This has sense only if you use
         # a Selection object as validator.
         self.svalidator = svalidator or validator
+
         # When render="checkbox", by default, an additional checkbox will be
         # rendered, allowing to select or unselect all possible values. If this
         # global checkbox must not be rendered, set the following attribute to
         # False.
         self.checkAll = checkAll
+
         # Default width, height and maxChars
         if width is None:
             self.width = 30
         if height is None:
             self.height = 4
+
         # Define the filter PX when appropriate
         if self.indexed:
             self.filterPx = 'pxFilter'
+
+        # Widget width and height on the *s*earch form
         self.swidth = self.swidth or self.width
         self.sheight = self.sheight or self.height
+
         # The *f*ilter width and height
         self.fwidth = fwidth
         self.fheight = fheight
+
         # Must p_self be shown, on "edit", in "disabled" mode? It works only if
         # p_self is rendered as a select widget.
         self.disabled = disabled
+
         # If render mode is "select", on "edit", a blank value will be added
         self.checkParameters()
 
@@ -346,9 +359,9 @@ class Select(Field):
         '''Ensure coherence between parameters'''
         # Valid render modes depend on multiplicities
         multiple = self.isMultiValued()
-        if multiple and (self.render == 'radio'):
+        if multiple and self.render == 'radio':
             raise Exception(RADIOS_KO)
-        if not multiple and (self.render == 'checkbox'):
+        if not multiple and self.render == 'checkbox':
             raise Exception(CBS_KO)
         # It is currently not possible to inline-edit a multi-valued field
         if multiple and self.inlineEdit:
@@ -369,7 +382,7 @@ class Select(Field):
             return possibleValue in compValue
         return possibleValue == compValue
 
-    def getValue(self, o, name=None, layout=None, single=None, at=None):
+    def getValue(self, o, name=n, layout=n, single=n, at=n):
         value = Field.getValue(self, o, name, layout, single, at)
         if not value:
             return emptyList if self.isMultiValued() else value
@@ -387,7 +400,7 @@ class Select(Field):
             r = r[:]
         return r
 
-    def getTranslatedValue(self, o, value, language=None):
+    def getTranslatedValue(self, o, value, language=n):
         '''Get the translated text for p_value, when p_value is one of p_self's
            authorized "static" values according to its p_self.validator (being a
            list or tuple o values).'''
@@ -396,11 +409,11 @@ class Select(Field):
             language = language or o.guard.userLanguage
             r = self.translations.get('value', language, value=value)
         else:
-            r = o.translate('%s_list_%s' % (self.labelId, value))
+            r = o.translate(f'{self.labelId}_list_{value}')
         return r
 
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
-                          language=None):
+                          language=n):
         '''Select-specific value formatting'''
         # Return an empty string if there is no p_value
         if Field.isEmptyValue(self, o, value) and not showChanges: return ''
@@ -420,7 +433,7 @@ class Select(Field):
                 r = _(o, value, language=language)
         return r
 
-    def getSearchValue(self, req, value=None):
+    def getSearchValue(self, req, value=n):
         '''The search value as encoded in a search form for a Select field can
            be a simple string value or a list of values with an and/or
            operator.'''
@@ -430,20 +443,20 @@ class Select(Field):
             r = Operator.fromRequest(req, self.name)(*r)
         return r
 
-    def getPossibleValues(self, o, withTranslations=False,
-                          withBlankValue=False, blankLabel=None, className=None,
-                          ignoreMasterValues=False):
-        '''Returns the list of possible values for this field.
-           If p_withTranslations is True, instead of returning a list of string
-           values, the result is a list of tuples (s_value, s_translation).
-           Moreover, p_withTranslations can hold a given language: in this case,
-           this language is used instead of the user language. If
-           p_withBlankValue is True, a blank value is prepended to the list,
-           excepted if the type is multivalued. Used in combination with
-           p_withTranslations being True, the i18n label for translating the
-           blank value is given in p_blankLabel. If p_className is given, p_o is
-           the tool and we are called from a context where no object is
-           available (ie, a search form).'''
+    def getPossibleValues(self, o, withTranslations=False, withBlankValue=False,
+                        blankLabel=n, className=None, ignoreMasterValues=False):
+        '''Returns the list of possible values for this field'''
+        # If p_withTranslations is True, instead of returning a list of string
+        # values, the result is a list of tuples (s_value, s_translation).
+        # Moreover, p_withTranslations can hold a given language: in this case,
+        # this language is used instead of the user language. If
+        # p_withBlankValue is True, a blank value is prepended to the list,
+        # excepted if the type is multivalued. Used in combination with
+        # p_withTranslations being True, the i18n label for translating the
+        # blank value is given in p_blankLabel. If p_className is given, p_o is
+        # the tool and we are called from a context where no object is available
+        # (ie, a search form).
+        #
         # Get the user language for translations, from p_withTranslations
         lg = isinstance(withTranslations, str) and withTranslations or None
         req = o.req
@@ -491,12 +504,12 @@ class Select(Field):
                         r.append(value)
             else:
                 r = () # Could be a slave without his own validator
-        if (withBlankValue == 'forced') or \
+        if withBlankValue == 'forced' or \
            (withBlankValue and not self.isMultiValued()):
             # Create the blank value to insert at the beginning of the list
             if withTranslations:
                 label = blankLabel or self.noValueLabel
-                blankValue = ('', o.translate(label, language=lg))
+                blankValue = '', o.translate(label, language=lg)
             else:
                 blankValue = ''
             # Insert the blank value in the result

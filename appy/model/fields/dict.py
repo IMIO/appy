@@ -5,6 +5,7 @@
 import copy
 from persistent.mapping import PersistentMapping
 
+from appy import n
 from appy.px import Px
 from appy.ui.layout import Layout
 from appy.model.utils import Object
@@ -16,7 +17,7 @@ class SepRow:
     '''Represents a custom row that is a separator but does not represent
        data.'''
 
-    def __init__(self, text, cellCss=None, rowCss=None):
+    def __init__(self, text, cellCss=n, rowCss=n):
         self.text = text
         # An optional CSS class to apply to the cell containing p_text
         self.cellCss = cellCss
@@ -95,22 +96,21 @@ class Dict(List):
      <!-- The text to show if the field is empty -->
      <div if="not value and layout=='view'">::field.getValueIfEmpty(o)</div>''')
 
-    def __init__(self, keys, fields, validator=None, multiplicity=(0,1),
-      default=None, defaultOnEdit=None, show=True, renderable=None, page='main',
-      group=None, layouts=None, move=0, readPermission='read',
-      writePermission='write', width='', height=None, maxChars=None, colspan=1,
-      master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, subLayouts=List.Layouts.sub,
-      widths=None, view=None, cell=None, buttons=None, edit=None, custom=None,
-      xml=None, translations=None, totalRows=None, totalCols=None,
-      headerAlign='middle', contentAlign='top', listCss=None, valueIfEmpty='-'):
+    def __init__(self, keys, fields, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
+      move=0, readPermission='read', writePermission='write', width='',
+      height=n, maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n,
+      focus=False, historized=False, mapping=n, generateLabel=n, label=n,
+      subLayouts=List.Layouts.sub, widths=n, view=n, cell=n, buttons=n, edit=n,
+      custom=n, xml=n, translations=n, totalRows=n, totalCols=n,
+      headerAlign='middle', contentAlign='top', listCss=n, valueIfEmpty='-'):
         # Call the base constructor
         super().__init__(fields, validator, multiplicity, default,
           defaultOnEdit, show, renderable, page, group, layouts, move,
           readPermission, writePermission, width, height, maxChars, colspan,
-          master, masterValue, focus, historized, mapping, generateLabel, label,
-          subLayouts, widths, view, cell, buttons, edit, custom, xml,
-          translations, totalRows=totalRows, totalCols=totalCols,
+          master, masterValue, masterSnub, focus, historized, mapping,
+          generateLabel, label, subLayouts, widths, view, cell, buttons, edit,
+          custom, xml, translations, totalRows=totalRows, totalCols=totalCols,
           headerAlign=headerAlign, contentAlign=contentAlign, listCss=listCss,
           valueIfEmpty=valueIfEmpty)
         # Method in "keys" must return a list of tuples (key, title): "key"
@@ -156,7 +156,7 @@ class Dict(List):
         r = getattr(o, self.name, None)
         if r: return copy.deepcopy(r)
 
-    def getEntryName(self, sub, row, name=None):
+    def getEntryName(self, sub, row, name=n):
         '''Add suffix "-d-" to the entry name'''
         # p_sub is the name of the concerned sub-field (as a string that must
         # correspond to the unprefixed sub-field name), or the Field object
@@ -253,7 +253,7 @@ class Dict(List):
         # Render the diff
         return self.doRender('view', o, minimal=True, specific={'alto': fake})
 
-    def getHistoryValue(self, o, value, i, language=None, empty='-'):
+    def getHistoryValue(self, o, value, i, language=n, empty='-'):
         '''For a Dict field, instead of showing the previous p_value in p_o's
            history, show a XHTML diff between p_value, as found at index p_i,
            and a newer version of it in p_o's history before p_i, or, if not

@@ -8,6 +8,7 @@ UPLOADED = 'file "%s" uploaded in Ref "%d.%s" via rich "%s".'
 import sys, re
 from xml.sax._exceptions import SAXParseException
 
+from appy import n
 from appy.px import Px
 from appy.ui.layout import Layouts
 from appy.xml.escape import Escape
@@ -120,20 +121,18 @@ class Rich(Multilingual, Field):
      <input type="text" maxlength=":field.maxChars" size=":field.swidth"
             value=":field.sdefault" name=":widgetName"/>''')
 
-    def __init__(self, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
-      layouts=None, move=0, indexed=False, mustIndex=True, indexValue=None,
-      searchable=False, filterField=None, readPermission='read',
-      writePermission='write', width=None, height=None, maxChars=None,
-      colspan=1, master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, sdefault='', scolspan=1,
-      swidth=None, fwidth=10, sheight=None, persist=True, styles=defaultStyles,
-      customStyles=None, documents=False, spellcheck=False, languages=('en',),
-      languagesLayouts=None, viewSingle=False, inlineEdit=False,
-      toolbar='Standard', view=None, cell=None, buttons=None, edit=None,
-      custom=None, xml=None, translations=None, inject=False, valueIfEmpty='-',
-      viewCss='xhtml', invalidTexts=None, transformText=None, toItalicize=None,
-      stripped=None):
+    def __init__(self, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
+      move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
+      filterField=n, readPermission='read', writePermission='write', width=n,
+      height=n, maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n,
+      focus=False, historized=False, mapping=n, generateLabel=n, label=n,
+      sdefault='', scolspan=1, swidth=n, fwidth=10, sheight=n, persist=True,
+      styles=defaultStyles, customStyles=n, documents=False, spellcheck=False,
+      languages=('en',), languagesLayouts=n, viewSingle=False, inlineEdit=False,
+      toolbar='Standard', view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
+      translations=n, inject=False, valueIfEmpty='-', viewCss='xhtml',
+      invalidTexts=n, transformText=n, toItalicize=n, stripped=n):
         # The list of styles that the user will be able to select in the styles
         # dropdown (within CKEditor) is defined hereafter.
         self.styles = styles
@@ -292,18 +291,18 @@ class Rich(Multilingual, Field):
         Multilingual.__init__(self, languages, languagesLayouts, viewSingle)
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, None, searchable, filterField, readPermission,
+          indexValue, n, searchable, filterField, readPermission,
           writePermission, width, height, maxChars, colspan, master,
-          masterValue, focus, historized, mapping, generateLabel, label,
-          sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
-          buttons, edit, custom, xml, translations)
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, sdefault, scolspan, swidth, sheight, persist, inlineEdit, view,
+          cell, buttons, edit, custom, xml, translations)
         # The *f*ilter width
         self.fwidth = fwidth
         # No max chars by default
         if maxChars is None:
             self.maxChars = Rich.NO_MAX
 
-    def getDiffValue(self, o, i=None, language=None):
+    def getDiffValue(self, o, i=n, language=n):
         '''If p_i is None, the method returns the content of this field on p_o,
            rendered with the cumulative diffs between successive versions, from
            the very first stored version in p_o's history to the currently
@@ -355,7 +354,7 @@ class Rich(Multilingual, Field):
         return HtmlDiff(r, current, itext, dtext).get()
 
     def getUniFormattedValue(self, o, value, layout='view', showChanges=False,
-                             language=None, contentLanguage=None):
+                             language=n, contentLanguage=n):
         '''Returns the formatted variant of p_value. If p_contentLanguage is
            specified, p_value is the p_contentLanguage part of a multilingual
            value.'''
@@ -397,12 +396,12 @@ class Rich(Multilingual, Field):
         except Cleaner.InvalidText as err:
             return o.translate('invalid_text', mapping={'text': str(err)})
 
-    def getSearchValue(self, req, value=None):
+    def getSearchValue(self, req, value=n):
         '''The input widget for a Rich field is of type "text". So behave like a
            Text field in that case.'''
         return Text.computeSearchValue(self, req, value=value)
 
-    def getHistoryValue(self, o, value, i, language=None, empty='-'):
+    def getHistoryValue(self, o, value, i, language=n, empty='-'):
         '''For a Rich field, instead of showing the previous p_value in p_o's
            history, show a XHTML diff between p_value and a newer version of it
            in p_o's history before p_i, or, if not found, the value as currently

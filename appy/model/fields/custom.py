@@ -4,6 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from persistent import Persistent
 
+from appy import n
 from appy.ui.layout import Layouts
 from appy.model.fields import Field
 
@@ -33,20 +34,19 @@ class Custom(Field):
     # Typically, a Custom field is only "viewable" in the XML layout
     view = edit = cell = buttons = search = ''
 
-    def __init__(self, validator=None, multiplicity=(1,1), show='xml',
-      renderable=None, page='main', group=None, layouts=None, move=0,
-      readPermission='read', writePermission='write', width=None, height=None,
-      maxChars=None, colspan=1, master=None, masterValue=None, focus=False,
-      historized=False, mapping=None, generateLabel=None, label=None, view=None,
-      cell=None, buttons=None, edit=None, custom=None, xml=None,
-      translations=None):
+    def __init__(self, validator=n, multiplicity=(1,1), show='xml',
+      renderable=n, page='main', group=n, layouts=n, move=0,
+      readPermission='read', writePermission='write', width=n, height=n,
+      maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n, focus=False,
+      historized=False, mapping=n, generateLabel=n, label=n, view=n, cell=n,
+      buttons=n, edit=n, custom=n, xml=n, translations=n):
+
         # Parameter "persist" is not available and is automatically set to True
-        super().__init__(None, (0,1), None, None, show, renderable, page, group,
-          layouts, move, False, True, None, None, False, None, readPermission,
-          writePermission, width, height, None, colspan, master, masterValue,
-          focus, historized, mapping, generateLabel, label, None, None, None,
-          None, True, False, view, cell, buttons, edit, custom, xml,
-          translations)
+        super().__init__(n, (0,1), n, n, show, renderable, page, group, layouts,
+          move, False, True, n, n, False, n, readPermission, writePermission,
+          width, height, n, colspan, master, masterValue, masterSnub, focus,
+          historized, mapping, generateLabel, label, n, n, n, n, True, False,
+          view, cell, buttons, edit, custom, xml, translations)
 
     def isEmptyValue(self, o, value):
         '''An empty persistent value must not be considered as empty'''

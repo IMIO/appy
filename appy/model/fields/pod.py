@@ -7,6 +7,7 @@ from pathlib import Path
 from DateTime import DateTime
 
 import appy
+from appy import n
 from appy.px import Px
 from ..fields import Field, Show
 from ..fields.file import FileInfo
@@ -58,7 +59,7 @@ class Config:
 class Mailing:
     '''Represents a mailing list as can be used by a pod field (see below)'''
 
-    def __init__(self, id, name=None, logins=None, subject=None, body=None):
+    def __init__(self, id, name=n, logins=n, subject=n, body=n):
         # The mailing list ID, an element among available mailings as defined in
         # Pod.mailing.
         self.id = id
@@ -184,7 +185,7 @@ class Pod(Field):
         # "l"eft-align layout
         l = Layouts(view=LayoutF('f;'))
         # Inline layout
-        inline = Layouts(view=Layout('f', width=None, css='inline', align=''))
+        inline = Layouts(view=Layout('f', width=n, css='inline', align=''))
 
     # Icon allowing to generate a given template in a given format
     pxIcon = Px('''
@@ -578,22 +579,20 @@ class Pod(Field):
 
     edit = search = ''
 
-    def __init__(self, validator=None, show=Show.TR, renderable=None,
-      page='main', group=None, layouts=None, move=0, readPermission='read',
-      writePermission='write', width=None, height=None, maxChars=None,
-      colspan=1, master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, template=None,
-      templateName=None, useTemplateName=None, showTemplate=None,
-      mergeTemplates=False, freezeTemplate=None, showFrozenOnly=True,
-      maxPerRow=5, context=None, stylesMapping={}, stylesOutlineDeltas=None,
-      formats=None, getChecked=None, mailing=None, mailingName=None,
-      showMailing=None, mailingInfo=None, view=None, cell=None, buttons=None,
-      edit=None, custom=None, xml=None, translations=None, downloadName=None,
-      downloadDisposition='attachment', forceOoCall=False,
-      optimalColumnWidths=False, distributeColumns=None, script=None,
-      pdfOptions='ExportNotes=True', tabbedCR=False, fonts=None, confirm=False,
-      raiseOnError=False, action=None, beforeAction=None, multiObjects=False,
-      finalizeFunction=None, crumb=None):
+    def __init__(self, validator=n, show=Show.TR, renderable=n, page='main',
+      group=n, layouts=n, move=0, readPermission='read',
+      writePermission='write', width=n, height=n, maxChars=n, colspan=1,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, template=n, templateName=n,
+      useTemplateName=n, showTemplate=n, mergeTemplates=False, freezeTemplate=n,
+      showFrozenOnly=True, maxPerRow=5, context=n, stylesMapping={},
+      stylesOutlineDeltas=n, formats=n, getChecked=n, mailing=n, mailingName=n,
+      showMailing=n, mailingInfo=n, view=n, cell=n, buttons=n, edit=n, custom=n,
+      xml=n, translations=n, downloadName=n, downloadDisposition='attachment',
+      forceOoCall=False, optimalColumnWidths=False, distributeColumns=n,
+      script=n, pdfOptions='ExportNotes=True', tabbedCR=False, fonts=n,
+      confirm=False, raiseOnError=False, action=n, beforeAction=n,
+      multiObjects=False, finalizeFunction=n, crumb=n):
         # Param "template" stores the path to the pod template(s). If there is
         # a single template, a string is expected. Else, a list or tuple of
         # strings is expected. Every such path must be relative to your
@@ -858,12 +857,11 @@ class Pod(Field):
         # be available in the POD context, as request attribute req.crumb.
         self.crumb = crumb
         # Call the base constructor
-        super().__init__(None, (0,1), None, None, show, renderable, page, group,
-          layouts, move, False, True, None, None, False, None, readPermission,
-          writePermission, width, height, None, colspan, master, masterValue,
-          focus, historized, mapping, generateLabel, label, None, None, None,
-          None, False, False, view, cell, buttons, edit, custom, xml,
-          translations)
+        super().__init__(n, (0,1), n, n, show, renderable, page, group, layouts,
+          move, False, True, n, n, False, n, readPermission, writePermission,
+          width, height, n, colspan, master, masterValue, masterSnub, focus,
+          historized, mapping, generateLabel, label, n, n, n, n, False, False,
+          view, cell, buttons, edit, custom, xml, translations)
         # Param "persist" is False, but actual persistence for this field is
         # determined by freezing.
         self.validable = False
@@ -956,8 +954,8 @@ class Pod(Field):
             r = elems[0]
         return r
 
-    def getDownloadName(self, o, template, format=None, queryRelated=False,
-                        bypassMethod=False, titleMethod=None):
+    def getDownloadName(self, o, template, format=n, queryRelated=False,
+                        bypassMethod=False, titleMethod=n):
         '''Gets the name of the pod result as will be seen by the user that will
            download it. Ensure the returned name is not too long for the OS that
            will store the downloaded file with this name.'''
@@ -1043,7 +1041,7 @@ class Pod(Field):
                 else: r[fmt] = [mailing]
         return r
 
-    def getTagId(self, c, fmt=None):
+    def getTagId(self, c, fmt=n):
         '''Returns an identifier for the icon (if p_fmt is there) or selector
            tag (else) related to a POD template.'''
         suffix = fmt or 'sel'
@@ -1180,10 +1178,9 @@ class Pod(Field):
             if show and not show(o, template):
                 o.raiseUnauthorized()
 
-    def getValue(self, o, name=None, layout=None, template=None, format=None,
-                 result=None, queryData=None, computeCustomContext=None,
-                 secure=True, executeAction=True, single=None, crumb=None,
-                 at=None, raiseError=False):
+    def getValue(self, o, name=n, layout=n, template=n, format=n, result=n,
+                 queryData=n, computeCustomContext=n, secure=True,
+                 executeAction=True, single=n, crumb=n, at=n, raiseError=False):
         '''For a pod field, getting its value means computing a pod document or
            returning a frozen one.'''
         # A pod field differs from other field types because there can be
@@ -1304,7 +1301,7 @@ class Pod(Field):
         # Get a FileInfo object to manipulate the file on the filesystem
         return FileInfo(result, inDb=False, uploadName=fileName)
 
-    def getBaseName(self, template=None):
+    def getBaseName(self, template=n):
         '''Gets the "base name" of p_template (or self.template[0] if not
            given). The base name is the name of the template, without path
            and extension. Moreover, if the template is a pointer to another one
@@ -1319,12 +1316,12 @@ class Pod(Field):
             r = os.path.splitext(elems[0])[0] + elems[1][1:].capitalize()
         return r
 
-    def getFreezeName(self, template=None, format='pdf', sep='.'):
+    def getFreezeName(self, template=n, format='pdf', sep='.'):
         '''Gets the name on disk on the frozen document corresponding to this
            pod field, p_template and p_format.'''
         return f'{self.name}_{self.getBaseName(template)}{sep}{format}'
 
-    def isFrozen(self, o, template=None, format='pdf', altDbFolder=None):
+    def isFrozen(self, o, template=n, format='pdf', altDbFolder=n):
         '''Is there a frozen document for thid pod field, on p_o, for p_template
            in p_format? If yes, it returns the absolute path to the frozen
            doc.'''
@@ -1345,7 +1342,7 @@ class Pod(Field):
             r = r, os.path.join(altDbFolder, relative, fileName)
         return r
 
-    def freeze(self, o, template=None, format='pdf', secure=False, upload=None,
+    def freeze(self, o, template=n, format='pdf', secure=False, upload=n,
                freezeOdtOnError=True):
         '''Freezes, on p_o, a document for this pod field, for p_template in
            p_format'''
@@ -1404,7 +1401,7 @@ class Pod(Field):
             o.log(UPLOAD_OK % result)
         return doc
 
-    def unfreeze(self, o, template=None, format='pdf', secure=False):
+    def unfreeze(self, o, template=n, format='pdf', secure=False):
         '''Unfreezes, on p_o, the document for this pod field, for p_template
            in p_format.'''
         # Security check
@@ -1419,7 +1416,7 @@ class Pod(Field):
             putils.FolderDeleter.deleteEmpty(str(folder))
             o.log(UNFROZ_OK % str(frozen))
 
-    def getFreezeFormats(self, o, template=None):
+    def getFreezeFormats(self, o, template=n):
         '''What are the formats into which the current user may freeze
            p_template?'''
         # One may have the right to edit the field to freeze anything in it

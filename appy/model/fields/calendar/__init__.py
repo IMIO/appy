@@ -10,11 +10,11 @@ from BTrees.IOBTree import IOBTree
 from persistent.list import PersistentList
 
 from appy.px import Px
-from appy import utils
 from .cell import Cell
 from .views import View
 from .event import Event
 from .other import Other
+from appy import utils, n
 from .. import Field, Show
 from .action import Action
 from .filter import Filter
@@ -62,7 +62,7 @@ class Layer:
     '''A layer is a set of additional data that can be activated or not on top
        of calendar data. Currently available for timelines only.'''
 
-    def __init__(self, name, label, onCell, activeByDefault=False, legend=None,
+    def __init__(self, name, label, onCell, activeByDefault=False, legend=n,
                  merge=False):
         # p_name must hold a short name or acronym, unique among all layers
         self.name = name
@@ -110,7 +110,7 @@ class Layer:
         # Layers will be chained: one layer will access the previous one in the
         # stack via attribute "previous". "previous" fields will automatically
         # be filled by the Calendar.
-        self.previous = None
+        self.previous = n
 
     def getCellInfo(self, o, activeLayers, date, other, events, preComputed):
         '''Get the cell info from this layer or one previous layer when
@@ -126,7 +126,7 @@ class Layer:
 
     def getLegendEntries(self, o):
         '''Returns the legend entries by calling method in self.legend'''
-        return self.legend(o) if self.legend else None
+        return self.legend(o) if self.legend else n
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Calendar(Field):
@@ -164,7 +164,7 @@ class Calendar(Field):
     class Layouts(Layouts):
         '''Calendar-specific layouts'''
         b = Layouts(edit='f', view='l-d-f')
-        n = Layouts(Layout('l-f', width=None))
+        n = Layouts(Layout('l-f', width=n))
 
         @classmethod
         def getDefault(class_, field):
@@ -242,25 +242,22 @@ class Calendar(Field):
     # The format allowing to produce a key representing a day
     dayKey = '%Y/%m/%d'
 
-    def __init__(self, eventTypes=None, eventNameMethod=None,
-      allowedEventTypes=None, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show='view', renderable=None, page='main',
-      group=None, layouts=None, move=0, readPermission='read',
-      writePermission='write', width='100%', height=300, colspan=1, master=None,
-      masterValue=None, focus=False, mapping=None, generateLabel=None,
-      label=None, maxEventLength=50, render='month', others=None,
-      timelineName=None, timelineMonthName=None, additionalInfo=None,
-      startDate=None, endDate=None, defaultDate=None, timeslots=None,
-      slotMap=None, cellInfo=None, gradients=None, showNoCellInfo=False,
-      columnColors=None, preCompute=None, applicableEvents=None, totalRows=None,
-      totalCols=None, validation=None, layers=None, layersSelector=True,
-      topPx=None, bottomPx=None, actions=None, filters=None,
-      selectableEmptyCells=False, legend=None, view=None, cell=None,
-      buttons=None, edit=None, editable=True, custom=None, xml=None,
-      translations=None, delete=True, beforeDelete=None, afterCreate=None,
+    def __init__(self, eventTypes=n, eventNameMethod=n, allowedEventTypes=n,
+      validator=n, multiplicity=(0,1), default=n, defaultOnEdit=n, show='view',
+      renderable=n, page='main', group=n, layouts=n, move=0,
+      readPermission='read', writePermission='write', width='100%', height=300,
+      colspan=1, master=n, masterValue=n, masterSnub=n, focus=False, mapping=n,
+      generateLabel=n, label=n, maxEventLength=50, render='month', others=n,
+      timelineName=n, timelineMonthName=n, additionalInfo=n, startDate=n,
+      endDate=n, defaultDate=n, timeslots=n, slotMap=n, cellInfo=n, gradients=n,
+      showNoCellInfo=False, columnColors=n, preCompute=n, applicableEvents=n,
+      totalRows=n, totalCols=n, validation=n, layers=n, layersSelector=True,
+      topPx=n, bottomPx=n, actions=n, filters=n, selectableEmptyCells=False,
+      legend=n, view=n, cell=n, buttons=n, edit=n, editable=True, custom=n,
+      xml=n, translations=n, delete=True, beforeDelete=n, afterCreate=n,
       selectableMonths=6, selectableWeeks=4, createEventLabel='which_event',
-      style='calTable', strictMonths=False, houredWidth='10em', fullDay=None,
-      createObjects=None):
+      style='calTable', strictMonths=False, houredWidth='10em', fullDay=n,
+      createObjects=n):
 
         '''Calendar field constructor'''
 
@@ -638,11 +635,11 @@ class Calendar(Field):
         # will be used as specific error message.
 
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
-          show, renderable, page, group, layouts, move, False, True, None, None,
-          False, None, readPermission, writePermission, width, height, None,
-          colspan, master, masterValue, focus, False, mapping, generateLabel,
-          label, None, None, None, None, True, False, view, cell, buttons, edit,
-          custom, xml, translations)
+          show, renderable, page, group, layouts, move, False, True, n, n,
+          False, n, readPermission, writePermission, width, height, n, colspan,
+          master, masterValue, masterSnub, focus, False, mapping, generateLabel,
+          label, n, n, n, n, True, False, view, cell, buttons, edit, custom,
+          xml, translations)
 
     def getRenderInfo(self, render):
         '''Extract renderring info from p_render. Raise an error if data is
@@ -667,7 +664,7 @@ class Calendar(Field):
             i -= 1
         return layers
 
-    def log(self, o, msg, date=None):
+    def log(self, o, msg, date=n):
         '''Logs m_msg, field-specifically prefixed.'''
         prefix = f'{o.iid}:{self.name}'
         if date:
@@ -695,8 +692,8 @@ class Calendar(Field):
         '''Gets the Cell object determining how to render a cell containing an
            event of this p_eventType.'''
         info = self.cellInfo
-        if info is None:
-            r = None
+        if info is n:
+            r = n
         elif isinstance(info, dict):
             r = info.get(eventType)
         else: # A method
@@ -708,7 +705,7 @@ class Calendar(Field):
            it for displaying this additional info in the calendar, at some
            p_date and p_hour.'''
         info = self.additionalInfo
-        return info(o, date, hour, render, preComputed) if info else None
+        return info(o, date, hour, render, preComputed) if info else n
 
     def getEventTypes(self, o):
         '''Returns the (dynamic or static) event types as defined in
@@ -769,7 +766,7 @@ class Calendar(Field):
             if not r.message: r.message = ''
         return r
 
-    def getEventsAt(self, o, date, empty=None, typeInfo=None):
+    def getEventsAt(self, o, date, empty=n, typeInfo=n):
         '''Returns the list of events that exist at some p_date (=day)'''
         # p_date can be:
         # - a DateTime object;
@@ -816,9 +813,9 @@ class Calendar(Field):
         '''Returns the event type of the first event defined at p_day, or None
            if unspecified.'''
         events = self.getEventsAt(o, date)
-        return events[0].eventType if events else None
+        return events[0].eventType if events else n
 
-    def getEventsBySlot(self, o, date, addEmpty=False, ifEmpty='-', expr=None,
+    def getEventsBySlot(self, o, date, addEmpty=False, ifEmpty='-', expr=n,
                         persist=False):
         '''Returns a list of (s_timeslot, event) tuples for every event defined
            in this calendar on p_o at this p_date.'''
@@ -843,7 +840,7 @@ class Calendar(Field):
             return (start.year(), start.month(), start.day(),
                     end.year(),   end.month(),   end.day())
 
-    def walkEvents(self, o, callback, dateRange=None):
+    def walkEvents(self, o, callback, dateRange=n):
         '''Walks, on p_o, the calendar value in chronological order for this
            field and calls p_callback for every day containing events. The
            callback must accept 3 args: p_o, the current day (as a DateTime

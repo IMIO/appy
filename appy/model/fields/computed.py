@@ -4,6 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from DateTime import DateTime
 
+from appy import n
 from appy.px import Px
 from appy.model.searches import Search
 from appy.model.fields.text import Text
@@ -12,7 +13,7 @@ from appy.model.fields import Field, Show
 from appy.model.fields.string import String
 from appy.ui.layout import Layouts, Layout, LayoutF
 
-# Error messages - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 UNFREEZ   = 'This field is unfreezable.'
 METHOD_NO = 'Specify a method in parameter "method".'
 METHOD_KO = 'Wrong value "%s". Parameter "method" must contain a method or ' \
@@ -48,17 +49,16 @@ class Computed(Field):
     # If dates are stored in a Computed field, the date filter may be required
     pxFilterDate = Date.pxFilter
 
-    def __init__(self, multiplicity=(0,1), default=None, defaultOnEdit=None,
-      show=None, renderable=None, page='main', group=None, layouts=None, move=0,
-      indexed=False, mustIndex=True, indexType=None, indexValue=None,
-      emptyIndexValue=None, searchable=False, filterField=None,
-      readPermission='read', writePermission='write', width=None, height=None,
-      maxChars=None, colspan=1, method=None, formatMethod=None, plainText=False,
-      master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, sdefault='', scolspan=1,
-      swidth=None, sheight=None, fwidth=4, context=None, view=None, cell=None,
-      buttons=None, edit=None, custom=None, xml=None, translations=None,
-      unfreezable=False, validable=False, pythonType=None,
+    def __init__(self, multiplicity=(0,1), default=n, defaultOnEdit=n, show=n,
+      renderable=n, page='main', group=n, layouts=n, move=0, indexed=False,
+      mustIndex=True, indexType=n, indexValue=n, emptyIndexValue=n,
+      searchable=False, filterField=n, readPermission='read',
+      writePermission='write', width=n, height=n, maxChars=n, colspan=1,
+      method=n, formatMethod=n, plainText=False, master=n, masterValue=n,
+      masterSnub=n, focus=False, historized=False, mapping=n, generateLabel=n,
+      label=n, sdefault='', scolspan=1, swidth=n, sheight=n, fwidth=4,
+      context=n, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
+      translations=n, unfreezable=False, validable=False, pythonType=n,
       matchDefault='precise'):
         # The Python method used for computing the field value, or a PX
         self.method = method
@@ -118,13 +118,13 @@ class Computed(Field):
         #                |     Integer, String or Select.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Call the base constructor
-        super().__init__(None, multiplicity, default, defaultOnEdit, show,
+        super().__init__(n, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, emptyIndexValue, searchable, filterField, readPermission,
-          writePermission, width, height, None, colspan, master, masterValue,
-          focus, historized, mapping, generateLabel, label, sdefault, scolspan,
-          swidth, sheight, False, False, view, cell, buttons, edit, custom, xml,
-          translations)
+          writePermission, width, height, n, colspan, master, masterValue,
+          masterSnub, focus, historized, mapping, generateLabel, label,
+          sdefault, scolspan, swidth, sheight, False, False, view, cell,
+          buttons, edit, custom, xml, translations)
         # When a custom widget is built from a computed field, its values are
         # potentially editable and validable, so "validable" must be True.
         self.validable = validable
@@ -143,7 +143,7 @@ class Computed(Field):
         # The base Python type corresponding to values computed by this field
         self.pythonType = pythonType
         # Set a filter PX if this field is indexed
-        self.dateProto = None # This attribute is explained below
+        self.dateProto = n # This attribute is explained below
         if self.indexed:
             itype = self.indexType
             if itype in ('TextIndex', 'RichIndex') or self.pythonType == str:
@@ -211,8 +211,7 @@ class Computed(Field):
         r = self.callMethod(o, method, cache=False)
         if isinstance(r, Search): return r
 
-    def getValue(self, o, name=None, layout=None, single=None,
-                 forceCompute=False, at=None):
+    def getValue(self, o, name=n, layout=n, single=n, forceCompute=False, at=n):
         '''Computes the field value on p_obj or get it from the database if it
            has been frozen.'''
         # Is there a database value ?
@@ -232,7 +231,7 @@ class Computed(Field):
             elif isinstance(r, Search): return self.renderSearch(o, r)
             return r
 
-    def getSearchValue(self, req, value=None):
+    def getSearchValue(self, req, value=n):
         '''Depending on p_self.indexType and p_self.pythonType, call the
            appropriate method.'''
         if self.indexType in ('TextIndex', 'RichIndex'):
@@ -264,7 +263,7 @@ class Computed(Field):
             return self.dateProto.getFilterInfo(mode)
 
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
-                          language=None):
+                          language=n):
         if self.formatMethod:
             r = self.formatMethod(o, value)
         else:

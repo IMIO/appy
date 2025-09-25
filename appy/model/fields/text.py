@@ -4,24 +4,26 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import re
 
+from appy import n
+from . import Field
 from appy.px import Px
 from appy.xml import Parser
 from appy.utils import flipDict
 from appy.ui.layout import Layouts
 from appy.xml.escape import Escape
-from appy.model.fields import Field
+from .multilingual import Multilingual
 from appy.utils import string as sutils
 from appy.xml.cleaner import StringCleaner
 from appy.ui.layout import Layouts, Layout
 from appy.database.operators import and_, in_
 from appy.database.indexes.text import TextIndex
-from appy.model.fields.multilingual import Multilingual
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+IN_ED_MLG  = 'Is is currently not possible to inline-edit multilingual Text ' \
+             'fields.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bn = '\n'
-
-IN_ED_MLG  = 'Is is currently not possible to inline-edit multilingual Text ' \
-             'fields.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Replacements:
@@ -65,7 +67,7 @@ class Replacements:
     # attribute below).
     regex = re.compile(r'\*(.+?)\*')
 
-    def __init__(self, replacements=None):
+    def __init__(self, replacements=n):
         # Apply custom replacements (if any). In order to disable a default
         # replacement, add it in p_replacement with a "None" value.
         if replacements:
@@ -86,7 +88,7 @@ class Replacements:
                 r = r[0]
         return r
 
-    def applyOn(self, text, fun=None, toReopen=None):
+    def applyOn(self, text, fun=n, toReopen=n):
         '''Apply replacements on p_text and return a tuple
                            (s_result, [s_toReopen])
         '''
@@ -165,7 +167,7 @@ class Text2Html:
     defaultReplacements = Replacements()
 
     def __init__(self, p='p', prefix='', replacements='default',
-                 replacementsFun=None, preListClass=None, lastLiClass=None):
+                 replacementsFun=n, preListClass=n, lastLiClass=n):
         # The HTML tag used for representing a paragraph
         self.p = p
         # A chunk of HTML code that could be inserted just after the first
@@ -366,8 +368,7 @@ class Icon:
     '''An icon from the toolbar when the Text field is used in "structured"
        mode.'''
 
-    def __init__(self, name, type, label=None, icon=None, data=None,
-                 shortcut=None):
+    def __init__(self, name, type, label=n, icon=n, data=n, shortcut=n):
         # A short, unique name for the icon
         self.name = name
         # The following type of icons exist. Depending on the type, p_data
@@ -652,19 +653,18 @@ class Text(Multilingual, Field):
      <input type="text" maxlength=":field.maxChars" size=":field.swidth"
             value=":field.sdefault" name=":widgetName"/>''')
 
-    def __init__(self, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
-      layouts=None, move=0, indexed=False, mustIndex=True, indexValue=None,
-      searchable=False, filterField=None, readPermission='read',
-      writePermission='write', width=60, height=5, maxChars=None, colspan=1,
-      master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, sdefault='', scolspan=1,
-      swidth=20, fwidth=10, sheight=None, persist=True, inlineEdit=False,
-      view=None, cell=None, buttons=None, edit=None, custom=None, xml=None,
-      translations=None, indexType='TextIndex',
+    def __init__(self, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
+      move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
+      filterField=n, readPermission='read', writePermission='write', width=60,
+      height=5, maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n,
+      focus=False, historized=False, mapping=n, generateLabel=n, label=n,
+      sdefault='', scolspan=1, swidth=20, fwidth=10, sheight=n, persist=True,
+      inlineEdit=False, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
+      translations=n, indexType='TextIndex',
       # Specific attributes
-      placeholder=None, languages=('en',), languagesLayouts=None,
-      viewSingle=False, structured=False, readonly=False, invalidTexts=None):
+      placeholder=n, languages=('en',), languagesLayouts=n, viewSingle=False,
+      structured=False, readonly=False, invalidTexts=n):
         # You can define a placeholder in the following attribute. Please
         # consult the homonym attribute on class String from string.py for more
         # information.
@@ -695,11 +695,11 @@ class Text(Multilingual, Field):
         Multilingual.__init__(self, languages, languagesLayouts, viewSingle)
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, None, searchable, filterField, readPermission,
+          indexValue, n, searchable, filterField, readPermission,
           writePermission, width, height, maxChars, colspan, master,
-          masterValue, focus, historized, mapping, generateLabel, label,
-          sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,
-          buttons, edit, custom, xml, translations)
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, sdefault, scolspan, swidth, sheight, persist, inlineEdit, view,
+          cell, buttons, edit, custom, xml, translations)
         # The *f*ilter width
         self.fwidth = fwidth
         # Specify a filter PX if the field content is indexed
@@ -765,7 +765,7 @@ class Text(Multilingual, Field):
         return r
 
     def getUniFormattedValue(self, o, value, layout='view', showChanges=False,
-                             language=None, contentLanguage=None):
+                             language=n, contentLanguage=n):
         '''Returns the formatted variant of p_value. If p_contentLanguage is
            specified, p_value is the p_contentLanguage part of a multilingual
            value.'''
@@ -816,7 +816,7 @@ class Text(Multilingual, Field):
         return r
 
     @classmethod
-    def computeSearchValue(class_, field, req, value=None):
+    def computeSearchValue(class_, field, req, value=n):
         '''Converts text encoded in a search form into a range search or into
            individual words within an and-operator.'''
         r = Field.getSearchValue(field, req, value=value).strip()
@@ -839,7 +839,7 @@ class Text(Multilingual, Field):
                 r = r[0]
         return r
 
-    def getSearchValue(self, req, value=None):
+    def getSearchValue(self, req, value=n):
         '''See called method's docstring'''
         return Text.computeSearchValue(self, req, value=value)
 

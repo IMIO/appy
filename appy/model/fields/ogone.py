@@ -3,6 +3,8 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import hashlib, copy
+
+from appy import n
 from appy.px import Px
 from appy.utils import asDict
 from appy.model.fields import Field
@@ -133,18 +135,18 @@ class Ogone(Field):
 
     edit = search = ''
 
-    def __init__(self, orderMethod, responseMethod, show='view',
-      renderable=None, page='main', group=None, layouts=None, move=0,
-      readPermission='read', writePermission='write', width=None, height=None,
-      colspan=1, master=None, masterValue=None, focus=False, mapping=None,
-      generateLabel=None, label=None, view=None, cell=None, buttons=None,
-      edit=None, custom=None, xml=None, translations=None):
+    def __init__(self, orderMethod, responseMethod, show='view', renderable=n,
+      page='main', group=n, layouts=n, move=0, readPermission='read',
+      writePermission='write', width=n, height=n, colspan=1, master=n,
+      masterValue=n, masterSnub=n, focus=False, mapping=n, generateLabel=n,
+      label=n, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
+      translations=n):
         # Call the base constructor
-        super().__init__(None, (0,1), None, None, show, renderable, page, group,
-          layouts, move, False, True, None, None, False, None, readPermission,
-          writePermission, width, height, None, colspan, master, masterValue,
-          focus, False, mapping, generateLabel, label, None, None, None, None,
-          False, False, view, cell, buttons, edit, custom, xml, translations)
+        super().__init__(n, (0,1), n, n, show, renderable, page, group, layouts,
+          move, False, True, n, n, False, n, readPermission, writePermission,
+          width, height, n, colspan, master, masterValue, masterSnub, focus,
+          False, mapping, generateLabel, label, n, n, n, n, False, False, view,
+          cell, buttons, edit, custom, xml, translations)
         # orderMethod must contain a method returning a dict containing info
         # about the order. Following keys are mandatory, among others:
         #   * orderID   An identifier for the order. Don't use the object ID
@@ -190,7 +192,7 @@ class Ogone(Field):
         r = (passphrase.join(r) + passphrase).encode()
         return hashlib.sha512(r).hexdigest()
 
-    def getValue(self, o, name=None, layout=None, single=None, at=None):
+    def getValue(self, o, name=n, layout=n, single=n, at=n):
         '''The "value" of the Ogone field is a dict that collects all the
            necessary info for making the payment.'''
         tool = o.tool

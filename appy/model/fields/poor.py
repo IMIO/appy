@@ -2,6 +2,7 @@
 # ~license~
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from appy import n
 from appy.px import Px
 from appy.xml.cleaner import Cleaner
 from appy.model.fields.rich import Rich
@@ -50,8 +51,8 @@ AutoCorrect.default = AutoCorrect()
 class Icon:
     '''An icon from the toolbar'''
 
-    def __init__(self, name, type, label=None, icon=None, data=None, args=None,
-                 shortcut=None, attrs=None):
+    def __init__(self, name, type, label=n, icon=n, data=n, args=n, shortcut=n,
+                 attrs=n):
         # A short, unique name for the icon
         self.name = name
         # The following type of icons exist. Depending on the type, p_data
@@ -244,8 +245,8 @@ class Poor(Rich):
         '''Rich-specific layouts'''
         editBase = 'd2-f;rv='
         viewBase = 'fl'
-        g = Layouts(edit=Layout(editBase, width=None),
-                    view=Layout(viewBase, width=None))
+        g = Layouts(edit=Layout(editBase, width=n),
+                    view=Layout(viewBase, width=n))
         # A wide variant
         gw = Layouts(edit=Layout(editBase), view=Layout(viewBase))
 
@@ -701,29 +702,28 @@ class Poor(Rich):
       <script if="linkNow">:linkJs</script>
      </x>''')
 
-    def __init__(self, validator=None, multiplicity=(0,1), default=None,
-      defaultOnEdit=None, show=True, renderable=None, page='main', group=None,
-      layouts=None, move=0, indexed=False, mustIndex=True, indexValue=None,
-      searchable=False, filterField=None, readPermission='read',
-      writePermission='write', width='25em', height='7em', maxChars=None,
-      colspan=1, master=None, masterValue=None, focus=False, historized=False,
-      mapping=None, generateLabel=None, label=None, sdefault='', scolspan=1,
-      swidth=None, fwidth=10, sheight=None, persist=True, documents=False,
-      languages=('en',), languagesLayouts=None, viewSingle=False,
-      inlineEdit=False, view=None, cell=None, buttons=None, edit=None,
-      custom=None, xml=None, translations=None, inject=False, valueIfEmpty='',
-      viewCss='xhtmlV', autoCorrect=AutoCorrect.default, font=None,
-      transformText=None, toItalicize=None, tagAttributes=None, stripped=None):
+    def __init__(self, validator=n, multiplicity=(0,1), default=n,
+      defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
+      move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
+      filterField=n, readPermission='read', writePermission='write',
+      width='25em', height='7em', maxChars=n, colspan=1, master=n,
+      masterValue=n, masterSnub=n, focus=False, historized=False, mapping=n,
+      generateLabel=n, label=n, sdefault='', scolspan=1, swidth=n, fwidth=10,
+      sheight=n, persist=True, documents=False, languages=('en',),
+      languagesLayouts=n, viewSingle=False, inlineEdit=False, view=n, cell=n,
+      buttons=n, edit=n, custom=n, xml=n, translations=n, inject=False,
+      valueIfEmpty='', viewCss='xhtmlV', autoCorrect=AutoCorrect.default,
+      font=n, transformText=n, toItalicize=n, tagAttributes=n, stripped=n):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
           indexValue, searchable, filterField, readPermission, writePermission,
-          width, height, maxChars, colspan, master, masterValue, focus,
-          historized, mapping, generateLabel, label, sdefault, scolspan, swidth,
-          fwidth, sheight, persist, None, None, documents, None,
-          languages, languagesLayouts, viewSingle, inlineEdit, 'Standard',
-          view, cell, buttons, edit, custom, xml, translations, inject,
-          valueIfEmpty, viewCss, None, transformText, toItalicize, stripped)
+          width, height, maxChars, colspan, master, masterValue, masterSnub,
+          focus, historized, mapping, generateLabel, label, sdefault, scolspan,
+          swidth, fwidth, sheight, persist, n, n, documents, n, languages,
+          languagesLayouts, viewSingle, inlineEdit, 'Standard', view, cell,
+          buttons, edit, custom, xml, translations, inject, valueIfEmpty,
+          viewCss, n, transformText, toItalicize, stripped)
         # As-you-type replacements are defined by placing an Autocorrect object
         # in this attribute.
         self.autoCorrect = autoCorrect
