@@ -98,11 +98,11 @@ class Action(Field):
                 label=_('label', field=field);
                 multi=multi|None;
                 className=className|o.class_.name;
-                inputTitle=field.getInputTitle(o, label);
-                inputLabel=field.getInputLabel(label, layout);
                 onCell=layout in field.cellLayouts;
                 picto=picto|'pictoB';
                 asPicto=not onCell and (picto != 'pictoB');
+                inputTitle=field.getInputTitle(o, label, asPicto);
+                inputLabel=field.getInputLabel(label, layout);
                 css=ui.Button.getCss(label, onCell, field.render,
                                      iconOut=field.iconOut)"
         id=":formId" action=":field.getFormAction(_ctx_)"
@@ -142,7 +142,7 @@ class Action(Field):
          onclick=":field.getOnClick(_ctx_) if not isFake else ''">
        <img src=":url(field.icon, base=field.iconBase, ram=field.iconRam)"
             class=":picto"/>
-       <div style=":'display:%s' % config.ui.pageDisplay">::inputTitle</div>
+       <div style=":f'display:{config.ui.pageDisplay}'">::inputTitle</div>
       </a>
 
       <!-- As button or icon -->
@@ -544,11 +544,18 @@ class Action(Field):
             msg = _('action_unexecutable')
         return msg
 
-    def getInputTitle(self, o, label):
+    def getInputTitle(self, o, label, asPicto):
         '''Returns the content of attribute "title" for the "input" field
            corresponding to the action in the ui.'''
+        # If p_asPicto is True, there is no input field, but a "a" tag. In that
+        # case, "input title" is the clickable name of the action.
         if not self.hasDescr: return label
-        return '%s: %s' % (label, o.translate(self.descrId))
+        descr = o.translate(self.descrId)
+        if asPicto:
+            r = f'<abbr title="{descr}">{label}</abbr>'
+        else:
+            r = f'{label}: {descr}'
+        return r
 
     def getIconUrl(self, url, pre='s', asBG=False):
         '''Returns the URL to p_self's (s)icon (depending on p_pre(fix)), to be
@@ -557,9 +564,9 @@ class Action(Field):
         if asBG and self.iconOut: return ''
         # If p_asBG, get the background image dimensions
         bg = self.iconSize if asBG else False
-        return url(getattr(self, '%sicon' % pre),
-                   base=getattr(self, '%siconBase' % pre),
-                   ram=getattr(self, '%siconRam' % pre), bg=bg)
+        return url(getattr(self, f'{pre}icon'),
+                   base=getattr(self, f'{pre}iconBase'),
+                   ram=getattr(self, f'{pre}iconRam'), bg=bg)
 
     def getInputLabel(self, label, layout):
         '''Returns the label to display on the button corresponding to this

@@ -1714,6 +1714,8 @@ class Field:
         '''For sub-classes that propose attribute "disabled", this method allows
            to answer the question: must p_self be disabled on the "edit"
            layout ?'''
+        # CAUTION :: The Ref field defines an attribute named "disabled" having
+        #            specific, alternate semantics.
         return self.getAttribute(o, 'disabled', cache=False)
 
     def getGroup(self, layout):

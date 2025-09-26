@@ -62,61 +62,64 @@ class Date(Field):
     # (a) with this precise date, or
     # (b) until this date, or
     # (c) from this date ?
-    match = ('precise', 'until', 'from')
+    match = 'precise', 'until', 'from'
 
     edit = Px('''
-     <!-- Native variant -->
-     <input if="field.native" name=":name" id=":name"
-            style=":field.getDateStyle(o)"
-            type=":field.nativeWidgets[field.format]"
-            value=":field.getNativeValue(
-             field.getInputValue(inRequest, requestValue, rawValue))"/>
+     <x var="disabled=field.getDisabled(o)">
 
-     <!-- Variant with one select widget for every part of the date/time -->
-     <x if="not field.native"
-        var="years=field.getSelectableYears(o);
-             disabled=field.getDisabled(o)">
+      <!-- Native variant -->
+      <input if="field.native" name=":name" id=":name" disabled=":disabled"
+             style=":field.getDateStyle(o)"
+             type=":field.nativeWidgets[field.format]"
+             value=":field.getNativeValue(
+              field.getInputValue(inRequest, requestValue, rawValue))"/>
 
-      <!-- Day -->
-      <select if="field.showDay" var2="days=range(1,32); part=f'{name}_day'"
-              name=":part" id=":part" disabled=":disabled">
-       <option value="">-</option>
-       <option for="day in days" var2="zDay=str(day).zfill(2)" value=":zDay"
-         selected=":field.isSelected(o, part, 'day', \
-                                     day, rawValue)">:zDay</option>
-      </select> 
+      <!-- Variant with one select widget for every part of the date/time -->
+      <x if="not field.native"
+         var2="years=field.getSelectableYears(o)">
 
-      <!-- Month -->
-      <select var="months=range(1,13); part=f'{name}_month'"
-              name=":part" id=":part" disabled=":disabled">
-       <option value="">-</option>
-       <option for="month in months"
-         var2="zMonth=str(month).zfill(2)" value=":zMonth"
-         selected=":field.isSelected(o, part, 'month', \
-                                     month, rawValue)">:zMonth</option>
-      </select> 
-
-      <!-- Year -->
-      <x var="part=f'{name}_year'">
-       <select if="field.showYear" name=":part" id=":part" disabled=":disabled">
+       <!-- Day -->
+       <select if="field.showDay" var2="days=range(1,32); part=f'{name}_day'"
+               name=":part" id=":part" disabled=":disabled">
         <option value="">-</option>
-        <option for="year in years" value=":year"
-          selected=":field.isSelected(o, part, 'year', \
-                                      year, rawValue)">:year</option>
-       </select>
-       <input if="not field.showYear" type="hidden" name=":part"
-              value=":field.DateTime().year()"/>
-      </x>
+        <option for="day in days" var2="zDay=str(day).zfill(2)" value=":zDay"
+          selected=":field.isSelected(o, part, 'day', \
+                                      day, rawValue)">:zDay</option>
+       </select> 
 
-      <!-- The icon for displaying the calendar popup -->
-      <x if="field.calendar and field.showYear and not disabled">
-       <input type="hidden" id=":name" name=":name"/>
-       <img id=":f'{name}_img'" src=":svg('calendar')" class="iconS"/>
-       <script>::field.getJsInit(name, years)</script>
-      </x>
+       <!-- Month -->
+       <select var="months=range(1,13); part=f'{name}_month'"
+               name=":part" id=":part" disabled=":disabled">
+        <option value="">-</option>
+        <option for="month in months"
+          var2="zMonth=str(month).zfill(2)" value=":zMonth"
+          selected=":field.isSelected(o, part, 'month', \
+                                      month, rawValue)">:zMonth</option>
+       </select> 
 
-      <!-- Hour and minutes -->
-      <x if="field.format == 0">:field.pxHour</x>
+       <!-- Year -->
+       <x var="part=f'{name}_year'">
+        <select if="field.showYear" name=":part" id=":part"
+                disabled=":disabled">
+         <option value="">-</option>
+         <option for="year in years" value=":year"
+           selected=":field.isSelected(o, part, 'year', \
+                                       year, rawValue)">:year</option>
+        </select>
+        <input if="not field.showYear" type="hidden" name=":part"
+               value=":field.DateTime().year()"/>
+       </x>
+
+       <!-- The icon for displaying the calendar popup -->
+       <x if="field.calendar and field.showYear and not disabled">
+        <input type="hidden" id=":name" name=":name"/>
+        <img id=":f'{name}_img'" src=":svg('calendar')" class="iconS"/>
+        <script>::field.getJsInit(name, years)</script>
+       </x>
+
+       <!-- Hour and minutes -->
+       <x if="field.format == 0">:field.pxHour</x>
+      </x>
      </x>''')
 
     search = Px('''

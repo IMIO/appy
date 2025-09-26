@@ -633,6 +633,7 @@ class Text(Multilingual, Field):
              tbid=f'{tid}_tb';
              x=hostLayout and o.Lock.set(o, field=field);
              placeholder=field.getPlaceholder(o);
+             disabled=field.getDisabled(o);
              showToolbar=field.showToolbar(ignoreInner=hostLayout)">
 
       <!-- Show the toolbar when relevant -->
@@ -645,7 +646,7 @@ class Text(Multilingual, Field):
       <textarea id=":tid" name=":tid" cols=":field.getTextareaCols()"
        style=":field.getTextareaStyle()" placeholder=":placeholder"
        readonly=":field.isReadonly(o)" onkeydown=":field.onKeyDown(tid)"
-       onfocus=":field.onFocus(tid, lg, hostLayout)"
+       onfocus=":field.onFocus(tid, lg, hostLayout)" disabled=":disabled"
        rows=":field.height">:field.getInputValue(inRequest, requestValue, value)
       </textarea></x>''')
 
@@ -664,7 +665,7 @@ class Text(Multilingual, Field):
       translations=n, indexType='TextIndex',
       # Specific attributes
       placeholder=n, languages=('en',), languagesLayouts=n, viewSingle=False,
-      structured=False, readonly=False, invalidTexts=n):
+      structured=False, readonly=False, invalidTexts=n, disabled=False):
         # You can define a placeholder in the following attribute. Please
         # consult the homonym attribute on class String from string.py for more
         # information.
@@ -691,6 +692,8 @@ class Text(Multilingual, Field):
         # Note that we are talking about non-exact matches here (ie, method
         # regex.search will be used, and not regex.match).
         self.invalidTexts = invalidTexts
+        # Must the field be viewable but disabled on the "edit" layout ?
+        self.disabled = disabled
         # Call base constructors
         Multilingual.__init__(self, languages, languagesLayouts, viewSingle)
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
