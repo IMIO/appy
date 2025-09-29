@@ -105,9 +105,9 @@ class State:
            are added for every permission within self.permissions.'''
         # Standardize parameters
         if type(roles) not in sequenceTypes: roles = (roles,)
-        if isinstance(permissions, str): permissions = (permissions,)
+        if isinstance(permissions, str): permissions = permissions,
         for perm, existingRoles in self.permissions.items():
-            if permissions and (perm not in permissions): continue
+            if permissions and perm not in permissions: continue
             # It is not possible to add p_roles if v_existingRoles is a method
             if callable(existingRoles): continue
             for role in roles:
@@ -121,8 +121,8 @@ class State:
         '''Removes p_roleNames within dict self.permissions. If p_permissions is
            specified, removal is restricted to those permissions. Else, removal
            occurs throughout the whole dict self.permissions.'''
-        if isinstance(roleNames, str): roleNames = (roleNames,)
-        if isinstance(permissions, str): permissions = (permissions,)
+        if isinstance(roleNames, str): roleNames = roleNames,
+        if isinstance(permissions, str): permissions = permissions,
         for perm, roles in self.permissions.items():
             if permissions and (perm not in permissions): continue
             for name in roleNames:
