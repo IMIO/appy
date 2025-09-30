@@ -371,12 +371,12 @@ class Config:
             # Extract simple user attributes
             params = self.getUserParams(headers)
             # Extract user global roles and groups
-            roles,groups2 = self.extractUserPrerogatives(tool, 'role', headers)
+            roles, groups2 = self.extractUserPrerogatives(tool, 'role', headers)
             groups,roles2 = self.extractUserPrerogatives(tool, 'group', headers)
         else:
             params = None
-            roles,groups2 = self.convertUserPrerogatives(tool, 'role', source)
-            groups,roles2 = self.convertUserPrerogatives(tool, 'group', source)
+            roles, groups2 = self.convertUserPrerogatives(tool, 'role', source)
+            groups, roles2 = self.convertUserPrerogatives(tool, 'group', source)
         # Merge found roles
         if roles or roles2:
             if roles and roles2:
