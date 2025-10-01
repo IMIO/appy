@@ -72,7 +72,7 @@ class Error:
             elif isinstance(error, traversal.handler.Guard.Error) and \
                  error.translated:
                 # Unauthorized with a specific human-readable message: use it
-                r = Escape.xhtml(error.translated)
+                r = error.translated
             else:
                 # Produce a standard message, completed with an optional
                 # additional message (in p_text).

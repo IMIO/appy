@@ -1448,6 +1448,42 @@ msgstr "Titre"
 msgid "Page_warning"
 msgstr "Attention: le téléversement d'images ne sera possible que si vous enregistrez la page et la modifiez à nouveau."
 
+#. Default: "Token"
+msgid "Page_token"
+msgstr "Token"
+
+#. Default: "Set a token"
+msgid "Page_setToken"
+msgstr "Définir un token"
+
+#. Default: "You are about to define a token on this page.\n\nThe possibly existing token will be replaced by a new one.\n\nProceed ?"
+msgid "Page_setToken_confirm"
+msgstr "Vous êtes sur le point de définir un token sur cette page.\n\nSi un token y était déjà défini, il sera remplacé par le nouveau.\n\nOn y va ?"
+
+#. Default: "This page and its potential sub-pages are protected by token ${token}."
+msgid "page_has_token"
+msgstr "Cette page et ses sous-pages potentielles sont protégées par le token ${token}."
+
+#. Default: "🪙 Token ${token} has been set on this page."
+msgid "page_token_set"
+msgstr "🪙 Le token ${token} a été défini sur cette page."
+
+#. Default: "It replaces deleted token ${token}."
+msgid "page_token_repl"
+msgstr "Il remplace le token supprimé ${token}."
+
+#. Default: "Delete the token"
+msgid "Page_delToken"
+msgstr "Enlever le token"
+
+#. Default: "The token set on this page, and the protection it involved, will disappear.\n\nAre you sure ?"
+msgid "Page_delToken_confirm"
+msgstr "Le token défini sur cette page, et la protection qu'il implique, vont disparaître.\n\nÊtes-vous sûr ?"
+
+#. Default: "This page is only accessible via an authentic and limited-time link, originating from a trusted third-party site or software."
+msgid "page_token_ko"
+msgstr "Cette page n'est accessible que depuis un lien authentique et à durée limitée, issu d'un logiciel ou site tiers de confiance."
+
 #. Default: "Linked carousel"
 msgid "Page_carousel"
 msgstr "Carrousel lié"

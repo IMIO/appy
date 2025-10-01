@@ -25,7 +25,7 @@ class Model:
                     'TooPermissive'
 
     # Appy standard global roles
-    globalRoles = 'Manager', 'Publisher'
+    globalRoles = publishers = 'Manager', 'Publisher'
 
     def __init__(self, config, classes, workflows):
         '''The unique Model object is created by the appy.model.loader.Loader'''

@@ -3216,7 +3216,7 @@ class Ref(Field):
                         # sibling.
                         r = upper
         # Don't return p_v if the sibling cannot be seen by the logged user
-        return r if r and r.allows('read') else None
+        return r if r and o.guard.mayView(r) else None
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #      Representation of this field within a class-diagram' class box

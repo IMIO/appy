@@ -2,9 +2,12 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import hashlib, datetime
+
 from ..px import Px
 from .base import Base
 from .user import User
+from ..utils import No
 from .fields import Show
 from .query import Query
 from .fields.pod import Pod
@@ -16,11 +19,13 @@ from .carousel import Carousel
 from ..xml.escape import Escape
 from .fields.group import Group
 from ..ui.sidebar import Sidebar
+from .fields.action import Action
 from .fields.select import Select
 from .fields.string import String
 from .fields.boolean import Boolean
 from .fields.integer import Integer
 from .fields.ref import Ref, autoref
+from ..utils import string as sutils
 from .fields.computed import Computed
 from .fields.phase import Page as FPage
 from ..ui.layout import Layout, Layouts
@@ -30,6 +35,44 @@ from .workflow.standard import Anonymous
 EXPR_ERR = 'Page "%s" (%s): error while evaluating page expression "%s" (%s).'
 EDITED   = 'Page %d %s within %s.'
 DELETED  = '%s deleted.'
+TOK_REPL = ' (replaces deleted token %s)'
+TOK_SET  = '%s :: Token %s set%s.'
+TOK_BASE = '%s (token-protected) :: Access tentative'
+TOK_NO   = f'{TOK_BASE} without token.'''
+TOK_KO   = f'{TOK_BASE} with wrong token.'''
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+br = '<br/>'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Config:
+    '''Part of the model config being specific to pages'''
+
+    def __init__(self):
+        # On any public page (ie, being accessible to the anonymous user),
+        # token, time-based security may be enabled. When it is the case, on
+        # such a page, a token may be generated (called "pageToken" below), and
+        # shared with some third-party software (TP). If the TP wants its users
+        # to access the page, he builds a link to the page, where he adds a
+        # parameter "_t_=<token>", and makes this link available to its users.
+        # The link is valid during the current hour. <token> is computed as
+        # explained hereatfer.
+        #
+        # 1) Build a string of the form <pageToken><YYMMDDHH>. <YYMMDDHH>
+        #    represents the current date and hour. HH (the hour part) is between
+        #    00 and 23.
+        #
+        # 2) Build a md5 hexadecimal digest from this string.
+        #
+        # Here is an example.
+        #
+        #    import hashlib, datetime
+        #
+        #    now = datetime.datetime.now().strftime('%Y%m%d%H')
+        #    toHash = f'{pageToken}{now}'
+        #    token = hashlib.md5(toHash.encode()).hexdigest()
+        #
+        self.tokensEnabled = False
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Page(Base):
@@ -46,9 +89,9 @@ class Page(Base):
     @staticmethod
     def getListColumns(tool):
         '''Show minimal info for the anonymous user'''
-        if tool.user.isAnon(): return ('title',)
-        return ('title', 'expression', 'next', 'selectable*100px|',
-                'podable*80px|', 'viewCss*100px|')
+        if tool.user.isAnon(): return 'title',
+        return 'title', 'expression', 'next', 'selectable*100px|', \
+               'podable*80px|', 'viewCss*100px|'
 
     listColumns = getListColumns
 
@@ -74,6 +117,18 @@ class Page(Base):
            POD.'''
         if self.podable: return self.getField('doc').doRender('view', self)
 
+    def getSupBreadCrumb(self):
+        '''Shows the token if any'''
+        if not self.isEmpty('token') and \
+           self.user.hasRole(self.model.publishers):
+            text = self.translate('page_has_token',
+                                  mapping={'token': self.token})
+            return f'<span class="help" title="{text}">🪙</span>'
+
+    def getSupTitle(self, nav):
+        '''Returns the same content as m_getSupBreadCrumb'''
+        return self.getSupBreadCrumb()
+
     def getSubTitle(self):
         '''Render a link to the tied carousel and/or search'''
         r = []
@@ -97,6 +152,103 @@ class Page(Base):
     # A warning: image upload is impossible while the page is temp
     warning = Info(show=lambda o: 'edit' if o.isTemp() else None,
                    focus=True, layouts=Info.Layouts.n, **pa)
+
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                               Token
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+    # See documentation in class Config hereabove.
+
+    # The page token that one may generate for this page and sub-pages,
+    # recursively.
+
+    def tokensEnabled(self):
+        '''Are page tokens enabled ?'''
+        return self.config.model.page.tokensEnabled
+
+    def showToken(self):
+        '''Show the token on the XML layout only'''
+        # Indeed, it appears in a specific way via methods m_getSupTitle and
+        # m_getSupBreadCrumb.
+        if self.token and self.user.hasRole(self.model.publishers):
+            return 'xml'
+
+    token = String(show=showToken, **pa)
+
+    def getToken(self):
+        '''Return the token that applies on p_self. It may be a token defined on
+           a parent page.'''
+        if not self.tokensEnabled(): return
+        r = self.token
+        if r: return r
+        parent = self.parent
+        return parent.getToken() if parent else None
+
+    def getTimeBasedToken(self):
+        '''Compute and return the time-based token being, now, valid'''
+        pageToken = self.token
+        now = datetime.datetime.now().strftime('%Y%m%d%H')
+        toHash = f'{pageToken}{now}'
+        return hashlib.md5(toHash.encode()).hexdigest()
+
+    def getTokenKoText(self):
+        '''Returns the translated text to return to the user when token-based
+           security prevents him from acecssing this page.'''
+        base = self.translate('unconsultable')
+        more = self.translate('page_token_ko')
+        return f'{base}{br*2}{more}'
+
+    def tokenAllows(self):
+        '''Returns True if token protection succeeds on p_self'''
+        # Get the token for p_self
+        token = self.getToken()
+        if not token:
+            # No token-based protection is defined on p_self: return True
+            return True
+        # Bypass token security for publishers
+        if self.user.hasRole(self.model.publishers): return True
+        # Get the time-based token that must be in the request
+        reqToken = self.req._t_
+        if not reqToken:
+            self.log(TOK_NO % self.strinG(path=False), type='warning')
+            return No(self.getTokenKoText())
+        # Compute the time-based value corresponding to our v_token
+        timeBased = self.getTimeBasedToken()
+        if reqToken != timeBased:
+            self.log(TOK_KO % self.strinG(path=False), type='warning')
+            return No(self.getTokenKoText())
+        return True
+
+    def showSetToken(self):
+        '''Show action "set token" to publishers only, for a public page only'''
+        if not self.tokensEnabled(): return
+        return 'buttons' if self.user.hasRole(self.model.publishers) else None
+
+    def storeToken(self):
+        '''Generates a token and stores it in p_self.token'''
+        old = self.token
+        self.token = token = sutils.randomName(8)
+        suffix = TOK_REPL % old if old else ''
+        self.log(TOK_SET % (self.strinG(path=False), token, suffix))
+        message = self.translate('page_token_set', mapping={'token': token})
+        if old:
+            more = self.translate('page_token_repl', mapping={'token': old})
+            message = f'{message}{br*2}{more}'
+        self.say(message, fleeting=False)
+
+    setToken = Action(action=storeToken, show=showSetToken, confirm=True, **pa)
+
+    def showDelToken(self):
+        '''Show action "delete token" to publishers only, if a token is set'''
+        if not self.tokensEnabled(): return
+        if self.token and self.user.hasRole(self.model.publishers):
+            return 'buttons'
+
+    def deleteToken(self):
+        '''Deletes p_self.token'''
+        self.token = None
+
+    delToken = Action(action=deleteToken, show=showDelToken, confirm=True, **pa)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                           Linked carousel
@@ -158,6 +310,7 @@ class Page(Base):
     maxWidth = Integer(default=700, show=False)
 
     # If this Python expression returns False, the page can't be viewed
+
     def showExpression(self):
         '''Show the expression to managers only'''
         # Do not show it on "view" if empty
@@ -165,6 +318,18 @@ class Page(Base):
         return self.allows('write')
 
     expression = String(layouts=Layouts.d, show=showExpression, **pa)
+
+    def expressionAllows(self):
+        '''Returns True if p_self.expression allows viewing p_self'''
+        expression = self.expression
+        if not expression: return True
+        user = self.user
+        try:
+            return eval(expression)
+        except Exception as err:
+            message = EXPR_ERR % (self.title, self.id, expression, str(err))
+            self.log(message, type='error')
+            return True
 
     # Name of the CSS class applied to the page content, when rendered on view
     # or cell layouts.
@@ -271,19 +436,6 @@ class Page(Base):
         r = {self} if includeMyself else set()
         return r if self.isRoot() else r.union(self.container.getParents())
 
-    def mayView(self):
-        '''In addition to the workflow, evaluating p_self.expression, if
-           defined, determines p_self's visibility.'''
-        expression = self.expression
-        if not expression: return True
-        user = self.user
-        try:
-            return eval(expression)
-        except Exception as err:
-            message = EXPR_ERR % (self.title, self.id, expression, str(err))
-            self.log(message, type='error')
-            return True
-
     def getMergedContent(self, r=None, level=1):
         '''Returns a list of chunks of XHTML code, one for p_self and one for
            each of its sub-pages, recursively.'''
@@ -308,7 +460,7 @@ class Page(Base):
         if level > 1:
             # At level 1, do not dump the title
             title = self.getValue('title', type='shown')
-            r.append(('<h1>%s</h1>' % Escape.xhtml(title), level-2))
+            r.append((f'<h1>{Escape.xhtml(title)}</h1>', level-2))
         # Add p_self's content
         if not self.isEmpty('content'):
             r.append((self.getValue('content', type='shown'), level-1))
@@ -388,10 +540,10 @@ class Page(Base):
      <div class="navBlock">
        <a var="sibling=o.getSibling(prev=True, tree=True)" if="sibling"
           class="navIcon" var2="prefix=_('Page_previous')" href=":sibling.url"
-          title=":f'{prefix}: {sibling.getShownValue()}'">🢪</a>
+          title=":f'{prefix}: {sibling.getShownValue()}'">⇠</a>
        <a var="sibling=o.getSibling(prev=False, tree=True)" if="sibling"
           class="navIcon" var2="prefix=_('Page_next')" href=":sibling.url"
-          title=":f'{prefix}: {sibling.getShownValue()}'">🢩</a>
+          title=":f'{prefix}: {sibling.getShownValue()}'">⇢</a>
      </div>''',
 
      css='''.navBlock { position:fixed; bottom:0; right:0.8em; z-index:2;
@@ -437,8 +589,10 @@ class Page(Base):
             divCss.append('pDelta')
         url = self.getAccessUrl()
         title = Escape.xhtml(self.getShownValue())
+        guard = self.guard
         if isSelected and not self.isEmpty('pages'):
-            subs = [sub.inPortlet(selected, level+1) for sub in self.pages]
+            subs = [sub.inPortlet(selected, level+1) \
+                    for sub in self.pages if guard.mayView(sub)]
             subs = ''.join(subs)
             # Add a CSS class indicating that this page is a *c*ontainer for
             # sub-pages.
@@ -481,6 +635,14 @@ class Page(Base):
         if orParent and self.parent:
             r = self.parent.inPublic(orParent=True)
         return r
+
+    def mayView(self):
+        '''In addition to the workflow, it may not be possible to view p_self
+           due to p_self.expression or due to token protection.'''
+        # Note that m_tokenAllows, instead of returning a boolean value, will
+        # raise a MessageException if token security fails. That way, the
+        # user will never be redirected to the login page.
+        return self.expressionAllows() and self.tokenAllows()
 
     def onEdit(self, created):
         '''Link the page among root pages if created from the portlet'''
@@ -527,7 +689,8 @@ class Page(Base):
           var="pages=pages|tool.OPage.getRoot(tool, mobile, splitted=False)">
       <x if="pages"
          var2="selected=o.getParents() if o.class_.python==tool.OPage else {}">
-       <x for="page in pages">::page.inPortlet(selected)</x>
+       <x for="page in pages"
+          if="guard.mayView(page)">::page.inPortlet(selected)</x>
       </x>
       <i if="not pages">:_('no_page')</i>
      </div>''',

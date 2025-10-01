@@ -413,9 +413,9 @@ class Base:
     #                           Security methods
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    def raiseUnauthorized(self, msg=None):
+    def raiseUnauthorized(self, msg=None, redirect=None):
         '''Raise a security-related error'''
-        raise self.guard.Error(msg)
+        raise self.guard.Error(msg, redirect=redirect)
 
     def raiseNotFound(self, msg=None):
         '''Raise a 404 error'''
@@ -1332,6 +1332,8 @@ class Base:
     def xml(self):
         '''Returns p_self's XML version'''
         self.resp.setContentType('xml')
+        # m_mayView checks more than the standard read permission
+        self.guard.mayView(self, None, raiseError=True)
         return self # p_self will be automatically marshalled by the traversal
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

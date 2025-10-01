@@ -393,13 +393,19 @@ class HttpHandler(Handler):
         if self.guard.user.isAnon():
             if resp.contentType == 'html':
                 # This is (supposedly) a user behind a browser
-                config = self.config
-                siteUrl = config.server.getUrl(self)
-                gotoUrl = urllib.parse.quote(f'{siteUrl}{self.path}')
-                resp.goto(url=f'{siteUrl}/tool/{config.ui.home}?goto=' \
-                              f'{gotoUrl}&stay=1',
-                          message=self.tool.translate('please_authenticate'))
-                r = None
+                if error and not error.redirect:
+                    # Log and return a 403 error
+                    resp.code = HTTPStatus.FORBIDDEN
+                    r = Error.get(resp, traversal, error=error)
+                else:
+                    # Redirect the user to give him a chance to authenticate
+                    config = self.config
+                    siteUrl = config.server.getUrl(self)
+                    gotoUrl = urllib.parse.quote(f'{siteUrl}{self.path}')
+                    text = self.tool.translate('please_authenticate')
+                    resp.goto(url=f'{siteUrl}/tool/{config.ui.home}?goto=' \
+                                  f'{gotoUrl}&stay=1', message=text)
+                    r = None
             else:
                 # Return a 403 error, marshalled
                 resp.code = HTTPStatus.FORBIDDEN

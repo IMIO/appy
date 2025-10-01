@@ -458,7 +458,7 @@ class Tool(Base):
             if user.isAnon():
                 suffix = 'public' if self.config.ui.discreetLogin else 'home'
                 r = f'{self.url}/{suffix}'
-            elif user.hasRole(('Manager','Publisher')):
+            elif user.hasRole(self.model.globalRoles):
                 r = f'{self.url}/view'
             else:
                 r = f'{user.url}/view'

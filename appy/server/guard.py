@@ -11,8 +11,8 @@ from pathlib import Path
 from DateTime import DateTime
 
 from appy.px import Px
-from appy.utils import multicall
 from appy.model.user import User
+from appy.utils import multicall, No
 from appy.server.cookie import Cookie
 from appy.utils import path as putils
 from appy.model.utils import Object as O
@@ -116,11 +116,16 @@ class Config:
 class Unauthorized(Exception):
     '''Error that is raised when a security problem is encountered'''
 
-    def __init__(self, text, translated=None):
+    def __init__(self, text, translated=None, redirect=None):
         # p_text contains technical details about the error
         super().__init__(text)
         # p_translated contains a potentially translated, human-targeted message
         self.translated = translated
+        # By default (p_redirect is None), when an Unauthorized exception is
+        # raised, if the end user is a humain being behind a web browser, we
+        # will redirect him to the login page. But one may force p_redirect to
+        # False to avoid this behaviour.
+        self.redirect = redirect
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Guard:
@@ -280,7 +285,7 @@ class Guard:
         # performed and p_raiseError is True.
         r = self.allows(o, permission, raiseError=raiseError, info=info)
         if not r: return
-        if permOnly == True or \
+        if permOnly is True or \
            (permOnly == 'specific' and permission != 'write'): return r
         # An additional, user-defined condition, may refine the base permission
         r = multicall(o, 'mayEdit', True)
@@ -306,7 +311,9 @@ class Guard:
         if not r and raiseError:
             method = f'{o.class_.name}::mayView'
             s = self.stringInfo(info)
-            raise Unauthorized(KO_PERM % (method, o.id, permission or 'read',s))
+            text = r.msg if isinstance(r, No) else None
+            raise Unauthorized(KO_PERM % (method, o.id, permission or 'read',s),
+                               translated=text, redirect=False)
         return r
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

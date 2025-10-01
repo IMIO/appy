@@ -1447,6 +1447,42 @@ msgstr "Titel"
 msgid "Page_warning"
 msgstr "Bitte beachten Sie: Das Hochladen von Bildern ist nur möglich, wenn Sie die Seite speichern und erneut bearbeiten."
 
+#. Default: "Token"
+msgid "Page_token"
+msgstr ""
+
+#. Default: "Set a token"
+msgid "Page_setToken"
+msgstr ""
+
+#. Default: "You are about to define a token on this page.\n\nThe possibly existing token will be replaced by a new one.\n\nProceed ?"
+msgid "Page_setToken_confirm"
+msgstr ""
+
+#. Default: "This page and its potential sub-pages are protected by token ${token}."
+msgid "page_has_token"
+msgstr ""
+
+#. Default: "🪙 Token ${token} has been set on this page."
+msgid "page_token_set"
+msgstr ""
+
+#. Default: "It replaces deleted token ${token}."
+msgid "page_token_repl"
+msgstr ""
+
+#. Default: "Delete the token"
+msgid "Page_delToken"
+msgstr ""
+
+#. Default: "The token set on this page, and the protection it involved, will disappear.\n\nAre you sure ?"
+msgid "Page_delToken_confirm"
+msgstr ""
+
+#. Default: "This page is only accessible via an authentic and limited-time link, originating from a trusted third-party site or software."
+msgid "page_token_ko"
+msgstr ""
+
 #. Default: "Linked carousel"
 msgid "Page_carousel"
 msgstr "Verknüpftes Karussell"
