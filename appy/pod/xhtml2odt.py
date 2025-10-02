@@ -447,24 +447,27 @@ class HtmlTable(Element):
             self.name = f'{prefix}_{self.name}'
         self.res = '' # The sub-buffer
         # The temporary sub-buffer, into which we will dump all table
-        # sub-elements, until we encounter the end of the first row. Then, we
-        # will know how much columns are defined in the table; we will dump
-        # columns declarations into self.res and dump self.tempRes into
-        # self.res.
+        # sub-elements, until we encounter the end of the last row. Then, the
+        # number of table columns will be known (=the number of cells of the
+        # longest row); we will dump column declarations into self.res and dump
+        # self.tempRes into self.res.
         self.tempRes = ''
         # If the table defines a caption, store its content in the following
         # alternate buffer. Indeed, the caption, in ODF, must be dumped outside
         # the table.
         self.captionRes = ''
-        # Was the first table row completely parsed ?
-        self.firstRowParsed = False
-        # The number of columns in the table
+        # Were all table rows parsed ?
+        self.rowsParsed = False
+        # The number of columns in the table. Will be set once all rows will
+        # have been parsed.
         self.nbOfColumns = 0
         # Are we currently within a table cell? Instead of a boolean, the field
         # stores an integer. The integer is > 1 if the cell spans more than one
         # column.
         self.inCell = 0
-        # The index, within the current row, of the current cell
+        # The index, within the current row, of the current cell. It will also
+        # be used to determine the number of cells within each row (indeed, this
+        # number could vary from one row to the other).
         self.cellIndex = -1
         # The size of the content of the currently parsed table cell
         self.cellContentSize = 0
@@ -478,6 +481,16 @@ class HtmlTable(Element):
         # If widths are found, self.columnContentSizes will not be used:
         # self.columnWidths will be used instead.
         self.columnWidths = []
+
+    def noteRowEnd(self):
+        '''The end of a row has just been parsed. Update p_self's data
+           structures.'''
+        # Update the number of columns with the number of cells of the current
+        # row.
+        self.nbOfColumns = max(self.nbOfColumns, self.cellIndex + 1)
+        # Reinitialise the cell index, that could be reused for the next row, if
+        # any.
+        self.cellIndex = -1
 
     def hasBorder(self):
         '''Support for table borders is currently limited. We have 2 cases:
@@ -586,6 +599,21 @@ class HtmlTable(Element):
             sizes[i] = int(math.pow(math.log(value), 3))
             i -= 1
         return sizes
+
+    def computeColumns(self, env):
+        '''Once all table rows have been parsed, it is time to dump column
+           declarations.'''
+        self.rowsParsed = True
+        # The number of columns in the table is now known: column declarations
+        # can be dumped.
+        for i in range(1, self.nbOfColumns + 1):
+            decl = f'<{env.tableNs}:table-column {env.tableNs}:style-name="' \
+                   f'{self.name}.{i}"/>'
+            self.res = f'{self.res}{decl}'
+        # Transfer the content of the temp buffer into the main buffer and stop
+        # using it.
+        self.res = f'{self.res}{self.tempRes}'
+        self.tempRes = ''
 
     def computeColumnStyles(self):
         '''Once the table has been completely parsed, self.columnContentSizes
@@ -1001,13 +1029,15 @@ class XhtmlEnvironment(Environment):
         # corresponding to the last parsed table. Else, we must dump p_s into
         # the global buffer (self.res).
         if self.currentTables:
-            currentTable = self.currentTables[-1]
-            if currentTable.inCaption:
-                currentTable.captionRes = f'{currentTable.captionRes}{s}'
-            elif not currentTable.res or currentTable.firstRowParsed:
-                currentTable.res = f'{currentTable.res}{s}'
+            # Get the currently parsed table
+            table = self.currentTables[-1]
+            # Choose the right table-related buffer to dump p_s
+            if table.inCaption:
+                table.captionRes = f'{table.captionRes}{s}'
+            elif not table.res or table.rowsParsed:
+                table.res = f'{table.res}{s}'
             else:
-                currentTable.tempRes = f'{currentTable.tempRes}{s}'
+                table.tempRes = f'{table.tempRes}{s}'
         else:
             self.res = f'{self.res}{s}'
 
@@ -1062,9 +1092,6 @@ class XhtmlEnvironment(Environment):
             table = self.currentTables[-1]
             table.inCell = colspan
             table.cellIndex += colspan
-            # If we are in the first row of a table, update columns count
-            if not table.firstRowParsed:
-                table.nbOfColumns += colspan
             styles = current.cssStyles
             if hasattr(styles, 'width') and colspan == 1:
                 table.setColumnWidth(styles.width)
@@ -1084,6 +1111,8 @@ class XhtmlEnvironment(Environment):
         elif elem == 'table':
             table = self.currentTables.pop()
             if table.nbOfColumns:
+                # All rows have been parsed: compute column declarations
+                table.computeColumns(self)
                 # Computes the column styles required by the table
                 table.computeColumnStyles()
             # Dumps the content of the last parsed table (together with a
@@ -1092,20 +1121,7 @@ class XhtmlEnvironment(Environment):
                 self.dumpString(table.captionRes)
             self.dumpString(table.res)
         elif elem in TABLE_ROW_TAGS:
-            table = self.currentTables[-1]
-            table.cellIndex = -1
-            if not table.firstRowParsed and table.nbOfColumns:
-                # If no cell has been parsed yet, we have an empty row that must
-                # be ignored.
-                table.firstRowParsed = True
-                # First row is parsed. The number of columns in the table is
-                # known: columns declarations can be dumped.
-                for i in range(1, table.nbOfColumns + 1):
-                    decl = f'<{self.tableNs}:table-column {self.tableNs}'\
-                           f':style-name="{table.name}.{i}"/>'
-                    table.res = f'{table.res}{decl}'
-                table.res = f'{table.res}{table.tempRes}'
-                table.tempRes = ''
+            self.currentTables[-1].noteRowEnd()
         elif elem in TABLE_COL_TAGS:
             table = self.currentTables[-1]
             # If we are walking a td or th, update "columnContentSizes" and

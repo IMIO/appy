@@ -49,11 +49,11 @@ class Config:
     '''Part of the model config being specific to pages'''
 
     def __init__(self):
-        # On any public page (ie, being accessible to the anonymous user),
-        # token, time-based security may be enabled. When it is the case, on
-        # such a page, a token may be generated (called "pageToken" below), and
-        # shared with some third-party software (TP). If the TP wants its users
-        # to access the page, he builds a link to the page, where he adds a
+        # On any page, beyond workflow-based security, token, time-based
+        # security may be enabled in complement. When it is the case, on such a
+        # page, a token may be generated (called "pageToken" below), and shared
+        # with some third-party software (TP). If the TP wants its users to
+        # access the page, he builds a link to the page, where he adds a
         # parameter "_t_=<token>", and makes this link available to its users.
         # The link is valid during the current hour. <token> is computed as
         # explained hereatfer.

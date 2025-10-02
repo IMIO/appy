@@ -6,8 +6,6 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import pathlib
 
-from .page import Config as PageConfig
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
     '''Model configuration'''
@@ -50,6 +48,7 @@ class Config:
         # folder. The attribute value may be a string or a pathlib.Path object.
         self.marshallFolder = None
         # Part of the configuration being specific to pages
+        from .page import Config as PageConfig
         self.page = PageConfig()
 
     def set(self, appFolder):
