@@ -307,7 +307,7 @@ class Page(Base):
     podable = Boolean(layouts=Boolean.Layouts.d, show=Show.V_, **pa)
 
     # Maximum width for images uploaded and rendered within the XHTML content
-    maxWidth = Integer(default=700, show=False)
+    maxWidth = Integer(default=Document.maxImageWidth, show=False)
 
     # If this Python expression returns False, the page can't be viewed
 

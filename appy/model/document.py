@@ -24,13 +24,17 @@ class Document(Base):
 
     # Documents are not indexed by default
     indexable = False
-    popup = ('500px', '500px')
-    listColumns = ('thumb*60px|', 'title')
+    popup = '500px', '500px'
+    listColumns = 'thumb*60px|', 'title'
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                               The file
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     do = {'label': 'Document'}
+
+    # Maximum width for an uploaded image
+    maxImageWidth = 1200
 
     def getMaxWidth(self):
         '''Get the maximum width for uploaded images. If the image is larger
@@ -41,13 +45,17 @@ class Document(Base):
         except AttributeError:
             # There is no container yet if the image is uploaded via ckeditor
             container = self.traversal.o
-        width = container.maxWidth if hasattr(container, 'maxWidth') else 700
-        return '%dpx' % width
+        if hasattr(container, 'maxWidth'):
+            width = container.maxWidth
+        else:
+            width = self.maxImageWidth
+        return f'{width}px'
 
     def getViewWidth(self):
         '''The width of the image as shown on the "view" layout varies depending
            on the it to be rendered in the popup or no.'''
-        return '450px' if self.req.popup == 'True' else '700px'
+        ratio = 0.65 if self.req.popup == 'True' else 1.0
+        return f'{int(self.maxImageWidth * ratio)}px'
 
     file = File(multiplicity=(1,1), isImage=True, resize=True, cache=True,
                 width=getMaxWidth, viewWidth=getViewWidth, nameStorer='title',
@@ -69,7 +77,7 @@ class Document(Base):
     # When used in a carousel, elements may be specified, that must be shown
     # on top of the document.
 
-    elementTypes = ('title', 'underTitle', 'buttonA', 'buttonB')
+    elementTypes = 'title', 'underTitle', 'buttonA', 'buttonB'
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                          Action "duplicate"
@@ -120,13 +128,13 @@ class Document(Base):
             target = attrs.target
             onClick = attrs.onClick
             params = attrs.params
-        target = (' target="%s"' % target) if target else ''
-        onClick = (' onClick="%s"' % onClick) if onClick else ''
+        target = f' target="{target}"' if target else ''
+        onClick = f' onClick="{onClick}"' if onClick else ''
         url = element.url
         if params:
             sep = '&' if '?' in url else '?'
-            url += sep + params
-        return '<a href="%s"%s%s>%s</a>' % (url, target, onClick, text)
+            url = f'{url}{sep}{params}'
+        return f'<a href="{url}"{target}{onClick}>{text}</a>'
 
     def getElements(self, carousel):
         '''Returns, as a list of chunks of XHTML code, the list of elements from
@@ -146,8 +154,8 @@ class Document(Base):
                 # Wrap the text in a clickable link
                 text = self.getElementLink(carousel, element, text)
             # Produce the complete chunk of XHTML for this element
-            html = '<div class="%s" style="top:%s;left:%s">%s</div>' % \
-                   (css, top, left, text)
+            html = f'<div class="{css}" style="top:{top};left:{left}">{text}' \
+                   f'</div>'
             r.append(html)
         return r
 
@@ -200,7 +208,7 @@ class Document(Base):
             parts = element.position.split(' ')
             if len(parts) != 2:
                 message = self.translate('position_ko')
-                setattr(errors, 'elements*position*%d' % i, message)
+                setattr(errors, f'elements*position*{i}', message)
 
     def mayView(self):
         '''This document is viewable if its container is'''

@@ -217,6 +217,7 @@ class TableProperties(Properties):
         # TableProperties instances with OCW/DC enabled
         class_.ocw = TableProperties(columnModifier='optimize')
         class_.dc = TableProperties(columnModifier='distribute')
+
 TableProperties.init()
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -760,6 +761,8 @@ class StylesEnvironment(OdfEnvironment):
         self.currentPageLayout = None # The currently parsed page layout
         # The name of the page layout defined for the whole document
         self.masterLayoutName = None
+        # The current watermark text possibly defined in a page style
+        self.currentWatermark = None
         self.state = READING
 
     def onStartElement(self):
