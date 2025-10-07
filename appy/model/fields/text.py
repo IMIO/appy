@@ -657,12 +657,12 @@ class Text(Multilingual, Field):
     def __init__(self, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
       move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
-      filterField=n, readPermission='read', writePermission='write', width=60,
-      height=5, maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n,
-      focus=False, historized=False, mapping=n, generateLabel=n, label=n,
-      sdefault='', scolspan=1, swidth=20, fwidth=10, sheight=n, persist=True,
-      inlineEdit=False, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
-      translations=n, indexType='TextIndex',
+      sortField=n, filterField=n, readPermission='read',
+      writePermission='write', width=60, height=5, maxChars=n, colspan=1,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, sdefault='', scolspan=1, swidth=20,
+      fwidth=10, sheight=n, persist=True, inlineEdit=False, view=n, cell=n,
+      buttons=n, edit=n, custom=n, xml=n, translations=n, indexType='TextIndex',
       # Specific attributes
       placeholder=n, languages=('en',), languagesLayouts=n, viewSingle=False,
       structured=False, readonly=False, invalidTexts=n, disabled=False):
@@ -698,7 +698,7 @@ class Text(Multilingual, Field):
         Multilingual.__init__(self, languages, languagesLayouts, viewSingle)
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, n, searchable, filterField, readPermission,
+          indexValue, n, searchable, sortField, filterField, readPermission,
           writePermission, width, height, maxChars, colspan, master,
           masterValue, masterSnub, focus, historized, mapping, generateLabel,
           label, sdefault, scolspan, swidth, sheight, persist, inlineEdit, view,

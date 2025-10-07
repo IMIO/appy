@@ -80,7 +80,7 @@ class Integer(Field):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, emptyIndexValue, searchable, n, readPermission,
+          indexValue, emptyIndexValue, searchable, n, n, readPermission,
           writePermission, width, height, maxChars, colspan, master,
           masterValue, masterSnub, focus, historized, mapping, generateLabel,
           label, sdefault, scolspan, swidth, sheight, persist, inlineEdit, view,

@@ -256,7 +256,7 @@ class Select(Field):
     def __init__(self, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
       move=0, indexed=False, mustIndex=True, indexValue=n, emptyIndexValue='-',
-      searchable=False, filterField=n, readPermission='read',
+      searchable=False, sortField=n, filterField=n, readPermission='read',
       writePermission='write', width=n, height=n, maxChars=n, colspan=1,
       master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
       mapping=n, generateLabel=n, label=n, sdefault='', scolspan=1, swidth=n,
@@ -311,11 +311,11 @@ class Select(Field):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, emptyIndexValue, searchable, filterField, readPermission,
-          writePermission, width, height, maxChars, colspan, master,
-          masterValue, masterSnub, focus, historized, mapping, generateLabel,
-          label, sdefault, scolspan, swidth, sheight, persist, inlineEdit, view,
-          cell, buttons, edit, custom, xml, translations)
+          indexValue, emptyIndexValue, searchable, sortField, filterField,
+          readPermission, writePermission, width, height, maxChars, colspan,
+          master, masterValue, masterSnub, focus, historized, mapping,
+          generateLabel, label, sdefault, scolspan, swidth, sheight, persist,
+          inlineEdit, view, cell, buttons, edit, custom, xml, translations)
 
         # Default value on the *s*earch form. It must be a list of values.
         self.sdefault = sdefault or []

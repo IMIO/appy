@@ -858,7 +858,7 @@ class Pod(Field):
         self.crumb = crumb
         # Call the base constructor
         super().__init__(n, (0,1), n, n, show, renderable, page, group, layouts,
-          move, False, True, n, n, False, n, readPermission, writePermission,
+          move, False, True, n, n, False, n, n, readPermission, writePermission,
           width, height, n, colspan, master, masterValue, masterSnub, focus,
           historized, mapping, generateLabel, label, n, n, n, n, False, False,
           view, cell, buttons, edit, custom, xml, translations)

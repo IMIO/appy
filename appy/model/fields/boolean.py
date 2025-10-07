@@ -140,13 +140,13 @@ class Boolean(Field):
     def __init__(self, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
       move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
-      filterField=n, readPermission='read', writePermission='write', width=n,
-      height=n, maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n,
-      focus=False, historized=False, mapping=n, generateLabel=n, label=n,
-      sdefault=False, scolspan=1, swidth=n, sheight=n, persist=True,
-      render='checkbox', falseFirst=True, inlineEdit=False, view=n, cell=n,
-      buttons=n, edit=n, custom=n, xml=n, translations=n, falseMeansEmpty=False,
-      disabled=False, confirm=False):
+      sortField=n, filterField=n, readPermission='read',
+      writePermission='write', width=n, height=n, maxChars=n, colspan=1,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, sdefault=False, scolspan=1, swidth=n,
+      sheight=n, persist=True, render='checkbox', falseFirst=True,
+      inlineEdit=False, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
+      translations=n, falseMeansEmpty=False, disabled=False, confirm=False):
 
         # The following p_render modes are available.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -180,7 +180,7 @@ class Boolean(Field):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, n, searchable, filterField, readPermission,
+          indexValue, n, searchable, sortField, filterField, readPermission,
           writePermission, width, height, n, colspan, master, masterValue,
           masterSnub, focus, historized, mapping, generateLabel, label,
           sdefault, scolspan, swidth, sheight, persist, inlineEdit, view, cell,

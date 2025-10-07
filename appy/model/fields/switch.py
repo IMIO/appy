@@ -39,7 +39,7 @@ class Switch(Field):
         self.fields = fields
         # Call the base Field constructor
         super().__init__(validator, (0,1), n, n, show, renderable, page, group,
-          layouts, move, False, True, n, n, False, n, readPermission,
+          layouts, move, False, True, n, n, False, n, n, readPermission,
           writePermission, width, height, n, colspan, master, masterValue,
           masterSnub, focus, False, mapping, generateLabel, label, False,
           scolspan, swidth, sheight, True, inlineEdit, view, cell, buttons,

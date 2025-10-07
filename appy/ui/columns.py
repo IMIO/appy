@@ -35,7 +35,8 @@ class Col:
                   from_=mode.refField)">:ui.Title.pxToggleSub</x>
 
         <!-- Sort icons -->
-        <div if="field.isSortable() and mode.batch.total &gt; 1" class="iflex1">
+        <div var="field=field.sortField or field"
+             if="field.isSortable() and mode.batch.total &gt; 1" class="iflex1">
          <img if="mode.sortKey != field.name or mode.sortOrder == 'desc'"
               onclick=":'askBunchSorted(%s, %s, %s)' % \
                          (q(mode.hook), q(field.name), q('asc'))"
@@ -60,7 +61,7 @@ class Col:
        <div class="thead">
 
         <!-- Sort icons -->
-        <div if="not selector" var2="refField=refField.filterField or refField"
+        <div if="not selector" var2="refField=refField.sortField or refField"
              class="iflex1">:field.pxSortIcons</div>
 
         <!-- Toggle descriptions' visibility -->

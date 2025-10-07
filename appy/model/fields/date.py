@@ -276,7 +276,7 @@ class Date(Field):
       endYear=time.localtime()[0]+10, reverseYears=False, minutesPrecision=5,
       show=True, renderable=n, page='main', group=n, layouts=n, move=0,
       indexed=False, mustIndex=True, indexValue=n, emptyIndexValue=0,
-      searchable=False, filterField=n, readPermission='read',
+      searchable=False, sortField=n, filterField=n, readPermission='read',
       writePermission='write', width=n, height=n, maxChars=n, colspan=1,
       master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
       mapping=n, generateLabel=n, label=n, sdefault=n, scolspan=1, swidth=n,
@@ -336,11 +336,11 @@ class Date(Field):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, emptyIndexValue, searchable, filterField, readPermission,
-          writePermission, width, height, n, colspan, master, masterValue,
-          masterSnub, focus, historized, mapping, generateLabel, label,
-          sdefault, scolspan, swidth, sheight, persist, False, view, cell,
-          buttons, edit, custom, xml, translations)
+          indexValue, emptyIndexValue, searchable, sortField, filterField,
+          readPermission, writePermission, width, height, n, colspan, master,
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, sdefault, scolspan, swidth, sheight, persist, False, view,
+          cell, buttons, edit, custom, xml, translations)
         # Define the filter PX when appropriate
         if self.indexed:
             self.filterPx = 'pxFilter'

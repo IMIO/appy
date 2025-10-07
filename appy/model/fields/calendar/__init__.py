@@ -636,10 +636,10 @@ class Calendar(Field):
 
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, False, True, n, n,
-          False, n, readPermission, writePermission, width, height, n, colspan,
-          master, masterValue, masterSnub, focus, False, mapping, generateLabel,
-          label, n, n, n, n, True, False, view, cell, buttons, edit, custom,
-          xml, translations)
+          False, n, n, readPermission, writePermission, width, height, n,
+          colspan, master, masterValue, masterSnub, focus, False, mapping,
+          generateLabel, label, n, n, n, n, True, False, view, cell, buttons,
+          edit, custom, xml, translations)
 
     def getRenderInfo(self, render):
         '''Extract renderring info from p_render. Raise an error if data is

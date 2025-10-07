@@ -470,11 +470,11 @@ class Field:
 
     def __init__(self, validator, multiplicity, default, defaultOnEdit, show,
       renderable, page, group, layouts, move, indexed, mustIndex, indexValue,
-      emptyIndexValue, searchable, filterField, readPermission, writePermission,
-      width, height, maxChars, colspan, master, masterValue, masterSnub, focus,
-      historized, mapping, generateLabel, label, sdefault, scolspan, swidth,
-      sheight, persist, inlineEdit, view, cell, buttons, edit, custom, xml,
-      translations):
+      emptyIndexValue, searchable, sortField, filterField, readPermission,
+      writePermission, width, height, maxChars, colspan, master, masterValue,
+      masterSnub, focus, historized, mapping, generateLabel, label, sdefault,
+      scolspan, swidth, sheight, persist, inlineEdit, view, cell, buttons, edit,
+      custom, xml, translations):
 
         # The p_validator restricts which values may be defined. If p_validator
         # is :
@@ -596,6 +596,12 @@ class Field:
         # If specified "searchable", the field will be added to some global
         # index allowing to perform application-wide, keyword searches.
         self.searchable = searchable
+
+        # You may need to specify another field for sorting p_self values. For
+        # example, if p_self is a computed field that displays a nice, extended
+        # variant of some basic field, this latter may be specified as sort
+        # field for p_self.
+        self.sortField = sortField
 
         # You may need to specify another field for rendering a filter for
         # p_self. For example, by default in Appy, field "title" uses field

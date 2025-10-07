@@ -110,7 +110,7 @@ class Password(Field):
         self.autofocus = autofocus
         # Call the base constructor
         super().__init__(validator, multiplicity, n, n, show, renderable,
-          page, group, layouts, move, False, True, n, n, False, n,
+          page, group, layouts, move, False, True, n, n, False, n, n,
           readPermission, writePermission, width, height, maxChars, colspan,
           master, masterValue, masterSnub, focus, historized, mapping,
           generateLabel, label, sdefault, scolspan, swidth, sheight, persist,

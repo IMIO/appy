@@ -705,25 +705,27 @@ class Poor(Rich):
     def __init__(self, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
       move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
-      filterField=n, readPermission='read', writePermission='write',
-      width='25em', height='7em', maxChars=n, colspan=1, master=n,
-      masterValue=n, masterSnub=n, focus=False, historized=False, mapping=n,
-      generateLabel=n, label=n, sdefault='', scolspan=1, swidth=n, fwidth=10,
-      sheight=n, persist=True, documents=False, languages=('en',),
-      languagesLayouts=n, viewSingle=False, inlineEdit=False, view=n, cell=n,
-      buttons=n, edit=n, custom=n, xml=n, translations=n, inject=False,
-      valueIfEmpty='', viewCss='xhtmlV', autoCorrect=AutoCorrect.default,
-      font=n, transformText=n, toItalicize=n, tagAttributes=n, stripped=n):
+      sortField=n, filterField=n, readPermission='read',
+      writePermission='write', width='25em', height='7em', maxChars=n,
+      colspan=1, master=n, masterValue=n, masterSnub=n, focus=False,
+      historized=False, mapping=n, generateLabel=n, label=n, sdefault='',
+      scolspan=1, swidth=n, fwidth=10, sheight=n, persist=True, documents=False,
+      languages=('en',), languagesLayouts=n, viewSingle=False, inlineEdit=False,
+      view=n, cell=n, buttons=n, edit=n, custom=n, xml=n, translations=n,
+      inject=False, valueIfEmpty='', viewCss='xhtmlV',
+      autoCorrect=AutoCorrect.default, font=n, transformText=n, toItalicize=n,
+      tagAttributes=n, stripped=n):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, searchable, filterField, readPermission, writePermission,
-          width, height, maxChars, colspan, master, masterValue, masterSnub,
-          focus, historized, mapping, generateLabel, label, sdefault, scolspan,
-          swidth, fwidth, sheight, persist, n, n, documents, n, languages,
-          languagesLayouts, viewSingle, inlineEdit, 'Standard', view, cell,
-          buttons, edit, custom, xml, translations, inject, valueIfEmpty,
-          viewCss, n, transformText, toItalicize, stripped)
+          indexValue, searchable, sortField, filterField, readPermission,
+          writePermission, width, height, maxChars, colspan, master,
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, sdefault, scolspan, swidth, fwidth, sheight, persist, n, n,
+          documents, n, languages, languagesLayouts, viewSingle, inlineEdit,
+          'Standard', view, cell, buttons, edit, custom, xml, translations,
+          inject, valueIfEmpty, viewCss, n, transformText, toItalicize,
+          stripped)
         # As-you-type replacements are defined by placing an Autocorrect object
         # in this attribute.
         self.autoCorrect = autoCorrect

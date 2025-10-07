@@ -124,15 +124,16 @@ class Rich(Multilingual, Field):
     def __init__(self, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
       move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
-      filterField=n, readPermission='read', writePermission='write', width=n,
-      height=n, maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n,
-      focus=False, historized=False, mapping=n, generateLabel=n, label=n,
-      sdefault='', scolspan=1, swidth=n, fwidth=10, sheight=n, persist=True,
-      styles=defaultStyles, customStyles=n, documents=False, spellcheck=False,
-      languages=('en',), languagesLayouts=n, viewSingle=False, inlineEdit=False,
-      toolbar='Standard', view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
-      translations=n, inject=False, valueIfEmpty='-', viewCss='xhtml',
-      invalidTexts=n, transformText=n, toItalicize=n, stripped=n):
+      sortField=n, filterField=n, readPermission='read',
+      writePermission='write', width=n, height=n, maxChars=n, colspan=1,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, sdefault='', scolspan=1, swidth=n,
+      fwidth=10, sheight=n, persist=True, styles=defaultStyles, customStyles=n,
+      documents=False, spellcheck=False, languages=('en',), languagesLayouts=n,
+      viewSingle=False, inlineEdit=False, toolbar='Standard', view=n, cell=n,
+      buttons=n, edit=n, custom=n, xml=n, translations=n, inject=False,
+      valueIfEmpty='-', viewCss='xhtml', invalidTexts=n, transformText=n,
+      toItalicize=n, stripped=n):
         # The list of styles that the user will be able to select in the styles
         # dropdown (within CKEditor) is defined hereafter.
         self.styles = styles
@@ -291,7 +292,7 @@ class Rich(Multilingual, Field):
         Multilingual.__init__(self, languages, languagesLayouts, viewSingle)
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, n, searchable, filterField, readPermission,
+          indexValue, n, searchable, sortField, filterField, readPermission,
           writePermission, width, height, maxChars, colspan, master,
           masterValue, masterSnub, focus, historized, mapping, generateLabel,
           label, sdefault, scolspan, swidth, sheight, persist, inlineEdit, view,

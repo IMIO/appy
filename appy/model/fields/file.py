@@ -559,7 +559,7 @@ class File(Field):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, False, True, n, n, False, n,
-          readPermission, writePermission, width, height, n, colspan, master,
+          n, readPermission, writePermission, width, height, n, colspan, master,
           masterValue, masterSnub, focus, historized, mapping, generateLabel,
           label, sdefault, scolspan, swidth, sheight, True, False, view, cell,
           buttons, edit, custom, xml, translations)

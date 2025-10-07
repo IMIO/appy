@@ -52,7 +52,7 @@ class Computed(Field):
     def __init__(self, multiplicity=(0,1), default=n, defaultOnEdit=n, show=n,
       renderable=n, page='main', group=n, layouts=n, move=0, indexed=False,
       mustIndex=True, indexType=n, indexValue=n, emptyIndexValue=n,
-      searchable=False, filterField=n, readPermission='read',
+      searchable=False, sortField=n, filterField=n, readPermission='read',
       writePermission='write', width=n, height=n, maxChars=n, colspan=1,
       method=n, formatMethod=n, plainText=False, master=n, masterValue=n,
       masterSnub=n, focus=False, historized=False, mapping=n, generateLabel=n,
@@ -120,10 +120,10 @@ class Computed(Field):
         # Call the base constructor
         super().__init__(n, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, emptyIndexValue, searchable, filterField, readPermission,
-          writePermission, width, height, n, colspan, master, masterValue,
-          masterSnub, focus, historized, mapping, generateLabel, label,
-          sdefault, scolspan, swidth, sheight, False, False, view, cell,
+          indexValue, emptyIndexValue, searchable, sortField, filterField,
+          readPermission, writePermission, width, height, n, colspan, master,
+          masterValue, masterSnub, focus, historized, mapping, generateLabel,
+          label, sdefault, scolspan, swidth, sheight, False, False, view, cell,
           buttons, edit, custom, xml, translations)
         # When a custom widget is built from a computed field, its values are
         # potentially editable and validable, so "validable" must be True.

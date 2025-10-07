@@ -348,7 +348,7 @@ class List(Field):
       listCss=n, valueIfEmpty='-', numbered=False):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
-         renderable, page, group, layouts, move, False, True, n, n, False, n,
+         renderable, page, group, layouts, move, False, True, n, n, False, n, n,
          readPermission, writePermission, width, height, n, colspan, master,
          masterValue, masterSnub, focus, historized, mapping, generateLabel,
          label, n, n, n, n, True, False, view, cell, buttons, edit, custom, xml,
