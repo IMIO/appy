@@ -393,8 +393,10 @@ class HttpHandler(Handler):
         if self.guard.user.isAnon():
             if resp.contentType == 'html':
                 # This is (supposedly) a user behind a browser
-                if error and not error.redirect:
-                    # Log and return a 403 error
+                if error and error.redirect is False:
+                    # Log and return a 403 error. p_error may be a class and not
+                    # an instance. In that case, v_error.redirect is None and
+                    # not False.
                     resp.code = HTTPStatus.FORBIDDEN
                     r = Error.get(resp, traversal, error=error)
                 else:
