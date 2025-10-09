@@ -12,6 +12,7 @@ from appy.model.workflow.transition import Transition
 # WARNING | To be activated, any workflow defined here must be listed in
 #         | appy.model.Model.baseWorkflows.
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class Anonymous:
     '''One-state workflow allowing anyone to consult and Manager + Owner(s) to
        edit.'''
@@ -20,8 +21,8 @@ class Anonymous:
     ma = 'Manager'
     pub = 'Publisher'
 
-    editors = (ma, o, pub)
-    everyone = ('Anonymous', 'Authenticated')
+    editors = ma, o, pub
+    everyone = 'Anonymous', 'Authenticated'
 
     active = State({r:everyone, w:editors, d:editors}, initial=True)
 
@@ -33,7 +34,8 @@ class Authenticated:
     o = 'Owner'
     ma = 'Manager'
 
-    authenticated = (ma, 'Authenticated')
+    authenticated = ma, 'Authenticated'
+
     active = State({r:authenticated, w:(ma, o), d:(ma, o)}, initial=True)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -96,6 +98,7 @@ class TooPermissive:
 
     # As an example, consult standard class appy/model/document.py that uses
     # this worflow.
-    everyone = ('Anonymous', 'Authenticated')
+
+    everyone = 'Anonymous', 'Authenticated'
     created = State({r:everyone, w:everyone, d:everyone}, initial=True)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

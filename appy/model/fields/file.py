@@ -132,12 +132,12 @@ class FileInfo:
         if not name: return self.fsPath
         # Build the full path to this db-controlled file
         folder = o.getFolder()
-        path = folder / name
-        if checkTemp and not path.is_file():
+        r = folder / name
+        if checkTemp and not r.is_file():
             # It may already have been deleted by a failed transaction. Try to
             # get a copy we may have made in the OS temp folder.
-            path = self.getTempFilePath(o, folder)
-        return path
+            r = self.getTempFilePath(o, folder)
+        return r
 
     def getUploadName(self, shorten=True):
         '''Returns the upload name, nicely formatted'''
@@ -403,6 +403,17 @@ class FileInfo:
             setattr(r, name, getattr(self, name))
         return r
 
+    def move(self, src, dest):
+        '''Moves p_self, being in-db and tied to this p_src object, to the disk
+           folder of this p_dest object.'''
+        currentPath = self.getFilePath(src, checkTemp=False)
+        # Update the path to the new file on p_self
+        destFolder, relPart = dest.getFolder(create=True, withRelative=True)
+        self.fsPath = relPart
+        newPath = self.getFilePath(dest, checkTemp=False)
+        # Move the file on disk
+        return currentPath.rename(newPath)
+
     def __repr__(self):
         '''p_self's short string representation'''
         return f'‹File @{self.fsPath}/{self.fsName} {self.getShownSize()}›'
@@ -415,7 +426,7 @@ class File(Field):
     traverse = Field.traverse.copy()
 
     # MIME types for images
-    imageMimeTypes = ('image/png', 'image/jpeg', 'image/gif')
+    imageMimeTypes = 'image/png', 'image/jpeg', 'image/gif'
 
     # MIME types for resizable images
     resizableImages = imageMimeTypes
@@ -429,6 +440,9 @@ class File(Field):
     # A file field may store a binary file in the object folder, within the
     # database-controlled filesystem.
     disk = True
+
+    # Make class FileInfo available here
+    Info = FileInfo
 
     class Layouts(Layouts):
         '''File-specific layouts'''
