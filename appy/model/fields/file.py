@@ -146,7 +146,7 @@ class FileInfo:
         if not r: return '?'
         # Simply return the upload name if not too long
         keep = FileInfo.uploadNameMax
-        if len(r) <= keep or not shorten: return r
+        if not shorten or len(r) <= keep: return r
         # Return an "acronym" tag with the first chars of the name
         return f'<abbr title="{r}" style="cursor:pointer">{r[:keep]}...</abbr>'
 

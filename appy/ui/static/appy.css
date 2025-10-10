@@ -253,6 +253,7 @@ div.rbutton { float:right }
 .small label { font-size:80% }
 .small ul { margin:0 0 0.1em 0.5em }
 .small li { padding:0 2px 0 10px; text-align:left }
+.list .small { margin:0 }
 .popup .grid th, .popup .grid td { border:1px solid grey }
 .calTable { font-size:95% }
 .calTable>tbody>tr>td { border:5px solid white; color:#555555; padding:10px }
