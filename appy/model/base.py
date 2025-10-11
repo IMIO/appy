@@ -1126,7 +1126,7 @@ class Base:
 
     def create(self, _name, secure=False, raiseOnWrongAttribute=True,
                executeMethods=True, indexIt=True, initialComment=None,
-               initialState=None, **kwargs):
+               initialState=None, at=None, **kwargs):
         '''Create a new instance of a Appy class'''
         # If p__name is the name of a field, the created object will be linked
         # to p_self via this field. Else, p__name must correspond to a root
@@ -1147,6 +1147,10 @@ class Base:
         # transition. If p_initialState is given (as a string), it will force
         # the object state instead of setting him to its workflow's initial
         # state.
+
+        # When the creation implies linking the created object via a ref field,
+        # p_at may be specified as a way to specify the position the newly
+        # created object must have within the ref (see doc in Ref::linkObject).
 
         # Determine the ID of the object to create
         id = kwargs.pop('id') if 'id' in kwargs else None
@@ -1178,7 +1182,7 @@ class Base:
         # Link the created object to its initiator when relevant
         if field:
             field.linkObject(self, o, executeMethods=executeMethods,
-                             reindex=indexIt)
+                             reindex=indexIt, at=at)
         # Call custom initialization: a hook allowing the app developer to
         # initialise its object after it's been linked to its initiator object.
         if executeMethods: multicall(o, 'onEdit', False, True)
