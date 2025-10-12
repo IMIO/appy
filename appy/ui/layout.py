@@ -480,7 +480,7 @@ class Layouts(dict):
 
     # Base types are those for which a Layout instance will be stored in a
     # Layouts instance.
-    baseTypes = ('edit', 'view', 'search')
+    baseTypes = 'edit', 'view', 'search'
 
     # "Top" layouts correspond to a zone on the top-right corner of some pages
     topLayouts = asDict(('query', 'pre'))
@@ -495,7 +495,7 @@ class Layouts(dict):
     # account, while, for most of them, this is implicit. For example, when
     # determining visibility of a field, boolean "True" implicitly denotes any
     # layout type, excepted those listed in the following attribute.
-    explicitTypes = ('sub', 'buttons', 'sidebar', 'field')
+    explicitTypes = 'sub', 'buttons', 'sidebar', 'field'
 
     # The following layouts do not accept all types of fields
     restrictedTypes = asDict(('buttons', 'sub', 'pre', 'query'))
@@ -562,14 +562,17 @@ class Layouts(dict):
     # ~~~ Default cell layout ~~~
     # Layouts for a field do not contain any entry for layout type "cell".
     # Indeed, rendering a field on such layout is, implicitly, simply rendering
-    # its value ("f"). Moreover, rendering a layout renders a complete XHTML
-    # table, even if it contains a single cell, like for "f". So we avoid doing
-    # this for performance and conciseness reasons. But we can't complelety
-    # forget cell layouts, because they are needed for inline-editing (or maybe
-    # other Ajax-like functionalities in the future). Indeed, the machinery for
-    # ajax-editing the field is inlaid in the XHTML table corresponding to the
+    # its value ("f"). Moreover, rendering a layout renders a complete div, even
+    # if it contains a single cell, like for "f". So we avoid doing this for
+    # performance and conciseness reasons. But we can't complelety forget cell
+    # layouts, because they are needed for inline-editing (or maybe other Ajax-
+    # like functionalities in the future). Indeed, the machinery for ajax-
+    # editing the field is inlaid in the XHTML table corresponding to the
     # layout. In such case, we will use a standard cell layout defined here.
-    cell = Layout('f|', align='center', css='no')
+    #
+    # Note that this default layout is aligned in the center. Every Field sub-
+    # class may override this cell attribute.
+    cell = LayoutF('f|', css='no')
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                              Class methods

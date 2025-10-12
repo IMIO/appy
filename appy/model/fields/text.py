@@ -14,9 +14,9 @@ from appy.xml.escape import Escape
 from .multilingual import Multilingual
 from appy.utils import string as sutils
 from appy.xml.cleaner import StringCleaner
-from appy.ui.layout import Layouts, Layout
 from appy.database.operators import and_, in_
 from appy.database.indexes.text import TextIndex
+from appy.ui.layout import Layouts, Layout, LayoutF
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 IN_ED_MLG  = 'Is is currently not possible to inline-edit multilingual Text ' \
@@ -482,6 +482,8 @@ class Text(Multilingual, Field):
         b = Layouts(edit='lrv-d-f', view='l-f')
         g = Layouts(edit=Layout('d2-f;rv=', width='99%'),
                     view=Layout('fl', width='99%'))
+        # Override default Layouts.cell attribute
+        cell = LayoutF('f', css='no')
 
         @classmethod
         def getDefault(class_, field):
@@ -614,14 +616,14 @@ class Text(Multilingual, Field):
       <div var="inToolbar=showToolbar and hostLayout;
                 align='left' if inToolbar else 'right';
                 fdir='row' if inToolbar else 'column'"
-           style=":'float:%s;display:flex;flex-direction:%s' % (align, fdir)">
+           style=":f'float:{align};display:flex;flex-direction:{fdir}'">
        <div>
-        <img id=":'%s_save' % tid" src=":svg('saveS')"
-             class=":'iconS %s' % ('clickable' if inToolbar else 'inlineIcon')"
+        <img id=":f'{tid}_save'" src=":svg('saveS')"
+             class=":'%s iconS' % ('clickable' if inToolbar else 'inlineIcon')"
              title=":_('object_save')"/></div>
        <div>
-        <img id=":'%s_cancel' % tid" src=":svg('cancelS')"
-             class=":'iconS %s' % ('clickable' if inToolbar else 'inlineIcon')"
+        <img id=":f'{tid}_cancel'" src=":svg('cancelS')"
+             class=":'%s iconS' % ('clickable' if inToolbar else 'inlineIcon')"
              title=":_('object_cancel')"/></div>
       </div>
       <script>:'prepareForAjaxSave(%s,%s,%s,%s)' % \

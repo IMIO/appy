@@ -974,7 +974,7 @@ class Field:
         else:
             # Get the Layout object related to p_layout and render its PX
             if layout in Field.cellLayouts:
-                table = self.Layouts.cell
+                table = c.field.Layouts.cell
             else:
                 table = self.layouts[layout]
             # Add the layout in the context, it is required by its PX

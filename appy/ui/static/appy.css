@@ -21,7 +21,7 @@ abbr      { cursor:help; text-decoration:none }
 form      { margin:0; padding:0 }
 acronym   { cursor:help }
 input     { font:100% |fonts| }
-textarea  { width:99%; font:100% |fonts|; border:1px solid #d0d0d0;
+textarea  { width:97.5%; font:100% |fonts|; border:1px solid #d0d0d0;
             background-color:white; margin-bottom:0.5em; transition:0.5s }
 label,
 .asLabel  { color:|linkColor|; padding:0.2em 0.6em 0 0;
