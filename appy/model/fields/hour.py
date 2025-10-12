@@ -142,7 +142,10 @@ class Hour(Field):
     def fromMinutes(class_, minutes):
         '''Converts a number of p_minutes into a Hour-compliant tuple
            (i_hour, i_minutes)'''
-        mins = int(minutes % 60)
+        # p_minutes can be a negative number
+        neg = minutes < 0
+        mins = int(abs(minutes) % 60)
+        if neg: mins = -mins
         hours = int(minutes / 60.0)
         return hours, mins
 
@@ -161,6 +164,13 @@ class Hour(Field):
             hour += 1
             if hour > 23:
                 hour = hour % 24
+        # Inversely, v_h and v_m may be negative numbers. For example,
+        # (01,10) - 71 = (23,59)
+        if mins < 0:
+            mins += 60
+            hours -= 1
+        if hour < 0:
+            hour += 24
         return hour, mins
 
     @classmethod
