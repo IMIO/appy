@@ -1,6 +1,7 @@
 html      { height:100% }
 body      { font:|fontSize| |fonts|; height:100%; margin:0 }
-pre       { margin-left:1em; background-color:#ececec; padding:0.6em }
+pre       { margin-left:1em; background:#ececec; padding:0.6em }
+td>pre    { background:transparent }
 h1        { font-size:14pt; letter-spacing:2px; font-weight:normal;
             padding:0 0 1em 0 }
 h2        { font-size:13pt; margin:6px 0 6px 0; font-style:italic;

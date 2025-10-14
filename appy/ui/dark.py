@@ -56,25 +56,26 @@ class Dark:
 
     css='''
      .dark .content, .dark .dropdown, body.dark, .dark .lsSearch .dropdown,
-       .dark .sidebar { background-color:|bgColor| }
-     .dark .portlet { background-color:|bgColorL|;
-                      box-shadow:none; border-right: 4px solid |sepColor| }
+       .dark .sidebar { background:|bgColor| }
+     .dark .portlet { background:|bgColorL|; box-shadow:none;
+                      border-right: 4px solid |sepColor| }
      .dark, .dark .phase a, .dark a, .dark .portlet a, .dark a:visited,
        .dark .portlet a:visited, .dark label, .dark select,
        .dark input, .dark input.button, .dark input.buttonPortlet,
        .dark .phase .navText, .dark .portletGroup { color:|fontColor| }
+     .dark .xhtml a, .dark .xhtml a:visited { color:|showyColor| }
      .dark .portletSearch:hover, .dark .pageS div:hover:not(.pageC) {
-       background-color:|fontColorB| }
+       background:|fontColorB| }
      .dark .portletSearch:hover>a, .dark .pageS div:hover:not(.pageC)>a {
        color:|bgColor| }
      .dark select[multiple] option, .dark .navText { color:|fontColorL| }
-     .dark .topBase { background-color:|sepColor| }
+     .dark .topBase { background:|sepColor| }
      .dark .language { color:|fontColor|; border-color:|sepColor| }
      .dark .pzone { border-bottom:1px solid |sepColor| }
-     .dark .phase > div { background-color:|sepColor|; color:|fontColor| }
-     .dark .currentPage { background-color:|bgColorL| !important }
+     .dark .phase > div { background:|sepColor|; color:|fontColor| }
+     .dark .currentPage { background:|bgColorL| !important }
      .dark .list>tbody>tr>th, .dark .list>thead>tr>th,
-       .dark .history>tbody>tr>th { background-color:|thBg|;
+       .dark .history>tbody>tr>th { background:|thBg|;
                                     border-bottom:2px solid |showyColor| }
      .dark .list>tbody>tr>th, .dark .list>thead>tr>th,
        .dark .list>tbody>tr>td, .dark .list>tbody>tr>th,
@@ -82,29 +83,32 @@ class Dark:
      .dark .list>tbody>tr:nth-child(even), .dark .fdown > :nth-child(even),
        .dark .gridG>tbody>tr:nth-child(even), .dark .subTitle table>tbody>tr>td,
        .dark .history>tbody>tr:nth-child(even), .dark pre, .dark .python
-       { background-color:transparent }
+       { background:transparent }
      .dark .list>tbody>tr:nth-child(odd), .dark .fdown > :nth-child(odd),
        .dark .gridG>tbody>tr:nth-child(odd),
-       .dark .history>tbody>tr:nth-child(odd) { background-color:|tdBg| }
+       .dark .history>tbody>tr:nth-child(odd) { background:|tdBg| }
      .dark .grid>tbody>tr>th, .dark .grid>thead>tr>th, .dark .small th,
-       .dark .xhtml th { background-color:|thBg| }
-     .dark .popup, .dark a.bref, .dark a.bref:visited { background-color:|tdBg|}
+       .dark .xhtml th { background:|thBg| }
+     .dark .popup, .dark a.bref, .dark a.bref:visited { background:|tdBg|}
      .dark textarea, .dark input[type=date], .dark input[type=number] {
-       background-color:|bgColorL|; border:none; color:|fontColor| }
+       background:|bgColorL|; border:none; color:|fontColor| }
      .dark .discreet, .dark .subTitle { color:|fontColorL| }
-     .dark .focus { box-shadow:none; background-color:|bgColorL|;
-                    color:|fontColor| }
-     .dark select:not([multiple]) option { background-color:|bgColorB| }
-     .dark .tab { background-color:|thBg| }
-     .dark .tabCur { border:none; background-color:|bgColorL|}
-     .dark .message { background-color:|thBg|; border:1px solid |showyColor| }
-     .dark .header { border:none; background-color:transparent }
-     .dark .cke_top, .dark .cke_bottom { background-color:lightgrey }
+     .dark .focus { box-shadow:none; background:|bgColorL|; color:|fontColor| }
+     .dark select:not([multiple]) option { background:|bgColorB| }
+     .dark .tab { background:|thBg| }
+     .dark .tabCur { border:none; background:|bgColorL|}
+     .dark .message { background:|thBg|; border:1px solid |showyColor| }
+     .dark .header { border:none; background:transparent }
+     .dark .cke_top, .dark .cke_bottom, .dark .cke_dialog_contents,
+       .dark .cke_dialog_body { background:lightgrey }
+     .dark .cke_dialog_body a, .dark .cke_dialog_body label,
+       .dark .cke_dialog_body select, .dark .cke_dialog_body input
+       { color:|bgColor| }
      .dark .small>tbody>tr>th { border:1px solid |showyColor| }
-     .dark .lsSelected { background-color:|bgColorL| }
-     .dark .toolbar { background-color:#7e7e7e}
-     .dark .xhtmlE { background-color:|bgColor|}
-     .dark .navBlock { background-color:|bgColor| }
+     .dark .lsSelected { background:|bgColorL| }
+     .dark .toolbar { background:#7e7e7e}
+     .dark .xhtmlE { background:|bgColor|}
+     .dark .navBlock { background:|bgColor| }
      .dark .currP { border-left:1px solid |bgColor|}''',
 
     # Use the Dark config as base object for CSS variables replacements, instead
