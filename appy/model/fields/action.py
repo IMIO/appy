@@ -584,8 +584,9 @@ class Action(Field):
                _('action_confirm')
 
     def isRenderableOn(self, layout):
-        '''Action fields can be rendered on "button" but not on "top" layouts'''
-        return layout not in Layouts.topLayouts
+        '''Action fields are not renderable on some layouts, like "edit", "xml"
+           or "top" layouts.'''
+        return layout in Layouts.actionLayouts
 
     traverse['perform'] = 'perm:write'
     def perform(self, o, options=None, minimal=False):

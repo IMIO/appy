@@ -230,7 +230,7 @@ class Change(Event):
     deletable = True
 
     # Types of entries in a diff
-    diffEntries = ('insert', 'delete')
+    diffEntries = 'insert', 'delete'
 
     # Showing details about a change = displaying the previous values of the
     # fields whose values were modified in this change.
@@ -334,7 +334,7 @@ class Link(Event):
     # The name of specific attribute added by this class. It is not "hardcoded"
     # in the constructor, because a sub-class may define another one. For class
     # Link, boolean "addition" tells if we have linked an existing object
-    # (addition==False) or a newly created one (addition==True).
+    # (addition is False) or a newly created one (addition is True).
     attribute = 'addition'
 
     def __init__(self, login, state, date, **params):

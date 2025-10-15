@@ -488,6 +488,9 @@ class Layouts(dict):
     # Layouts corresponding to ranges of icons or buttons
     buttonLayouts = asDict(('buttons', 'sub', 'view', 'xml'))
 
+    # Layouts that accept actions
+    actionLayouts = asDict(('buttons', 'sub', 'view', 'cell'))
+
     # Layouts corresponding to cell content in a list of objects
     cellLayouts = asDict(('cell', 'sub'))
 
