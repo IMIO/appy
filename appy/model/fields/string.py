@@ -180,6 +180,24 @@ class String(Multilingual, Field):
             style=":f'text-transform:{field.transform}'"/><br/>''')
 
     # Some predefined functions that may be used as validators
+
+    @classmethod
+    def rightLength(class_, o, rangE, value):
+        '''Has p_value the right length? If no, returns a translated message.'''
+        # p_rangE must be expressed as a tuple (i_minLength, i_maxLength) or an
+        # object having attributes "min" and "max".
+        if isinstance(rangE, tuple):
+            miN, maX = rangE
+        else:
+            miN = rangE.min
+            maX = rangE.max
+        length = len(value)
+        if length < miN or length > maX:
+            r = o.translate('length_ko', mapping={'min': miN, 'max': maX})
+        else:
+            r = True
+        return r
+
     @staticmethod
     def _MODULO_97(o, value, complement=False):
         '''p_value must be a string representing a number, like a bank account.

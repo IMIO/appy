@@ -288,6 +288,10 @@ msgstr "The field contains ${found} characters · The maximum is ${max}."
 msgid "range_ko"
 msgstr "Choose a value between ${min} and ${max}."
 
+#. Default: "The term must have between ${min} and ${max} character·s."
+msgid "length_ko"
+msgstr "The term must have between ${min} and ${max} character·s."
+
 #. Default: "Wrong or missing file extension. Valid extension(s) is (are): ${exts}."
 msgid "ext_ko"
 msgstr "Wrong or missing file extension. Valid extension(s) is (are): ${exts}."

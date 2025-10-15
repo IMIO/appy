@@ -43,17 +43,17 @@ class Integer(Field):
      </x><br/>''')
 
     @classmethod
-    def inRange(class_, o, range, value):
-        '''Is p_value within p_range ? If no, returns a translated message'''
-        # p_range must be expressed as a tuple (min, max) or an object having
-        # attributes "min" and "max".
-        if isinstance(range, tuple):
-            min, max = range
+    def inRange(class_, o, rangE, value):
+        '''Is p_value within p_range ? If no, returns a translated message.'''
+        # p_range must be expressed as a tuple (i_min, i_max) or an object
+        # having attributes "min" and "max".
+        if isinstance(rangE, tuple):
+            miN, maX = rangE
         else:
-            min = range.min
-            max = range.max
-        if (value < min) or (value > max):
-            r = o.translate('range_ko', mapping={'min': min, 'max': max})
+            miN = rangE.min
+            maX = rangE.max
+        if value < miN or value > maX:
+            r = o.translate('range_ko', mapping={'min': miN, 'max': maX})
         else:
             r = True
         return r

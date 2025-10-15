@@ -287,6 +287,10 @@ msgstr ""
 msgid "range_ko"
 msgstr ""
 
+#. Default: "The term must have between ${min} and ${max} character·s."
+msgid "length_ko"
+msgstr ""
+
 #. Default: "Wrong or missing file extension. Valid extension(s) is (are): ${exts}."
 msgid "ext_ko"
 msgstr ""
