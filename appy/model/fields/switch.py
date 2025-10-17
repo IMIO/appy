@@ -84,13 +84,24 @@ class Switch(Field):
                 return fieldset, fields
         return fieldset, {}
 
-    def injectFields(self, meta, class_, r):
+    def injectFields(self, meta, class_, r, withProperties=False):
         '''Adds, in dict p_r, any switch sub-field'''
         # p_r is a dict of fields that will be stored on p_self's p_meta-class,
         # as attribute "switchFields".
+        #
+        # If read/write properties must be injected on the p_meta(class) for
+        # every sub-field (p_withProperties=True), v_fields will collect the
+        # fields to add in a dict. For that purpose, p_r cannot be used, because
+        # it may contain other fields as well.
+        allFields = {} if withProperties else None
         for case, fields in self.fields:
             for name, field in fields.items():
                 # Ensure this name can be used
                 meta.checkFieldName(class_, name)
                 r[name] = field
+                if withProperties:
+                    allFields[name] = field
+        # Also inject a the property on p_class_ if requested
+        if withProperties:
+            meta.injectProperties(fields=allFields)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

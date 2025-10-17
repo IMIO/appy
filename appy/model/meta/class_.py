@@ -338,7 +338,7 @@ class Class(Meta):
                 sf = self.switchFields = collections.OrderedDict()
             else:
                 sf = self.switchFields
-            field.injectFields(self, pyClass, sf)
+            field.injectFields(self, pyClass, sf, withProperties=True)
 
     def openHistories(self):
         '''Make histories on p_self's objects viewable by anyone having the
