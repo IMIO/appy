@@ -259,13 +259,14 @@ class Class(Meta):
         class_ = self.python
         # v_r Will become p_self.fields
         r = collections.OrderedDict()
-        # v_sr will become p_self.switchFields, collecting sub-fields found
-        # within Switch fields. Sub-fields found within Switch fields must be
-        # considered, in some aspects, as first-class fields: they must have a
-        # read/write property (as produced by m_injectProperties) and they must
-        # be retrievable via method o.getField. But their rendering is specific
-        # and is managed internally by their switch.
-        sr = None
+        # v_sf (*s*witch *f*ields) will become p_self.switchFields, collecting
+        # sub-fields found within Switch fields. Sub-fields found within Switch
+        # fields must be considered, in some aspects, as first-class fields:
+        # they must have a read/write property (as produced by
+        # m_injectProperties) and they must be retrievable via method
+        # o.getField. But their rendering is specific and is managed internally
+        # by their switch.
+        sf = None
         # Find field in p_class_ and base classes
         indexable = self.isIndexable() # Is p_self indexable ?
         for aClass in self.getFieldClasses(class_):
@@ -291,9 +292,9 @@ class Class(Meta):
                 # Manage Switch sub-fields
                 if isinstance(field, Switch) and field.fields:
                     # Store any found sub-field within v_sr
-                    if sr is None:
-                        sr = collections.OrderedDict()
-                    field.injectFields(self, aClass, sr)
+                    if sf is None:
+                        sf = collections.OrderedDict()
+                    field.injectFields(self, aClass, sf)
                 # Ensure no indexed field is set on an unindexable class.
                 # Indexed fields from class "Base" are tolerated on not
                 # indexable classes because they have no effect on these
@@ -305,12 +306,23 @@ class Class(Meta):
             if isBase and ts.title and ts.searchable:
                 ts.title.filterField = ts.searchable
         self.fields = r
-        self.switchFields = sr
+        self.switchFields = sf
 
     def setField(self, name, field):
-        '''Possibly called by p_self.python's m_update method, this method adds,
-           to p_self.fields, a new p_field named p_name, or replaces the field
-           currently named p_name if the name is already in use.'''
+        '''This method adds, to p_self.fields, a new p_field named p_name, or
+           replaces the field currently named p_name if the name is already in
+           use.'''
+        # This is for fields that would not have been read "the standard way" by
+        # m_readFields. For example, fields added by p_self.python's m_update
+        # methods, or fields added via app/ext's onInstall methods.
+        #
+        # Ensure the field name is acceptable. Don't check it if it replaces an
+        # existing field. The developer must know what she is doing: replacing
+        # an existing field, possiblity with another one having a different
+        # type, may lead to a plethora of problems.
+        pyClass = self.python
+        if name not in self.fields:
+            self.checkFieldName(pyClass, name)
         self.fields[name] = field
         # Late-initialise it
         field.init(self, name)
@@ -319,6 +331,14 @@ class Class(Meta):
             back = field.back
             if back and not hasattr(back, 'name'):
                 back.class_.meta.setField(back.attribute, back)
+        # For a switch, inject the sub-fields
+        if isinstance(field, Switch):
+            sf = self.switchFields
+            if sf is None:
+                sf = self.switchFields = collections.OrderedDict()
+            else:
+                sf = self.switchFields
+            field.injectFields(self, pyClass, sf)
 
     def openHistories(self):
         '''Make histories on p_self's objects viewable by anyone having the
