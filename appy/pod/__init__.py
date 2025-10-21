@@ -7,18 +7,18 @@ from appy.utils import Traceback
 
 # POD-specific constants - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 XHTML_HEADINGS = tuple((f'h{i}' for i in range(1,11)))
-XHTML_LISTS    = ('ol', 'ul')
+XHTML_LISTS    = 'ol', 'ul'
 
 # "para" is a meta-tag representing p, div, blockquote or address
 XHTML_PARA_TAGS = XHTML_HEADINGS + ('p', 'div', 'blockquote', 'address',
                                     'caption', 'para')
-XHTML_INNER_TAGS      = ('b', 'i', 'u', 'em', 'span')
-XHTML_UNSTYLABLE_TAGS = ('li', 'a')
+XHTML_INNER_TAGS      = 'b', 'i', 'u', 'em', 'span'
+XHTML_UNSTYLABLE_TAGS = 'li', 'a'
 XHTML_META_TAGS       = {'p': 'para', 'div': 'para', 'blockquote': 'para',
                          'address': 'para', 'caption': 'para'}
 
 # Cell-like tags (including "li")
-XHTML_CELL_TAGS = ('th', 'td', 'li')
+XHTML_CELL_TAGS = 'th', 'td', 'li'
 
 # Default output formats for POD templates, by template type
 formatsByTemplate = {'.odt': ('pdf', 'doc', 'docx', 'odt'),
@@ -109,5 +109,5 @@ def getUuid(removeDots=False, prefix='f'):
        document).'''
     r = uuid.uuid4().hex
     if removeDots: r = r.replace('.', '')
-    return '%s%s' % (prefix, r)
+    return f'{prefix}{r}'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
