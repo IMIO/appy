@@ -323,7 +323,7 @@ class User(Base):
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     pm['multiplicity'] = (0, None)
-    del pm['width']
+    del pm['width']; del pm['layouts']
 
     def showRoles(self):
         '''Global roles are not visible or editable under all circumstances'''
@@ -343,7 +343,8 @@ class User(Base):
     roles = Select(show=showRoles, indexed=True, width=40, height=10,
       validator=Selection(selectRoles,
                           single=lambda o, role: o.translate(f'role_{role}')),
-      fwidth='3em', render='checkbox', checkAll=False, **pm)
+      fwidth='12em', render='checkbox', checkAll=False,
+      layouts=Select.Layouts.g, **pm)
 
     def addRole(self, role):
         '''Adds p_role among p_self.roles'''
