@@ -14,7 +14,8 @@ HELP_ACT  = 'Action can be "start" (start the site), "stop" (stop it), ' \
             '"restart" (stop it and directly restart it), "fg" (start it in ' \
             'the foreground), "clean" (clean temporary objects, pack the ' \
             'database, detect missing files on the filesystem, remove ' \
-            'phantom files) or "run" (execute a specific method).'
+            'phantom files, detect refs containing a high number of objects) ' \
+            'or "run" (execute a specific method).'
 HELP_METH = 'When action in "run", you must specify the name of the method ' \
             'to execute on your app\'s tool. When action is "start" or "fg", ' \
             'you may also specify such a method: it will be executed just ' \

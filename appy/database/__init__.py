@@ -470,7 +470,8 @@ class Database:
 
     def clean(self, handler, logger, method=None):
         '''Clean the database = (a) remove any temp object from it, (b) launch
-           an analysis via the appy.database.analyser and (c) pack it.'''
+           analyses via analysers from appy.database.analyser and (c) pack
+           it.'''
         # Create a specific connection
         connection = handler.dbConnection = self.openConnection()
         # (a) Remove temp objects. Get the temp store.
@@ -489,8 +490,9 @@ class Database:
             commit = True
         # (b) Launch an analysis. importing the Analyser at the start of this
         #     file produces a circular import.
-        from appy.database.analyser import Analyser
-        Analyser(handler, logger, method).run()
+        from appy.database import analysers
+        for class_ in analysers.alL:
+            class_(handler, logger, method).run()
         # At this step, close the connection (after committing if necessary)
         if commit:
             self.commit(handler, description=SITE_CLEAN)

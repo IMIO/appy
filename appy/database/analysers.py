@@ -23,7 +23,7 @@ SANE_FILES = '  %d walked sane files (total size: %s).'
 PH_FOUND   = '  %s phantom file(s) found (total size: %s), moved to %s.'
 PH_NO      = '  No phantom file was found.'
 MISS_TEXT  = '  Missing files on disk = %d.'
-A_START    = 'Analysing database @%s (%s)...'
+F_START    = 'Analysing files in database @%s (%s)...'
 WALK       = '  Walking instances of class...'
 WALK_C     = '   %s...'
 WALKED     = '   > %d object(s) analysed.'
@@ -37,6 +37,20 @@ A_END      = 'Done.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Analyser:
+    '''Abstract analyser'''
+
+    def __init__(self, handler, logger, method):
+        self.handler = handler
+        self.logger = logger
+        self.tool = handler.dbConnection.root.objects.get('tool')
+        self.config = handler.server.config
+        # Usage of p_method depends on the concrete analyser. May be unused.
+        self.method = method
+        # Database size, formatted
+        self.dbSize = self.config.database.getDatabaseSize(True)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class FilesAnalyser(Analyser):
     '''Detect (and possibly repair) incoherences between FileInfo objects as
        stored in the database and corresponding files stored on the
        DB-controlled filesystem.'''
@@ -46,20 +60,16 @@ class Analyser:
     # filesystem but not mentioned in any FileInfo instance in the database.
 
     def __init__(self, handler, logger, method=None):
-        self.handler = handler
-        self.logger = logger
-        self.tool = handler.dbConnection.root.objects.get('tool')
-        self.config = handler.server.config
+        # p_method, if passed, is a "rise file from the ashes" method: it will
+        # allow to find or rebuild a file being mentioned in a FileInfo object
+        # but being missing on disk.
+        super().__init__(handler, logger, method)
         # The folder containing the DB-controlled files
         cfg = self.config.database
         self.binariesFolder = cfg.binariesFolder
         # Define a folder where to move potentially found phantom files
         now = DateTime()
         self.phantomFolder = cfg.phantomFolder / now.strftime('%Y%m%d_%H%M%S')
-        # p_method, if passed, is a "rise file from the ashes" method: it will
-        # allow to find or rebuild a file being mentioned in a FileInfo object
-        # but being missing on disk.
-        self.method = method
 
     def log(self, text, type='info'):
         '''Logs this p_text'''
@@ -257,7 +267,7 @@ class Analyser:
         # Start the analysis
         tool = self.tool
         config = self.config.database
-        self.log(A_START % (config.filePath, config.getDatabaseSize(True)))
+        self.log(F_START % (config.filePath, self.dbSize))
         # Step #1 - Collect all File fields per Appy class
         fileFields = self.collectFields()
         # Step #2 - Walk all objects
@@ -268,4 +278,16 @@ class Analyser:
         self.walkFilesystem(fileFields)
         # Log and return final results
         self.log(A_END)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class RefsAnalyser(Analyser):
+    '''Detect refs having a high number of objects'''
+
+    def run(self):
+        '''Run the analysis'''
+        # Browse all indexable classes from the model
+        pass
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+alL = FilesAnalyser, RefsAnalyser
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
