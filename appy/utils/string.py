@@ -90,6 +90,9 @@ class Normalize:
     replacements.update({'Æ':'AE', 'æ': 'ae', 'Œ':'OE', 'œ': 'oe',
                          ' ':' ', '‑':'-'})
 
+    # For rex v_odsTabKo (see below), the following replacements may be used
+    odsReplacements = {':': '.', '/': '-'}
+
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # B. The default regular expressions
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -105,6 +108,10 @@ class Normalize:
     nonAlphanum_  = re.compile('[^a-zA-Z0-9_]')  # Alphanums + the underscore
     nonDigit      = re.compile('[^0-9]')
     anyDigit      = re.compile('[0-9]')
+    odsTabKo      = re.compile(r"[\[\]\*\?\:\/']") # Any char being illegal
+                                                   # within ODS
+                                                   # (OpenDocument Spreadsheet)
+                                                   # tabs
 
     # Access some of the previously defined regular expressions, depending on
     # the fact that blanks (1) and/or dashes (2) must be matched or not.
@@ -248,6 +255,12 @@ class Normalize:
     def noDigit(class_, s):
         '''Returns a version of p_s whose digits have been removed'''
         return Normalize.string(s, class_.anyDigit)
+
+    @classmethod
+    def odsTab(class_, s, replace=odsReplacements):
+        '''Returns a version of p_s that can be used as name for an ODS
+           (OpenDocument Spreadsheet) tab.'''
+        return Normalize.string(s, class_.odsTabKo, replace=replace)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Variables:
