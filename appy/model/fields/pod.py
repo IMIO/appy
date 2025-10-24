@@ -184,8 +184,10 @@ class Pod(Field):
         rt = Layouts(view=LayoutF('f!', css='topSpace')) # "r"ight
         # "l"eft-align layout
         l = Layouts(view=LayoutF('f;'))
+        # Default cell layout: make it an inline layout
+        cell = LayoutF('f', inline=True)
         # Inline layout
-        inline = Layouts(view=Layout('f', width=n, css='inline', align=''))
+        inline = Layouts(view=cell)
 
     # Icon allowing to generate a given template in a given format
     pxIcon = Px('''

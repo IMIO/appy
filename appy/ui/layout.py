@@ -359,7 +359,7 @@ class LayoutF(Layout):
      </div>''')
 
     def __init__(self, layoutString=None, style=None, css=None, other=None,
-                 derivedType=None, direction='row', wrap=False):
+                 derivedType=None, direction='row', wrap=False, inline=False):
         # Call the base constructor
         super().__init__(layoutString, style=style, css=css, other=other,
                          derivedType=derivedType)
@@ -376,11 +376,14 @@ class LayoutF(Layout):
         # Unwrap the first row, that is the unique row that will be taken into
         # account.
         self.row = self.rows[0]
+        # CSS display will bel "flex" or "inline-flex" ?
+        self.inline = inline
 
     def getStyle(self):
         '''Get content of the main tag's "style" attribute'''
         row = self.row
-        r = f'display:flex;align-items:{row.valign}'
+        pre = 'inline-' if self.inline else ''
+        r = f'display:{pre}flex;align-items:{row.valign}'
         if len(row.cells) == 1:
             # Get the horizontal alignment from this unique cell
             cell = row.cells[0]
