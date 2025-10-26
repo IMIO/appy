@@ -3220,8 +3220,10 @@ class Ref(Field):
         return r if r and o.guard.mayView(r) else None
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #      Representation of this field within a class-diagram' class box
+    #                     Representations of this field
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # Representatio within a class-diagram' class box
 
     pxBox = Px('''<tr><td></td><td>::field.getAssocLine(tool)</td></tr>''')
 
@@ -3247,6 +3249,21 @@ class Ref(Field):
                f'{self.umlMultiplicities()} {assoc2}<a class="bref" ' \
                f'href="{tool.url}/view?page=model&className={cname}">{cname}'\
                f'</a>'
+
+    def getSymbol(self):
+        '''Returns an utf8 symbol representing the fact that p_self is a forward
+           or a bakward ref.'''
+        return '⏪' if self.isBack else '⏩'
+
+    # Textual representation
+    def asString(self):
+        '''p_self and its back ref, as a short string'''
+        back = self.back
+        if back:
+            more = f'↔ {self.class_.meta.name}::{back.name} {back.getSymbol()}'
+        else:
+            more = '⊣'
+        return f'{self.name} {self.getSymbol()} {more}'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def autoref(class_, field):

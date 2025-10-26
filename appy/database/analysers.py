@@ -10,6 +10,7 @@ from pathlib import Path
 from DateTime import DateTime
 
 from appy.utils import path as putils
+from appy.model.fields.ref import Ref
 from appy.model.fields.file import File
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -27,13 +28,18 @@ F_START    = 'Analysing files in database @%s (%s)...'
 WALK       = '  Walking instances of class...'
 WALK_C     = '   %s...'
 WALKED     = '   > %d object(s) analysed.'
-WALKED_TOT = '  %d objects in the database.'
+WALKED_F   = '  %d objects with File fields in the database.'
 WALK_FS    = '  Walking filesystem @%s...'
 DISK_KO    = '  Missing on disk for %s :: %s%s'
 RISHES     = '  ✅ "Rise file from the ashes" method :: File %s is back.'
 TMP_FOUND  = ' :: A copy exists in %s (%d bytes); the FileInfo-referred file ' \
              'is %d bytes).'
 A_END      = 'Done.'
+R_START    = 'Analysing refs in database @%s (%s)...'
+R_CLASS    = '  %s (in %s) :: #Object(s): %d'
+R_REF_D    = '    ❗ Disabled ref(s) :: %s.'
+REF_UP     = '    %s %s :: %s :: %d tied objects (>%d).'
+R_END      = 'Done. %d objects analysed.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Analyser:
@@ -48,6 +54,10 @@ class Analyser:
         self.method = method
         # Database size, formatted
         self.dbSize = self.config.database.getDatabaseSize(True)
+
+    def log(self, text, type='info'):
+        '''Logs this p_text'''
+        getattr(self.logger, type)(text)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class FilesAnalyser(Analyser):
@@ -70,10 +80,6 @@ class FilesAnalyser(Analyser):
         # Define a folder where to move potentially found phantom files
         now = DateTime()
         self.phantomFolder = cfg.phantomFolder / now.strftime('%Y%m%d_%H%M%S')
-
-    def log(self, text, type='info'):
-        '''Logs this p_text'''
-        getattr(self.logger, type)(text)
 
     def collectFields(self):
         '''Get a dict of all the app's File fields, keyed by class name'''
@@ -138,7 +144,7 @@ class FilesAnalyser(Analyser):
                                 r -= 1
             self.log(WALKED % count)
             total += count
-        self.log(WALKED_TOT % total)
+        self.log(WALKED_F % total)
         self.log(MISS_TEXT % r)
 
     def getPhantomFolder(self):
@@ -276,17 +282,67 @@ class FilesAnalyser(Analyser):
         # Step #3 - Walk the file system
         #         > Check existing files not being mentioned in the DB
         self.walkFilesystem(fileFields)
-        # Log and return final results
+        # Log the end of the analysis
         self.log(A_END)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class RefsAnalyser(Analyser):
     '''Detect refs having a high number of objects'''
 
+    def walkObjects(self, class_, refs):
+        '''Walk instances of this p_class_, searching for refs containing a
+           number of objects being higher than the defined threshold. Returns
+           the number of such instances.'''
+        r = 0
+        tool = self.tool
+        config = tool.config.database
+        low = config.refThresholdLow
+        high = config.refThresholdHigh
+        for o in tool.search(class_.name):
+            r += 1
+            for ref in refs:
+                count = o.countRefs(ref.name)
+                if count >= low:
+                    if count >= high:
+                        symbol = '💥'
+                        threshold = high
+                    else:
+                        symbol = '📍'
+                        threshold = low
+                    self.log(REF_UP % (symbol, o.strinG(path=False),
+                                       ref.asString(), count, threshold))
+        return r
+
     def run(self):
         '''Run the analysis'''
-        # Browse all indexable classes from the model
-        pass
+        # Start the analysis
+        tool = self.tool
+        config = self.config.database
+        self.log(R_START % (config.filePath, self.dbSize))
+        # Browse all classes from the model, in alphabetical order
+        classes = list(tool.model.classes.values())
+        classes.sort(key=lambda c: c.name)
+        self.log(WALK)
+        total = 0 # Compute the total number of walked objects whose classes
+                  # have at leastone not-disabled ref.
+        for class_ in classes:
+            # Ignore not indexable classes, considered as transient
+            if not class_.isIndexable(): continue
+            # Log this class and its number of objects
+            ocount = tool.count(class_.name)
+            self.log(R_CLASS % (class_.name, class_.python.__module__, ocount))
+            # Collect ref fields on this p_class_
+            refs = class_.getRefs(forward=None, sort=True)
+            if not refs: continue
+            # Log a warning for any disabled ref found within refs
+            disabled = [ref.asString() for ref in refs if ref.disabled]
+            if disabled:
+                self.log(R_REF_D % (', '.join(disabled)), type='warning')
+            if len(refs) == len(disabled): continue
+            # Walk instances of this p_class_
+            total += self.walkObjects(class_, refs)
+        # Log the end of the analysis
+        self.log(R_END % total)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 alL = FilesAnalyser, RefsAnalyser

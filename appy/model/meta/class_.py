@@ -68,6 +68,9 @@ class Class(Meta):
     # to use field "searchable".
     unsearchableFields = 'title', 'allowed', 'cid'
 
+    # Attributes storing fields
+    fieldStores = 'fields', 'switchFields'
+
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Model-construction-time methods
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -693,7 +696,7 @@ class Class(Meta):
                 r.append(elem)
         return r
 
-    def getRefs(self, class_=None, forward=True, names=False):
+    def getRefs(self, class_=None, forward=True, names=False, sort=None):
         '''Returns, among p_self.fields, those being Ref fields'''
         # If p_class_ contains the name of a class, only Refs pointing to
         # instances of this class are part of the result. If p_forward is :
@@ -706,16 +709,25 @@ class Class(Meta):
         # p_names is True.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         r = []
-        for field in self.fields.values():
-            # Ignore non-ref fields
-            if not isinstance(field, Ref): continue
-            # Manage p_forward
-            if forward is not None and forward == field.isBack: continue
-            # Manage p_class_
-            if class_ and field.class_.__name__ != class_: continue
-            # Add this v_field to the result
-            elem = field.name if names else field
-            r.append(elem)
+        for store in Class.fieldStores:
+            fields = getattr(self, store)
+            if not fields: continue
+            for field in fields.values():
+                # Ignore non-ref fields
+                if not isinstance(field, Ref): continue
+                # Manage p_forward
+                if forward is not None and forward == field.isBack: continue
+                # Manage p_class_
+                if class_ and field.class_.__name__ != class_: continue
+                # Add this v_field to the result
+                elem = field.name if names else field
+                r.append(elem)
+        # Sort fields in alphabetical order if requested
+        if sort:
+            if names:
+                r.sort()
+            else:
+                r.sort(key=lambda field: field.name)
         return r
 
     def getFieldSets(self, o, fields=None):

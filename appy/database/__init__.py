@@ -91,6 +91,12 @@ class Config:
         # storing the database and binaries, a warning will be shown on page
         # "Admin zone > Database".
         self.warnSpaceLeft = 0.05
+        # When the Ref analyser (launched via ./site clean) scans the database,
+        # looking for refs containing a high number of objects, it will log an
+        # entry for every Ref having a number of objects being equal or higher
+        # to these thresholds.
+        self.refThresholdLow = 1000
+        self.refThresholdHigh = 10000
 
     def set(self, folder, filePath=None, phantomFolder=None):
         '''Sets site-specific configuration elements. If filePath is None,
