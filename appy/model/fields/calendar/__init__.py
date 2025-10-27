@@ -228,13 +228,13 @@ class Calendar(Field):
                                gap:0.5em; position:sticky; top:1.5em;
                                align-self:flex-start }
       .calSelect { margin:10px 0; color:|selectColor|; font-size:95% }
-      .calSpan { margin-bottom:3px; font-size:92%; color:|selectColor| }
+      .calSpan { margin-bottom:0.7em; font-size:98%; color:|selectColor| }
       .calSpan input { color:|selectColor|; text-align:center }''')
 
     edit = search = ''
 
     # Currently supported render modes (see p_render below)
-    renderModes = ('month', 'monthMulti', 'week', 'dayMulti')
+    renderModes = 'month', 'monthMulti', 'week', 'dayMulti'
 
     # PX to use when rendering a calendar cell, in render mode "month"
     monthCell = 'pxCell'
@@ -257,7 +257,7 @@ class Calendar(Field):
       xml=n, translations=n, delete=True, beforeDelete=n, afterCreate=n,
       selectableMonths=6, selectableWeeks=4, createEventLabel='which_event',
       style='calTable', strictMonths=False, houredWidth='10em', fullDay=n,
-      createObjects=n):
+      createObjects=n, useEventComments=False):
 
         '''Calendar field constructor'''
 
@@ -615,6 +615,11 @@ class Calendar(Field):
         # instances of the returned class: Appy will check it and will render
         # the "create" button only if the check succeeds.
         self.createObjects = createObjects
+
+        # If the following attribute is True, when creating or updating a
+        # calendar event, the zone allowing to enter a comment (in XHTML format)
+        # will be shown.
+        self.useEventComments = useEventComments
 
         # Call the base constructor
 
@@ -1058,7 +1063,7 @@ class Calendar(Field):
             valid = self.validate(o, date, eventType, timeslot, eventSpan)
             if isinstance(valid, str): return valid
             return Event.create(o, self, date, eventType, timeslot=timeslot,
-                                eventSpan=eventSpan)
+                                eventSpan=eventSpan, comment=req.comment)
         elif action == 'deleteEvent':
             self.deleteEvent(o, date, req.timeslot or '*')
 

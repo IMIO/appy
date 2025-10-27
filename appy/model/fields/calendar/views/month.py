@@ -287,6 +287,16 @@ class Month(View):
         <input type="text" size="1" name="eventSpan"
                onkeypress="return (event.keyCode != 13)"/>
        </div>
+
+       <!-- An optional comment (use a Poor widget) -->
+       <div class="calSpan" if="field.useEventComments"
+            var2="field=view.Poor(viewCss=None, label='None', width='96%',
+                               height='5em', placeholder=_('workflow_comment'));
+                  x=field.init(None, 'comment'); name=field.name; value=None;
+                  lg=None; inRequest=False; requestValue=None;
+                  hostLayout=None">:field.editUni</div>
+
+       <!-- Save and cancel buttons -->
        <input type="button" value=":_('object_save')" onclick=":submitJs"/>
        <input type="button" value=":_('object_cancel')"
               onclick=":f'closePopup({q(popupId)})'"/>
@@ -395,7 +405,7 @@ class Month(View):
 
         <!-- The event name -->
         <x>::event.getName(o, field, timeslots, typeInfo)</x>
-          <!-- Icon for delete this particular event -->
+          <!-- Icon for deleting this particular event -->
            <img if="mayDelete and not single" class="calicon iconS"
                 src=":svg('deleteS')"  style="visibility:hidden"
                 onclick=":'openEventPopup(%s,%s,%s,%s)' % (q(hook), \

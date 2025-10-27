@@ -9,6 +9,7 @@ from DateTime import DateTime
 from appy.utils import exeC
 from ..filter import Filter
 from appy.utils import string as sutils
+from appy.model.fields.poor import Poor
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class View:
@@ -23,6 +24,9 @@ class View:
     # Background cell gradient used when rendering several events in a place
     # (typically, a cell) with very little space.
     cellGradient = 'background-image:radial-gradient(#c2c2c2,#fff)'
+
+    # Make some classes available here
+    Poor = Poor
 
     def __init__(self, o, field):
         '''View constructor'''

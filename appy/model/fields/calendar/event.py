@@ -27,7 +27,7 @@ class Factory:
 
     def __init__(self, o, field, date, eventType, timeslot='main',
                  eventSpan=None, log=True, say=True, deleteFirst=False,
-                 end=None, data=None):
+                 end=None, comment=None, data=None):
         # The object on which calendar data is manipulated
         self.o = o
         # The Calendar field
@@ -55,6 +55,8 @@ class Factory:
         self.deleteFirst = deleteFirst
         # [Unslotted events only] The end date and hour, as a DateTime object
         self.end = end
+        # An optional comment, in XHTML format
+        self.comment = comment
         # Optional custom event data
         self.data = data
         # Get the persistent list of events stored at this p_date on p_o. Create
@@ -82,14 +84,15 @@ class Factory:
         dayPart = Timeslot.get(timeslot, o, field, timeslots).dayPart or 0
         if (count + dayPart) == 1.0:
             # Delete all events of this type and create a single event of this
-            # type, with timeslot "main". If custom data was stored on these
-            # events, it will be lost.
+            # type, with timeslot "main". If a comment or custom data was stored
+            # on these events, it will be lost.
             i = len(events) - 1
             while i >= 0:
                 if events[i].eventType == eventType:
                     del events[i]
                 i -= 1
-            events.insert(0, Event(eventType, data=self.data))
+            events.insert(0, Event(eventType, comment=self.comment,
+                                   data=self.data))
             return True
 
     def checkSlotted(self):
@@ -127,7 +130,8 @@ class Factory:
         merged = self.mergeSlotted(events)
         if not merged:
             # Create and store the event
-            event = Event(eventType, timeslot=timeslot, data=self.data)
+            event = Event(eventType, timeslot=timeslot, comment=self.comment,
+                          data=self.data)
             events.append(event)
             # Sort events in the order of timeslots
             if len(events) > 1:
@@ -151,7 +155,7 @@ class Factory:
         '''Create an unslotted event'''
         eventType = self.eventType
         event = Event(eventType, timeslot=None, start=self.date, end=self.end,
-                      data=self.data)
+                      comment=self.comment, data=self.data)
         events = self.events
         events.append(event)
         if len(events) > 1:
@@ -197,7 +201,7 @@ class Event(Persistent):
     '''A calendar event as will be stored in the database'''
 
     def __init__(self, eventType, timeslot='main', start=None, end=None,
-                 data=None):
+                 comment=None, data=None):
         # The event type, as a string, selected from possible values as defined
         # in attribute Calendar::eventTypes.
         self.eventType = eventType
@@ -209,6 +213,9 @@ class Event(Persistent):
         # "unslotted" events defining their own specific schedule.
         self.start = start
         self.end = end
+        # An optional comment, in XHTML format, encodable if attribute
+        # Calendar.useEventComments is True.
+        self.comment = comment
         # Additional, custom data that can be injected in the event, as an
         # instance of class appy.model.fields.calendar.data.EventData, or a
         # custom sub-class.
@@ -439,7 +446,7 @@ class Event(Persistent):
     @classmethod
     def create(class_, o, field, date, eventType, timeslot='main',
                eventSpan=None, log=True, say=True, deleteFirst=False, end=None,
-               data=None):
+               comment=None, data=None):
         '''Create a new event of some p_eventType in this calendar p_field on
            p_o, at some p_date (day), being a DateTime object.'''
 
@@ -474,7 +481,7 @@ class Event(Persistent):
 
         # Delegate the event creation to a factory
         factory = Factory(o, field, date, eventType, timeslot, eventSpan, log,
-                          say, deleteFirst, end, data)
+                          say, deleteFirst, end, comment, data)
         return factory.make(handleEventSpan=True)
 
     @classmethod

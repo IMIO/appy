@@ -182,6 +182,9 @@ function triggerCalendarEvent(hook, action, maxEventLength) {
         }
       }
     }
+    // Copy the poor comment to the inner textarea
+    const comment = f.elements['comment'];
+    if (comment) comment.value = comment.previousSibling.innerHTML;
   }
   closePopup(popupId);
   askAjax(hook, formId);
