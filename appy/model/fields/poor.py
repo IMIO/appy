@@ -688,6 +688,7 @@ class Poor(Rich):
 
       <!-- The poor zone in itself -->
       <div contenteditable="true" class="xhtmlE"
+           data-placeholder=":field.getPlaceholder(o)"
            style=":field.getWidgetStyle(True)"
            onfocus=":'' if linkNow else linkJs"
            onpaste="getPastedData(event)" oncopy="getCopiedData(event)"
@@ -709,10 +710,10 @@ class Poor(Rich):
       writePermission='write', width='25em', height='7em', maxChars=n,
       colspan=1, master=n, masterValue=n, masterSnub=n, focus=False,
       historized=False, mapping=n, generateLabel=n, label=n, sdefault='',
-      scolspan=1, swidth=n, fwidth=10, sheight=n, persist=True, documents=False,
-      languages=('en',), languagesLayouts=n, viewSingle=False, inlineEdit=False,
-      view=n, cell=n, buttons=n, edit=n, custom=n, xml=n, translations=n,
-      inject=False, valueIfEmpty='', viewCss='xhtmlV',
+      scolspan=1, swidth=n, fwidth=10, sheight=n, persist=True, placeholder=n,
+      documents=False, languages=('en',), languagesLayouts=n, viewSingle=False,
+      inlineEdit=False, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
+      translations=n, inject=False, valueIfEmpty='', viewCss='xhtmlV',
       autoCorrect=AutoCorrect.default, font=n, transformText=n, toItalicize=n,
       tagAttributes=n, stripped=n):
         # Call the base constructor
@@ -726,6 +727,8 @@ class Poor(Rich):
           'Standard', view, cell, buttons, edit, custom, xml, translations,
           inject, valueIfEmpty, viewCss, n, transformText, toItalicize,
           stripped)
+        # Define a placeholder here, as a method returning some i18n text
+        self.placeholder = placeholder
         # As-you-type replacements are defined by placing an Autocorrect object
         # in this attribute.
         self.autoCorrect = autoCorrect

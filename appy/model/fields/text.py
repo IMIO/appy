@@ -760,15 +760,6 @@ class Text(Multilingual, Field):
             id = f'{self.name}_{lg}' if lg else self.name
         return f"linkTextToolbar('{id}_tb', this)"
 
-    def getPlaceholder(self, o):
-        '''Returns a placeholder for the field if defined'''
-        r = self.getAttribute(o, 'placeholder') or ''
-        if r == True:
-            # A placeholder must be set, but we have no value. In this case, we
-            # take the field label.
-            r = o.translate(self.labelId)
-        return r
-
     def getUniFormattedValue(self, o, value, layout='view', showChanges=False,
                              language=n, contentLanguage=n):
         '''Returns the formatted variant of p_value. If p_contentLanguage is

@@ -63,6 +63,8 @@ input[type=datetime-local] { width:12em; margin-bottom:0.4em;
 input::placeholder   { color:#666666 }
 select[multiple]     { border:1px solid |itextBottomColor|; margin:0;
                        background-image:none; padding:0.1em 0.3em }
+div[contenteditable=true]:empty:before { content:attr(data-placeholder);
+                       color:#b0b0b0 }
 form[name=search] input[type=button] { margin:0 }
 
 .main { width:100%; border:0 }

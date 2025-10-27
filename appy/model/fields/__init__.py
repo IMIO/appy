@@ -1052,6 +1052,15 @@ class Field:
         '''Returns True if p_self is an inner field within a container field'''
         return '*' in self.name
 
+    def getPlaceholder(self, o):
+        '''For sub-fields defining a placeholder, this method returns it'''
+        r = self.getAttribute(o, 'placeholder') or ''
+        if r is True:
+            # A placeholder must be set, but we have no value. In this case, we
+            # take the field label.
+            r = o.translate(self.labelId)
+        return r
+
     def getValueAt(self, o, at):
         '''Gets p_self's stored value on this p_o(bject), p_at this moment (a
            DateTime object).'''

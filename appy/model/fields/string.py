@@ -167,10 +167,9 @@ class String(Multilingual, Field):
 
     editUni = Px('''
      <input type="text"
-       var="inputId=f'{name}_{lg}' if lg else name;
-            placeholder=field.getPlaceholder(o)"
+       var="inputId=f'{name}_{lg}' if lg else name"
        id=":inputId" name=":inputId" size=":field.getInputSize()"
-       maxlength=":field.maxChars" placeholder=":placeholder"
+       maxlength=":field.maxChars" placeholder=":field.getPlaceholder(o)"
        value=":field.getInputValue(inRequest, requestValue, value)"
        style=":field.getWidgetStyle()" readonly=":field.isReadonly(o)"/>''')
 
@@ -453,15 +452,6 @@ class String(Multilingual, Field):
         # the value to use in most cases, it is not always true. For example, a
         # string like "Gaëtan" could have "gaetan" as sort value.
         return Normalize.sortable(self.getValue(o) or '')
-
-    def getPlaceholder(self, o):
-        '''Returns a placeholder for the field if defined'''
-        r = self.getAttribute(o, 'placeholder') or ''
-        if r == True:
-            # A placeholder must be set, but we have no value. In this case, we
-            # take the field label.
-            r = o.translate(self.labelId)
-        return r
 
     def applyTransform(self, value):
         '''Applies a transform as required by self.transform on single
