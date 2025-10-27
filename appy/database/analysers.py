@@ -37,7 +37,7 @@ TMP_FOUND  = ' :: A copy exists in %s (%d bytes); the FileInfo-referred file ' \
 A_END      = 'Done.'
 R_START    = 'Analysing refs in database @%s (%s)...'
 R_CLASS    = '  %s (in %s) :: #Object(s): %d'
-R_REF_D    = '    ❗ Disabled ref(s) :: %s.'
+R_REF_D    = '    ❗ Disabled ref(s):'
 REF_UP     = '    %s %s :: %s :: %d tied objects (>%d).'
 R_END      = 'Done. %d objects analysed.'
 
@@ -45,11 +45,9 @@ R_END      = 'Done. %d objects analysed.'
 class Analyser:
     '''Abstract analyser'''
 
-    def __init__(self, handler, logger, method):
-        self.handler = handler
-        self.logger = logger
-        self.tool = handler.dbConnection.root.objects.get('tool')
-        self.config = handler.server.config
+    def __init__(self, tool, method):
+        self.tool = tool
+        self.config = tool.config
         # Usage of p_method depends on the concrete analyser. May be unused.
         self.method = method
         # Database size, formatted
@@ -57,7 +55,7 @@ class Analyser:
 
     def log(self, text, type='info'):
         '''Logs this p_text'''
-        getattr(self.logger, type)(text)
+        self.tool.log(text, type=type)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class FilesAnalyser(Analyser):
@@ -69,11 +67,11 @@ class FilesAnalyser(Analyser):
     # folders. A phantom file is a file being present on the DB-controlled
     # filesystem but not mentioned in any FileInfo instance in the database.
 
-    def __init__(self, handler, logger, method=None):
+    def __init__(self, tool, method):
         # p_method, if passed, is a "rise file from the ashes" method: it will
         # allow to find or rebuild a file being mentioned in a FileInfo object
         # but being missing on disk.
-        super().__init__(handler, logger, method)
+        super().__init__(tool, method)
         # The folder containing the DB-controlled files
         cfg = self.config.database
         self.binariesFolder = cfg.binariesFolder
@@ -313,6 +311,16 @@ class RefsAnalyser(Analyser):
                                        ref.asString(), count, threshold))
         return r
 
+    def manageDisabled(self, class_, refs):
+        '''Logs a warning for any disabled ref found within p_class_ p_refs.
+           Return True if all p_refs are disabled.'''
+        disabled = [ref.asString() for ref in refs if ref.disabled]
+        if disabled:
+            self.log(R_REF_D, type='warning')
+            for refS in disabled:
+                self.log(f'      {refS}', type='warning')
+        return len(refs) == len(disabled)
+
     def run(self):
         '''Run the analysis'''
         # Start the analysis
@@ -335,15 +343,11 @@ class RefsAnalyser(Analyser):
             refs = class_.getRefs(forward=None, sort=True)
             if not refs: continue
             # Log a warning for any disabled ref found within refs
-            disabled = [ref.asString() for ref in refs if ref.disabled]
-            if disabled:
-                self.log(R_REF_D % (', '.join(disabled)), type='warning')
-            if len(refs) == len(disabled): continue
+            allDisabled = self.manageDisabled(class_, refs)
+            if allDisabled: continue
             # Walk instances of this p_class_
             total += self.walkObjects(class_, refs)
         # Log the end of the analysis
         self.log(R_END % total)
 
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-alL = FilesAnalyser, RefsAnalyser
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

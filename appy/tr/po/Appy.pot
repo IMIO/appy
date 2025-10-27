@@ -2019,6 +2019,34 @@ msgstr ""
 msgid "Tool_page_online"
 msgstr ""
 
+#. Default: "Pack"
+msgid "Tool_packDatabase"
+msgstr ""
+
+#. Default: "Pack the ZODB database, removing any obsolete, historical data ?\n\n⚠️ It may slow down the entire system."
+msgid "Tool_packDatabase_confirm"
+msgstr ""
+
+#. Default: "Analyse files"
+msgid "Tool_analyseFiles"
+msgstr ""
+
+#. Default: "Generate, in app.log, a report about binary files in this database ?\n\n⚠️ It may slow down the entire system."
+msgid "Tool_analyseFiles_confirm"
+msgstr ""
+
+#. Default: "Analyse refs"
+msgid "Tool_analyseRefs"
+msgstr ""
+
+#. Default: "Generate, in app.log, a report about refs in this database ?\n\n⚠️ It may slow down the entire system."
+msgid "Tool_analyseRefs_confirm"
+msgstr ""
+
+#. Default: "🤘 Analysis successfully performed.\n\nYou have been redirected to the page allowing to view application logs, where the report has been dumped."
+msgid "analysis_done"
+msgstr ""
+
 #. Default: "config.py"
 msgid "Tool_page_configPy"
 msgstr ""

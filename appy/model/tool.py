@@ -377,9 +377,24 @@ class Tool(Base):
       page=Page('server', phase='admin', show=forAdmin,
                 label='Tool_page_server'), **ta)
 
-    databaseInfo = Computed(method=Database.view, layouts='f',
-      page=Page('database', phase='admin', show=forAdmin,
-                label='Tool_page_database'), **ta)
+    # Database info and actions
+    pageDB = Page('database', phase='admin', show=forAdmin,
+                  label='Tool_page_database')
+
+    databaseInfo = Computed(method=Database.view, layouts='f', page=pageDB,
+                            **ta)
+
+    actionsDB = {'page': pageDB, 'show': 'buttons', 'confirm': True}
+
+    # Pack the ZODB
+    packDatabase = Action(action=Database.packFromUi, **actionsDB)
+
+    # Launch a Files analyser (see module appy.database.analysers)
+    actionsDB['result'] = 'redirect'
+    analyseFiles = Action(action=Database.analyseFiles, **actionsDB)
+
+    # Launch a Refs analyser (see module appy.database.analysers)
+    analyseRefs = Action(action=Database.analyseRefs, **actionsDB)
 
     # Database transactions
     transInfo = Computed(method=Database.Transaction.pxList, layouts='f',

@@ -443,7 +443,7 @@ class Database:
     #                       Global database operations
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    def pack(self, logger=None):
+    def pack(self, logger=None, fromUi=False):
         '''Packs the database'''
         # Get the absolute path to the database file
         path = self.db.storage.getName()
@@ -456,8 +456,19 @@ class Database:
         # Get its size, in bytes, after the pack
         newSize = os.stat(path).st_size
         # Log the operation
+        text = DB_PACKED % (sizeF, putils.getShownSize(newSize))
         if logger:
-            logger.info(DB_PACKED % (sizeF, putils.getShownSize(newSize)))
+            logger.info(text)
+        if fromUi:
+            return text
+
+    @classmethod
+    def packFromUi(class_, tool):
+        '''Launch a database pack from the UI'''
+        logger = tool.H().server.loggers.app
+        text = tool.database.pack(logger=logger, fromUi=True)
+        tool.resp.fleetingMessage = False
+        return True, text
 
     def cleanTemp(self, handler, logger, count=None):
         '''Removes any object from the temp store'''
@@ -473,6 +484,31 @@ class Database:
         # Reset the ID counter
         connection.root.lastTempId = 0
         logger.info(TMP_OBJS_DEL % count)
+
+    @classmethod
+    def finalizeAnalysis(class_, tool):
+        '''Perform finalization action once a Ref or Files analysis has been
+           triggered performed from the UI.'''
+        # Say something nice
+        tool.say(tool.translate('analysis_done'), fleeting=False)
+        # No commit is needed
+        tool.H().commit = False
+        # Redirect the user to the page showing the log file
+        return True, f'{tool.url}/view?page=logsViewer'
+
+    @classmethod
+    def analyseFiles(class_, tool, method=None, fromUi=True):
+        '''Launches a Files analyser'''
+        from appy.database.analysers import FilesAnalyser
+        FilesAnalyser(tool, method).run()
+        if fromUi: return class_.finalizeAnalysis(tool)
+
+    @classmethod
+    def analyseRefs(class_, tool, method=None, fromUi=True):
+        '''Launches a Ref analyser'''
+        from appy.database.analysers import RefsAnalyser
+        RefsAnalyser(tool, method).run()
+        if fromUi: return class_.finalizeAnalysis(tool)
 
     def clean(self, handler, logger, method=None):
         '''Clean the database = (a) remove any temp object from it, (b) launch
@@ -496,9 +532,9 @@ class Database:
             commit = True
         # (b) Launch an analysis. importing the Analyser at the start of this
         #     file produces a circular import.
-        from appy.database import analysers
-        for class_ in analysers.alL:
-            class_(handler, logger, method).run()
+        tool = connection.root.objects.get('tool')
+        self.analyseFiles(tool, method, fromUi=False)
+        self.analyseRefs(tool, method, fromUi=False)
         # At this step, close the connection (after committing if necessary)
         if commit:
             self.commit(handler, description=SITE_CLEAN)
