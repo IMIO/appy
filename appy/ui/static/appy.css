@@ -23,7 +23,7 @@ form      { margin:0; padding:0 }
 acronym   { cursor:help }
 input     { font:100% |fonts| }
 textarea  { width:97.5%; font:100% |fonts|; border:1px solid #d0d0d0;
-            background-color:white; margin-bottom:0.5em; transition:0.5s }
+            background-color:white; margin-bottom:0.5em; transition:height 0.2s}
 label,
 .asLabel  { color:|linkColor|; padding:0.2em 0.6em 0 0;
             text-transform:uppercase; font-size:95% }
@@ -32,7 +32,7 @@ legend    { padding-bottom:2px; padding-right:3px; color:black }
 ul        { line-height:1.2em; margin:0 0 0.2em 0.6em; padding:0;
             list-style-type:"»" }
 li        { margin:0; padding:2px 0.5em }
-img       { border:0; vertical-align:middle }
+img       { border:0; vertical-align:middle; transition:opacity 0.3s }
 audio     { margin:2px 0 }
 select    { border:none; border-bottom:1px solid |itextBottomColor|;
             outline:unset; overflow-y:auto; background-color:transparent;

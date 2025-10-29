@@ -384,7 +384,7 @@ class Tool(Base):
     databaseInfo = Computed(method=Database.view, layouts='f', page=pageDB,
                             **ta)
 
-    actionsDB = {'page': pageDB, 'show': 'buttons', 'confirm': True}
+    actionsDB = {'page': pageDB, 'show': 'buttons', 'confirm': True, **ta}
 
     # Pack the ZODB
     packDatabase = Action(action=Database.packFromUi, **actionsDB)

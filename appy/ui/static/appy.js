@@ -768,22 +768,22 @@ function toggleCheckbox(cb) {
   cb.nextSibling.value = (cb.checked)? 'True': 'False';
 }
 
-// Toggle visibility of all elements having p_nodeType within p_node
-function toggleVisibility(node, nodeType, css){
+// Toggle opacity of all elements having p_nodeType within p_node
+function toggleOpacity(node, nodeType, css){
   let sNode, className, elements = node.getElementsByTagName(nodeType);
   for (let i=0; i<elements.length; i++){
     sNode = elements[i];
     className = sNode.className || '';
-    // Ignore nodes having class "css"
+    // If a p_css class is specified, only toggle elements having it
     if (!css || className.includes(css)) {
-      // Switch node's visibility
-      if (sNode.style.visibility == 'hidden') sNode.style.visibility= 'visible';
-      else sNode.style.visibility = 'hidden';
+      // Switch node's opacity (0 to 1 or 1 to 0)
+      if (sNode.style.opacity == 0) sNode.style.opacity = 1;
+      else sNode.style.opacity = 0;
     }
   }
 }
 // Shorthand for toggling clickable images' visibility 
-function itoggle(img) {toggleVisibility(img, 'img', 'calicon');}
+function itoggle(img) {toggleOpacity(img, 'img', 'calicon');}
 
 // JS implementation of Python ''.rsplit
 function _rsplit(s, delimiter, limit) {

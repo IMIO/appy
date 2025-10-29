@@ -20,6 +20,9 @@ DAY_FULL    = 'No more place for adding this event.'
 UNSORT_EVTS = 'Events must be sorted if you want to get spanned events to be ' \
               'grouped.'
 FROM_RQ_RNS = 'Render mode "%s" not known or not supported yet.'
+EVT_ED      = '%s updated in slot %s.'
+EVT_DEL     = '%s deleted (%d)%s.'
+EVT_DEL_SL  = '%s deleted at slot %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Factory:
@@ -271,6 +274,11 @@ class Event(Persistent):
                 prefix = f'{prefix} · '
         # Complete the v_prefix with base data when available
         if baseData: prefix = f'{prefix}{baseData}'
+        # Finally, add the event comment if found
+        if xhtml:
+            comment = getattr(self, 'comment', None)
+            if comment:
+                r = f'{r}<div class="evtCom">{comment}</div>'
         return f'{prefix}{r}'
 
     def sameAs(self, other):
@@ -483,6 +491,102 @@ class Event(Persistent):
         factory = Factory(o, field, date, eventType, timeslot, eventSpan, log,
                           say, deleteFirst, end, comment, data)
         return factory.make(handleEventSpan=True)
+
+    @classmethod
+    def update(class_, o, field, date, timeslot, eventType, comment=None,
+               log=True, say=True):
+        '''Updates the event being currently defined on this p_o(bject) in this
+           calendar p_field, at this p_date and p_timeslot: set a new
+           p_eventType and/or p_comment.'''
+        # Get the events being defined at this p_date
+        events = field.getEventsAt(o, date)
+        if not events: return
+        # Find the event at this p_timeslot
+        for event in events:
+            if event.timeslot == timeslot:
+                # The event has been found: update it
+                event.eventType = eventType
+                if field.useEventComments:
+                    event.comment = comment
+                if log:
+                    eventName = event.getName(o, field, None, xhtml=False)
+                    field.log(o, EVT_ED % (eventName, timeslot), date)
+                if say:
+                    o.say(o.translate('object_saved'), fleeting=False)
+                return
+
+    @classmethod
+    def delete(class_, o, field, date, timeslot, handleEventSpan=True, log=True,
+               say=True, executeMethods=True):
+        '''Deletes the event being currently defined on this p_o(bject) in this
+           calendar p_field, at this p_date and p_timeslot.'''
+        # If p_timeslot is "*", it deletes all events at p_date, be there a
+        # single event on the main timeslot or several events on other
+        # timeslots. Else, it only deletes the event at this p_timeslot. If
+        # p_handleEventSpan is True, p_o.req.deleteNext will be used to delete
+        # successive events, too. Returns the number of deleted events.
+        events = field.getEventsAt(o, date)
+        if not events: return 0
+        # Execute "beforeDelete"
+        if executeMethods and field.beforeDelete:
+            ok = field.beforeDelete(o, date, timeslot)
+            # Abort event deletion when required
+            if ok is False: return 0
+        daysDict = getattr(o, field.name)[date.year()][date.month()]
+        count = len(events)
+        if timeslot == '*':
+            # Delete all events at this p_date, and possible at subsequent days,
+            # too, of p_handleEventSpan is True. Remember their v_eNames.
+            eNames = ', '.join([e.getName(o, field, None, xhtml=False) \
+                                for e in events])
+            r = count
+            del daysDict[date.day()]
+            req = o.req
+            suffix = ''
+            if handleEventSpan and req.deleteNext == 'True':
+                # Delete similar events spanning the next days when relevant
+                nbOfDays = 0
+                while True:
+                    date += 1
+                    if field.hasEventsAt(o, date, events):
+                        r += class_.delete(o, field, date, timeslot, say=False,
+                                    handleEventSpan=False, executeMethods=False)
+                        nbOfDays += 1
+                    else:
+                        break
+                if nbOfDays: suffix = f', span+{nbOfDays}'
+            if log:
+                msg = EVT_DEL % (eNames, count, suffix)
+                field.log(o, msg, date)
+        else:
+            # Delete the event at p_timeslot
+            r = 1
+            i = len(events) - 1
+            while i >= 0:
+                if events[i].timeslot == timeslot:
+                    name = events[i].getName(o, field, None, xhtml=False)
+                    msg = EVT_DEL_SL % (name, timeslot)
+                    del events[i]
+                    if log: field.log(o, msg, date)
+                    break
+                i -= 1
+        if say:
+            o.say(o.translate('object_deleted'), fleeting=False)
+        return r
+
+    @classmethod
+    def deleteMany(class_, o, field, start, end, timeslot, handleEventSpan=True,
+                   log=True, say=True, executeMethods=True):
+        '''Calls p_class_.delete to delete, in this calendar p_field on this
+           p_o(bject), all events between these p_start & p_end dates (DateTime
+           objects), transmitting all other parameters to p_class_.delete.
+           Returns the number of deleted events.'''
+        r = 0
+        for day in dutils.DayIterator(start, end):
+            r += class_.delete(o, field, day, timeslot,
+                               handleEventSpan=handleEventSpan, log=log,
+                               say=say, executeMethods=executeMethods)
+        return r
 
     @classmethod
     def getFromRequest(class_, o, name, params):

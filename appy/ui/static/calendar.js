@@ -15,8 +15,9 @@ function askMonth(iid, name, month) {
   askAjax(hook, null, {'month': month.replace('/', '%2F')})
 }
 
-// Manages filters about a given calendar, for a given Appy object
 class Filters {
+  // Manages filters about a given calendar, for a given Appy object
+
   constructor(iid, name, filters) {
     /* A Filters object will be injected in the dom node corresponding to the
        current calendar view. */
@@ -91,103 +92,173 @@ class Filters {
   }
 }
 
-function enableOptions(select, enabled, selectFirst, message){
-  /* This function disables, in p_select, all options that are not in p_enabled.
-     p_enabled is a string containing a comma-separated list of option names.
-     If p_selectFirst is True, the first option from p_enabled will be selected
-     by default. p_message will be shown (as "title") for disabled options. */
-  // Get p_enabled as a dict
-  const l = enabled.split(',');
-  let d = {};
-  for (let i=0; i < l.length; i++) d[l[i]] = true;
-  // Remember if we have already selected the first enabled option
-  let isSelected = false,
-      options = select.options;
-  // Disable options not being p_enabled
-  for (let i=0; i<options.length; i++) {
-    // Make sure the option is visible
-    options[i].style.display = 'block';
-    options[i].selected = false;
-    if (!options[i].value) continue;
-    if (options[i].value in d) {
-      options[i].disabled = false;
-      options[i].title = '';
-      // Select it?
-      if (selectFirst && !isSelected) {
-        options[i].selected = true;
-        isSelected = true;
-      }
-    }
-    else {
-      options[i].disabled = true;
-      options[i].title = message;
-    }
-  }
-}
+class EventPopup {
+  /* Represents the popup allowing to create, update or delete, at a given day
+     and timeslot, a calendar event. */
 
-function openEventPopup(hookId, action, day, timeslot, spansDays,
-                        applicableEventTypes, message, freeSlots) {
-  /* Opens the popup for creating (or deleting, depending on p_action) a
-     calendar event at some p_day. When action is "del", we need to know the
-     p_timeslot where the event is assigned and if the event spans more days
-     (from p_spansDays), in order to propose a checkbox allowing to delete
-     events for those successive days. When action is "new", a possibly
-     restricted list of applicable event types for this day is given in
-     p_applicableEventTypes; p_message contains an optional message explaining
-     why not applicable types are not applicable. When "new", p_freeSlots may
-     list the available timeslots at p_day. */
-  const popupId = `${hookId}_${action}`,
-        f = document.getElementById(`${popupId}Form`);
-  f.day.value = day;
-  if (action == 'del') {
-    if (f.timeslot) f.timeslot.value = timeslot;
+  constructor(node, hook, action, day, timeslot) {
+    /* The node, within a calendar cell, that requested a popup action
+       (typically, an img tag). */
+    this.node = node;
+    // The ajax-refreshable node representing the calendar field
+    this.hook = hook;
+    /* The requested action: create ("new"), update ("edit") or delete ("del")
+       an event. */
+    this.action = action;
+    this.create = action == 'new';
+    // The day during which the related event occurs
+    this.day = day;
+    /* The event timeslot at this day. When action is "edit" or "del", this
+       timeslot is required to identify the event to update or delete. */
+    this.timeslot = timeslot;
+    // The popup ID
+    const suffix = (action == 'del')? 'del': 'edit';
+    this.popupId = `${hook}_${suffix}`;
+    // The popup's inner form
+    this.formId = `${this.popupId}Form`;
+    this.form = document.getElementById(this.formId);
+    // Initialise the p_day if passed
+    if (day) this.form.day.value = day;
+  }
+
+  getCaller() {
+    // Returns the cell (td tag) from which this.node originates
+    let r = this.node.parentNode;
+    while (r.tagName != 'TD') r = r.parentNode;
+    return r;
+  }
+
+  openDelete(spansDays) {
+    /* Opens the popup for deleting an event. p_spansDays is required to know if
+       the event spans more days: that way, a checkbox may be shown, allowing to
+       delete events for those successive days, too. */
+    const f = this.form;
+    if (f.timeslot) f.timeslot.value = this.timeslot;
     // Show or hide the checkbox for deleting the event for successive days
-    let elem = document.getElementById(`${hookId}_DelNextEvent`),
+    let elem = document.getElementById(`${this.hook}_DelNextEvent`),
         cb = elem.getElementsByTagName('input');
     cb[0].checked = false;
     cb[1].value = 'False';
-    elem.style.display = (spansDays == 'True')? 'block': 'none'
+    elem.style.display = (spansDays)? 'block': 'none';
+    openPopup(this.popupId);
   }
-  else if (action == 'new') {
+
+  enableOptionsOn(select, enabled, selectFirst, message){
+    /* Disables, in this p_select widget, all options that are not in p_enabled.
+       p_enabled is a string containing a comma-separated list of option names.
+       If p_selectFirst is True, the first option from p_enabled will be
+       selected by default. p_message will be shown (as "title") for disabled
+       options. */
+    // Get p_enabled as a dict
+    const l = enabled.split(',');
+    let d = {};
+    for (let i=0; i < l.length; i++) d[l[i]] = true;
+    // Remember if we have already selected the first enabled option
+    let isSelected = false,
+        options = select.options;
+    // Disable options not being p_enabled
+    for (let i=0; i<options.length; i++) {
+      // Make sure the option is visible
+      options[i].style.display = 'block';
+      options[i].selected = false;
+      if (!options[i].value) continue;
+      if (options[i].value in d) {
+        options[i].disabled = false;
+        options[i].title = '';
+        // Select it?
+        if (selectFirst && !isSelected) {
+          options[i].selected = true;
+          isSelected = true;
+        }
+      }
+      else {
+        options[i].disabled = true;
+        options[i].title = message;
+      }
+    }
+  }
+
+  openEdit(applicableEventTypes, message, freeSlots, eventType) {
+    /* Opens a popup for creating or updating an event. A possibly restricted
+       list of applicable event types for this day is given in
+       p_applicableEventTypes; p_message contains an optional message explaining
+       why not applicable types are not applicable. In creation mode,
+       p_freeSlots may list the available timeslots at p_day. In edit mode,
+       p_eventType is the even type of the even to update. */
+
+    const f = this.form,
+          spanZone = document.getElementById('spanZone'),
+          slotZone = document.getElementById('slotZone'),
+          newLabel = document.getElementById('newEventLabel'),
+          comment = document.getElementById('commentP');
+    // Determine the action to perform: create or update an event
+    f.actionType.value = (this.create)? 'createEvent': 'editEvent';
     // Reinitialise field backgrounds
     f.eventType.style.background = '';
     if (f.eventSpan) f.eventSpan.style.background = '';
-    // Disable unapplicable events and non-free timeslots
-    enableOptions(f.eventType, applicableEventTypes, false, message);
-    if (f.timeslot) enableOptions(f.timeslot, freeSlots, true, '🛇');
-  }
-  openPopup(popupId);
-}
-
-function triggerCalendarEvent(hook, action, maxEventLength) {
-  /* Sends an Ajax request for triggering a calendar event (create or delete an
-     event) and refreshing the view month. */
-  const popupId = `${hook}_${action}`,
-        formId = `${popupId}Form`,
-        f = document.getElementById(formId);
-  if (action == 'new') {
-    // Check that an event span has been specified
-    if (f.eventType.selectedIndex == 0) {
-      f.eventType.style.background = wrongTextInput;
-      return;
+    // Show or hide the span zone
+    spanZone.style.display = (this.create)? 'block': 'none';
+    // Disable unapplicable events
+    this.enableOptionsOn(f.eventType, applicableEventTypes, false, message);
+    if (this.create) {
+      /* Disable non-free timeslots and ensure the timeslot zone, if applicable,
+         is shown. */
+      if (slotZone) {
+        this.enableOptionsOn(f.timeslot, freeSlots, true, '🛇');
+        // Ensure the timeslot zone is shown
+        slotZone.style.display = 'block';
+      }
+      newLabel.style.display = 'block';
+      // Reset fields
+      f.eventType.value = '';
+      if (comment) comment.innerHTML = '';
     }
-    if (f.eventSpan) {
-      // Check that eventSpan is empty or contains a valid number
-      let spanNumber = f.eventSpan.value.replace(' ', '');
-      if (spanNumber) {
-        spanNumber = parseInt(spanNumber);
-        if (isNaN(spanNumber) || (spanNumber > maxEventLength)) {
-          f.eventSpan.style.background = wrongTextInput;
-          return;
+    else { // Force the timeslot and ensure the slot zone is hidden
+      slotZone.style.display = 'none';
+      newLabel.style.display = 'none';
+      f.timeslot.value = this.timeslot;
+      // Fill data
+      f.eventType.value = eventType;
+      if (comment) {
+        const comments = this.getCaller().getElementsByClassName('evtCom');
+        if (comments.length) comment.innerHTML = comments[0].innerHTML;
+      }
+    }
+    openPopup(this.popupId);
+  }
+
+  run(maxEventLength) {
+    /* Sends an Ajax request for triggering a calendar event (create, update or
+       delete an event) and refreshing the view month. In the case of an event
+       creation, the maximum number of days the event may span is specified in
+       p_maxEventLength. */
+    const f = this.form;
+    if (this.create) {
+      // Validate the event type and span
+      if (f.eventType.selectedIndex == 0) {
+        f.eventType.style.background = wrongTextInput;
+        return;
+      }
+      if (f.eventSpan) {
+        // Check that eventSpan is empty or contains a valid number
+        let nb = f.eventSpan.value.replace(' ', '');
+        if (nb) {
+          nb = parseInt(nb);
+          if (isNaN(nb) || (nb > maxEventLength)) {
+            f.eventSpan.style.background = wrongTextInput;
+            return;
+          }
         }
       }
     }
-    // Copy the poor comment to the inner textarea
-    const comment = f.elements['comment'];
-    if (comment) comment.value = comment.previousSibling.innerHTML;
+    if (this.action != 'del') {
+      // Copy the poor comment to the inner textarea
+      const comment = f.elements['comment'];
+      if (comment) comment.value = comment.previousSibling.innerHTML;
+    }
+    closePopup(this.popupId);
+    askAjax(this.hook, this.formId);
   }
-  closePopup(popupId);
-  askAjax(hook, formId);
 }
 
 // Manages the calendar event validation process

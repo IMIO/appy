@@ -252,18 +252,18 @@ class Month(View):
            onclick=":f'askMonth({q(iid)},{q(name)},{q(next.id)})'"/>
      </div>''')
 
-    # Popup for adding an event in the month view
-    pxAddPopup = Px('''
-     <div var="popupId=f'{hook}_new';
-               submitJs='triggerCalendarEvent(%s, %s, %s_maxEventLength)' % \
-                        (q(hook), q('new'), field.name)"
+    # Popup for adding or updating an event in the month view
+    pxEditPopup = Px('''
+     <div var="popupId=f'{hook}_edit';
+               submitJs=f'new EventPopup(this,`{hook}`,`new`).run(
+                           {field.name}_maxEventLength)'"
           id=":popupId" class="popup" align="center">
       <form id=":f'{popupId}Form'" method="post" data-sub="process">
        <input type="hidden" name="actionType" value="createEvent"/>
        <input type="hidden" name="day"/>
 
        <!-- Choose an event type -->
-       <div align="center">:_(field.createEventLabel)</div>
+       <div align="center" id="newEventLabel">:_(field.createEventLabel)</div>
        <select name="eventType" class="calSelect"
                onchange=":view.getEventTypeOnChange()">
         <option value="">:_('choose_a_value')</option>
@@ -273,7 +273,7 @@ class Month(View):
        </select>
 
        <!-- Choose a timeslot -->
-       <div if="showTimeslots">
+       <div if="showTimeslots" id="slotZone">
         <label class="calSpan">:_('timeslot')</label> 
         <select if="showTimeslots" name="timeslot" class="calSelect">
          <option for="sname, slot in field.Timeslot.getAllNamed(o, timeslots)"
@@ -282,7 +282,7 @@ class Month(View):
        </div>
 
        <!-- Span the event on several days -->
-       <div align="center" class="calSpan">
+       <div align="center" class="calSpan" id="spanZone">
         <x>::_('event_span')</x>
         <input type="text" size="1" name="eventSpan"
                onkeypress="return (event.keyCode != 13)"/>
@@ -312,7 +312,7 @@ class Month(View):
          if (slots) slots = slots.split(',');
          // Walk all options
          for (opt of slotSelector.options) {
-           // Hide or show it. Hide options disabled by m_openEventPopup.
+           // Hide or show it. Hide options disabled by the EventPopup class.
            show = ((!slots || slots.includes(opt.value)) && !opt.disabled);
            opt.style.display = (show)? 'block': 'none';
            // Set the first visible option as the selected one
@@ -345,21 +345,62 @@ class Month(View):
          <label lfor=":cbId" class="simpleLabel">:_('del_next_events')</label>
        </div>
        <input type="button" value=":_('yes')"
-              onClick=":'triggerCalendarEvent(%s, %s)' % (q(hook), q('del'))"/>
+              onClick=":f'new EventPopup(this,`{hook}`,`del`).run()'"/>
        <input type="button" value=":_('no')"
               onclick=":f'closePopup({q(popupId)})'"/>
       </form>
      </div>''')
+
+    # Render events in a particular calendar cell
+    pxEvents = Px('''
+     <x if="events">
+      <div for="event in events" style="color:grey" if="view.unfiltered(event)">
+
+       <!-- Checkbox for validating the event -->
+       <input type="checkbox" checked="checked" class="smallbox"
+              if="mayValidate and field.validation.isWish(o, event.eventType)"
+              id=":'%s_%s_%s' % (date.strftime('%Y%m%d'), event.eventType,
+                                 event.getTimeMark())"
+              onclick=":f'onCheckCbCell(this,{q(hook)})'"/>
+
+       <!-- The event name -->
+       <x>::event.getName(o, field, timeslots, typeInfo)</x>
+
+        <!-- Edit this particular event -->
+        <img if="mayEdit and event.eventType in allowedEventTypes"
+             class="calicon iconS" src=":svg('edit')" style="opacity:0"
+             onclick=":f'new EventPopup(this,`{hook}`,`edit`,`{dayString}`,
+                        `{event.timeslot}`).openEdit(`{okTypes.eventTypes}`,
+                        `{okTypes.message}`,null,`{event.eventType}`)'"/>
+
+        <!-- Delete this particular event -->
+        <img if="mayDelete and not single" class="calicon iconS"
+             src=":svg('deleteS')" style="opacity:0"
+             onclick=":f'new EventPopup(this,`{hook}`,`del`,`{dayString}`,
+                        `{event.timeslot}`).openDelete()'"/>
+      </div>
+     </x>
+
+     <!-- Events from other calendars -->
+     <x if="others"
+        var2="otherEvents=field.Other.getEventsAt(field, date, others,
+                                                 typeInfo, view, preComputed)">
+      <div for="event in otherEvents"
+           style=":f'color:{event.color};font-style:italic'">:event.name</div>
+     </x>''')
 
     # PX rendering a calendar cell
     pxCell = Px('''
      <td var="events=field.getEventsAt(o, date, typeInfo=typeInfo);
               single=events and len(events) == 1;
               spansDays=field.hasEventsAt(o, date+1, events);
+              spansDaysJs='true' if spansDays else 'false';
               mayCreate=mayEdit and allowedEventTypes and not field.dayIsFull(o,
                           date, events, timeslots);
               mayDelete=mayEdit and events and field.mayDelete(o, events);
               mayAppyCreate=view.mayAppyCreate(_ctx_);
+              okTypes=field.getApplicableEventTypesAt(o, date, eventTypes,
+                         preComputed, True) if (mayCreate or mayEdit) else None;
               js='itoggle(this)' if mayEdit or mayAppyCreate else ''"
          class=":cssClasses" style=":cellStyle"
          onmouseover=":js" onmouseout=":js">
@@ -368,58 +409,29 @@ class Month(View):
 
       <!-- Icon for adding an event -->
       <x if="mayCreate">
-       <img class="calicon" style="visibility:hidden"
-            var="info=field.getApplicableEventTypesAt(o, date,
-                       eventTypes, preComputed, True)"
-            if="info and info.eventTypes" src=":url('plus')"
+       <img class="calicon" style="opacity:0"
+            if="okTypes and okTypes.eventTypes" src=":url('plus')"
             var2="freeSlots=field.Timeslot.getFreeAt(o, date, events, timeslots,
                                                      slotIdsStr, True)"
-            onclick=":'openEventPopup(%s,%s,%s,null,null,%s,%s,%s)' %
-             (q(hook), q('new'), q(dayString), q(info.eventTypes),
-              q(info.message), q(freeSlots))"/>
+            onclick=":f'new EventPopup(this,`{hook}`,`new`,`{dayString}`,
+                       null).openEdit(`{okTypes.eventTypes}`,
+                       `{okTypes.message}`,`{freeSlots}`,null)'"/>
       </x>
 
       <!-- Icon for adding an Appy object -->
       <x if="mayAppyCreate" var2="cname,attrs=mayAppyCreate">
-       <img class="calicon" style="visibility:hidden" src=":url('plus')"
+       <img class="calicon" style="opacity:0" src=":url('plus')"
             onclick=":f'postAndClick(`{cname}_add`,`{attrs}`)'"/>
       </x>
 
       <!-- Icon for deleting event(s) -->
-      <img if="mayDelete" class="calicon iconS" style="visibility:hidden"
+      <img if="mayDelete" class="calicon iconS" style="opacity:0"
            src=":svg('deleteS' if single else 'deleteMany')"
-           onclick=":'openEventPopup(%s,%s,%s,%s,%s)' %  (q(hook), \
-                      q('del'), q(dayString), q('*'), q(spansDays))"/>
+           onclick=":f'new EventPopup(this,`{hook}`,`del`,`{dayString}`,
+                     `*`).openDelete({spansDaysJs})'"/>
 
       <!-- Events -->
-      <x if="events">
-       <div for="event in events" style="color:grey"
-            if="view.unfiltered(event)">
-
-        <!-- Checkbox for validating the event -->
-        <input type="checkbox" checked="checked" class="smallbox"
-            if="mayValidate and field.validation.isWish(o, event.eventType)"
-            id=":'%s_%s_%s' % (date.strftime('%Y%m%d'), event.eventType, \
-                               event.getTimeMark())"
-            onclick=":f'onCheckCbCell(this,{q(hook)})'"/>
-
-        <!-- The event name -->
-        <x>::event.getName(o, field, timeslots, typeInfo)</x>
-          <!-- Icon for deleting this particular event -->
-           <img if="mayDelete and not single" class="calicon iconS"
-                src=":svg('deleteS')"  style="visibility:hidden"
-                onclick=":'openEventPopup(%s,%s,%s,%s)' % (q(hook), \
-                           q('del'), q(dayString), q(event.timeslot))"/>
-       </div>
-      </x>
-
-      <!-- Events from other calendars -->
-      <x if="others"
-         var2="otherEvents=field.Other.getEventsAt(field, date, others,
-                                                  typeInfo, view, preComputed)">
-       <div for="event in otherEvents"
-            style=":f'color:{event.color};font-style:italic'">:event.name</div>
-      </x>
+      <x>:view.pxEvents</x>
 
       <!-- Additional info -->
       <x var="info=field.getAdditionalInfoAt(o,date,None,'month',preComputed)"
@@ -488,9 +500,9 @@ class Month(View):
       </tr>
      </table>
 
-     <!-- Popups for creating and deleting a calendar event -->
+     <!-- Popups for creating, updating or deleting a calendar event -->
      <x if="mayEdit and eventTypes">
-      <x>:view.pxAddPopup</x><x>:view.pxDelPopup</x></x>
+      <x>:view.pxEditPopup</x><x>:view.pxDelPopup</x></x>
 
      <!-- Popup for validating events -->
      <x if="mayEdit and field.validation">:field.validation.pxPopup</x>''',

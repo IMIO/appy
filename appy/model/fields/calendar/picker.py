@@ -166,8 +166,8 @@ class Picker(Calendar):
                 if event:
                     # Delete it
                     date = DateTime(dateS)
-                    calendar.deleteEvent(o, date, slotId, handleEventSpan=False,
-                                         log=False, say=False)
+                    calendar.Event.delete(o, calendar, date, slotId,
+                      handleEventSpan=False, log=False, say=False)
 
     def mustExclude(self, o, date, cache):
         '''Must we prevent this p_date from being picked ?'''

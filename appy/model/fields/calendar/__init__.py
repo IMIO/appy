@@ -38,8 +38,6 @@ MISS_EN_M   = "When param 'eventTypes' is a method, you must give another " \
               "method in param 'eventNameMethod'."
 S_MONTHS_KO = 'Strict months can only be used with timeline calendars.'
 ACT_MISS    = 'Action "%s" does not exist or is not visible.'
-EVT_DEL     = '%s deleted (%d)%s.'
-EVT_DEL_SL  = '%s deleted at slot %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Gradient:
@@ -961,75 +959,6 @@ class Calendar(Field):
         # Check the field-specific condition
         return self.getAttribute(o, 'editable')
 
-    def deleteEvent(self, o, date, timeslot, handleEventSpan=True, log=True,
-                    say=True, executeMethods=True):
-        '''Deletes an event. If t_timeslot is "*", it deletes all events at
-           p_date, be there a single event on the main timeslot or several
-           events on other timeslots. Else, it only deletes the event at
-           p_timeslot. If p_handleEventSpan is True, req.deleteNext will be used
-           to delete successive events, too. Returns the number of deleted
-           events.'''
-        events = self.getEventsAt(o, date)
-        if not events: return 0
-        # Execute "beforeDelete"
-        if executeMethods and self.beforeDelete:
-            ok = self.beforeDelete(o, date, timeslot)
-            # Abort event deletion when required
-            if ok is False: return 0
-        daysDict = getattr(o, self.name)[date.year()][date.month()]
-        count = len(events)
-        if timeslot == '*':
-            # Delete all events at this p_date, and possible at subsequent days,
-            # too, of p_handleEventSpan is True. Remember their v_eNames.
-            eNames = ', '.join([e.getName(o, self, None, xhtml=False) \
-                                for e in events])
-            r = count
-            del daysDict[date.day()]
-            req = o.req
-            suffix = ''
-            if handleEventSpan and req.deleteNext == 'True':
-                # Delete similar events spanning the next days when relevant
-                nbOfDays = 0
-                while True:
-                    date += 1
-                    if self.hasEventsAt(o, date, events):
-                        r += self.deleteEvent(o, date, timeslot, say=False,
-                                    handleEventSpan=False, executeMethods=False)
-                        nbOfDays += 1
-                    else:
-                        break
-                if nbOfDays: suffix = f', span+{nbOfDays}'
-            if log:
-                msg = EVT_DEL % (eNames, count, suffix)
-                self.log(o, msg, date)
-        else:
-            # Delete the event at p_timeslot
-            r = 1
-            i = len(events) - 1
-            while i >= 0:
-                if events[i].timeslot == timeslot:
-                    name = events[i].getName(o, self, None, xhtml=False)
-                    msg = EVT_DEL_SL % (name, timeslot)
-                    del events[i]
-                    if log: self.log(o, msg, date)
-                    break
-                i -= 1
-        if say:
-            o.say(o.translate('object_deleted'), fleeting=False)
-        return r
-
-    def deleteEvents(self, o, start, end, timeslot, handleEventSpan=True,
-                     log=True, say=True, executeMethods=True):
-        '''Calls m_deleteEvent to delete all events between these p_start and
-           p_end dates (DateTime objects), transmitting all other parameters to
-           m_deleteEvent. Returns the number of deleted events.'''
-        r = 0
-        for day in dutils.DayIterator(start, end):
-            r += self.deleteEvent(o, day, timeslot,
-                                  handleEventSpan=handleEventSpan, log=log,
-                                  say=say, executeMethods=executeMethods)
-        return r
-
     def validate(self, o, date, eventType, timeslot, span=0):
         '''The validation process for a calendar is a bit different from the
            standard one, that checks a "complete" request value. Here, we only
@@ -1057,15 +986,20 @@ class Calendar(Field):
         eventType = req.eventType
         eventSpan = req.eventSpan or 0
         eventSpan = min(int(eventSpan), self.maxEventLength)
+        timeslot = req.timeslot
         if action == 'createEvent':
             # Trigger validation
-            timeslot = req.timeslot or 'main'
             valid = self.validate(o, date, eventType, timeslot, eventSpan)
             if isinstance(valid, str): return valid
-            return Event.create(o, self, date, eventType, timeslot=timeslot,
+            return Event.create(o, self, date, eventType,
+                                timeslot=timeslot or 'main',
                                 eventSpan=eventSpan, comment=req.comment)
+        elif action == 'editEvent':
+            # Update the event being defined at this v_timeslot
+            Event.update(o, self, date, timeslot, eventType, req.comment)
         elif action == 'deleteEvent':
-            self.deleteEvent(o, date, req.timeslot or '*')
+            # Delete the event being defined at this v_timeslot
+            Event.delete(o, self, date, timeslot or '*')
 
     def splitList(self, l, sub): return utils.splitList(l, sub)
 
