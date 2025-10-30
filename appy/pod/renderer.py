@@ -40,6 +40,9 @@ DOC_FMT_NS  = 'Format "%s" is not supported.'
 WARN_FIN_KO = 'Warning: error while calling finalize function. %s'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+bn = '\n'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Make sure any file on disk is opened as UTF-8. Windows' default encoding is
 # still CP1252 :-D
 enc = {'encoding': 'utf-8'}
@@ -88,7 +91,9 @@ CsvOptions.default = CsvOptions()
 class Renderer:
     '''Produce (="render") a document from a template'''
 
-    templateTypes = ('odt', 'ods') # Types of POD templates
+    # Types of POD templates
+    templateTypes = 'odt', 'ods'
+
     # Regular expression for finding the title within metadata
     metaRex = re.compile('<dc:title>.*?</dc:title>', re.S)
     metaHook = '</office:meta>'
@@ -103,7 +108,7 @@ class Renderer:
       'input',   # Text input fields
       'db'       # Database fields
     )
-    defaultExpressionsHolders = ('if', 'change', 'input')
+    defaultExpressionsHolders = 'if', 'change', 'input'
 
     def __init__(self, template, context, result, pythonWithUnoPath=None,
       ooServer='localhost', ooPort=2002, stream='auto', stylesMapping={},
@@ -425,9 +430,9 @@ class Renderer:
         self.stylesManager.stylesMapping = smap
 
     # Attributes to clone to a sub-renderer when using m_clone hereafter
-    cloneAttributes = ('html', 'raiseOnError', 'findImage', 'rotateImages',
-      'stylesTemplate', 'optimalColumnWidths', 'distributeColumns',
-      'expressionsHolders', 'protection', 'tabbedCR', 'fonts', 'evaluator')
+    cloneAttributes = 'html', 'raiseOnError', 'findImage', 'rotateImages', \
+      'stylesTemplate', 'optimalColumnWidths', 'distributeColumns', \
+      'expressionsHolders', 'protection', 'tabbedCR', 'fonts', 'evaluator'
 
     def clone(self, template, context, result, **params):
         '''Creates another Renderer instance, similar to p_self, but for
@@ -654,16 +659,16 @@ class Renderer:
         # passed to m_renderText, exactly as you would do for m_renderXhtml.
         #
         # Determine the prefix to insert before the first line
-        prefix = '%s<tab/>' % prefix if prefix else ''
+        prefix = f'{prefix}<tab/>' if prefix else ''
         # Split p_s into lines of text
         r = s.split('\n')
         if tags:
             # Prepare the opening and closing sub-tags
-            opening = ''.join(['<%s>' % tag for tag in tags])
+            opening = ''.join([f'<{tag}>' for tag in tags])
             closing = ''
             j = len(tags) - 1
             while j >= 0:
-                closing += '</%s>' % tags[j]
+                closing = f'{closing}</{tags[j]}>'
                 j -= 1
         else:
             opening = closing = ''
@@ -678,16 +683,16 @@ class Renderer:
                 css = lastCss
             else:
                 css = otherCss
-            css = ' class="%s"' % css if css else ''
-            r[i] = '<p%s>%s%s%s%s</p>' % (css, pre, opening,
-                                          Escape.xhtml(r[i]), closing)
+            css = f' class="{css}"' if css else ''
+            r[i] = f'<p{css}>{pre}{opening}{Escape.xhtml(r[i])}{closing}</p>'
             i -= 1
         return self.renderXhtml(''.join(r), stylesMapping=stylesMapping)
 
     # Supported image formats. "image" represents any format
-    imageFormats = ('png', 'jpeg', 'jpg', 'gif', 'svg', 'image')
-    ooFormats = ('odt',)
+    imageFormats = 'png', 'jpeg', 'jpg', 'gif', 'svg', 'image'
+    ooFormats = 'odt',
     convertibleFormats = FILE_TYPES.keys()
+
     # Constant indicating if a renderer must inherit a value from is parent
     # renderer.
     INHERIT = 1
@@ -888,8 +893,8 @@ class Renderer:
     def importCell(self, content, style='Default'):
         '''Creates a chunk of ODF code ready to be dumped as a table cell
            containing this p_content and styled with this p_style.'''
-        return '<table:table-cell table:style-name="%s">' \
-               '<text:p>%s</text:p></table:table-cell>' % (style, content)
+        return f'<table:table-cell table:style-name="{style}">' \
+               f'<text:p>{content}</text:p></table:table-cell>'
 
     def drawShape(self, name, type='rect', stroke='none', strokeWidth='0cm',
                   strokeColor='#666666', fill='solid', fillColor='#666666',
@@ -901,12 +906,11 @@ class Renderer:
           stroke=stroke, strokeWidth=strokeWidth, strokeColor=strokeColor,
           fill=fill, fillColor=fillColor)
         # Return the ODF code representing the shape
-        return '<draw:%s text:anchor-type="%s" draw:z-index="1" ' \
-               'draw:name="%s" draw:style-name="%s" ' \
-               'draw:text-style-name="MP1" svg:width="%s" svg:height="%s"' \
-               ' svg:x="%s" svg:y="%s"><text:p/></draw:%s>' % \
-               (type, anchor, name, style.name, width, height, deltaX, deltaY,
-                type)
+        return f'<draw:{type} text:anchor-type="{anchor}" draw:z-index="1" ' \
+               f'draw:name="{name}" draw:style-name="{style.name}" ' \
+               f'draw:text-style-name="MP1" svg:width="{width}" ' \
+               f'svg:height="{height}" svg:x="{deltaX}" svg:y="{deltaY}">' \
+               f'<text:p/></draw:{type}>'
 
     def _insertBreak(self, type):
         '''Inserts a page or column break into the result'''
@@ -930,7 +934,7 @@ class Renderer:
         # Remove the result if it exists
         if exists: os.remove(self.result)
         # Create a temp folder for storing temporary files
-        self.tempFolder = '%s.%f' % (self.result, time.time())
+        self.tempFolder = f'{self.result}.{time.time()}'
         try:
             os.mkdir(self.tempFolder)
         except OSError as oe:
@@ -950,8 +954,9 @@ class Renderer:
             toInsert = ''
             for fileName in self.fileNames.keys():
                 mimeType = mimetypes.guess_type(fileName)[0]
-                toInsert += ' <manifest:file-entry manifest:media-type="%s" ' \
-                            'manifest:full-path="%s"/>\n' % (mimeType, fileName)
+                toInsert = f'{toInsert} <manifest:file-entry manifest:' \
+                           f'media-type="{mimeType}" manifest:full-path=' \
+                           f'"{fileName}"/>{bn}'
             manifestName = j(self.unzipFolder, 'META-INF', 'manifest.xml')
             # Read the the content of this file, if not already in
             # self.manifestXml.
@@ -979,7 +984,7 @@ class Renderer:
             else:
                 title = os.path.splitext(os.path.basename(self.result))[0]
             hook = self.metaHook
-            title = '<dc:title>%s</dc:title>%s' % (title, hook)
+            title = f'<dc:title>{title}</dc:title>{hook}'
             content = content.replace(hook, title)
             with open(metaName, 'w', **enc) as f:
                 f.write(content)

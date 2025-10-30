@@ -68,12 +68,14 @@ def findPackages(base):
 base = 'py%d' % sys.version_info[0]
 if base == 'py3':
     dependencies = ['zodb', 'DateTime']
-    python = '>=3.6'
     scripts = ['py3/appy/bin/appy']
 else:
     dependencies = []
-    python = '>=2.4'
     scripts = None
+
+# The version specifier must be unique to both Python 2 and Python 3 (since
+# setuptools has replaced distutils).
+python = '>=2.4, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*'
 
 setup(name = "appy", version = "{version}",
       description = "The Appy framework",
