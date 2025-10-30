@@ -211,12 +211,12 @@ class HtmlElement(Element):
         # "elemType" being "para" or not.
         if parent.elem == 'li':
             if self.elem in NOT_INSIDE_LI:
-                return (parent.parent.setConflictual(),parent.setConflictual(),)
+                return parent.parent.setConflictual(), parent.setConflictual()
         elif parent.elemType == 'para' and self.elem in NOT_INSIDE_P_OR_P:
             # For conflictual case div > li, copy div styles to the li
             if self.elem == 'li' and parent.cssStyles:
                 self.mergeInnerCssStyles(parent.cssStyles)
-            return (parent.setConflictual(),)
+            return parent.setConflictual(),
         # Check inner paragraphs
         elif parent.elem in INNER_TAGS and self.elemType == 'para':
             res = [parent.setConflictual()]
@@ -236,10 +236,10 @@ class HtmlElement(Element):
         if parent.tagsToClose and \
            parent.tagsToClose[-1].elemType == 'para' and \
            self.elem in NOT_INSIDE_P_OR_P:
-            return (parent.tagsToClose[-1].setConflictual(),)
+            return parent.tagsToClose[-1].setConflictual(),
         # Check elements that can't be found within a list
         if parent.elemType == 'list' and self.elem in NOT_INSIDE_LIST:
-            return (parent.setConflictual(),)
+            return parent.setConflictual(),
         return ()
 
     def addInnerParagraph(self, env):
@@ -994,18 +994,17 @@ class XhtmlEnvironment(Environment):
     def getTags(self, elems, start=True,
                 ignoreToRemove=False, ignoreWaiting=False):
         '''This method returns a series of start or end tags (depending on
-           p_start) that correspond to HtmlElement instances in p_elems.'''
-        res = ''
+           p_start) that correspond to HtmlElement objects in p_elems.'''
+        r = ''
         for elem in elems:
             # Ignore tags flagged "to remove" when relevant
             if ignoreToRemove and elem.removeTag: continue
             # Ignore not-yet-dumped elements when relevant
-            if ignoreWaiting and (elem.dumpStatus == 'waiting'): continue
+            if ignoreWaiting and elem.dumpStatus == 'waiting': continue
             # Get the tag
             tag = elem.dump(start, self)
-            if start: res += tag
-            else: res = tag + res
-        return res
+            r = f'{r}{tag}' if start else f'{tag}{r}'
+        return r
 
     def closeConflictualElements(self, conflictElems):
         '''This method dumps end tags for p_conflictElems, excepted if those
@@ -1013,10 +1012,12 @@ class XhtmlEnvironment(Environment):
            from the result.'''
         startTags = self.getTags(conflictElems, start=True,
                                  ignoreToRemove=True, ignoreWaiting=True)
-        if startTags and self.res.endswith(startTags):
+        base, name, value = self.getCurrentBuffer()
+        if startTags and value.endswith(startTags):
             # In this case I would dump an empty (series of) tag(s). Instead, I
             # will remove those tags.
-            self.res = self.res[:-len(startTags)]
+            value = value[:-len(startTags)]
+            setattr(base, name, value)
         else:
             tags = self.getTags(conflictElems, start=False,
                                 ignoreToRemove=True, ignoreWaiting=True)
@@ -1497,7 +1498,7 @@ class Xhtml2OdtConverter:
         self.odtChunk = None
         self.xhtmlParser = XhtmlParser(XhtmlEnvironment(renderer), self)
         if keepWithNext:
-            if (keepWithNext is True) or (keepWithNext > 1):
+            if keepWithNext is True or keepWithNext > 1:
                 # Apply "keep-with-next" functionality by using a sub-SAX parser
                 from appy.pod.xhtml import parser as xparser
                 parser = xparser.XhtmlParser(xparser.XhtmlEnvironment(), self,
