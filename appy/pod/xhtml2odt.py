@@ -993,7 +993,7 @@ class XhtmlEnvironment(XmlEnvironment):
             # Ignore tags flagged "to remove" when relevant
             if ignoreToRemove and elem.removeTag: continue
             # Ignore not-yet-dumped elements when relevant
-            if ignoreWaiting and (elem.dumpStatus == 'waiting'): continue
+            if ignoreWaiting and elem.dumpStatus == 'waiting': continue
             # Get the tag
             tag = elem.dump(start, self)
             if start: res += tag
@@ -1006,10 +1006,12 @@ class XhtmlEnvironment(XmlEnvironment):
            from the result.'''
         startTags = self.getTags(conflictElems, start=True,
                                  ignoreToRemove=True, ignoreWaiting=True)
-        if startTags and self.res.endswith(startTags):
+        base, name, value = self.getCurrentBuffer()
+        if startTags and value.endswith(startTags):
             # In this case I would dump an empty (series of) tag(s). Instead, I
             # will remove those tags.
-            self.res = self.res[:-len(startTags)]
+            value = value[:-len(startTags)]
+            setattr(base, name, value)
         else:
             tags = self.getTags(conflictElems, start=False,
                                 ignoreToRemove=True, ignoreWaiting=True)
@@ -1433,7 +1435,7 @@ class Xhtml2OdtConverter:
         self.odtChunk = None
         self.xhtmlParser = XhtmlParser(XhtmlEnvironment(renderer), self)
         if keepWithNext:
-            if (keepWithNext is True) or (keepWithNext > 1):
+            if keepWithNext is True or keepWithNext > 1:
                 # Apply "keep-with-next" functionality by using a sub-SAX parser
                 from appy.pod.xhtml import parser as xparser
                 parser = xparser.XhtmlParser(xparser.XhtmlEnvironment(), self,
