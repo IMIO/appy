@@ -433,7 +433,7 @@ class Tool(Base):
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def sendMail(self, to, subject, body, attachments=None, replyTo=None,
-                 split=False):
+                 split=True):
         '''Sends a mail. See doc in appy/utils/mail.py.'''
         mailer = Mailer(self.config.mail, self.log)
         return mailer.send(to, subject, body, attachments=attachments,
@@ -441,7 +441,7 @@ class Tool(Base):
 
     def sendMailIf(self, o, privilege, subject, body, attachments=None,
                    privilegeType='permission', excludeExpression='False',
-                   userMethod=None, replyTo=None, split=False, variables=None):
+                   userMethod=None, replyTo=None, split=True, variables=None):
         '''Sends a mail concerning this p_o(bject), to people having this
            p_privilege. See doc in appy/utils/mail.py.'''
         mailer = Mailer(o.config.mail, o.log)
