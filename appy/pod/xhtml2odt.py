@@ -552,7 +552,7 @@ class HtmlTable(Element):
         # Do not define a specific table style if not necessary
         if not hasWidth and not margins and not kwn and not unbreak and \
            (align == 'left'):
-            return 'podTable', tableWidthPx, originalTableWidthPx
+            return 'podTable', tableWidthPx, originalTableWidthPx, tableWidth
         # Define a specific style for this table and return its name
         if marginWidth:
             # Do not dump relative width
