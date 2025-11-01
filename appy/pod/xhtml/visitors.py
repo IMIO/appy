@@ -162,6 +162,7 @@ class TablesOptimizer(TablesVisitor):
                     r = self.visitRow(row)
                     updated = updated or r
         return updated
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class KeepWithNext(Visitor):
     # CSS classes with "keep with next" functionality, by tag type. By default,

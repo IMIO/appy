@@ -154,26 +154,25 @@ class EventPopup {
     let d = {};
     for (let i=0; i < l.length; i++) d[l[i]] = true;
     // Remember if we have already selected the first enabled option
-    let isSelected = false,
-        options = select.options;
+    let isSelected = false;
     // Disable options not being p_enabled
-    for (let i=0; i<options.length; i++) {
+    for (const option of select.options) {
       // Make sure the option is visible
-      options[i].style.display = 'block';
-      options[i].selected = false;
-      if (!options[i].value) continue;
-      if (options[i].value in d) {
-        options[i].disabled = false;
-        options[i].title = '';
+      option.style.display = 'block';
+      option.selected = false;
+      if (!option.value) continue;
+      if (option.value in d) {
+        option.disabled = false;
+        option.title = '';
         // Select it?
         if (selectFirst && !isSelected) {
-          options[i].selected = true;
+          option.selected = true;
           isSelected = true;
         }
       }
       else {
-        options[i].disabled = true;
-        options[i].title = message;
+        option.disabled = true;
+        option.title = message;
       }
     }
   }
@@ -196,6 +195,8 @@ class EventPopup {
     // Reinitialise field backgrounds
     f.eventType.style.background = '';
     if (f.eventSpan) f.eventSpan.style.background = '';
+    // Reinitialise the event type search field
+    f.searchET.value = '';
     // Show or hide the span zone
     spanZone.style.display = (this.create)? 'block': 'none';
     // Disable unapplicable events
@@ -225,6 +226,107 @@ class EventPopup {
       }
     }
     openPopup(this.popupId);
+    // Set focus on the event type search input field
+    document.getElementById('searchET').focus();
+  }
+
+  static updateTimeslots(typeSelector) {
+    const option = typeSelector.options[typeSelector.selectedIndex],
+          slotSelector = typeSelector.form['timeslot'];
+    let slots = option.dataset.slots, i = 0, defaultFound = false, opt, show;
+    if (slots) slots = slots.split(',');
+    // Walk all options
+    for (opt of slotSelector.options) {
+      // Hide or show it. Hide options disabled by the EventPopup class.
+      show = ((!slots || slots.includes(opt.value)) && !opt.disabled);
+      opt.style.display = (show)? 'block': 'none';
+      // Set the first visible option as the selected one
+      if (!defaultFound && show) {
+        defaultFound = true;
+        slotSelector.selectedIndex = i;
+      }
+      i += 1;
+    }
+  }
+
+  static setEventType(select, i) {
+    /* Select, in this p_select widget, the event type corresponding to the i_th
+       option. */
+    select.selectedIndex = i;
+    // Possibly update the related timeslots
+    EventPopup.updateTimeslots(select);
+  }
+
+  static filterEventTypes(input, event) {
+    /* Updates visibility of event type options, depending on the term being
+       encoded in this p_input field. */
+    const select = input.nextElementSibling, keyword = input.value;
+    let show, lastOption, last = -1, first = -1, i = -1, shown = 0;
+    // Walk v_select options (excepted the first one)
+    for (const option of select.options) {
+      i += 1;
+      /* Ignore the first option: this is a pseudo-option inviting the user to
+         select a value. */
+      if (i === 0) continue;
+      // Don't show disabled options if keywords are entered
+      if (option.disabled) {
+        option.style.display = (keyword)? 'none': 'block';
+      }
+      else {
+        /* Show the option if there is no keyword or if the option matches the
+           keyword. */
+        show = (keyword)? option.text.includes(keyword): true;
+        option.style.display = (show)? 'block': 'none';
+        // Reinitialise data attributes, possibly set from other searches
+        option.removeAttribute('data-sprev');
+        option.removeAttribute('data-snext');
+        if (show) {
+          shown += 1;
+          // Remember the first shown option
+          if (first === -1) first = i;
+          /* Set, on this option, a link between it and the v_last (previous)
+             shown option. That way, it will be possible to navigate (via
+             keyboard arrows) between shown options. */
+          if (lastOption) {
+            option.setAttribute('data-sprev', last.toString());
+            lastOption.setAttribute('data-snext', i.toString());
+          }
+          // Remember the v_last shown option
+          last = i;
+          lastOption = option;
+        }
+      }
+    }
+    // Automatically select the first shown option
+    EventPopup.setEventType(select, (keyword && first !== -1)? first: 0);
+    /* Update the text of the first option depending on the fact that, once
+       filtered, options may be selected or not. */
+    const suffix = (keyword && !shown)? 'Nil': 'Choose',
+          text = document.getElementById(`option${suffix}`).textContent;
+    select.options[0].textContent = text;
+  }
+
+  static selectEventType(input, event) {
+    /* Select the next/previous event in the event type selector when the
+       up/down arrow is pressed in the p_input field. Enable this only if
+       keywords are entered.*/
+    if (!input.value) return;
+    const up = (event.key === 'ArrowUp'),
+          down = (up)? false: (event.key === 'ArrowDown');
+    // Do nothing if the key pressed was not "up" nor "down"
+    if (!up && !down) return;
+    /* Make the move only if the selected option has the appropriate "search
+       sibling" option. */
+    const select = input.nextElementSibling,
+          i = select.selectedIndex, options = select.options;
+    if (i === -1) return; // There is no selected option
+    const option = options[i],
+          part = (up)? 'prev': 'next',
+          j = option.getAttribute(`data-s${part}`);
+    if (j) {
+      // Select the option having this index
+      EventPopup.setEventType(select, parseInt(j));
+    }
   }
 
   run(maxEventLength) {

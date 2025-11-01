@@ -71,10 +71,12 @@ class Tag:
     
     # This is a tag and not tag content
     isTag = True
+
     # Being "walkable" means: tags of a given type can be globally visited. For
     # example, tables are globally walkable, while rows are not: rows of a given
     # table can only be visited via this table.
     walkable = False
+
     # A tag being "structural" means that it cannot directly hold textual
     # content.
     structural = False

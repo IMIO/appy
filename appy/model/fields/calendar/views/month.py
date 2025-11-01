@@ -62,7 +62,7 @@ class Month(View):
         strictMonths = self.field.strictMonths
         if dayOneNb != 1 and not strictMonths:
             # If I write "previousDate = DateTime(currentDay)", the date is
-            # converted from UTC to GMT
+            # converted from UTC to GMT.
             previousDate = DateTime(f'{month}/01 UTC')
             # If the 1st day of the month is not a Monday, integrate the last
             # days of the previous month.
@@ -151,7 +151,7 @@ class Month(View):
         '''If p_self.field defines a slot map, configure a JS function that will
            update selectable timeslots in the timeslot selector, everytime an
            event type is selected in the event type selector.'''
-        return 'updateTimeslots(this)' if self.field.slotMap else ''
+        return 'EventPopup.updateTimeslots(this)' if self.field.slotMap else ''
 
     def getSlotsFor(self, eventType):
         '''Returns a comma-separated list of timeslots one may select when
@@ -264,6 +264,11 @@ class Month(View):
 
        <!-- Choose an event type -->
        <div align="center" id="newEventLabel">:_(field.createEventLabel)</div>
+       <div id="optionChoose" class="hide">:_('choose_a_value')</div>
+       <div id="optionNil" class="hide">:_('query_no_result')</div>
+       <input id="searchET" type="text" size="3" placeholder="…"
+              oninput="EventPopup.filterEventTypes(this, event)"
+              onkeyup="EventPopup.selectEventType(this, event)"/>
        <select name="eventType" class="calSelect"
                onchange=":view.getEventTypeOnChange()">
         <option value="">:_('choose_a_value')</option>
@@ -303,26 +308,7 @@ class Month(View):
       </form>
      </div>''',
 
-     js='''
-       function updateTimeslots(typeSelector) {
-         const option = typeSelector.options[typeSelector.selectedIndex],
-               slotSelector = typeSelector.form['timeslot'];
-         let slots = option.dataset.slots, i = 0, defaultFound = false,
-             opt, show;
-         if (slots) slots = slots.split(',');
-         // Walk all options
-         for (opt of slotSelector.options) {
-           // Hide or show it. Hide options disabled by the EventPopup class.
-           show = ((!slots || slots.includes(opt.value)) && !opt.disabled);
-           opt.style.display = (show)? 'block': 'none';
-           // Set the first visible option as the selected one
-           if (!defaultFound && show) {
-             defaultFound = true;
-             slotSelector.selectedIndex = i;
-           }
-           i += 1;
-         }
-       }''')
+     css='#searchET { border:none }')
 
     # Popup for removing events in the month view
     pxDelPopup = Px('''
