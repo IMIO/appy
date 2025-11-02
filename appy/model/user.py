@@ -189,7 +189,7 @@ class User(Base):
     #                                 Login
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
-    pm['multiplicity'] = (1,1)
+    pm['multiplicity'] = 1,1
 
     def showLogin(self):
         '''When must we show the login field ?'''
@@ -317,6 +317,11 @@ class User(Base):
         # Return a formatted recipient, containing the person's first and last
         # names.
         return f'{self.getTitle(normalized=normalized)} <{r}>'
+
+    def strinG(self, translated=False, path=True, titles=True):
+        '''p_self as a short string'''
+        r = super().strinG(translated=translated, path=path, titles=titles)
+        return f'{r} · Login={self.login}'
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                          Roles and permissions
@@ -819,9 +824,12 @@ class User(Base):
             if isLocal and self.id == 'admin': self.ensureIsManager()
             # p_self must be owned by itself
             self.localRoles.add(login, 'Owner')
-            # If the user was created by anon|system, anon|system can't stay its
+            # If p_self was created by anon|system, anon|system can't stay its
             # Owner.
             self.localRoles.delete(('anon', 'system'))
+            # When p_created, m_updateTitle has already been called via
+            # m_onEditEarly.
+            if not created: self.updateTitle()
         elif page == 'password':
             # If p_self corresponds to the currently logged user, update the
             # authentication cookie with its new password.
