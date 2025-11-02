@@ -267,7 +267,8 @@ class Portlet:
        .portletGroup { display:flex; flex-wrap:nowrap; gap:|pgGap|;
                        align-items:center; text-transform:|pgTransform|;
                        padding:|pgPadding|; margin:|pgMargin|;
-                       color:|portletTextColor|; line-height:|pgLineHeight| }
+                       color:|portletTextColor|; line-height:|pgLineHeight|;
+                       font-weight:|portletGWeight| }
        .groupTop { margin-top:0.4em }
        .portletGC { padding:|gcPadding|; font-size:|gcFSize|;
                     font-style:|gcFStyle| }

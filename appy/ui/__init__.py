@@ -385,6 +385,7 @@ class Config:
         self.portletTPadding = '5px 0' # Portlet title: padding
         self.portletTWeight = 'normal' # Portlet title boldness: could be "bold"
         self.portletTSize = '100%' # Portlet title font-size
+        self.portletGWeight = 'normal' # Group title boldness: could be "bold"
         self.portletISize = '24px' # Size of most *i*cons in the portlet
         self.portletAHeight = '24px' # Height for *A*dd buttons. If the imahe
                                      # image height is < text height, space can
