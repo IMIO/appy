@@ -62,11 +62,6 @@ mimeTypesExts = {
   f'{ms2}-powerpoint.presentation.macroEnabled.12': 'pptm'
 }
 
-# Chars being illegal in ODS sheet names. The apostrophe is legal inside the
-# name, but not as first or last char; for the sake of simplicity, we declare it
-# here as completely unallowed.
-notInSheet = re.compile(r"[\[\]\*\?\:\\/']")
-
 def getMimeType(fileName, default='application/octet-stream'):
     '''Tries to guess mime type from p_fileName'''
     r, encoding = mimetypes.guess_type(fileName)
