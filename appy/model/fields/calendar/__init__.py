@@ -227,7 +227,8 @@ class Calendar(Field):
                                align-self:flex-start }
       .calSelect { margin:10px 0; color:|selectColor|; font-size:95% }
       .calSpan { margin-bottom:0.7em; font-size:98%; color:|selectColor| }
-      .calSpan input { color:|selectColor|; text-align:center }''')
+      .calSpan input { color:|selectColor|; text-align:center }
+      #searchET { color:|selectColor| }''')
 
     edit = search = ''
 
