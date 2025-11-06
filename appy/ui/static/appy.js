@@ -192,10 +192,17 @@ function XhrObject() { // Wraps a XmlHttpRequest object
 /* When inserting HTML at some DOM node in a page via Ajax, scripts defined in
    this chunk of HTML are not executed. This function, typically used as "onGet"
    param for the askAjaxChunk function below, will evaluate those scripts. */
+
 function evalInnerScripts(xhrObject, hookElem) {
   if (!hookElem) return;
-  let scripts = hookElem.getElementsByTagName('script');
-  for (let i=0; i<scripts.length; i++) eval(scripts[i].innerHTML);
+  const scripts = hookElem.getElementsByTagName('script');
+  for (const script of scripts) eval(script.innerHTML);
+  /* This code will only evaluate inner JS code (ie, <script>someFun()</script>,
+     but will not import external JS files potentially referred in "src" tags
+     (ie, <script src="some/external/resource.js"/>). Indeed, importing such JS
+     files can only be done asynchronously (via JS function "import");
+     consequently, there is no guarantee the JS file will be loaded when the
+     code requiring it will be executed.*/
 }
 
 function injectChunk(tag, content, inner, searchTop, append){

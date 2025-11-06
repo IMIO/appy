@@ -19,8 +19,11 @@ class Switch(Field):
       <input if="layout == 'edit'" type="hidden" name=":field.name"
              value=":fieldset"/>
       <x var="fieldName=None;
-              page,grouped,css,js,phases=o.getGroupedFields(field.pageName, \
-                                         layout, fields=fields)">:o.pxFields</x>
+              page,grouped,css,js,phases=o.getGroupedFields(field.pageName,
+                                                        layout, fields=fields)">
+       <!-- Render the select fieldset -->
+       <x>:o.pxFields</x>
+      </x>
      </x>''')
 
     search = ''
@@ -52,9 +55,15 @@ class Switch(Field):
             for sub, field in fields.items():
                 field.init(class_, sub)
 
+    def getJs(self, o, layout, r, config):
+        '''Get JS dependencies required by inner fields'''
+        for case, fields in self.fields:
+            for sub, field in fields.items():
+                field.getJs(o, layout, r, config)
+
     def getChosenFields(self, o, layout='view', fieldset=n):
         '''Returns, among self.fields, the chosen sub-set, as a "flat" list of
-           Field instances.'''
+           Field objects.'''
         # More precisely, r_ is a tuple (name, fields), "name" being the name of
         # the chosen fieldset and "fields" being the flat list of corresponding
         # fields.
@@ -77,7 +86,8 @@ class Switch(Field):
                     # one if the switch has not master.
                     fieldset = self.fields[0][0]
         # Return an empty list of fields if we haven't a fieldset
-        if not fieldset: return fieldset, {}
+        if not fieldset:
+            return fieldset, {}
         # Get the list of fields corresponding to the chosen fieldset
         for name, fields in self.fields:
             if name == fieldset:
