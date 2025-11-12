@@ -38,6 +38,8 @@ MISS_EN_M   = "When param 'eventTypes' is a method, you must give another " \
               "method in param 'eventNameMethod'."
 S_MONTHS_KO = 'Strict months can only be used with timeline calendars.'
 ACT_MISS    = 'Action "%s" does not exist or is not visible.'
+DCLASS_KO   = 'Class specified in attribute "dataClass" is not a sub-class of '\
+              'class appy.model.fields.calendar.data.EventData.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Gradient:
@@ -138,6 +140,7 @@ class Calendar(Field):
     # includes.
 
     # Make some classes available here
+    traverse['View'] = 'perm:read'
     View = View
     Cell = Cell
     Other = Other
@@ -171,7 +174,7 @@ class Calendar(Field):
 
     view = cell = buttons = Px('''
      <div var="view=field.View.get(o, field);
-               hook=f'{o.iid}{field.name}';
+               hook=f'{o.iid}{name}';
                timeslots=field.Timeslot.getAll(o, field);
                eventTypes=field.getEventTypes(o);
                allowedEventTypes=field.getAllowedEventTypes(o, eventTypes);
@@ -187,8 +190,6 @@ class Calendar(Field):
                activeLayers=field.getActiveLayers(req);
                actions=field.Action.getVisibleOn(o, field, view.monthDayOne)"
           id=":hook">
-      <script>:f'var {field.name}_maxEventLength={field.maxEventLength};'
-      </script>
       <script>:field.getAjaxData(hook, o, view, popup=popup,
                                  activeLayers=','.join(activeLayers))</script>
 
@@ -256,7 +257,8 @@ class Calendar(Field):
       xml=n, translations=n, delete=True, beforeDelete=n, afterCreate=n,
       selectableMonths=6, selectableWeeks=4, createEventLabel='which_event',
       style='calTable', strictMonths=False, houredWidth='10em', fullDay=n,
-      createObjects=n, useEventComments=False):
+      createObjects=n, useEventComments=False, eventFields=None,
+      dataClass=None):
 
         '''Calendar field constructor'''
 
@@ -620,6 +622,33 @@ class Calendar(Field):
         # will be shown.
         self.useEventComments = useEventComments
 
+        # If you define fields in p_eventFields, they will complete the event
+        # data model and will be rendered in the popup for creating or updating
+        # an event, below the standard fields. When such fields are in use,
+        # everytime an event is created or updated, values for these additional
+        # fields will be stored in attribute "data" on the event, as an instance
+        # of persitent class appy.model.fields.calendar.data.EventData, or a
+        # subclass of it as defined in p_dataClass (see below). p_eventFields
+        # must be a method accepting these args:
+        # - the event type selected by the user in the event popup,
+        # - the current day (as a DateTime object),
+        # The method must return a dict of the form ~{s_fieldName: Field}~ or
+        # None. Indeed, None may be returned for event types for which the data
+        # model must not be extended.
+        # For performance reasons, any returned dict should be statically
+        # defined in your app or ext. Else, it will be created everytime event
+        # data must be shown or edited.
+        self.eventFields = eventFields
+
+        # When using p_eventFields, additional data about evey event will be
+        # stored in attribute event.data (see class Event in module appy/model/
+        # fields/calendar/event.py). Attribute event.data will be an instance of
+        # persistent class appy.model.fields.calendar.data.EventData, excepted
+        # if you specify a p_dataClass here. In that case, event.data will store
+        # an instance of your p_dataClass, that must be a subclass of class
+        # EventData.
+        self.dataClass = dataClass
+
         # Call the base constructor
 
         # p_validator, allowing field-specific validation, behaves differently
@@ -644,6 +673,14 @@ class Calendar(Field):
           colspan, master, masterValue, masterSnub, focus, False, mapping,
           generateLabel, label, n, n, n, n, True, False, view, cell, buttons,
           edit, custom, xml, translations)
+
+        # Ensure parameters are correct
+        self.checkParameters()
+
+    def checkParameters(self):
+        '''Ensure p_self's parameters are correct'''
+        if self.dataClass and not issubclass(self.dataClass, EventData):
+            raise Exception(DCLASS_KO)
 
     def getRenderInfo(self, render):
         '''Extract renderring info from p_render. Raise an error if data is
@@ -682,7 +719,7 @@ class Calendar(Field):
         pre = self.preCompute
         if pre: return pre(o, view.monthDayOne, view.grid)
 
-    weekDays = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
+    weekDays = 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
 
     def getNamesOfDays(self, _):
         '''Returns the translated names of all week days, short and long
@@ -825,6 +862,18 @@ class Calendar(Field):
            in this calendar on p_o at this p_date.'''
         return Timeslot.getEventsAt(o, self, date, addEmpty, ifEmpty, expr,
                                     persist)
+
+    def getEventFieldsFor(self, o, eventType, day):
+        '''Retrieve the event fields potentially defined for this p_eventType'''
+        method = self.eventFields
+        if not method: return
+        r = method(o, eventType, day)
+        if r:
+            # Ensure these fields are late-initialised
+            for name, field in r.items():
+                if hasattr(field, 'name'): break
+                field.init(None, name)
+        return r
 
     def standardizeDateRange(self, range):
         '''p_range can have various formats (see m_walkEvents below). This
@@ -1020,6 +1069,7 @@ class Calendar(Field):
         # Add the key corresponding to the current period type (month, day,...)
         period = view.periodType
         params[period] = getattr(view, period)
+        params['name'] = self.name
         params['layout'] = o.H().getLayout()
         params['multiple'] = '1' if self.multiple else '0'
         params['filters'] = view.filterValues

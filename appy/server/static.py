@@ -102,7 +102,7 @@ class Config:
         #
         # Keys must correspond to file names, not prefixed with any path-related
         # info.
-        self.versions = {'appy.css':99, 'appy.js':61, 'calendar.js':13}
+        self.versions = {'appy.css':100, 'appy.js':61, 'calendar.js':14}
 
         # Log any file download representing more than this number of bytes. By
         # "download", we mean, a file downloaded by a Appy client on a Appy

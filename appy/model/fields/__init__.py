@@ -801,8 +801,18 @@ class Field:
         '''Short string representation for this field'''
         # If p_self's repr goes to the UI, using surrounding chars "<" and ">"
         # may cause XHTML escaping problems.
-        name = f'{self.container.name}::{self.name}' \
-               if hasattr(self, 'container') else 'uninit'
+        if hasattr(self, 'name'):
+            # p_self has been late-initialised
+            cont = self.container
+            if cont:
+                # Prefix the name with the container (=class) name
+                name = f'{cont.name}::{self.name}'
+            else:
+                # It may be the case for fields not being tied to any Appy
+                # class, like calendar event-specific fields.
+                name = self.name
+        else:
+            name = 'uninit'
         cname = self.__class__.__name__.lower()
         return f'{start}field {name} ({cname}){end}'
 

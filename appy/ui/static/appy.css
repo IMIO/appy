@@ -51,6 +51,7 @@ input[type=submit]   { border:1px solid |altColor|; margin:0 5px;
                        color:|buttonColor|; cursor:pointer;
                        text-transform:|buttonCase| }
 input[type=text],
+input[type=number],
 input[type=password] { outline:none; cursor:text;
                        border:none; padding:3px 0; margin:0 2px |fieldBottom| 0;
                        border-bottom:|itextBottom| |itextBottomColor|;
@@ -61,6 +62,8 @@ input[type=date]     { width:9em; margin-bottom:0.2em;
 input[type=datetime-local] { width:12em; margin-bottom:0.4em;
                        margin-bottom:|fieldBottom| }
 input::placeholder   { color:#666666 }
+input:invalid,
+select:invalid       { background-color:|wrongTextColor| }
 select[multiple]     { border:1px solid |itextBottomColor|; margin:0;
                        background-image:none; padding:0.1em 0.3em }
 form[name=search] input[type=button] { margin:0 }
@@ -88,7 +91,7 @@ div[contenteditable=true]:empty:before { content:attr(data-placeholder);
 .pageIcons { text-transform:uppercase; font-weight:bold; font-size:96% }
 .prePods { display:flex; gap:1em; margin-left:auto }
 .required { color:|warnColor|; font-weight:bold }
-.hourSel::before { content:':'; margin-right:1px; }
+.hourSel::before { content:':'; margin-right:1px }
 .auto { width:auto }
 .mono { font-family:monospace; font-size:120% }
 
@@ -379,6 +382,7 @@ th input { margin:0 !important}
 .navText { display:inline-flex; flex-wrap:nowrap; font-weight:bold;
            color:|linkColor|; padding:0 0.5em }
 .navSep { color:|altColor|; margin:0 0.3em }
+.hourSep { margin:0 0.3em }
 .highlight { background-color:yellow }
 .highlightRow { font-weight:bold; background-color:yellow; opacity:0.6 }
 .globalActions { display: flex; margin-bottom:0.5em }
@@ -413,6 +417,23 @@ th input { margin:0 !important}
  100% { opacity: 1.0 }
 }
 .fadedIn { animation: fadeIN 0.4s 1; animation-fill-mode: forwards }
+
+@keyframes shakeSlow {
+  0% { transform:rotate(0deg); filter:sepia(0) }
+  95% { transform:rotate(0deg); filter:sepia(0) }
+  97% { transform:rotate(10deg); filter:sepia(1) }
+  99% { transform:rotate(-10deg); filter:sepia(0.6) }
+  100% { transform:rotate(0deg); filter:sepia(0.3) }
+}
+
+@keyframes shakeTilt {
+  0% { transform: rotate(0deg) }
+  25% { transform: rotate(5deg) }
+  50% { transform: rotate(0eg) }
+  75% { transform: rotate(-5deg) }
+  100% { transform: rotate(0deg) }
+}
+.shakeOnce { animation:shakeTilt 0.15s 2 }
 
 /* Bugfix for the calendar class from jscalendar */
 .calendar { z-index: 10 }

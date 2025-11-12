@@ -52,14 +52,14 @@ class PxParser(Parser):
     '''PX parser that is specific for parsing PX data'''
 
     # XML attributes being specific to PX
-    pxAttributes = ('var', 'for', 'if', 'var2')
+    pxAttributes = 'var', 'for', 'if', 'var2'
 
     # PX attributes that must not be part of the reslt
     pxIgnorable = pxAttributes + ('z', 'attrs')
 
     # XHTML attributes that could not be dumped, depending on their value
-    noDump = ('selected', 'checked', 'disabled', 'multiple', 'readonly',
-              'autofocus')
+    noDump = 'selected', 'checked', 'disabled', 'multiple', 'readonly', \
+             'required', 'autofocus'
 
     # The following dict allows to convert attrs "lfor" to "for". Indeed,
     # because tags "label" can have an attribute named "for", it clashes with

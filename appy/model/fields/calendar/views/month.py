@@ -151,7 +151,11 @@ class Month(View):
         '''If p_self.field defines a slot map, configure a JS function that will
            update selectable timeslots in the timeslot selector, everytime an
            event type is selected in the event type selector.'''
-        return 'EventPopup.updateTimeslots(this)' if self.field.slotMap else ''
+        if self.field.slotMap:
+            r = 'EventPopup.geT(this).setEventType(-2)'
+        else:
+            r = ''
+        return r
 
     def getSlotsFor(self, eventType):
         '''Returns a comma-separated list of timeslots one may select when
@@ -218,7 +222,6 @@ class Month(View):
     pxPeriodSelector = Px('''
      <div var="around=view.around;
                iid=str(o.iid);
-               name=name|field.name;
                goBack=view.mayGo(back=True);
                goForward=view.mayGo(back=False)">
 
@@ -255,8 +258,7 @@ class Month(View):
     # Popup for adding or updating an event in the month view
     pxEditPopup = Px('''
      <div var="popupId=f'{hook}_edit';
-               submitJs=f'new EventPopup(this,`{hook}`,`new`).run(
-                           {field.name}_maxEventLength)'"
+               submitJs=f'EventPopup.geT(this).run()'"
           id=":popupId" class="popup" align="center">
       <form id=":f'{popupId}Form'" method="post" data-sub="process">
        <input type="hidden" name="actionType" value="createEvent"/>
@@ -266,16 +268,17 @@ class Month(View):
        <div align="center" id="newEventLabel">:_(field.createEventLabel)</div>
        <div id="optionChoose" class="hide">:_('choose_a_value')</div>
        <div id="optionNil" class="hide">:_('query_no_result')</div>
-       <input id="searchET" type="text" size="3" placeholder="…"
-              oninput="EventPopup.filterEventTypes(this, event)"
-              onkeyup="EventPopup.selectEventType(this, event)"/>
-       <select name="eventType" class="calSelect"
+       <input id="searchET" name="searchET" type="text" size="3" placeholder="…"
+              oninput="EventPopup.geT(this).filterEventTypes()"
+              onkeyup="EventPopup.geT(this).selectEventType(event)"/>
+       <select name="eventType" class="calSelect" required="required"
                onchange=":view.getEventTypeOnChange()">
         <option value="">:_('choose_a_value')</option>
         <option for="eventType in allowedEventTypes"
                 data-slots=":view.getSlotsFor(eventType)"
                 value=":eventType">:typeInfo[eventType].name</option>
        </select>
+       <span class="required">*</span>
 
        <!-- Choose a timeslot -->
        <div if="showTimeslots" id="slotZone">
@@ -289,7 +292,7 @@ class Month(View):
        <!-- Span the event on several days -->
        <div align="center" class="calSpan" id="spanZone">
         <x>::_('event_span')</x>
-        <input type="text" size="1" name="eventSpan"
+        <input type="number" size="1" min="1" name="eventSpan"
                onkeypress="return (event.keyCode != 13)"/>
        </div>
 
@@ -301,8 +304,13 @@ class Month(View):
                   lg=None; inRequest=False; requestValue=None;
                   hostLayout=None">:field.editUni</div>
 
+       <!-- Event fields -->
+       <div if="field.eventFields" id=":f'{popupId}Fields'" class="calspan">
+       </div>
+
        <!-- Save and cancel buttons -->
-       <input type="button" value=":_('object_save')" onclick=":submitJs"/>
+       <input type="button" value=":_('object_save')" onclick=":submitJs"
+              name="saveButton"/>
        <input type="button" value=":_('object_cancel')"
               onclick=":f'closePopup({q(popupId)})'"/>
       </form>
@@ -331,7 +339,7 @@ class Month(View):
          <label lfor=":cbId" class="simpleLabel">:_('del_next_events')</label>
        </div>
        <input type="button" value=":_('yes')"
-              onClick=":f'new EventPopup(this,`{hook}`,`del`).run()'"/>
+              onClick=":f'EventPopup.geT(this).run()'"/>
        <input type="button" value=":_('no')"
               onclick=":f'closePopup({q(popupId)})'"/>
       </form>
@@ -355,15 +363,16 @@ class Month(View):
         <!-- Edit this particular event -->
         <img if="mayEdit and event.eventType in allowedEventTypes"
              class="calicon iconS" src=":svg('edit')" style="opacity:0"
-             onclick=":f'new EventPopup(this,`{hook}`,`edit`,`{dayString}`,
-                        `{event.timeslot}`).openEdit(`{okTypes.eventTypes}`,
-                        `{okTypes.message}`,null,`{event.eventType}`)'"/>
+             onclick=":f'new EventPopup(this,`{o.iid}`,`{name}`,`edit`,
+                        `{dayString}`,`{event.timeslot}`,{hasEventFields}
+                        ).openEdit(`{okTypes.eventTypes}`,`{okTypes.message}`,
+                        null,`{event.eventType}`,{field.maxEventLength})'"/>
 
         <!-- Delete this particular event -->
         <img if="mayDelete and not single" class="calicon iconS"
              src=":svg('deleteS')" style="opacity:0"
-             onclick=":f'new EventPopup(this,`{hook}`,`del`,`{dayString}`,
-                        `{event.timeslot}`).openDelete()'"/>
+             onclick=":f'new EventPopup(this,`{o.iid}`,`{name}`,`del`,
+                        `{dayString}`,`{event.timeslot}`).openDelete()'"/>
       </div>
      </x>
 
@@ -399,9 +408,10 @@ class Month(View):
             if="okTypes and okTypes.eventTypes" src=":url('plus')"
             var2="freeSlots=field.Timeslot.getFreeAt(o, date, events, timeslots,
                                                      slotIdsStr, True)"
-            onclick=":f'new EventPopup(this,`{hook}`,`new`,`{dayString}`,
-                       null).openEdit(`{okTypes.eventTypes}`,
-                       `{okTypes.message}`,`{freeSlots}`,null)'"/>
+            onclick=":f'new EventPopup(this,`{o.iid}`,`{name}`,`new`,
+                       `{dayString}`,null,{hasEventFields}).openEdit(
+                       `{okTypes.eventTypes}`,`{okTypes.message}`,`{freeSlots}`,
+                       null,{field.maxEventLength})'"/>
       </x>
 
       <!-- Icon for adding an Appy object -->
@@ -413,8 +423,8 @@ class Month(View):
       <!-- Icon for deleting event(s) -->
       <img if="mayDelete" class="calicon iconS" style="opacity:0"
            src=":svg('deleteS' if single else 'deleteMany')"
-           onclick=":f'new EventPopup(this,`{hook}`,`del`,`{dayString}`,
-                     `*`).openDelete({spansDaysJs})'"/>
+           onclick=":f'new EventPopup(this,`{o.iid}`,`{name}`,`del`,
+                      `{dayString}`,`*`).openDelete({spansDaysJs})'"/>
 
       <!-- Events -->
       <x>:view.pxEvents</x>
@@ -439,9 +449,8 @@ class Month(View):
 
        <!-- On edit, render a checkbox -->
        <x if="onEdit" var2="suffix='on' if hasEvent else 'off'">
-        <input type="hidden" name=":field.name"
-               value=":f'{dayString}_{suffix}'"/>
-        <input type="checkbox" class="pickCB" name=":f'cb_{field.name}'"
+        <input type="hidden" name=":name" value=":f'{dayString}_{suffix}'"/>
+        <input type="checkbox" class="pickCB" name=":f'cb_{name}'"
                id=":dayString" value=":dayString" checked=":hasEvent"
                onchange="updatePicked(this)"/>
        </x>
@@ -459,7 +468,8 @@ class Month(View):
     px = Px('''
      <table cellpadding="0" cellspacing="0" width=":field.width"
             class=":field.style" id=":f'{hook}_cal'"
-            var="rowHeight=int(field.height/float(len(view.grid)))">
+            var="rowHeight=int(field.height/float(len(view.grid)));
+                 hasEventFields='true' if field.eventFields else 'false'">
 
       <!-- 1st row: names of days -->
       <tr height="22px">

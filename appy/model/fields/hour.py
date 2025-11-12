@@ -15,18 +15,19 @@ class Hour(Field):
     view = cell = buttons = Px('''<x>:value</x>''')
 
     edit = Px('''
-     <x var="hPart=hPart | '%s_hour' % name;
-             mPart=mPart | '%s_minute' % name;
-             hours=range(0,field.maxHour+1)">
-      <select name=":hPart" id=":hPart" class="hourSel">
+     <x var="hPart=hPart | f'{name}_hour';
+             mPart=mPart | f'{name}_minute';
+             hours=range(0, field.maxHour+1)">
+      <select name=":hPart" id=":hPart" class="hourSel"
+              required="field.required">
        <option value="">-</option>
        <option for="hour in hours"
          var2="zHour=str(hour).zfill(2)" value=":zHour"
          selected=":field.isSelected(o, hPart, 'hour', \
                                      hour, rawValue)">:zHour</option>
-      </select> <x>:field.editSep</x> 
+      </select> <span class="hourSep">:field.editSep</span> 
       <select var="minutes=range(0, 60, field.minutesPrecision)"
-              name=":mPart" id=":mPart">
+              name=":mPart" id=":mPart" required="field.required">
        <option value="">-</option>
        <option for="min in minutes"
          var2="zMin=str(min).zfill(2)" value=":zMin"
@@ -35,7 +36,7 @@ class Hour(Field):
       </select>
      </x>''')
 
-    hourParts = ('hour', 'minute')
+    hourParts = 'hour', 'minute'
 
     # Default separator between "hour" and "minute" parts
     defaultSep = ':'

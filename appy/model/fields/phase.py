@@ -332,14 +332,7 @@ class UiPhase:
       .phase .currentPage a, .phase .currentPage span { color:|phaseCcolor| }
 
       // Animation for the "edit" icon
-      @keyframes shakeImage {
-        0% { transform:rotate(0deg); filter:sepia(0) }
-        95% { transform:rotate(0deg); filter:sepia(0) }
-        97% { transform:rotate(10deg); filter:sepia(1) }
-        99% { transform:rotate(-10deg); filter:sepia(0.6) }
-        100% { transform:rotate(0deg); filter:sepia(0.3) }
-      }
-      .shake { animation:shakeImage 10s infinite }''')
+      .shake { animation:shakeSlow 10s infinite }''')
 
     def __init__(self, name, phases):
         # The name of the phase

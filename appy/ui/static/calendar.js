@@ -96,12 +96,16 @@ class EventPopup {
   /* Represents the popup allowing to create, update or delete, at a given day
      and timeslot, a calendar event. */
 
-  constructor(node, hook, action, day, timeslot) {
+  constructor(node, iid, name, action, day, timeslot, hasFields) {
     /* The node, within a calendar cell, that requested a popup action
        (typically, an img tag). */
     this.node = node;
+    // The IID of the Appy object hosting the calendar field
+    this.iid = iid;
+    // The name of the calendar field
+    this.name = name;
     // The ajax-refreshable node representing the calendar field
-    this.hook = hook;
+    this.hook = `${iid}${name}`;
     /* The requested action: create ("new"), update ("edit") or delete ("del")
        an event. */
     this.action = action;
@@ -111,14 +115,23 @@ class EventPopup {
     /* The event timeslot at this day. When action is "edit" or "del", this
        timeslot is required to identify the event to update or delete. */
     this.timeslot = timeslot;
+    // May the popup render additional Appy fields for all or some event types ?
+    this.hasFields = hasFields;
     // The popup ID
     const suffix = (action == 'del')? 'del': 'edit';
-    this.popupId = `${hook}_${suffix}`;
+    this.popupId = `${this.hook}_${suffix}`;
     // The popup's inner form
     this.formId = `${this.popupId}Form`;
     this.form = document.getElementById(this.formId);
+    // Store p_this on the form
+    this.form.appyEventPopup = this;
     // Initialise the p_day if passed
     if (day) this.form.day.value = day;
+  }
+
+  static geT(widget) {
+    // Retrieve the EventPopup object, stored on the popup form
+    return widget.form.appyEventPopup;
   }
 
   getCaller() {
@@ -164,7 +177,7 @@ class EventPopup {
       if (option.value in d) {
         option.disabled = false;
         option.title = '';
-        // Select it?
+        // Select it ?
         if (selectFirst && !isSelected) {
           option.selected = true;
           isSelected = true;
@@ -177,14 +190,21 @@ class EventPopup {
     }
   }
 
-  openEdit(applicableEventTypes, message, freeSlots, eventType) {
+  getEventFields(eventType) {
+    // Make an Ajax request to get the zone allowing to edit the event fields
+    const hook = `${this.popupId}Fields`,
+          url = `${siteUrl}/${this.iid}/${this.name}/View/pxEventFields`,
+          params = {'hook':hook, 'eventType':eventType, 'day': this.day};
+    askAjaxChunk(url, 'POST', params, hook);
+  }
+
+  openEdit(applicableEventTypes, message, freeSlots, eventType, maxEvents) {
     /* Opens a popup for creating or updating an event. A possibly restricted
        list of applicable event types for this day is given in
        p_applicableEventTypes; p_message contains an optional message explaining
        why not applicable types are not applicable. In creation mode,
        p_freeSlots may list the available timeslots at p_day. In edit mode,
-       p_eventType is the even type of the even to update. */
-
+       p_eventType is the even type of the event to update. */
     const f = this.form,
           spanZone = document.getElementById('spanZone'),
           slotZone = document.getElementById('slotZone'),
@@ -199,6 +219,10 @@ class EventPopup {
     f.searchET.value = '';
     // Show or hide the span zone
     spanZone.style.display = (this.create)? 'block': 'none';
+    // Define the max number of events to create
+    if (maxEvents) f.eventSpan.setAttribute('max', maxEvents);
+    // Clean animation on the Save button
+    f.saveButton.className = '';
     // Disable unapplicable events
     this.enableOptionsOn(f.eventType, applicableEventTypes, false, message);
     if (this.create) {
@@ -213,6 +237,7 @@ class EventPopup {
       // Reset fields
       f.eventType.value = '';
       if (comment) comment.innerHTML = '';
+      document.getElementById(`${this.popupId}Fields`).style.display = 'none';
     }
     else { // Force the timeslot and ensure the slot zone is hidden
       slotZone.style.display = 'none';
@@ -220,6 +245,7 @@ class EventPopup {
       f.timeslot.value = this.timeslot;
       // Fill data
       f.eventType.value = eventType;
+      if (this.hasFields) this.getEventFields(eventType);
       if (comment) {
         const comments = this.getCaller().getElementsByClassName('evtCom');
         if (comments.length) comment.innerHTML = comments[0].innerHTML;
@@ -227,40 +253,56 @@ class EventPopup {
     }
     openPopup(this.popupId);
     // Set focus on the event type search input field
-    document.getElementById('searchET').focus();
+    f.searchET.focus();
   }
 
-  static updateTimeslots(typeSelector) {
-    const option = typeSelector.options[typeSelector.selectedIndex],
-          slotSelector = typeSelector.form['timeslot'];
-    let slots = option.dataset.slots, i = 0, defaultFound = false, opt, show;
+  /* Refresh the list of possible timeslots given the currently selected event
+     type. */
+  updateTimeslots() {
+    const select = this.form.eventType,
+          option = select.options[select.selectedIndex],
+          slotSelect = this.form.timeslot;
+    let slots = option.dataset.slots, i = 0, defaultFound = false, show;
     if (slots) slots = slots.split(',');
     // Walk all options
-    for (opt of slotSelector.options) {
+    for (const opt of slotSelect.options) {
       // Hide or show it. Hide options disabled by the EventPopup class.
       show = ((!slots || slots.includes(opt.value)) && !opt.disabled);
       opt.style.display = (show)? 'block': 'none';
       // Set the first visible option as the selected one
       if (!defaultFound && show) {
         defaultFound = true;
-        slotSelector.selectedIndex = i;
+        slotSelect.selectedIndex = i;
       }
       i += 1;
     }
   }
 
-  static setEventType(select, i) {
-    /* Select, in this p_select widget, the event type corresponding to the i_th
-       option. */
-    select.selectedIndex = i;
+  setEventType(i) {
+    /* Select, in the event type selector, the type corresponding to the i_th
+       option. If p_i equals -2, it means that the type has already been
+       changed in the type selector: only complementary actions need to be
+       performed. */
+    const select = this.form.eventType,
+          hasChanged = (i === -2) || i != select.selectedIndex;
+    // Don't do anything if the selected value hasn't changed
+    if (!hasChanged) return;
+    // Update the selected value, excepted if it has already been done
+    if (i !== -2) select.selectedIndex = i;
     // Possibly update the related timeslots
-    EventPopup.updateTimeslots(select);
+    this.updateTimeslots();
+    // Possibly ajax-refresh event fields
+    if (this.hasFields && select.selectedIndex > 0) {
+      const eventType = select.options[select.selectedIndex].value;
+      this.getEventFields(eventType);
+    }
   }
 
-  static filterEventTypes(input, event) {
+  filterEventTypes() {
     /* Updates visibility of event type options, depending on the term being
-       encoded in this p_input field. */
-    const select = input.nextElementSibling, keyword = input.value;
+       encoded in the search input field. */
+    const f = this.form, select = f.eventType, input = f.searchET,
+          keyword = input.value;
     let show, lastOption, last = -1, first = -1, i = -1, shown = 0;
     // Walk v_select options (excepted the first one)
     for (const option of select.options) {
@@ -298,7 +340,7 @@ class EventPopup {
       }
     }
     // Automatically select the first shown option
-    EventPopup.setEventType(select, (keyword && first !== -1)? first: 0);
+    this.setEventType((keyword && first !== -1)? first: 0);
     /* Update the text of the first option depending on the fact that, once
        filtered, options may be selected or not. */
     const suffix = (keyword && !shown)? 'Nil': 'Choose',
@@ -306,10 +348,11 @@ class EventPopup {
     select.options[0].textContent = text;
   }
 
-  static selectEventType(input, event) {
+  selectEventType(event) {
     /* Select the next/previous event in the event type selector when the
-       up/down arrow is pressed in the p_input field. Enable this only if
+       up/down arrow is pressed in the search input field. Enable this only if
        keywords are entered.*/
+    const input = this.form.searchET;
     if (!input.value) return;
     const up = (event.key === 'ArrowUp'),
           down = (up)? false: (event.key === 'ArrowDown');
@@ -317,7 +360,7 @@ class EventPopup {
     if (!up && !down) return;
     /* Make the move only if the selected option has the appropriate "search
        sibling" option. */
-    const select = input.nextElementSibling,
+    const select = this.form.eventType,
           i = select.selectedIndex, options = select.options;
     if (i === -1) return; // There is no selected option
     const option = options[i],
@@ -325,37 +368,42 @@ class EventPopup {
           j = option.getAttribute(`data-s${part}`);
     if (j) {
       // Select the option having this index
-      EventPopup.setEventType(select, parseInt(j));
+      this.setEventType(parseInt(j));
     }
   }
 
-  run(maxEventLength) {
+  // Ensure all required fields, on the create/edit event form, are filled 
+  validate() {
+    // Get all form fields being invalid
+    const invalid = this.form.querySelectorAll(':scope :invalid');
+    // Return true if all fields are valid
+    return invalid.length == 0;
+  }
+
+  shakeSave() {
+    // Tilt-shake the Save button, to alert about a form validaton problem
+    const save = this.form.saveButton;
+    if (save.classList.contains('shakeOnce')) {
+      // Reset the animation
+      save.classList.remove('shakeOnce');
+      setTimeout(function() {save.classList.add('shakeOnce');}, 10);
+    }
+    else save.classList.add('shakeOnce');
+  }
+
+  run() {
     /* Sends an Ajax request for triggering a calendar event (create, update or
-       delete an event) and refreshing the view month. In the case of an event
-       creation, the maximum number of days the event may span is specified in
-       p_maxEventLength. */
+       delete an event) and refreshing the view month. */
     const f = this.form;
-    if (this.create) {
-      // Validate the event type and span
-      if (f.eventType.selectedIndex == 0) {
-        f.eventType.style.background = wrongTextInput;
+    if (this.action != 'del') {
+      // Are all required fields filled ?
+      if (!this.validate()) {
+        // Shake the "Save" button and abort
+        this.shakeSave();
         return;
       }
-      if (f.eventSpan) {
-        // Check that eventSpan is empty or contains a valid number
-        let nb = f.eventSpan.value.replace(' ', '');
-        if (nb) {
-          nb = parseInt(nb);
-          if (isNaN(nb) || (nb > maxEventLength)) {
-            f.eventSpan.style.background = wrongTextInput;
-            return;
-          }
-        }
-      }
-    }
-    if (this.action != 'del') {
       // Copy the poor comment to the inner textarea
-      const comment = f.elements['comment'];
+      const comment = f.comment;
       if (comment) comment.value = comment.previousSibling.innerHTML;
     }
     closePopup(this.popupId);

@@ -6,6 +6,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from DateTime import DateTime
 
+from appy.px import Px
 from appy.utils import exeC
 from ..filter import Filter
 from appy.utils import string as sutils
@@ -178,6 +179,10 @@ class View:
         params = sutils.getStringFrom(params)
         return f"askAjax('{hook}',null,{params})"
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                              Class methods
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     @classmethod
     def get(class_, o, field, ignoreReq=False):
         '''Return a concrete View object for viewing this calendar p_field on
@@ -194,4 +199,24 @@ class View:
         concrete = exeC(f'from appy.model.fields.calendar.views.{moduleName} ' \
                         f'import {className}', className)
         return concrete(o, field)
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                                 PXs
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # Render fields possibly defined in attribute Calendar.eventFields
+
+    pxEventFields = Px('''
+     <div id=":req.hook" class="calSpan"
+          var="layout='edit';
+               day=field.DateTime(req.day);
+               fields=field.getEventFieldsFor(o, req.eventType, day)">
+      <!-- Render these v_fields, if any -->
+      <x if="fields"
+         var2="fieldName=None;
+               page,grouped,css,js,phases=o.getGroupedFields('main', 'edit',
+                                                             fields=fields)">
+       <x>:o.pxFields</x>
+      </x>
+     </div>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
