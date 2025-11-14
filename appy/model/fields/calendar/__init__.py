@@ -8,6 +8,7 @@ from DateTime import DateTime
 from persistent import Persistent
 from BTrees.IOBTree import IOBTree
 from persistent.list import PersistentList
+from persistent.mapping import PersistentMapping
 
 from appy.px import Px
 from .cell import Cell
@@ -25,6 +26,7 @@ from .typeInfo import TypeInfo
 from .totals import Total, Totals
 from .validation import Validation
 from appy.utils import dates as dutils
+from appy.ui.validate import Validator
 from appy.utils import string as sutils
 from appy.model.utils import Object as O
 from appy.ui.layout import Layout, Layouts
@@ -140,7 +142,6 @@ class Calendar(Field):
     # includes.
 
     # Make some classes available here
-    traverse['View'] = 'perm:read'
     View = View
     Cell = Cell
     Other = Other
@@ -153,6 +154,8 @@ class Calendar(Field):
     TypeInfo = TypeInfo
     DateTime = DateTime
     Timeslot = Timeslot
+    traverse['EventData'] = 'perm:read'
+    EventData = EventData
     IterSub = utils.IterSub
     Validation = Validation
 
@@ -226,7 +229,8 @@ class Calendar(Field):
       .viewF > :nth-child(2) { display:flex; flex-direction:column; width:10em;
                                gap:0.5em; position:sticky; top:1.5em;
                                align-self:flex-start }
-      .calSelect { margin:10px 0; color:|selectColor|; font-size:95% }
+      .calSelect { margin:0.2em 0; color:|selectColor|; font-size:95% }
+      .eFields { margin-bottom:0.2em }
       .calSpan { margin-bottom:0.7em; font-size:98%; color:|selectColor| }
       .calSpan input { color:|selectColor|; text-align:center }
       #searchET { color:|selectColor| }''')
@@ -629,12 +633,13 @@ class Calendar(Field):
         # fields will be stored in attribute "data" on the event, as an instance
         # of persitent class appy.model.fields.calendar.data.EventData, or a
         # subclass of it as defined in p_dataClass (see below). p_eventFields
-        # must be a method accepting these args:
-        # - the event type selected by the user in the event popup,
-        # - the current day (as a DateTime object),
-        # The method must return a dict of the form ~{s_fieldName: Field}~ or
-        # None. Indeed, None may be returned for event types for which the data
-        # model must not be extended.
+        # must be a method accepting, as unique arg, the event type selected by
+        # the user in the event popup. It must return a dict of the form
+        #
+        #                       ~{s_fieldName: Field}~
+        #
+        # or None. Indeed, None may be returned for event types for which the
+        # data model must not be extended.
         # For performance reasons, any returned dict should be statically
         # defined in your app or ext. Else, it will be created everytime event
         # data must be shown or edited.
@@ -647,25 +652,29 @@ class Calendar(Field):
         # if you specify a p_dataClass here. In that case, event.data will store
         # an instance of your p_dataClass, that must be a subclass of class
         # EventData.
-        self.dataClass = dataClass
+        self.dataClass = dataClass or EventData
 
         # Call the base constructor
 
         # p_validator, allowing field-specific validation, behaves differently
         # for the Calendar field. If specified, it must hold a method that will
-        # be executed every time a user wants to create an event (or series of
-        # events) in the calendar. This method must accept those args:
-        #  - date       the date of the event (as a DateTime object);
-        #  - eventType  the event type (one among p_eventTypes);
-        #  - timeslot   the timeslot for the event (see param p_timeslots) ;
-        #  - span       the number of additional days on which the event will
+        # be executed every time a user wants to create an event (or a series of
+        # events) or update an event in the calendar. This method must accept
+        # those args:
+        #  - date       is the date of the event (as a DateTime object);
+        #  - eventType  is its type (one among p_eventTypes);
+        #  - timeslot   is its timeslot (see param p_timeslots) ;
+        #  - span       is the number of additional days on which the event will
         #               span (will be 0 if the user wants to create an event
-        #               for a single day).
-        # If validation succeeds (ie, the event creation can take place), the
-        # method must return True (boolean). Else, it will be canceled and an
-        # error message will be shown. If the method returns False (boolean), it
-        # will be a standard error message. If the method returns a string, it
-        # will be used as specific error message.
+        #               for a single day, or if he is updating an event).
+        #  - event      is the event being modified or None if a new event is
+        #               being created.
+
+        # If validation succeeds (ie, the event creation or update can take
+        # place), the method must return True (boolean). Else, it will be
+        # canceled and an error message will be shown. If the method returns
+        # False (boolean), it will be a standard error message. If the method
+        # returns a string, it will be used as specific error message.
 
         Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, False, True, n, n,
@@ -863,17 +872,43 @@ class Calendar(Field):
         return Timeslot.getEventsAt(o, self, date, addEmpty, ifEmpty, expr,
                                     persist)
 
-    def getEventFieldsFor(self, o, eventType, day):
+    def getEventFieldsFor(self, o, eventType):
         '''Retrieve the event fields potentially defined for this p_eventType'''
         method = self.eventFields
         if not method: return
-        r = method(o, eventType, day)
+        r = method(o, eventType)
         if r:
             # Ensure these fields are late-initialised
             for name, field in r.items():
                 if hasattr(field, 'name'): break
                 field.init(None, name)
         return r
+
+    def getEventFieldValues(self, o, eventType, day):
+        '''Retrieve, from the request, values for the currently shown event
+           fields.'''
+        # If a validation error is encountered, the return value is a 2-tuple
+        # (None, s_errorMessage). If there is no validation error, the returned
+        # 2-tuple is, either:
+        #  (o   , True), v_o being an instance of class p_self.dataClass,
+        #                on which field values are stored, or:
+        #  (None, True), if there is no data corresponding to this p_eventType.
+        #
+        # First, get field definitions
+        fields = self.getEventFieldsFor(o, eventType)
+        if not fields: return None, True
+        # Use a Validator object to retrieve storable field values and detect
+        # potential validation errors.
+        validator = Validator(o, True, 'validation_event_error')
+        validator.intraFieldValidation(fields)
+        if validator.errors:
+            # At least one validation error has been encountered
+            return None, validator.getXhtmlErrors()
+        # Values exist for this p_eventType. Get them from the request and store
+        # them in an instance of class p_self.dataClass.
+        r = self.dataClass()
+        r.values = PersistentMapping(validator.values.d())
+        return r, True
 
     def standardizeDateRange(self, range):
         '''p_range can have various formats (see m_walkEvents below). This
@@ -1009,15 +1044,15 @@ class Calendar(Field):
         # Check the field-specific condition
         return self.getAttribute(o, 'editable')
 
-    def validate(self, o, date, eventType, timeslot, span=0):
+    def validate(self, o, date, eventType, timeslot, span, event):
         '''The validation process for a calendar is a bit different from the
            standard one, that checks a "complete" request value. Here, we only
-           check the validity of some insertion of events within the
+           check the validity of inserting or modifying events within the
            calendar.'''
         if not self.validator: return
-        r = self.validator(o, date, eventType, timeslot, span)
+        r = self.validator(o, date, eventType, timeslot, span, event)
         if isinstance(r, str):
-            # Validation failed, and we have the error message in "r"
+            # Validation failed, and we have the error message in v_r
             return r
         # Return a standard message if the validation fails without producing a
         # specific message.
@@ -1032,24 +1067,41 @@ class Calendar(Field):
         req = o.req
         action = req.actionType
         # Get the date and timeslot for this action
-        date = DateTime(req.day)
+        day = DateTime(req.day)
         eventType = req.eventType
-        eventSpan = req.eventSpan or 0
-        eventSpan = min(int(eventSpan), self.maxEventLength)
+        span = req.eventSpan or 0
+        span = min(int(span), self.maxEventLength)
         timeslot = req.timeslot
-        if action == 'createEvent':
-            # Trigger validation
-            valid = self.validate(o, date, eventType, timeslot, eventSpan)
-            if isinstance(valid, str): return valid
-            return Event.create(o, self, date, eventType,
-                                timeslot=timeslot or 'main',
-                                eventSpan=eventSpan, comment=req.comment)
-        elif action == 'editEvent':
-            # Update the event being defined at this v_timeslot
-            Event.update(o, self, date, timeslot, eventType, req.comment)
-        elif action == 'deleteEvent':
+        if action == 'deleteEvent':
             # Delete the event being defined at this v_timeslot
-            Event.delete(o, self, date, timeslot or '*')
+            Event.delete(o, self, day, timeslot or '*')
+        else:
+            # Create or update an event. If we are about to update an event, get
+            # the v_event to update.
+            if action == 'editEvent':
+                event = self.getEventAt(o, day, timeslot)
+            else: # action is 'createEvent'
+                event = None
+            # Trigger validation
+            valid = self.validate(o, day, eventType, timeslot, span, event)
+            if isinstance(valid, str): return valid
+            # Retrieve values for event fields, if any
+            if self.eventFields:
+                data, valid = self.getEventFieldValues(o, eventType, day)
+            else:
+                data = None
+                valid = True
+            if isinstance(valid, str): return valid
+            # Create or update the event
+            if event:
+                # Update the event
+                r = Event.update(o, self, day, timeslot, eventType, req.comment,
+                                 data=data)
+            else:
+                # Create a new event
+                timeslot = timeslot or 'main'
+                r = Event.create(o, self, day, eventType, timeslot=timeslot,
+                                 data=data, eventSpan=span, comment=req.comment)
 
     def splitList(self, l, sub): return utils.splitList(l, sub)
 

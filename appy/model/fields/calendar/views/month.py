@@ -257,8 +257,7 @@ class Month(View):
 
     # Popup for adding or updating an event in the month view
     pxEditPopup = Px('''
-     <div var="popupId=f'{hook}_edit';
-               submitJs=f'EventPopup.geT(this).run()'"
+     <div var="popupId=f'{hook}_edit'"
           id=":popupId" class="popup" align="center">
       <form id=":f'{popupId}Form'" method="post" data-sub="process">
        <input type="hidden" name="actionType" value="createEvent"/>
@@ -309,10 +308,10 @@ class Month(View):
        </div>
 
        <!-- Save and cancel buttons -->
-       <input type="button" value=":_('object_save')" onclick=":submitJs"
-              name="saveButton"/>
+       <input type="button" value=":_('object_save')" name="saveButton"
+              onclick="EventPopup.geT(this).run()"/>
        <input type="button" value=":_('object_cancel')"
-              onclick=":f'closePopup({q(popupId)})'"/>
+              onclick=":f'closePopup(`{popupId}`)'"/>
       </form>
      </div>''',
 

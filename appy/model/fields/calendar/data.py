@@ -3,6 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
+from appy.model.base import Base
 from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -93,6 +94,10 @@ class EventData(Persistent):
         self.modified = None
         # p_self's last modifier
         self.modifier = None
+        # When event fields are in use, an EventData object must mimic an Appy
+        # object. As a consequence, values for event fields will be stored in a
+        # persistent dict in p_self.values.
+        self.values = None
 
     def complete(self, o, event):
         '''Fills p_self's base attributes on p_event creation'''
@@ -100,13 +105,33 @@ class EventData(Persistent):
         self.created = self.modified = DateTime()
         self.creator = self.modifier = o.user.login
 
+    def update(self, o, other):
+        '''Updates p_self with data as stored on this p_other data set'''
+        self.modified = DateTime()
+        self.modifier = o.user.login
+        self.values = other.values
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                              I am Appy
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # Minimal stuff for mimicking the Base class
+    iid = 666 # A dummy object IID
+    def H(self): return Base.Handler.get()
+    config = property(lambda o: o.H().config, None)
+    req = property(lambda o: o.H().req, None)
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                                PXs
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     # This PX renders the base EventData attributes, as defined in the
     # hereabove-defined constructor.
 
     pxBase = Px('''
      <div class="dropdownMenu menuCal" onmouseover="toggleDropdown(this)"
           onmouseout="toggleDropdown(this,'none')">
-      <div>🛈</div>
+      <div>☰</div>
       <div class="dropdown fadedIn ddCal" style="display:none">
        <div>
         <b>:_('Base_creator')</b> 
@@ -124,7 +149,7 @@ class EventData(Persistent):
       </div>
      </div>''',
 
-     css='''.menuCal { float:left;cursor:help;font-weight:normal;
+     css='''.menuCal { float:left; cursor:help; font-weight:normal;
                        font-style:normal; margin-right:0.2em }
             .ddCal { margin-left:-3em; width:10em;
                      font-size:85% !important }''')
@@ -134,26 +159,67 @@ class EventData(Persistent):
     # attributes, on your sub-class.
     pxMonth = pxMonthMulti = pxWeek = pxDay = pxDayMulti = None
 
+    # PX that renders fields possibly defined in attribute Calendar.eventFields
+
+    pxEventFields = Px('''
+     <div id=":req.hook" class="calSpan"
+          var="layout='edit';
+               fields=field.getEventFieldsFor(o, req.eventType)">
+      <!-- Render these v_fields, if any -->
+      <x if="fields"
+         var2="fieldName=None;
+               page,grouped,css,js,phases=o.getGroupedFields('main', 'edit',
+                                                             fields=fields)">
+       <!-- If we are editing existing event data, get it and set it as the
+            current (mimicked) Appy v_o(bject). -->
+       <x var="px=o.pxFields;
+               day=field.DateTime(req.day);
+               event=field.getEventAt(o, day, req.timeslot);
+               o=event.data if event and event.data else o">:px</x>
+      </x>
+     </div>''')
+
     def updateContext(self, c, mode):
         '''Override this to complete the PX p_c(ontext) that will be passed to
            s_px.'''
 
-    def render(self, o, mode='Month'):
-        '''Returns a 2-tuple with the 2 parts one may render about p_self: the
-           standard attributes as defined in the EventData constructor, and the
-           sub-class custom rendering.'''
-        # Patch the current context
+    def render(self, o, calendar, event, mode='Month'):
+        '''Render this dataset (p_self) being stored in this p_event within that
+           p_calendar, on this p_o(bject).'''
+        # Returns a 3-tuple with the 3 parts one may render about p_self:
+        # 1· a custom rendering as proposed by an EventData sub-class via its
+        #    px{mode};
+        # 2· the standard attributes as defined in the EventData constructor;
+        # 3· event fields (if any)
+        #
+        # Define a context for the PXs allowing to render parts 1 to 3: get the
+        # current PX context and patch it.
         context = o.traversal.context
         baseO = context.o # Remember the currently walked object
         context.data = self
         context.o = o
         # Let a sub-class update the context
         self.updateContext(context, mode)
-        # Get and execute the PX
+        # Get and execute the PXs
         px = getattr(self, f'px{mode}')
         custom = px(context) if px else None
-        r = custom, self.pxBase(context)
+        standard = self.pxBase(context)
+        # Render event fields
+        if calendar.eventFields:
+            fields = calendar.getEventFieldsFor(o, event.eventType)
+            if fields:
+                # Render these fields
+                c = context
+                c.fieldName = None
+                c.page, c.grouped, c.css, c.js, c.phases = \
+                  o.getGroupedFields('main', 'view', fields=fields)
+                # p_self plays the role of the current Appy object (v_context.o)
+                c.o = self
+                fields = o.pxFields(context)
+        else:
+            fields = None
         # Reset the context
         context.o = baseO
-        return r
+        # Return the result
+        return custom, standard, fields
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

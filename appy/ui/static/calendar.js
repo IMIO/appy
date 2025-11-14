@@ -193,8 +193,9 @@ class EventPopup {
   getEventFields(eventType) {
     // Make an Ajax request to get the zone allowing to edit the event fields
     const hook = `${this.popupId}Fields`,
-          url = `${siteUrl}/${this.iid}/${this.name}/View/pxEventFields`,
-          params = {'hook':hook, 'eventType':eventType, 'day': this.day};
+          url = `${siteUrl}/${this.iid}/${this.name}/EventData/pxEventFields`,
+          params = {'hook':hook, 'eventType':eventType, 'day': this.day,
+                    'timeslot': this.timeslot};
     askAjaxChunk(url, 'POST', params, hook);
   }
 
@@ -247,8 +248,10 @@ class EventPopup {
       f.eventType.value = eventType;
       if (this.hasFields) this.getEventFields(eventType);
       if (comment) {
-        const comments = this.getCaller().getElementsByClassName('evtCom');
+        const cid = `${this.timeslot}_evtCom`,
+              comments = this.getCaller().getElementsByClassName(cid);
         if (comments.length) comment.innerHTML = comments[0].innerHTML;
+        else comment.innerHTML = '';
       }
     }
     openPopup(this.popupId);
@@ -386,7 +389,7 @@ class EventPopup {
     if (save.classList.contains('shakeOnce')) {
       // Reset the animation
       save.classList.remove('shakeOnce');
-      setTimeout(function() {save.classList.add('shakeOnce');}, 10);
+      setTimeout(function() {save.classList.add('shakeOnce');}, 50);
     }
     else save.classList.add('shakeOnce');
   }
@@ -402,9 +405,10 @@ class EventPopup {
         this.shakeSave();
         return;
       }
-      // Copy the poor comment to the inner textarea
-      const comment = f.comment;
-      if (comment) comment.value = comment.previousSibling.innerHTML;
+      // Use a Form object to perform standard Appy actions on the form
+      const F = new Form(f);
+      F.enableDisabled();
+      F.retrieveContentEditable();
     }
     closePopup(this.popupId);
     askAjax(this.hook, this.formId);

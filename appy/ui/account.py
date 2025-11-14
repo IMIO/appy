@@ -10,6 +10,7 @@ from appy.utils import formatNumber
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Entry:
     '''Abstract base class for any entry'''
+
     def __init__(self, account, label, style, sep, cellTag):
         # The outer account
         self.account = account
@@ -26,13 +27,13 @@ class Entry:
         '''Returns the table row corresponding to this entry, which has index
            p_i in the list.'''
         css = 'even' if i % 2 else 'odd'
-        return '<tr class="%s">%s</tr>' % (css, self.render())
+        return f'<tr class="{css}">{self.render()}</tr>'
 
     def renderLabel(self):
         '''Renders the label for this entry'''
         s = self.style
-        label = self.label if not s else '<%s>%s</%s>' % (s, self.label, s)
-        return '<label>%s</label>' % label
+        label = self.label if not s else f'<{s}>{self.label}</{s}>'
+        return f'<label>{label}</label>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Amount(Entry):
@@ -56,14 +57,14 @@ class Amount(Entry):
         '''Render the "unit" part of this amount'''
         r = '' if value is None else (self.unit or '')
         if r:
-            r = '<span class="discreet">%s</span>' % r
+            r = f'<span class="discreet">{r}</span>'
         t = self.cellTag
-        return '<%s%s>%s</%s>' % (t, css or '', r, t)
+        return f'<{t}{css or ""}>{r}</{t}>'
 
     def render(self):
         '''Returns the XHTML table cells corresponding to this entry'''
         # Dump a separator if required
-        tdc = self.sep and ' class="accountSep"' or ''
+        tdc = ' class="accountSep"' if self.sep else ''
         # Format the value
         value = self.value
         if value is None:
@@ -71,18 +72,18 @@ class Amount(Entry):
             sign = ''
         else:
             value = formatNumber(value, tsep=' ')
-            sign = not self.positive and '-' or ''
+            sign = '' if self.positive else '-'
         # Define the unit
         unit = self.renderUnit(value, css=tdc)
         # Produce the complete result
         t = self.cellTag
-        return '<%s>%s</%s><%s%s align="center">%s</%s><%s align="%s"%s>%s' \
-               '</%s>%s' % (t, self.renderLabel(), t, t, tdc, sign, t, t,
-                            self.align, tdc, value, t, unit)
+        return f'<{t}>{self.renderLabel()}</{t}><{t}{tdc} align="center">' \
+               f'{sign}</{t}><{t} align="{self.align}"{tdc}>{value}</{t}>{unit}'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Section(Entry):
     '''Entry representing a section'''
+
     def __init__(self, account, label, style=None, sep=False, cellTag='td'):
         # Call the base constructor
         Entry.__init__(self, account, label, style, sep, cellTag)
@@ -90,8 +91,8 @@ class Section(Entry):
     def render(self):
         '''Renders this section'''
         t = self.cellTag
-        return '<%s class="accountSub">%s</%s><%s colspan="3"></%s>' % \
-               (t, self.renderLabel(), t, t, t)
+        return f'<{t} class="accountSub">{self.renderLabel()}</{t}>' \
+               f'<{t} colspan="3"></{t}>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Account:
@@ -119,18 +120,18 @@ class Account:
                   sep=False, fieldValue=None, cellTag='td', context=None):
         '''Adds an entry of type "amount" in the account'''
 
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # The label and value of the amount to display can be determined by:
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # p_field      | it must be the name of a Float or Integer field whose
         #              | value will be retrieved on p_self.o, excepted if
         #              | p_fieldValue is given: it will be used instead;
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # p_value      | it must be a float or int value. in that case, an i18n
         #              | p_label must be present and will be used (with an
         #              | optional p_mapping) to determine the label for this
         #              | amount;
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # p_expression | it must be a string containing a Python expression that
         #              | will be evaluated with "o" in its context ("o" being
         #              | p_self.o). p_context, if passed, can also be used in
@@ -138,7 +139,7 @@ class Account:
         #              | int amount ; in that case, similarly to the previous
         #              | case, an i18n p_label must be present, with its
         #              | optional p_mapping.
-        # ----------------------------------------------------------------------
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # p_positive is False, the amount will be negated. A specific p_style
         # can be applied to the entry "b" (bold) or "i" (italic).
         o = self.o

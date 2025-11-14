@@ -70,33 +70,6 @@ function loading(icon) {
  return `<div align="center"><img src="${buildUrl(icon)}"/></div>`;
 }
 
-// Add to form p_f a hidden field named p_name with this p_value
-function addFormField(f, name, value) {
-  // If a field named p_name already exists, simply set its value to p_value
-  if (name in f.elements) {
-    f.elements[name].value = value;
-    return;
-  }
-  let field = document.createElement('input');
-  field.setAttribute('type', 'hidden');
-  field.setAttribute('name', name);
-  field.setAttribute('value', value);
-  f.appendChild(field);
-}
-
-// Function for performing a HTTP POST request
-function post(action, params, target) {
-  // Create a form object
-  let f = document.createElement('form');
-  f.setAttribute('action', action);
-  f.setAttribute('method', 'post');
-  if (target) f.setAttribute('target', target);
-  // Create a (hidden) field for every parameter
-  for (let key in params) addFormField(f, key, params[key]);
-  document.body.appendChild(f);
-  f.submit();
-}
-
 // Fills dict p_d with elements from form p_f
 function form2dict(f, d) {
   // Get the other params
@@ -770,6 +743,122 @@ function prepareForAjaxSave(id, objectId, objectUrl, layout, name) {
   }
 }
 
+// Wrapper for the Appy form, or any other DOM form object
+class Form {
+
+  constructor(form) {
+    // The DOM form object being wrapped. By default, this is the Appy form.
+    this.form = form || document.getElementById('appyForm');
+  }
+
+  // Enable any disabled form element
+  enableDisabled() {
+    for (const elem of this.form.querySelectorAll('*[disabled]')) {
+      elem.disabled = false;
+    }
+  }
+
+  // Add, to this form, a hidden field having this p_name and p_value
+  addField(name, value) {
+    // If a field named p_name already exists, simply set its value to p_value
+    const f = this.form;
+    if (name in f.elements) {
+      f.elements[name].value = value;
+      return;
+    }
+    let field = document.createElement('input');
+    field.setAttribute('type', 'hidden');
+    field.setAttribute('name', name);
+    field.setAttribute('value', value);
+    f.appendChild(field);
+  }
+
+  // Complete the Appy form via special form element named "_get_"
+  complete() {
+    const g = this.form._get_;
+    if (!g.value) return;
+    let [source, name, info] = g.value.split(':');
+    if (source == 'form') {
+      // Complete this.form with form elements coming from another form
+      const f2 = getNode(`:${name}`);
+      if (!f2) return;
+      const f = this.form,
+            fields = info.split(',');
+      let fieldValue;
+      for (const fieldName of fields) {
+        if (fieldName[0] == '*') {
+          // Try to retrieve search criteria from the storage if present
+          let spars = getSearchInfo(`${fieldName.substr(1)}_customSearch`);
+          fieldValue = ('criteria' in spars)? spars['criteria']: null;
+          if (!fieldValue) continue;
+          fieldName = 'criteria';
+        }
+        else {
+          fieldValue = f2.elements[fieldName].value;
+        }
+        addField(fieldName, fieldValue);
+      }
+    }
+  }
+
+  // Poor fields: copy, in textareas, content stored in content-editable divs
+  retrieveContentEditable() {
+    const divs = this.form.querySelectorAll('[contenteditable=true]');
+    for (const d of divs) {
+      if (d.innerHTML && d.innerHTML !== '<div></div>' && d.nextSibling) {
+        d.nextSibling.value = d.innerHTML;
+      }
+    }
+  }
+
+  // Submits the form the Appy way
+  appySubmit(action, gotoPage, gotoLayout) {
+    // Complete the form via the "_get_" element if present
+    if (action != 'cancel') { this.complete(); this.enableDisabled(); }
+    const f = this.form;
+    f.action.value = action;
+    if (f.popup.value == 'True') {
+      /* Initialize the "close popup" cookie. If set to "no", it is not time
+         yet to close it. The timer hereafter will regularly check if the
+         popup must be closed. */
+      createCookie('closePopup', 'no');
+      const popup = getNode('iframePopup', true);
+      // Set a timer for checking when we must close the iframe popup
+      popup.popupTimer = setInterval(backFromPopup, 700);
+    }
+    f.gotoPage.value = gotoPage;
+    f.gotoLayout.value = gotoLayout;
+    this.retrieveContentEditable();
+    f.submit(); clickOn(f);
+  }
+
+  // Protect the Appy form: warn the user that it should be left via buttons
+  static protect() {
+    window.onbeforeunload = function(event){
+    const f = document.getElementById('appyForm');
+    if (f.action.value == '') {
+      let e = event || window.event;
+      if (e) e.returnValue = warn_leave_form;
+      return warn_leave_form;
+      }
+    }
+  }
+
+  // Create a transient form object for performing a HTTP POST request
+  static post(action, params, target) {
+    // Create a form object
+    let f = document.createElement('form'),
+        F = new Form(f);
+    f.setAttribute('action', action);
+    f.setAttribute('method', 'post');
+    if (target) f.setAttribute('target', target);
+    // Create a (hidden) field for every parameter
+    for (let key in params) F.addField(key, params[key]);
+    document.body.appendChild(f);
+    f.submit();
+  }
+}
+
 // Used by checkbox widgets for having radio-button-like behaviour
 function toggleCheckbox(cb) {
   cb.nextSibling.value = (cb.checked)? 'True': 'False';
@@ -1243,7 +1332,7 @@ function onLink(action, url, fieldName, targetId, hook, start, semantics,
     params['action'] = 'onLink';
     askAjax(hook, null, params);
   }
-  else post(`${url}/${fieldName}/onLink`, params);
+  else Form.post(`${url}/${fieldName}/onLink`, params);
 }
 
 function onLinkMany(action, url, id, start) {
@@ -1310,7 +1399,7 @@ function updateFileNameStorer(field, storerId) {
 }
 
 function onUnlockPage(objectUrl, page) {
-  const code = `post('${objectUrl}/unlock', {'page':'${page}'})`;
+  const code = `Form.post('${objectUrl}/unlock', {'page':'${page}'})`;
   askConfirm('script', code, action_confirm);
 }
 
@@ -1608,7 +1697,7 @@ function postConfirmedEditForm(data) {
   let f = document.getElementById('appyForm');
   f.confirmed.value = 'True';
   if (data) f.confirmedData.value = data;
-  submitAppyForm('save', 'main', 'view');
+  new Form(f).appySubmit('save', 'main', 'view');
 }
 
 // Function that shows or hides a tab. p_action is 'show' or 'hide'.

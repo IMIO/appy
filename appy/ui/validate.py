@@ -23,7 +23,7 @@ class Validator:
        <td>::labels</td><td>::message</td></tr>
      </table>''')
 
-    def __init__(self, o, saveConfirmed):
+    def __init__(self, o, saveConfirmed, errorLabel='validation_error'):
         # A validator is created every time an p_o(bject) is created or updated
         # from the UI via a web form.
         self.o = o
@@ -40,7 +40,7 @@ class Validator:
         # holding the translated error message.
         self.errors = O() # ~{O(s_fieldName=s_errorMessage)}~
         # The standard translated error message
-        self.errorMessage = o.translate('validation_error')
+        self.errorMessage = o.translate(errorLabel)
         # If a confirmation was requested, has it already be done ?
         self.saveConfirmed = saveConfirmed
 
@@ -145,6 +145,20 @@ class Validator:
             else:
                 label = _('label', field=field)
             self.addMessage(r, messages, label, summaryMessage)
+        return r
+
+    def getXhtmlErrors(self, prefixed=True):
+        '''Calls m_getGroupedErrors and builds a XHTML table base on its return
+           value. Return None if there is no validation error.'''
+        # This method may be used as an alternative to Validator.pxErrors
+        errors = self.getGroupedErrors()
+        if not errors: return
+        rows = []
+        for labels, text in errors:
+            rows.append(f'<tr><th>{labels}</th><td>{text}</td></tr>')
+        r = f'<table class="small" width="100%">{"".join(rows)}</table>'
+        if prefixed:
+            r = f'{self.errorMessage}{r}'
         return r
 
     def gotoEdit(self):

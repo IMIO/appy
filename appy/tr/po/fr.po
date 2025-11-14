@@ -740,6 +740,10 @@ msgstr "Corrigez les erreurs indiquées."
 msgid "validation_sub_error"
 msgstr "Passez la souris sur l'icône en forme de point d'exclamation (sans cliquer), le détail de l'erreur sera affiché."
 
+#. Default: "🚫 Operation canceled.\n\nAt least one error has prevented the action from being performed, we are sorry."
+msgid "validation_event_error"
+msgstr "🚫 Opération annulée.\n\nAu moins une erreur a empêché l'action d'être menée à bien, nous sommes désolés."
+
 #. Default: "Error"
 msgid "error_name"
 msgstr "Erreur"

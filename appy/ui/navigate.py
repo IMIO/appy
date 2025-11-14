@@ -137,8 +137,8 @@ class Siblings:
      js='''
        function gotoSourceSearch(key) {
          // Post a form allowing to re-trigger a search
-         let params = getSearchInfo(key, false);
-         post(`${siteUrl}/tool/Search/results`, params);
+         const params = getSearchInfo(key, false);
+         Form.post(`${siteUrl}/tool/Search/results`, params);
        }
 
        function askSiblings(key, index) {

@@ -739,6 +739,10 @@ msgstr "Verbeter de aangegeven fout·en."
 msgid "validation_sub_error"
 msgstr "Beweeg de muis over het uitroeptekenpictogram (zonder te klikken). De foutdetails worden weergegeven."
 
+#. Default: "🚫 Operation canceled.\n\nAt least one error has prevented the action from being performed, we are sorry."
+msgid "validation_event_error"
+msgstr ""
+
 #. Default: "Error"
 msgid "error_name"
 msgstr "Fout"

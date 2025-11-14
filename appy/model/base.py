@@ -1068,8 +1068,7 @@ class Base:
            var2="label=o.class_.getTextFor(o, 'save')">
        <div>
         <a class="clickable" tabindex="0"
-           onclick=":'submitAppyForm(%s,%s,%s)' % \
-                      (q('save'), q(current.name), q('view'))"
+           onclick=":f'new Form().appySubmit(`save`,`{current.name}`,`view`)'"
            onkeydown="if (event.keyCode==13) this.click();">
          <img src=":svg('save')" class=":picto"/>
          <div style=":f'display:{config.ui.pageDisplay}'">::label</div>
@@ -1081,8 +1080,7 @@ class Base:
       <div if="isEdit and current.showCancel" var2="label=_('object_cancel')">
        <div>
         <a class="clickable" name="cancel" tabindex="0"
-           onclick=":'submitAppyForm(%s,%s,%s)' % \
-                      (q('cancel'), q(current.name), q('view'))"
+           onclick=":f'new Form().appySubmit(`cancel`,`{current.name}`,`view`)'"
            onkeydown="if (event.keyCode==13) this.click();">
          <img src=":svg('cancel')" class=":picto"/>
          <div style=":f'display:{config.ui.pageDisplay}'">::label</div>
@@ -1450,7 +1448,7 @@ class Base:
       <x>::ui.Globals.getForms(tool)</x>
       <script>:ui.Validator.getJsErrors(handler)</script>
       <!-- Warn the user that the form should be left via buttons -->
-      <script>protectAppyForm()</script>
+      <script>Form.protect()</script>
       <form id="appyForm" name="appyForm" method="post"
             enctype="multipart/form-data" action=":f'{o.url}/save'">
        <input type="hidden" name="action" value=""/>
@@ -1473,83 +1471,7 @@ class Base:
         (q('script'), q('postConfirmedEditForm(comment)'), q(confirmText),
          o.class_.getConfirmPopupWidth(popup))</script>
       <x>::ui.Globals.getScripts(tool, q, layout)</x>
-     </x>''',
-
-     js='''
-      enableDisabled = function(f) {
-        for (const elem of f.querySelectorAll('*[disabled]')) {
-          elem.disabled = false;
-        }
-      }
-
-      completeAppyForm = function(f) {
-        // Complete Appy form p_f via special form element named "_get_"
-        const g = f._get_;
-        if (!g.value) return;
-        let [source, name, info] = g.value.split(':');
-        if (source == 'form') {
-          // Complete p_f with form elements coming from another form
-          let f2 = getNode(`:${name}`),
-              fields = info.split(','),
-              fieldName = fieldValue = null;
-          if (!f2) return;
-          for (let i=0; i < fields.length; i++) {
-            fieldName = fields[i];
-            if (fieldName[0] == '*') {
-              // Try to retrieve search criteria from the storage if present
-              let spars = getSearchInfo(`${fieldName.substr(1)}_customSearch`);
-              fieldValue = ('criteria' in spars)? spars['criteria']: null;
-              if (!fieldValue) continue;
-              fieldName = 'criteria';
-            }
-            else {
-              fieldValue = f2.elements[fieldName].value;
-            }
-            addFormField(f, fieldName, fieldValue);
-          }
-        }
-      }
-
-      retrieveContentEditable = function(f) {
-        // Copy, in textareas, content stored in content-editable divs
-        const divs = f.querySelectorAll('[contenteditable=true]');
-        for (const d of divs) {
-          if (d.innerHTML && d.innerHTML !== '<div></div>' && d.nextSibling) {
-            d.nextSibling.value = d.innerHTML;
-          }
-        }
-      }
-
-      submitAppyForm = function(action, gotoPage, gotoLayout) {
-        const f = document.getElementById('appyForm');
-        // Complete the form via the "_get_" element if present
-        if (action != 'cancel') { completeAppyForm(f); enableDisabled(f); }
-        f.action.value = action;
-        if (f.popup.value == 'True') {
-          /* Initialize the "close popup" cookie. If set to "no", it is not time
-             yet to close it. The timer hereafter will regularly check if the
-             popup must be closed. */
-          createCookie('closePopup', 'no');
-          const popup = getNode('iframePopup', true);
-          // Set a timer for checking when we must close the iframe popup
-          popup.popupTimer = setInterval(backFromPopup, 700);
-        }
-        f.gotoPage.value = gotoPage;
-        f.gotoLayout.value = gotoLayout;
-        retrieveContentEditable(f);
-        f.submit(); clickOn(f);
-      }
-
-      protectAppyForm = function() {
-        window.onbeforeunload = function(event){
-        let f = document.getElementById("appyForm");
-        if (f.action.value == "") {
-          let e = event || window.event;
-          if (e) {e.returnValue = warn_leave_form;}
-          return warn_leave_form;
-          }
-        }
-      }''', template=Template.px, hook='content', name='edit')
+     </x>''', template=Template.px, hook='content', name='edit')
 
     def getInitiator(self, search=False):
         '''Gets, from the request, information about a potential initiator'''

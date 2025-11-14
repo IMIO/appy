@@ -834,8 +834,8 @@ class Search:
 
        // Get all search results
        function allLSResults(pre, className) {
-         let params = getLSParams(pre, className);
-         post(siteUrl + '/tool/Search/results', params);
+         const params = getLSParams(pre, className);
+         Form.post(`${siteUrl}/tool/Search/results`, params);
        }
 
        // Add the selected object to the initiator Ref field

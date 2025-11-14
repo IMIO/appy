@@ -739,6 +739,10 @@ msgstr "Bitte korrigieren Sie die angezeigten Fehler."
 msgid "validation_sub_error"
 msgstr "Bewegen Sie die Maus über das Ausrufezeichen-Symbol (ohne zu klicken), die Fehlerdetails werden angezeigt."
 
+#. Default: "🚫 Operation canceled.\n\nAt least one error has prevented the action from being performed, we are sorry."
+msgid "validation_event_error"
+msgstr ""
+
 #. Default: "Error"
 msgid "error_name"
 msgstr "Fehler"

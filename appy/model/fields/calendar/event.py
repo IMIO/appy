@@ -1,4 +1,8 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# ~license~
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import copy
 from DateTime import DateTime
 from persistent import Persistent
 from BTrees.IOBTree import IOBTree
@@ -66,6 +70,14 @@ class Factory:
         # it if it does not exist yet.
         self.events = Event.getList(o, field, date)
 
+    def getData(self, cloned=False):
+        '''Return p_self.data. If p_cloned is True and p_self.data is not None,
+           it returns a deepcopy of p_self.data.'''
+        r = self.data
+        if r and cloned:
+            r = copy.deepcopy(r)
+        return r
+
     def mergeSlotted(self, events):
         '''If, after adding an event of p_eventType, all timeslots are used with
            events of the same type, we can merge them and create a single event
@@ -81,6 +93,8 @@ class Factory:
         eventType = self.eventType
         timeslots = self.timeslots
         for event in events:
+            # Events with data cannot be merged
+            if event.hasData(): return
             if event.eventType == eventType:
                 count += event.getDayPart(o, field, timeslots)
         Timeslot = field.Timeslot
@@ -118,14 +132,16 @@ class Factory:
             _ = self.o.translate
             return _('timeslot_misfit', mapping={'slot': slot.getName()})
 
-    def makeSlotted(self, date, events, handleEventSpan):
+    def makeSlotted(self, date, events, handleEventSpan, cloneData=False):
         '''Create a slotted event in calendar p_self.field. Manage potential
            merging of events and creation of a sequence of events spanned on
            several subsequent days.'''
         # In the case of an event spanned on several subsequent days, when
         # m_makeSlotted will be called recursively for creating the events on
-        # these subsequent days, it will be called with p_handleEventSpan being
-        # False to avoid infinite recursion.
+        # these subsequent days, it will be called with:
+        # 1· p_handleEventSpan being False, to avoid infinite recursion;
+        # 2· p_cloneData being True, to avoid having the same data shared by
+        #    several subsequent events.
         timeslot = self.timeslot
         eventType = self.eventType
         event = None
@@ -134,7 +150,7 @@ class Factory:
         if not merged:
             # Create and store the event
             event = Event(eventType, timeslot=timeslot, comment=self.comment,
-                          data=self.data)
+                          data=self.getData(cloned=cloneData))
             events.append(event)
             # Sort events in the order of timeslots
             if len(events) > 1:
@@ -147,7 +163,7 @@ class Factory:
             for i in range(eventSpan):
                 nextDate = date + (i+1)
                 nextEvents = Event.getList(self.o, self.field, nextDate)
-                self.makeSlotted(nextDate, nextEvents, False)
+                self.makeSlotted(nextDate, nextEvents, False, True)
                 suffix = f', span+{eventSpan}'
         if handleEventSpan and self.log:
             msg = f'added {eventType}, slot {timeslot}{suffix}'
@@ -224,6 +240,55 @@ class Event(Persistent):
         # custom sub-class.
         self.data = data
 
+    def getTimeMark(self):
+        '''Returns short info about the event time: the timeslot for a slotted
+           event, or the start date else.'''
+        return self.timeslot or self.start.strftime('%H:%M')
+
+    def getTimePrefix(self, timeslots, xhtml=True):
+        '''Returns info about the timeslot or start hour for this event. This
+           info is generally rendered as a prefix to other event data.'''
+        # Define a prefix, based on the start hour or timeslot
+        timeslot = self.timeslot
+        if timeslot == 'main':
+            # No prefix to set: the event spans the entire day
+            r = ''
+        elif timeslot:
+            # Add the timeslot as prefix
+            slot = timeslots.get(timeslot) if timeslots else None
+            if slot:
+                r = slot.getName(withCode=True)
+            else:
+                r = timeslot
+        else:
+            # An unslotted event: add the start hour as prefix
+            r = self.start.strftime('%H:%M')
+        if r:
+            # Format the prefix and add it to the result
+            if xhtml:
+                r = f'<div class="calSlot discreet">{r}</div>'
+            else:
+                r = f'{r} · '
+        return r
+
+    def getType(self, unsuffixed=None, unprefixed=None):
+        '''Returns p_self's type, whose potential suffix and/or prefix has been
+           removed.'''
+        # If p_unsuffixed (p_unprefixed) is passed, it is a string. If the event
+        # type end (starts) with it, the result will not contain it.
+        r = self.eventType
+        if not r: return
+        if unsuffixed and r.endswith(unsuffixed):
+            r = r[:-len(unsuffixed)]
+        if unprefixed and r.startswith(unprefixed):
+            r = r[len(unprefixed):]
+        return r
+
+    def hasData(self):
+        '''Has p_self data in its attribute p_self.data ?'''
+        r = getattr(self, 'data', None)
+        return bool(r)
+
     def getName(self, o, field, timeslots, typeInfo=None, xhtml=True,
                 mode='Month'):
         '''Gets the name for this event, that depends on its type or data and
@@ -233,53 +298,39 @@ class Event(Persistent):
         # be dumped, and not only a "name".
         data = getattr(self, 'data', None)
         if data and xhtml:
-            r, baseData = data.render(o, mode)
+            name, baseData, fields = data.render(o, field, self, mode)
+            name = name or self.getName(o, field, timeslots, typeInfo=typeInfo,
+                                        xhtml=False, mode=mode)
         else:
-            # If we have the translated names for event types, use it
-            r = baseData = None
+            name = baseData = fields = None
+            # Use the the translated names for event types if available
             if typeInfo:
                 if self.eventType in typeInfo:
-                    r = typeInfo[self.eventType].name
+                    name = typeInfo[self.eventType].name
                 else:
                     # This can be an old deactivated event not precomputed
                     # anymore in p_typeInfo. Try to use field.getEventName
                     # to compute it.
                     try:
-                        r = field.getEventName(o, self.eventType)
+                        name = field.getEventName(o, self.eventType)
                     except Exception:
                         pass
         # If no name was found, use the raw event type
-        r = r or self.eventType
+        name = name or self.eventType
+        r = [name]
         # Define a prefix, based on the start hour or timeslot
-        timeslot = self.timeslot
-        if timeslot == 'main':
-            # No prefix to set: the event spans the entire day
-            prefix = ''
-        elif timeslot:
-            slotId = self.timeslot
-            # Add the timeslot as prefix
-            slot = timeslots.get(slotId) if timeslots else None
-            if slot:
-                prefix = slot.getName(withCode=True)
-            else:
-                prefix = slotId
-        else:
-            # An unslotted event: add the start hour as prefix
-            prefix = self.start.strftime('%H:%M')
-        if prefix:
-            # Format the prefix and add it to the result
-            if xhtml:
-                prefix = f'<div class="calSlot discreet">{prefix}</div>'
-            else:
-                prefix = f'{prefix} · '
-        # Complete the v_prefix with base data when available
-        if baseData: prefix = f'{prefix}{baseData}'
-        # Finally, add the event comment if found
+        r.insert(0, self.getTimePrefix(timeslots, xhtml))
+        # Add base data, when available, as a dropdown menu to insert between
+        # the time prefix and the event name.
+        if baseData: r.insert(1, baseData)
+        # Add the event comment if found
         if xhtml:
             comment = getattr(self, 'comment', None)
             if comment:
-                r = f'{r}<div class="evtCom">{comment}</div>'
-        return f'{prefix}{r}'
+                r.append(f'<div class="{self.timeslot}_evtCom">{comment}</div>')
+            # Add event fields
+            if fields: r.append(fields)
+        return ''.join(r)
 
     def sameAs(self, other):
         '''Is p_self the same as p_other?'''
@@ -292,11 +343,6 @@ class Event(Persistent):
         if id == 'main': return 1.0
         # Get the dayPart attribute as defined on the Timeslot object
         return field.Timeslot.get(self.timeslot, o, field, timeslots).dayPart
-
-    def getTimeMark(self):
-        '''Returns short info about the event time: the timeslot for a slotted
-           event, or the start date else.'''
-        return self.timeslot or self.start.strftime('%H:%M')
 
     def matchesType(self, type):
         '''Is p_self an event of this p_type ?'''
@@ -494,26 +540,39 @@ class Event(Persistent):
 
     @classmethod
     def update(class_, o, field, date, timeslot, eventType, comment=None,
-               log=True, say=True):
+               data=None, log=True, say=True):
         '''Updates the event being currently defined on this p_o(bject) in this
            calendar p_field, at this p_date and p_timeslot: set a new
-           p_eventType and/or p_comment.'''
-        # Get the events being defined at this p_date
-        events = field.getEventsAt(o, date)
-        if not events: return
-        # Find the event at this p_timeslot
-        for event in events:
-            if event.timeslot == timeslot:
-                # The event has been found: update it
-                event.eventType = eventType
-                if field.useEventComments:
-                    event.comment = comment
-                if log:
-                    eventName = event.getName(o, field, None, xhtml=False)
-                    field.log(o, EVT_ED % (eventName, timeslot), date)
-                if say:
-                    o.say(o.translate('object_saved'), fleeting=False)
-                return
+           p_eventType and/or p_comment and possibly update p_data.'''
+        # Get the event being defined at this p_date and p_timeslot
+        event = field.getEventAt(o, date, timeslot)
+        if not event: return
+        # The event has been found: update it
+        event.eventType = eventType
+        # Possibly update comment
+        if field.useEventComments:
+            event.comment = comment
+        # Possibly update data
+        if field.eventFields:
+            if not data:
+                # Remove existing data on the v_event
+                if event.data:
+                    event.data = None
+            elif not event.data:
+                # Set data for the first time on v_event
+                data.complete(o, event)
+                event.data = data
+            else:
+                # Update event data
+                event.data.update(o, data)
+        else:
+            event.updateData(o, data)
+        if log:
+            eventName = event.getName(o, field, None, xhtml=False)
+            field.log(o, EVT_ED % (eventName, timeslot), date)
+        if say:
+            o.say(o.translate('object_saved'), fleeting=False)
+        return
 
     @classmethod
     def delete(class_, o, field, date, timeslot, handleEventSpan=True, log=True,

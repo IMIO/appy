@@ -199,24 +199,4 @@ class View:
         concrete = exeC(f'from appy.model.fields.calendar.views.{moduleName} ' \
                         f'import {className}', className)
         return concrete(o, field)
-
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                                 PXs
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-    # Render fields possibly defined in attribute Calendar.eventFields
-
-    pxEventFields = Px('''
-     <div id=":req.hook" class="calSpan"
-          var="layout='edit';
-               day=field.DateTime(req.day);
-               fields=field.getEventFieldsFor(o, req.eventType, day)">
-      <!-- Render these v_fields, if any -->
-      <x if="fields"
-         var2="fieldName=None;
-               page,grouped,css,js,phases=o.getGroupedFields('main', 'edit',
-                                                             fields=fields)">
-       <x>:o.pxFields</x>
-      </x>
-     </div>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

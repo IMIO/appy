@@ -397,7 +397,7 @@ class Guard:
         '''Gets the JS code allowing to create a User instance for the purpose
            of self-registering.'''
         # Compute the URL to post the form to
-        return f"javascript:post('{tool.url}/new',{{'action':'Create'," \
+        return f"javascript:Form.post('{tool.url}/new',{{'action':'Create'," \
                f"'className':'User','nav':'ref.tool.users.0.0'}})"
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
