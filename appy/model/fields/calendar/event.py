@@ -284,10 +284,14 @@ class Event(Persistent):
             r = r[len(unprefixed):]
         return r
 
+    def getData(self):
+        '''Return p_self.data'''
+        # On old databases, the "data" attribute may be absent
+        return getattr(self, 'data', None)
+
     def hasData(self):
         '''Has p_self data in its attribute p_self.data ?'''
-        r = getattr(self, 'data', None)
-        return bool(r)
+        return bool(self.getData())
 
     def getName(self, o, field, timeslots, typeInfo=None, xhtml=True,
                 mode='Month'):
@@ -378,9 +382,15 @@ class Event(Persistent):
         '''Returns all the events stored in this calendar p_field on this
            p_o(bject), of a given p_eventType if passed.'''
 
-        # If p_eventType is None, it returns events of all types. p_eventType
-        # can also be a list or tuple. The return value is a list of 2-tuples
-        # whose 1st elem is a DateTime object and whose 2nd elem is the event.
+        # If p_eventType is:
+        # - None, it returns events of all types ;
+        # - a list or tuple, it returns events of all listed types ;
+        # - a string mask ending with a star, it returns all events whose type
+        #   starts with this mask. For example, mask "holiday*" would match
+        #   event types "holiday" and "holidayNonStandard".
+
+        # The return value is a list of 2-tuples whose 1st elem is a DateTime
+        # object and whose 2nd elem is the event.
 
         # If p_sorted is True, the list is sorted in chronological order. Else,
         # the order is random, but the result is computed faster.

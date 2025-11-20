@@ -19,7 +19,7 @@ class Hour(Field):
              mPart=mPart | f'{name}_minute';
              hours=range(0, field.maxHour+1)">
       <select name=":hPart" id=":hPart" class="hourSel"
-              required="field.required">
+              required=":field.required">
        <option value="">-</option>
        <option for="hour in hours"
          var2="zHour=str(hour).zfill(2)" value=":zHour"
@@ -27,7 +27,7 @@ class Hour(Field):
                                      hour, rawValue)">:zHour</option>
       </select> <span class="hourSep">:field.editSep</span> 
       <select var="minutes=range(0, 60, field.minutesPrecision)"
-              name=":mPart" id=":mPart" required="field.required">
+              name=":mPart" id=":mPart" required=":field.required">
        <option value="">-</option>
        <option for="min in minutes"
          var2="zMin=str(min).zfill(2)" value=":zMin"

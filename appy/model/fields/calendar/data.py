@@ -141,7 +141,7 @@ class EventData(Persistent):
        </div> 
        <div if="data.modified and data.modified != data.created"
             class="topSpaceS">
-        <b>:_('Base_modified')</b> 
+        <b>:_('Base_modifier')</b> 
         <x>:user.getTitleFromLogin(data.modifier)</x> 
         <x>:_('date_on')</x> 
         <x>:tool.formatDate(data.modified, withHour=True)</x>

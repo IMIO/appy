@@ -27,7 +27,7 @@ class Config:
     # "site" | The site log contains every hit on the site = enery HTTP POST or
     #        | GET request.
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    logTypes = ('app', 'site')
+    logTypes = 'app', 'site'
 
     # Available attributes to dump within log entries
     logAttributes = {
@@ -131,7 +131,7 @@ class Viewer:
     # "tail" | The n last lines of the selected log file are displayed
     # "full" | The complete file content is shown
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    modes = ('tail', 'full')
+    modes = 'tail', 'full'
 
     # Attributes having sense in "tail" mode
     bounded = O( # Values having min and max bounds

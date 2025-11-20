@@ -663,10 +663,12 @@ class Calendar(Field):
         # those args:
         #  - date       is the date of the event (as a DateTime object);
         #  - eventType  is its type (one among p_eventTypes);
-        #  - timeslot   is its timeslot (see param p_timeslots) ;
+        #  - timeslot   is its timeslot (see param p_timeslots);
         #  - span       is the number of additional days on which the event will
         #               span (will be 0 if the user wants to create an event
-        #               for a single day, or if he is updating an event).
+        #               for a single day, or if he is updating an event);
+        #  - data       is the potential object to-be-stored in attribute
+        #               event.data (is None if not applicable);
         #  - event      is the event being modified or None if a new event is
         #               being created.
 
@@ -1044,13 +1046,13 @@ class Calendar(Field):
         # Check the field-specific condition
         return self.getAttribute(o, 'editable')
 
-    def validate(self, o, date, eventType, timeslot, span, event):
+    def validate(self, o, date, eventType, timeslot, span, data, event):
         '''The validation process for a calendar is a bit different from the
            standard one, that checks a "complete" request value. Here, we only
            check the validity of inserting or modifying events within the
            calendar.'''
         if not self.validator: return
-        r = self.validator(o, date, eventType, timeslot, span, event)
+        r = self.validator(o, date, eventType, timeslot, span, data, event)
         if isinstance(r, str):
             # Validation failed, and we have the error message in v_r
             return r
@@ -1082,15 +1084,16 @@ class Calendar(Field):
                 event = self.getEventAt(o, day, timeslot)
             else: # action is 'createEvent'
                 event = None
-            # Trigger validation
-            valid = self.validate(o, day, eventType, timeslot, span, event)
-            if isinstance(valid, str): return valid
-            # Retrieve values for event fields, if any
+            # If event fields are there, retrieve their values
             if self.eventFields:
                 data, valid = self.getEventFieldValues(o, eventType, day)
             else:
                 data = None
                 valid = True
+            # A validation error may prevent the event creation or update
+            if isinstance(valid, str): return valid
+            # Trigger validation
+            valid = self.validate(o,day, eventType, timeslot, span, data, event)
             if isinstance(valid, str): return valid
             # Create or update the event
             if event:
