@@ -282,7 +282,7 @@ class Config:
         self.compact = False
         # Some input fields will get this background color once they will
         # contain erroneous content.
-        self.wrongTextColor = '#009ba4'
+        self.wrongTextColor = '#ebf0f0'
         # Text color representing a problem or warning (some flavour of red)
         self.warnColor = '#e15151'
         # Text color in the header
