@@ -2,6 +2,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from DateTime import DateTime
 import datetime, hmac, hashlib, base64
 
 from appy import n
@@ -12,8 +13,13 @@ from appy.model.utils import Object as O
 from appy.ui.layout import LayoutF, Layouts
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+AMOUNT_MIS = 'A method must be placed in attribute "amount".'
+
 API        = 'Worldline API ::'
 WL_HT_AUTH = f'{API} %s :: Got tokenization ID %s'
+PAY_TOK_KO = f'{API} %s :: Payment aborted :: No token in the request.'
+PAY_KO     = f'{API} %s :: Payment aborted :: Payment response error :: %s.'
+
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bn = '\n'
@@ -120,7 +126,7 @@ class Worldline(Field):
 
      <!-- Submit the form -->
      <input type="button" class="buttonFixed button" value=":_('pay')"
-            onclick="submitWLForm()"/>
+            onclick=":f'submitWLForm(`{tagId}`)'"/>
 
      <!-- This JS file contains the methods needed for tokenization -->
      <script var="baseUrl=config.worldline.getBaseUrl()"
@@ -133,13 +139,21 @@ class Worldline(Field):
      css=''' .divWL { margin: 1em 0.2em }''',
 
      js = '''
-       function submitWLForm(){
+       function submitWLForm(hook){
          tokenizer.submitTokenization().then((result) => {
+           /* Ajax-refresh the payment field, triggering or canceling (depending
+              on p_result) the payment via a server-2-server request. */
+           const [objectId, fieldName] = hook.split('_'),
+                 objectUrl = `${siteUrl}/${objectId}`, params = {};
            if (result.success) {
-             /* Proceed by storing the result.hostedTokenizationId from our
-                platform to be used in subsequent steps */
-           } else { // displayErrorMessage(result.error.message);
+             params['action'] = 'pay';
+             params['token'] = result.hostedTokenizationId;
            }
+           else {
+             params['action'] = 'abort';
+             params['reason'] = result.error.message;
+           }
+           askField(hook, objectUrl, 'view', params);
          });
        }''')
 
@@ -154,7 +168,14 @@ class Worldline(Field):
       move=0, readPermission='read', writePermission='write', width=n, height=n,
       colspan=1, master=n, masterValue=n, masterSnub=n, focus=False, mapping=n,
       generateLabel=n, label=n, view=n, cell=n, buttons=n, edit=n, custom=n,
-      xml=n, translations=n):
+      xml=n, translations=n, amount=None):
+
+        # p_amount must hold a method accepting no arg and returning the amount
+        # to pay, as a tuple (f_amount, s_currencyCode). Supported currency
+        # codes are "EUR", "KWD" and "JPY".
+        if not amount or not callable(amount):
+            raise Exception(AMOUNT_MIS)
+        self.amount = amount
 
         # Call the base constructor
         super().__init__(n, (0,1), n, n, show, renderable, page, group, layouts,
@@ -233,9 +254,9 @@ class Worldline(Field):
         '''Call endpoint "hostedtokenizations", as a preamble to display the
            payment iframe. The endpoint returns a "hosted tokenization URL" that
            will be used by the Wordline form being shown in the iframe.'''
-        # API documentation: https://docs.direct.worldline-solutions.com/en/
-        #                     api-reference#tag/HostedTokenization/operation/
-        #                     CreateHostedTokenizationApi
+        # API documentation:
+        # https://docs.direct.worldline-solutions.com/en/api-reference#tag/
+        #  HostedTokenization/operation/CreateHostedTokenizationApi
         data = O(locale=self.getLocale(o), askConsumerConsent=False)
         resp = self.call(o, 'hostedtokenizations', data=data)
         if resp.errors:
@@ -255,11 +276,80 @@ class Worldline(Field):
     def getFrameInit(self, o):
         '''Get the JS code allowing to initialise the iframe'''
         # Create a Tokenizer object. Retrieve the hosted tokenization URL from
-        # p_self's value on this p_o(bject)
+        # p_self's value on this p_o(bject).
         url = getattr(o, self.name).hostedTokenizationUrl
         # Invoking tokenizer.initialize() will add the <iframe> inside the
         # div tag whose ID is p_self.divId.
         return f"var tokenizer=new Tokenizer('{url}','{self.divId}'," \
                f" {{hideCardholderName:false}});{bn}tokenizer.initialize()" \
-               f".then(() => {{}}).catch(reason => {{}})"
+               f".then(() => {{}}).catch(reason => {{console.log(reason);}})"
+
+    # Factors to apply to payment amounts, in order to get Wordline-compliant
+    # integer amounts. If the currency is not in this list, default factor will
+    # be 100.
+
+    currencyFactors = {
+      'EUR': 100,
+      'KWD': 1000,
+      'JPY': 1
+    }
+
+    def getAmount(self, o):
+        '''Retrieve the amount to pay, with its currency, from, p_self.amount.
+           Format it according to Worldline requirements.'''
+        amount, currency = self.amount(o)
+        factor = self.currencyFactors.get(currency, 100)
+        amount = int(amount * factor)
+        return O(amount=amount, currencyCode=currency)
+
+    traverse['pay'] = 'perm:read'
+    def pay(self, o):
+        '''Trigger a server-2-server payment request, after the user has entered
+           card details, as tokenized in the request, at key 'token'.'''
+        # API documentation:
+        # https://docs.direct.worldline-solutions.com/en/api-reference#tag/
+        #  Payments/operation/CreatePaymentApi
+        #
+        # If there is no token in the request, abort the payment
+        token = o.req.token
+        if not token:
+            o.req.reason = PAY_TOK_KO  % o.strinG(path=False)
+            return self.abort(o)
+        # Build the request
+        config = o.config.worldline
+        # Define redirection data, in case the user must perform an additional
+        # step due to a 3D Secure card.
+        returnUrl = f'{o.url}/{self.name}/confirm'
+        secure3D = O(redirectionData=O(returnUrl=returnUrl),
+                     skipAuthentication=False)
+        # Create an Order object, containing browser info and payment details
+        headers = o.H().headers
+        tzOffset = str(int(DateTime().tzoffset() / 60))
+        customer = O(device=O(acceptHeader=headers['Accept'],
+                              userAgent=headers['User-Agent'],
+                              locale=self.getLocale(o),
+                              timezoneOffsetUtcMinutes=tzOffset))
+        order = O(amountOfMoney=self.getAmount(o), customer=customer)
+        # Build the complete request
+        data = O(hostedTokenizationId=token, order=order,
+                 cardPaymentMethodSpecificInput=O(threeDSecure=secure3D))
+        resp = self.call(o, 'payments', data=data)
+        if resp.errorId:
+            # Something went wrong: abort the payment
+            o.req.reason = PAY_KO % o.strinG(path=False)
+            return self.abort(o)
+        # XXX To be continued
+
+    traverse['pay'] = 'perm:read'
+    def confirm(self, o):
+        '''Confirm the payment after the user wen through an additional,
+           3D-secure-related, confirmation page.'''
+        # XXX To be continued
+
+    traverse['abort'] = 'perm:read'
+    def abort(self, o):
+        '''Aborts the payment after an error occurred after the user, having
+           entered his card details, has clicked on the 'pay' button. The error
+           message is in the request, at key 'reason'.'''
+        # XXX To be continued
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

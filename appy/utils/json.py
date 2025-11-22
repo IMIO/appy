@@ -66,9 +66,12 @@ class Decoder:
 class Encoder:
     '''Converts Python data structures to JSON'''
 
+    # Classes being considered as dicts
+    dictClasses = dict, O
+
     def __init__(self, d):
         # The Python object or dict to encode
-        self.d = d.__dict__ if hasattr(d, '__dict__') else d
+        self.d = d
         # The result, as a list of string tokens
         self.r = []
 
@@ -95,6 +98,8 @@ class Encoder:
 
     def encodeDict(self, d):
         '''Encodes dict p_d as a JSON string'''
+        # Ensure p_d is a dict
+        if isinstance(d, O): d = d.__dict__
         # Browse items in p_d
         r = self.r
         r.append('{')
@@ -115,7 +120,7 @@ class Encoder:
            into p_self.r.'''
         if isinstance(v, str):
             self.encodeString(v)
-        elif isinstance(v, dict):
+        elif isinstance(v, Encoder.dictClasses):
             self.encodeDict(v)
         elif isinstance(v, sequenceTypes):
             self.encodeList(v)
@@ -125,7 +130,7 @@ class Encoder:
                 r.append(str(v).lower())
             else:
                 # Perform a simple string conversion
-                r.append(str(r))
+                r.append(str(v))
 
     def encode(self):
         '''Encode the root dict p_self.d'''
