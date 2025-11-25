@@ -563,20 +563,17 @@ class Event(Persistent):
         if field.useEventComments:
             event.comment = comment
         # Possibly update data
-        if field.eventFields:
-            if not data:
-                # Remove existing data on the v_event
-                if event.data:
-                    event.data = None
-            elif not event.data:
-                # Set data for the first time on v_event
-                data.complete(o, event)
-                event.data = data
-            else:
-                # Update event data
-                event.data.update(o, data)
+        if not data:
+            # Remove existing data on the v_event
+            if event.data:
+                event.data = None
+        elif not event.data:
+            # Set data for the first time on v_event
+            data.complete(o, event)
+            event.data = data
         else:
-            event.updateData(o, data)
+            # Update event data
+            event.data.update(o, data)
         if log:
             eventName = event.getName(o, field, None, xhtml=False)
             field.log(o, EVT_ED % (eventName, timeslot), date)

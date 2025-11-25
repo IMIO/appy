@@ -13,7 +13,7 @@ from appy.model.utils import Object as O
 from appy.ui.layout import LayoutF, Layouts
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-AMOUNT_MIS = 'A method must be placed in attribute "amount".'
+CALL_MIS   = 'A method must be placed in attribute "%s".'
 
 API        = 'Worldline API ::'
 WL_HT_AUTH = f'{API} %s :: Got tokenization ID %s'
@@ -168,14 +168,24 @@ class Worldline(Field):
       move=0, readPermission='read', writePermission='write', width=n, height=n,
       colspan=1, master=n, masterValue=n, masterSnub=n, focus=False, mapping=n,
       generateLabel=n, label=n, view=n, cell=n, buttons=n, edit=n, custom=n,
-      xml=n, translations=n, amount=None):
+      xml=n, translations=n, amount=None, onSuccess=None, onFailure=None):
 
         # p_amount must hold a method accepting no arg and returning the amount
         # to pay, as a tuple (f_amount, s_currencyCode). Supported currency
         # codes are "EUR", "KWD" and "JPY".
-        if not amount or not callable(amount):
-            raise Exception(AMOUNT_MIS)
         self.amount = amount
+        self.checkCallable('amount')
+
+        # p_onSuccess must hold a method that will be executed once the payment
+        # has been accepted. It will be called with no arg.
+        self.onSuccess = onSuccess
+        self.checkCallable('onSuccess')
+
+        # p_onFailure must hold a method that will be executed if the payment
+        # was not successful. It will be called with a single arg: a code
+        # representing the reason for the failure.
+        self.onFailure = onFailure
+        self.checkCallable('onFailure')
 
         # Call the base constructor
         super().__init__(n, (0,1), n, n, show, renderable, page, group, layouts,
@@ -183,6 +193,12 @@ class Worldline(Field):
           width, height, n, colspan, master, masterValue, masterSnub, focus,
           False, mapping, generateLabel, label, n, n, n, n, False, False, view,
           cell, buttons, edit, custom, xml, translations)
+
+    def checkCallable(self, name):
+        '''Ensure the attribute having this p_name is there and is callable'''
+        value = getattr(self, name)
+        if value is None or not callable(value):
+            raise Exception(CALL_MIS % name)
 
     def call(self, o, endpoint, method='POST', data=n):
         '''Calls this Worldline p_endpoint, with this HTTP m_method, in the
@@ -302,6 +318,31 @@ class Worldline(Field):
         amount = int(amount * factor)
         return O(amount=amount, currencyCode=currency)
 
+    def onPay(self, o, resp):
+        '''Manages a p_res(ponse) retrieved from the m_pay method'''
+        if resp.errorId:
+            # Something went wrong: abort the payment
+            o.req.reason = PAY_KO % o.strinG(path=False)
+            return self.abort(o)
+        else:
+            action = resp.merchantAction
+            if action and action.actionType == 'REDIRECT':
+                # The user must be redirected to a page where he will give more
+                # info about his identify as card holder (3DS check).
+                url = action.redirectData.redirectURL
+                self.goto(url)
+            else:
+                # Get the payment status code
+                code = resp.statusOutput.statusCode
+                if code == 5:
+                    # The payment has been accepted; payment information encoded
+                    # so far is satisfying (no need to redirect the user to an
+                    # additional page).
+                    self.onSuccess(o)
+                else:
+                    # The payment has been refused
+                    self.onFailure(o, 0)
+
     traverse['pay'] = 'perm:read'
     def pay(self, o):
         '''Trigger a server-2-server payment request, after the user has entered
@@ -334,11 +375,7 @@ class Worldline(Field):
         data = O(hostedTokenizationId=token, order=order,
                  cardPaymentMethodSpecificInput=O(threeDSecure=secure3D))
         resp = self.call(o, 'payments', data=data)
-        if resp.errorId:
-            # Something went wrong: abort the payment
-            o.req.reason = PAY_KO % o.strinG(path=False)
-            return self.abort(o)
-        # XXX To be continued
+        self.onPay(o, resp)
 
     traverse['pay'] = 'perm:read'
     def confirm(self, o):

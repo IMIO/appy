@@ -360,7 +360,8 @@ class Month(View):
        <x>::event.getName(o, field, timeslots, typeInfo)</x>
 
         <!-- Edit this particular event -->
-        <img if="mayEdit and event.eventType in allowedEventTypes"
+        <img if="mayEdit and field.editableEvents and event.eventType in 
+                  allowedEventTypes"
              class="calicon iconS" src=":svg('edit')" style="opacity:0"
              onclick=":f'new EventPopup(this,`{o.iid}`,`{name}`,`edit`,
                         `{dayString}`,`{event.timeslot}`,{hasEventFields}

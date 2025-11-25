@@ -238,7 +238,9 @@ class EventPopup {
       // Reset fields
       f.eventType.value = '';
       if (comment) comment.innerHTML = '';
-      document.getElementById(`${this.popupId}Fields`).style.display = 'none';
+      if (this.hasFields) {
+        document.getElementById(`${this.popupId}Fields`).style.display = 'none';
+      }
     }
     else { // Force the timeslot and ensure the slot zone is hidden
       slotZone.style.display = 'none';

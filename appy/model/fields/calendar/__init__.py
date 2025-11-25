@@ -257,12 +257,12 @@ class Calendar(Field):
       showNoCellInfo=False, columnColors=n, preCompute=n, applicableEvents=n,
       totalRows=n, totalCols=n, validation=n, layers=n, layersSelector=True,
       topPx=n, bottomPx=n, actions=n, filters=n, selectableEmptyCells=False,
-      legend=n, view=n, cell=n, buttons=n, edit=n, editable=True, custom=n,
-      xml=n, translations=n, delete=True, beforeDelete=n, afterCreate=n,
-      selectableMonths=6, selectableWeeks=4, createEventLabel='which_event',
-      style='calTable', strictMonths=False, houredWidth='10em', fullDay=n,
-      createObjects=n, useEventComments=False, eventFields=None,
-      dataClass=None):
+      legend=n, view=n, cell=n, buttons=n, edit=n, editable=True,
+      editableEvents=False, custom=n, xml=n, translations=n, delete=True,
+      beforeDelete=n, afterCreate=n, selectableMonths=6, selectableWeeks=4,
+      createEventLabel='which_event', style='calTable', strictMonths=False,
+      houredWidth='10em', fullDay=n, createObjects=n, useEventComments=False,
+      eventFields=None, dataClass=None):
 
         '''Calendar field constructor'''
 
@@ -510,6 +510,17 @@ class Calendar(Field):
         # store a method whose result may prevent the user to edit the calendar
         # field.
         self.editable = editable
+
+        # For someone having the possibility to edit a calendar, may individual
+        # events be edited ? If no, it means that modifying an event can only be
+        # done by deleting an event and recreating another one. If no data is
+        # tied to an event, or, in the simplest case, if the only information
+        # representing an event is its type, it may be satisfying. You must know
+        # that enabling edition of events may be problematic, because, on the
+        # edit event popup, it is not possible to update the event timeslot.
+        # Consequenly, you may get an event selector containing event types that
+        # cannot be stored at the unmodifiable timeslot.
+        self.editableEvents = editableEvents
 
         # [Non-multiple only] May the user delete events in this calendar? If
         # p_delete is a method, it must accept an event type as single arg.
