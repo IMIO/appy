@@ -1247,6 +1247,14 @@ msgstr "U heeft de betaling geannuleerd. De bestelling is geannuleerd."
 msgid "payment_abandoned"
 msgstr "Het spijt ons, maar er is een fout opgetreden tijdens het betalingsproces. Probeer het nog eens."
 
+#. Default: "Amount"
+msgid "payment_amount"
+msgstr "Bedrag"
+
+#. Default: "Date"
+msgid "payment_date"
+msgstr "Datum"
+
 #. Default: "Standard view"
 msgid "standard_view"
 msgstr "Standaardweergave"

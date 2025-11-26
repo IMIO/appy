@@ -1248,6 +1248,14 @@ msgstr "Vous avez annulé le paiement. La commande a été annulée."
 msgid "payment_abandoned"
 msgstr "Nous sommes désolés, mais une erreur est survenue durant le processus de paiement. Veuillez réessayer."
 
+#. Default: "Amount"
+msgid "payment_amount"
+msgstr "Montant"
+
+#. Default: "Date"
+msgid "payment_date"
+msgstr "Date"
+
 #. Default: "Standard view"
 msgid "standard_view"
 msgstr "Vue standard"

@@ -6,6 +6,8 @@ import importlib.util, sys, copy
 
 from appy.utils import formatNumber
 
+bn = '\n'
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def importModule(name, fileName):
     '''Imports module p_name given its absolute file p_name'''
@@ -47,24 +49,48 @@ class Object:
     def __init__(self, **fields):
         for k, v in fields.items(): setattr(self, k, v)
 
-    def __repr__(self):
+    def __repr__(self, level=None, step=2):
         '''A compact, string representation of this object for debugging
            purposes.'''
+        # If p_level is not None, it represents an indentation level and is
+        # used to indent attributes and sub-objects. In that case, every
+        # indentation level is incremented by p_step spaces.
         r = '‹O '
         for name, value in self.__dict__.items():
             # Avoid infinite recursion if p_self it auto-referenced
             if value == self: continue
             v = value
-            if hasattr(v, '__repr__'):
+            # Compute spaces if an indentation p_level is defined
+            if level is not None:
+                level += 1
+                spaces = ' ' * (level * step)
+                prefix = f'{bn}{spaces}'
+                suffix = ''
+            else:
+                prefix = ''
+                suffix = ' '
+            # Stringify v_v, the value to dump
+            if isinstance(v, Object):
+                v = v.__repr__(level=level, step=step)
+            elif hasattr(v, '__repr__'):
                 try:
                     v = v.__repr__()
                 except TypeError:
                     pass
+            # Decrement the indentation level if defined
+            if level is not None:
+                level -= 1
+            # Dump the name and value for the current attribute
             try:
-                r = f'{r}{name}={v} '
+                r = f'{r}{prefix}{name}={v}{suffix}'
             except UnicodeDecodeError:
-                r = f'{r}{name}=--encoding problem-- '
+                r = f'{r}{prefix}{name}=--encoding problem--{suffix}'
         return f'{r.strip()}›'
+
+    def prinT(self):
+        '''Prints p_self on stdout, as a short string but being more readable
+           (with indented sub-objects), compared to __repr__'s output.'''
+        print(self.__repr__(level=0))
 
     def __bool__(self): return bool(self.__dict__)
     def d(self): return self.__dict__

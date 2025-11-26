@@ -8,6 +8,7 @@ import datetime, hmac, hashlib, base64
 from appy import n
 from appy.px import Px
 from appy.model.fields import Field
+from appy.utils import formatNumber
 from appy.utils.client import Resource
 from appy.model.utils import Object as O
 from appy.ui.layout import LayoutF, Layouts
@@ -19,7 +20,8 @@ API        = 'Worldline API ::'
 WL_HT_AUTH = f'{API} %s :: Got tokenization ID %s'
 PAY_TOK_KO = f'{API} %s :: Payment aborted :: No token in the request.'
 PAY_KO     = f'{API} %s :: Payment aborted :: Payment response error :: %s.'
-
+PAY_STATUS = f'{API} %s :: Payment %s (%d).'
+RECEIPT_KO = f'{API} %s:%s :: Empty payment :: Cannot generate receipt.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bn = '\n'
@@ -121,20 +123,25 @@ class Worldline(Field):
 
     # This PX includes the Worldline iframe
     view = Px('''
-     <!-- This div will host the iframe -->
-     <div id=":field.divId" class="divWL"></div>
+     <!-- Being in an Ajax request means that we are already further in the
+          process: don't show this initialisation PX. -->
+     <x if="not ajax">
 
-     <!-- Submit the form -->
-     <input type="button" class="buttonFixed button" value=":_('pay')"
-            onclick=":f'submitWLForm(`{tagId}`)'"/>
+      <!-- This div will host the iframe -->
+      <div id=":field.divId" class="divWL"></div>
 
-     <!-- This JS file contains the methods needed for tokenization -->
-     <script var="baseUrl=config.worldline.getBaseUrl()"
-             src=":f'{baseUrl}/hostedtokenization/js/client/tokenizer.min.js'">
-     </script>
+      <!-- Submit the form -->
+      <input type="button" class="buttonFixed button" value=":_('pay')"
+             onclick=":f'submitWLForm(`{tagId}`)'"/>
 
-     <!-- Get the JS code that will initialise the iframe -->
-     <script>::field.getFrameInit(o)</script>''',
+      <!-- This JS file contains the methods needed for tokenization -->
+      <script var="baseUrl=config.worldline.getBaseUrl()"
+              src=":f'{baseUrl}/hostedtokenization/js/client/tokenizer.min.js'">
+      </script>
+
+      <!-- Get the JS code that will initialise the iframe -->
+      <script>::field.getFrameInit(o)</script>
+     </x>''',
 
      css=''' .divWL { margin: 1em 0.2em }''',
 
@@ -160,9 +167,18 @@ class Worldline(Field):
     def show(self, o):
         '''Show the payment widget only if initialisation data has been stored
            on the corresponding object.'''
+        if self.H().isAjax(): return
         # Normally, this method is supposed to belong to the object, not to the
         # field. Consequently, p_self is the object and p_o is the field.
-        return None if self.isEmpty(o.name) else 'view'
+        data = getattr(self, o.name, None)
+        # p_data can also store the final payment response. Show the payment
+        # widget only if v_data corresponds to initialisation data.
+        if data and data.hostedTokenizationId:
+            return 'view'
+
+    def isRenderableOn(self, layout):
+        '''This field may only be rendered on "view"'''
+        return layout == 'view'
 
     def __init__(self, show=show, renderable=n, page='main', group=n, layouts=n,
       move=0, readPermission='read', writePermission='write', width=n, height=n,
@@ -182,8 +198,9 @@ class Worldline(Field):
         self.checkCallable('onSuccess')
 
         # p_onFailure must hold a method that will be executed if the payment
-        # was not successful. It will be called with a single arg: a code
-        # representing the reason for the failure.
+        # was not successful. It will be called with a single arg: an integer
+        # code representing the reason for the failure. Constants PAY_SUC to
+        # PAY_CAN as defined below represent all possible codes.
         self.onFailure = onFailure
         self.checkCallable('onFailure')
 
@@ -301,8 +318,7 @@ class Worldline(Field):
                f".then(() => {{}}).catch(reason => {{console.log(reason);}})"
 
     # Factors to apply to payment amounts, in order to get Wordline-compliant
-    # integer amounts. If the currency is not in this list, default factor will
-    # be 100.
+    # integer amounts.
 
     currencyFactors = {
       'EUR': 100,
@@ -310,38 +326,182 @@ class Worldline(Field):
       'JPY': 1
     }
 
+    # Symbols for currencies
+    currencySymbols = {
+      'EUR': '€',
+      'JPY': '¥',
+    }
+
+    # If the currency is not in this list, the default factor will be this one
+    defaultFactor = 100
+
     def getAmount(self, o):
         '''Retrieve the amount to pay, with its currency, from, p_self.amount.
            Format it according to Worldline requirements.'''
         amount, currency = self.amount(o)
-        factor = self.currencyFactors.get(currency, 100)
+        factor = self.currencyFactors.get(currency, self.defaultFactor)
         amount = int(amount * factor)
         return O(amount=amount, currencyCode=currency)
 
+    def getFormattedAmount(self, amount):
+        '''Returns this p_amount, formatted'''
+        currency = amount.currencyCode
+        factor = self.currencyFactors.get(amount.currencyCode)
+        factor = factor or self.defaultFactor
+        r = formatNumber(amount.amount / factor)
+        symbol = self.currencySymbols.get(currency) or currency
+        return f'{symbol} {r}'
+
+    def addReceiptRow(self, o, rows, label, value):
+        '''Adds a new row of data into the receipt computed by m_getReceipt'''
+        text = o.translate(f'payment_{label}')
+        value = value if isinstance(value, str) else str(value)
+        row = f'<tr><th>{text}</th><td>{value}</td></tr>'
+        rows.append(row)
+
+    def getReceipt(self, o):
+        '''Return, as a XHTML table, info about the payment transaction'''
+        # Info about the payment is normally stored on the p_o(bject)
+        info = o.values.get(self.name)
+        if not info:
+            raise Exception(RECEIPT_KO % (o.strinG(path=False), self.name))
+        rows = []
+        add = self.addReceiptRow
+        # Get the paid amount (with currency)
+        payOut = info.payment.paymentOutput
+        amount = payOut.amountOfMoney
+        add(o, rows, 'amount', self.getFormattedAmount(amount))
+        # Get the payment date as transmitted by Worldline
+        date = payOut.transactionDate
+        if date:
+            add(o, rows, 'date', o.tool.formatDate(DateTime(date)))
+        title = o.translate('payment_details')
+        descr = o.translate('payment_accepted')
+        return f'<table class="small"><tr><th colspan="2">{title}</th></tr>' \
+               f'<tr><td colspan="2" style="background-color:green">{descr}' \
+               f'</td></tr>{bn.join(rows)}</table>'
+
+    # Final payment statuses, allowing to categorise concrete statuses as
+    # received by m_pay. Intermediary statuses, such as the one received when
+    # the user must be redirected to an additonal page due to a 3DS check, are
+    # not of interest here, and considered wrong, if received. Indeed, our
+    # interest here is to know what action must be performed to finalize the
+    # payment. Everything about statuses is documented here:
+
+    # https://docs.direct.worldline-solutions.com/en/integration/
+    #  api-developer-guide/statuses.
+
+    PAY_SUC  = 0 # The payment was successful
+    PAY_REJ  = 1 # The payment has been rejected
+    PAY_WRO  = 2 # The payment status is wrong: it has no sense as final step
+    PAY_UNK  = 3 # The payment status is unknown / uncertain
+
+    # Codes representing rejected or wrong payments
+    failureCodes = PAY_REJ, PAY_WRO
+
+    # The following status code is Appy-specific
+    PAY_CAN  = 4 # The payment process has been cancelled by the end user
+
+    # Short texts for every payment status
+    paymentTexts = {
+      PAY_SUC: 'successful',
+      PAY_REJ: 'rejected',
+      PAY_WRO: 'aborted (technical problem)',
+      PAY_UNK: 'uncertain / unknown',
+      PAY_CAN: 'cancelled by the end user'
+    }
+
+    # Note that the previous statuses are also used as possible status codes as
+    # passed to app/ext method "onFailure". In that context, PAY_WRO is recycled
+    # to denote any technical problem.
+
+    # Concrete codes for the 3 first hereabove-mentioned payment status
+    # categories. Any code that would not fall into these categories will be
+    # considered belonging to the last one: unknown / uncertain.
+
+    paymentCodes = {
+      PAY_SUC: (
+        # Normally, the following statuses correspond to intermediary statuses,
+        # where "capturing" the payment has still to be done. That being said:
+        # - the page documenting the "hosted tokenization" payment process (see
+        #   step "flow") doesn't mention at all this "capturing" process ;
+        # - on the test site, most (if not all) successful payments return this
+        #   status.
+        # Consequently, at least for now, these statuses are considered
+        # representing final successful payments.
+        5, 56,
+        # Successful, completely captured payment
+        9
+      ),
+      PAY_REJ: (
+        # Statuses considered as "cancelled" (maybe due to a technical problem?)
+        1, 6, 61, 62, 64, 75, 96,
+        # Statuses considered as "rejected"
+        2, 57, 59, 73, 83, 93
+      ),
+      PAY_WRO : (
+        # The payment object has just been created. After m_pay has been called,
+        # this status has no sense: we are, in any case, further in the payment
+        # process.
+        0,
+        # The following statuses are those received when the user is redirected
+        # to a 3DS-related additional page. It cannot be received as a final
+        # step.
+        46, 50, 51, 55
+      )
+    }
+
     def onPay(self, o, resp):
         '''Manages a p_res(ponse) retrieved from the m_pay method'''
+        # In any case, a database commit is required
+        o.H().commit = True
         if resp.errorId:
             # Something went wrong: abort the payment
             o.req.reason = PAY_KO % o.strinG(path=False)
-            return self.abort(o)
+            self.log(PAY_KO, type='error')
+            self.abort(o)
+            # Clean any payment info possibly stored on p_o regarding p_self
+            if self.name in o.values:
+                del o.values[self.name]
         else:
+            # Store p_resp on p_o
+            o.values[self.name] = resp
+            # Continue the payment process
             action = resp.merchantAction
             if action and action.actionType == 'REDIRECT':
                 # The user must be redirected to a page where he will give more
-                # info about his identify as card holder (3DS check).
+                # info about his identity as card holder (3DS check).
                 url = action.redirectData.redirectURL
-                self.goto(url)
+                self.goto(url, fromAjax=True)
             else:
-                # Get the payment status code
-                code = resp.statusOutput.statusCode
-                if code == 5:
-                    # The payment has been accepted; payment information encoded
-                    # so far is satisfying (no need to redirect the user to an
-                    # additional page).
+                # Get the payment status code. If the payment was successful,
+                # payment information encoded so far is satisfying: there is no
+                # need to redirect the user to an additional page.
+                code = resp.payment.statusOutput.statusCode
+                globalCodes = self.paymentCodes
+                if code in globalCodes[self.PAY_SUC]:
+                    # The payment has been accepted
+                    text = self.paymentTexts[self.PAY_SUC]
+                    success = True
+                else:
+                    success = False
+                    # A payment failure. But which one ?
+                    found = False
+                    for failCode in self.failureCodes:
+                        if code in globalCodes[failCode]:
+                            text = self.paymentTexts[failCode]
+                            found = True
+                            break
+                    # The failure code could not be found: an uncertain payment
+                    if not found:
+                        failCode = self.PAY_UNK
+                        text = self.paymentTexts[failCode]
+                o.log(PAY_STATUS % (o.strinG(path=False), text, code))
+                # Trigger app/ext code
+                if success:
                     self.onSuccess(o)
                 else:
-                    # The payment has been refused
-                    self.onFailure(o, 0)
+                    self.onFailure(o, failCode)
 
     traverse['pay'] = 'perm:read'
     def pay(self, o):

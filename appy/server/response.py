@@ -173,7 +173,8 @@ class Response:
         if fleeting is not None:
             self.fleetingMessage = fleeting
 
-    def goto(self, url=None, message=None, fromPopup=False, fleeting=None):
+    def goto(self, url=None, message=None, fromPopup=False, fromAjax=False,
+             fleeting=None):
         '''Redirect the user to p_url'''
         if message: self.addMessage(message, fleeting=fleeting)
         req = self.handler.req
@@ -182,20 +183,29 @@ class Response:
             # technique, performed by the Appy IFrame.
             req._back = url
         else:
-            # The standard HTTP technique
-            self.code = HTTPStatus.SEE_OTHER # 303
+            # The current request may be an Ajax request or not
+            if fromAjax:
+                # The Ajax JS code will implement himself the redirection
+                self.code = HTTPStatus.OK
+                # The header key to set is specific
+                key = 'Appy-Redirect'
+            else:
+                key = 'Location'
+                self.code = HTTPStatus.SEE_OTHER # 303
             # Redirect to p_url or to the referer URL...
-            location = self.headers.get('Location')
+            location = self.headers.get(key)
             if location and not url:
                 pass # ... unless a redirect has already be planned
             else:
-                self.headers['Location']= url or self.handler.headers['Referer']
+                self.headers[key] = url or self.handler.headers['Referer']
 
     def ungoto(self):
         '''Undo a previous call to m_goto'''
         self.code = HTTPStatus.OK
         if 'Location' in self.headers:
             del self.headers['Location']
+        if 'Appy-Redirect' in self.headers:
+            del self.headers['Appy-Redirect']
 
     def write(self, s):
         '''Writes part p_s of the response to the client socket. Returns True if

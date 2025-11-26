@@ -237,7 +237,7 @@ function getAjaxChunk(pos) {
       // Call a custom Javascript function if required
       if (rq.onGet) rq.onGet(rq, injected);
       // Refresh the whole page if requested
-      let goto = rq.xhr.getResponseHeader('Appy-Redirect');
+      const goto = rq.xhr.getResponseHeader('Appy-Redirect');
       if (goto) {
         window.top.location = goto;
         // Do not "consume" any message here: let v_goto do it

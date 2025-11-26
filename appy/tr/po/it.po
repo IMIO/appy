@@ -1247,6 +1247,14 @@ msgstr ""
 msgid "payment_abandoned"
 msgstr ""
 
+#. Default: "Amount"
+msgid "payment_amount"
+msgstr ""
+
+#. Default: "Date"
+msgid "payment_date"
+msgstr ""
+
 #. Default: "Standard view"
 msgid "standard_view"
 msgstr ""

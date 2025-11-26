@@ -1247,6 +1247,14 @@ msgstr "Sie haben die Zahlung storniert. Die Bestellung wurde storniert."
 msgid "payment_abandoned"
 msgstr "Es tut uns leid, aber beim Bezahlvorgang ist ein Fehler aufgetreten. Versuchen Sie es erneut."
 
+#. Default: "Amount"
+msgid "payment_amount"
+msgstr ""
+
+#. Default: "Date"
+msgid "payment_date"
+msgstr "Datum"
+
 #. Default: "Standard view"
 msgid "standard_view"
 msgstr "Standard Ansicht"

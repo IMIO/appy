@@ -399,10 +399,11 @@ class Base:
         '''Adds p_message to the global message returned in the response'''
         self.resp.addMessage(message, fleeting=fleeting, first=first)
 
-    def goto(self, url=None, message=None, fromPopup=False, fleeting=None):
+    def goto(self, url=None, message=None, fromPopup=False, fromAjax=False,
+             fleeting=None):
         '''Return to some p_url or to the referer page. If you want to come back
            from a popup, explicitly set p_fromPopup to True.'''
-        self.resp.goto(url, message, fromPopup, fleeting=fleeting)
+        self.resp.goto(url, message, fromPopup, fromAjax, fleeting=fleeting)
 
     def gotoSet(self):
         '''Return True if m_goto has already been called and the response code

@@ -1248,6 +1248,14 @@ msgstr "You have canceled the payment. The order has been canceled, too."
 msgid "payment_abandoned"
 msgstr "We are sorry, but something went wrong with your payment. Please try again."
 
+#. Default: "Amount"
+msgid "payment_amount"
+msgstr "Amount"
+
+#. Default: "Date"
+msgid "payment_date"
+msgstr "Date"
+
 #. Default: "Standard view"
 msgid "standard_view"
 msgstr "Standard view"

@@ -373,10 +373,10 @@ class Px:
 
     # Names of the base variables that must be present in the context of any
     # standard Appy PX.
-    contextKeys = ('traversal', 'handler', 'guard', 'tool', 'req', 'o', 'home',
-      'layout', 'popup', 'ajax', 'ui', '_', 'user', 'isAnon', 'Px', 'config',
-      'appName', 'q', 'url', 'svg', 'lang', 'dir', 'dleft', 'dright',
-      'mobile', '_css_')
+    contextKeys = 'traversal', 'handler', 'guard', 'tool', 'req', 'o', 'home', \
+      'layout', 'popup', 'ajax', 'ui', '_', 'user', 'isAnon', 'Px', 'config', \
+      'appName', 'q', 'url', 'svg', 'lang', 'dir', 'dleft', 'dright', \
+      'mobile', '_css_'
 
     @classmethod
     def copyContext(class_, context, other, overwrite=False):

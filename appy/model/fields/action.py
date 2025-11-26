@@ -639,10 +639,7 @@ class Action(Field):
         elif result == 'redirect':
             # msg does not contain a message, but the URL where to redirect
             # the user. Redirecting is different if we are in an Ajax request.
-            if handler.isAjax():
-                o.resp.setHeader('Appy-Redirect', msg)
-            else:
-                return o.goto(msg)
+            return o.goto(msg, fromAjax=handler.isAjax())
         else:
             return r
 
