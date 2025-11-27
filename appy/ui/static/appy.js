@@ -796,7 +796,7 @@ class Form {
         else {
           fieldValue = f2.elements[fieldName].value;
         }
-        addField(fieldName, fieldValue);
+        this.addField(fieldName, fieldValue);
       }
     }
   }

@@ -100,6 +100,12 @@ class Object:
     def values(self): return self.__dict__.values()
     def items(self): return self.__dict__.items()
 
+    def json(self):
+        '''Returns p_self as a JSON-encoded string'''
+        # If this import is done in the file header, there is a circular import
+        from appy.utils.json import Encoder
+        return Encoder(self).encode()
+
     def __setitem__(self, k, v):
         '''Dict-like attribute set'''
         self.__dict__[k] = v
