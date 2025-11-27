@@ -86,7 +86,7 @@ class Sub(Program):
         # Get args as p_self's attributes
         for name, value in self.args.__dict__.items():
             setattr(self, name, value)
-        # Ensure the file exists and is has .odt extension
+        # Ensure the file exists and has an .odt extension
         path = Path(self.path)
         if not path.is_file():
             return self.exit(FILE_KO % self.path)
@@ -132,7 +132,7 @@ class Sub(Program):
     def analyseContent(self, contents):
         '''Analyse the content of p_self.path, whose content of files
            content.xml and styles.xml are in dict p_content.'''
-        r = False 
+        r = False
         # Get the first paragraph within content.xml
         contentXml = contents['content.xml']
         stylesXml = contents['styles.xml']
@@ -170,7 +170,6 @@ class Sub(Program):
         # Unzip the file in the temp folder
         tempFolder = self.tempFolder = putils.getOsTempFolder(sub=True)
         fileName = str(self.path)
-        self.tempFolder = tempFolder
         contents = unzip(fileName, tempFolder, odf=True, asBytes=False)
         changed = self.analyseContent(contents)
         if changed:

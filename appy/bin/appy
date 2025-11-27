@@ -22,7 +22,7 @@ class MetaScript:
     '''Calls any script from appy/bin, using syntax: appy <script>'''
 
     # Script lying in appy/bin and being callable via this meta-script
-    scripts = ['make', 'convert', 'oclean', 'ogrep', 'osub']
+    scripts = ['make', 'convert', 'oclean', 'ogrep', 'osub', 'osplit']
 
     # Doc for commands
     HELP_NO   = 'Welcome to %s !\nVersion: %%s\nInstalled in:%s\n\n' \
