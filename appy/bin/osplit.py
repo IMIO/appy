@@ -4,7 +4,6 @@
    page breaks.'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import re, os.path
 from pathlib import Path
 
 from appy.bin import Program

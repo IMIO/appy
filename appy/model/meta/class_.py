@@ -50,11 +50,11 @@ S_F_HOM     = '%s: "%s" is both used as search and field name, this is not ' \
               'allowed.'
 CUS_ID_KO   = 'The custom ID produced by method "generaeId" must be a string.'
 S_FIELD_KO  = 'Field "%s", mentioned as search field on class "%s", not found.'
-FILT_KO     = '%s :: Unparsable filter :: %s.'
+FILT_UNP    = '%s :: Unparsable filter :: %s.'
 FILT_ERR    = '%s::%s - Filter error :: %s. %s'
 IDX_FL_KO   = 'Indexed field "%s" cannot be defined on class "%s" having no ' \
               'catalog.'
-FIL_KO      = 'Wrong filter "%s" on class "%s".'
+FILT_KO     = 'Wrong filter "%s" on class "%s".'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Class(Meta):
@@ -934,7 +934,7 @@ class Class(Meta):
             else:
                 r = sutils.getDictFrom(filters)
         except ValueError:
-            tool.log(FILT_KO % (self.name, str(filters)), type='error')
+            tool.log(FILT_UNP % (self.name, str(filters)), type='error')
             return {}
         # Apply a potential transform on every filter value
         fields = fields or self.fields
@@ -951,7 +951,7 @@ class Class(Meta):
                     del(r[name])
             else:
                 # The filter entry is wrong
-                tool.log(FIL_KO % (name, self.name), type='warning')
+                tool.log(FILT_KO % (name, self.name), type='warning')
                 del(r[name])
         return r
 
