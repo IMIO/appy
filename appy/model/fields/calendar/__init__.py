@@ -231,6 +231,7 @@ class Calendar(Field):
                                align-self:flex-start }
       .calSelect { margin:0.2em 0; color:|selectColor|; font-size:95% }
       .eFields { margin-bottom:0.2em }
+      .eFields label { padding:0 0.6em 0 0 }
       .calSpan { margin-bottom:0.7em; font-size:98%; color:|selectColor| }
       .calSpan input { color:|selectColor|; text-align:center }
       #searchET { color:|selectColor| }''')

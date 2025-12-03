@@ -120,6 +120,8 @@ class EventData(Persistent):
     def H(self): return Base.Handler.get()
     config = property(lambda o: o.H().config, None)
     req = property(lambda o: o.H().req, None)
+    database = property(lambda o: o.H().server.database, None)
+    def getObject(self, id): return self.database.getObject(self.H(), id)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                PXs

@@ -249,7 +249,7 @@ class Base:
     traverse['catalog'] = 'Manager'
     catalog = property(lambda o: o.getCatalog(), raiseReadOnly)
 
-    # A reference the the database object
+    # A reference to the database object
     database = property(lambda o: o.H().server.database, raiseReadOnly)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

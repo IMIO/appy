@@ -685,4 +685,49 @@ class List(Field):
         iterName, preamble = self.getTotalsInfo(rows)
         subs = preamble + subFields if preamble else subFields
         return Totals.init(self, iterName, subs, totals, rows=rows)
+
+    def setCodes(self, o, sub='code'):
+        '''Ensures, on every row of the list stored on this p_o(bject) and
+           corresponding to p_self, a code is set on the sub-field named
+           p_sub.'''
+        # This method is useful only if you define, among p_self's sub-fields,
+        # a field corresponding to a "code". Such a code must be a stringified
+        # integer allowing to identify a row of data within p_self, even after
+        # rows have been moved or deleted. This can be useful if some external
+        # object references a row in a list, which lacks any notion of permanent
+        # identifier. If you want to enable this kind of code, within p_self
+        # sub-fields, create a field like this one:
+        #
+        # ('code', String(width=2, readonly=True, alignOnEdit='center',
+        #                 layouts=Layouts(edit=LayoutF('f', css='codeC')))),
+        #
+        # CSS class codeC may put a grey background on the field, warning the
+        # user that it is a read-only value.
+        #
+        # .codeC input[type=text] { background-color:lightgrey }
+        #
+        # Call method p_setCodes in o's m_onEdit method.
+        rows = getattr(o, self.name)
+        if not rows: return
+        i = 0
+        count = len(rows)
+        # First pass: compute the highest encountered code
+        highest = 0
+        while i < count:
+            code = getattr(rows[i], sub)
+            if code:
+                highest = max(highest, int(code))
+            i += 1
+        # Second pass: give a code to rows that do not have one
+        i = 0
+        while i < count:
+            row = rows[i]
+            code = row[sub]
+            if not code:
+                # A code is missing for this v_row: add one
+                code = highest + 1
+                data = {sub: str(code)}
+                rows[i] = row.clone(**data)
+                highest += 1
+            i += 1
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

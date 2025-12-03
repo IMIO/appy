@@ -168,7 +168,7 @@ class Select(Field):
        multiple=":isMultiple" onchange=":field.getOnChange(o, layout)"
        size=":field.getSelectSize(False, isMultiple)"
        style=":field.getSelectStyle(False, isMultiple)"
-       disabled=":field.getDisabled(o)">
+       disabled=":field.getDisabled(o)" required=":field.required">
       <option for="val, text in possibleValues" value=":val"
               selected=":field.isSelected(o, name, val, rawValue)"
               title=":text">:Px.truncateValue(text, charsWidth)</option>
@@ -330,7 +330,7 @@ class Select(Field):
         # False.
         self.checkAll = checkAll
 
-        # Default width, height and maxChars
+        # Default width & height
         if width is None:
             self.width = 30
         if height is None:
@@ -348,11 +348,11 @@ class Select(Field):
         self.fwidth = fwidth
         self.fheight = fheight
 
-        # Must p_self be shown, on "edit", in "disabled" mode? It works only if
+        # Must p_self be shown, on /edit, in "disabled" mode? It works only if
         # p_self is rendered as a select widget.
         self.disabled = disabled
 
-        # If render mode is "select", on "edit", a blank value will be added
+        # If render mode is "select", on /edit, a blank value will be added
         self.checkParameters()
 
     def checkParameters(self):
@@ -509,7 +509,11 @@ class Select(Field):
             # Create the blank value to insert at the beginning of the list
             if withTranslations:
                 label = blankLabel or self.noValueLabel
-                blankValue = '', o.translate(label, language=lg)
+                if hasattr(o, 'translate'):
+                    blankText = o.translate(label, language=lg)
+                else: # A pseudo-Appy object may not be translate-aware
+                    blankText = '-'
+                blankValue = '', blankText
             else:
                 blankValue = ''
             # Insert the blank value in the result

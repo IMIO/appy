@@ -84,7 +84,7 @@ class Hour(Field):
         r = []
         empty = True
         for partName in self.hourParts:
-            part = req['%s_%s' % (name, partName)] or ''
+            part = req[f'{name}_{partName}'] or ''
             if part: empty = False
             r.append(part)
         return None if empty else ':'.join(r)
@@ -269,6 +269,13 @@ class Hour(Field):
             r = class_.inRange(value, start, (23,59)) or \
                 class_.inRange(value, (0,0), end)
         return r
+
+    @classmethod
+    def formatRange(class_, start, end, sep=' → ', hourSep=':'):
+        '''Returns the [start, end] range as a formatted string'''
+        s = class_.toString(start, sep=hourSep)
+        e = class_.toString(end, sep=hourSep)
+        return f'{s}{sep}{e}'
 
     @classmethod
     def intersection(class_, rangeA, rangeB, recurse=True):
