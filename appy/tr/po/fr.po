@@ -632,6 +632,14 @@ msgstr "Bienvenue"
 msgid "login_reserved"
 msgstr "Ce login est réservé."
 
+#. Default: "A login can't contain any space."
+msgid "login_space"
+msgstr "Sérieux ? 😉\nCitez-moi un seul système informatique qui vous a déjà autorisé à encoder une espace dans un login."
+
+#. Default: "A login can't contain any non-blocking space."
+msgid "login_nbsp"
+msgstr "Envergure mondiale 🥇\nEncoder une espace insécable dans un login, c'est du grand art."
+
 #. Default: "This login is already in use."
 msgid "login_in_use"
 msgstr "L'identifiant d'utilisateur que vous avez sélectionné est déjà utilisé ou est invalide. Choisissez-en un autre."
@@ -1232,9 +1240,13 @@ msgstr "Payer"
 msgid "please_pay"
 msgstr "Veuillez procéder au paiement via le bouton « <b>${pay}</b> »."
 
+#. Default: "You are about to cancel the payment and the complete order.\n\nProceed?"
+msgid "pay_cancel_text"
+msgstr "Annuler complètement le paiment et la commande ?"
+
 #. Default: "Your payment was successful."
 msgid "payment_accepted"
-msgstr "Votre paiement effectué avec succès."
+msgstr "Paiement effectué avec succès."
 
 #. Default: "We are sorry, but your payment has been refused. The order has been canceled."
 msgid "payment_refused"

@@ -130,9 +130,24 @@ class Worldline(Field):
       <!-- This div will host the iframe -->
       <div id=":field.divId" class="divWL"></div>
 
-      <!-- Submit the form -->
-      <input type="button" class="buttonFixed button" value=":_('pay')"
-             onclick=":f'submitWLForm(`{tagId}`)'"/>
+      <!-- "Pay" and "Cancel" buttons -->
+      <div class="flex1">
+
+       <!-- Submit the form -->
+       <input type="button" class="buttonFixed button" value=":_('pay')"
+              onclick=":f'submitWLForm(`{tagId}`)'"/>
+
+       <!-- Cancel the payment -->
+       <div>
+        <script>:f'var cancelText=`{o.translate("pay_cancel_text")}`;'</script>
+        <input type="button" class="buttonFixed button"
+               value=":_('object_cancel')"
+               var="cancelUrl=f'{o.siteUrl}/{o.iid}/{field.name}/abort';
+                    cancelParams='{%s:%s}' % (q('code'), q('4'));
+                    cancelJs=f'Form.post({q(cancelUrl)},{cancelParams})'"
+               onclick=":f'askConfirm(`script`,`{cancelJs}`,cancelText)'"/>
+       </div>
+      </div>
 
       <!-- This JS file contains the methods needed for tokenization -->
       <script var="baseUrl=config.worldline.getBaseUrl()"
@@ -158,6 +173,7 @@ class Worldline(Field):
            }
            else {
              params['action'] = 'abort';
+             params['code'] = '2';
              params['reason'] = result.error.message;
            }
            askField(hook, objectUrl, 'view', params);
@@ -193,14 +209,19 @@ class Worldline(Field):
         self.checkCallable('amount')
 
         # p_onSuccess must hold a method that will be executed once the payment
-        # has been accepted. It will be called with no arg.
+        # has been accepted. It will be called with no arg and must return a
+        # 2-tuple containing:
+        # - the URL the user must be redirected to ;
+        # - a translated message to show in the UI.
         self.onSuccess = onSuccess
         self.checkCallable('onSuccess')
 
         # p_onFailure must hold a method that will be executed if the payment
         # was not successful. It will be called with a single arg: an integer
         # code representing the reason for the failure. Constants PAY_SUC to
-        # PAY_CAN as defined below represent all possible codes.
+        # PAY_CAN as defined below represent all possible codes. p_onFailure
+        # must return a 2-tuple being similar to p_onSuccess' return value (see
+        # above).
         self.onFailure = onFailure
         self.checkCallable('onFailure')
 
@@ -457,12 +478,14 @@ class Worldline(Field):
         o.H().commit = True
         if resp.errorId:
             # Something went wrong: abort the payment
-            o.req.reason = PAY_KO % o.strinG(path=False)
-            self.log(PAY_KO, type='error')
-            self.abort(o)
+            req = o.req
+            req.code = self.PAY_WRO
+            # More details could be dumped than the error ID
+            req.reason = PAY_KO % (o.strinG(path=False), resp.errorId)
             # Clean any payment info possibly stored on p_o regarding p_self
             if self.name in o.values:
                 del o.values[self.name]
+            self.abort(o)
         else:
             # Store p_resp on p_o
             o.values[self.name] = resp
@@ -472,7 +495,7 @@ class Worldline(Field):
                 # The user must be redirected to a page where he will give more
                 # info about his identity as card holder (3DS check).
                 url = action.redirectData.redirectURL
-                self.goto(url, fromAjax=True)
+                o.goto(url, fromAjax=True)
             else:
                 # Get the payment status code. If the payment was successful,
                 # payment information encoded so far is satisfying: there is no
@@ -499,9 +522,11 @@ class Worldline(Field):
                 o.log(PAY_STATUS % (o.strinG(path=False), text, code))
                 # Trigger app/ext code
                 if success:
-                    self.onSuccess(o)
+                    url, message = self.onSuccess(o)
                 else:
-                    self.onFailure(o, failCode)
+                    url, message, self.onFailure(o, failCode)
+                o.resp.fleetingMessage = False
+                o.goto(url, message, fromAjax=True)
 
     traverse['pay'] = 'perm:read'
     def pay(self, o):
@@ -512,9 +537,11 @@ class Worldline(Field):
         #  Payments/operation/CreatePaymentApi
         #
         # If there is no token in the request, abort the payment
-        token = o.req.token
+        req = o.req
+        token = req.token
         if not token:
-            o.req.reason = PAY_TOK_KO  % o.strinG(path=False)
+            req.code = self.PAY_WRO
+            req.reason = PAY_TOK_KO  % o.strinG(path=False)
             return self.abort(o)
         # Build the request
         config = o.config.worldline
@@ -539,14 +566,29 @@ class Worldline(Field):
 
     traverse['pay'] = 'perm:read'
     def confirm(self, o):
-        '''Confirm the payment after the user wen through an additional,
+        '''Confirm the payment after the user went through an additional,
            3D-secure-related, confirmation page.'''
         # XXX To be continued
 
     traverse['abort'] = 'perm:read'
     def abort(self, o):
-        '''Aborts the payment after an error occurred after the user, having
-           entered his card details, has clicked on the 'pay' button. The error
-           message is in the request, at key 'reason'.'''
-        # XXX To be continued
+        '''Aborts the payment after an error occurred'''
+        # A database commit is required
+        o.H().commit = True
+        # Several error cases are possible and are listed in v_paymentTexts.
+        # Retrieve the code corresponding to the current case.
+        req = o.req
+        code = req.code
+        # The code may be found in the request
+        if code: code = int(code)
+        # More textual details may be found in v_req.reason
+        text = self.paymentTexts[code]
+        if req.reason:
+            text = f'{text} ({req.reason})'
+        o.log(PAY_STATUS % (o.strinG(path=False), text, code))
+        # Trigger app/ext code
+        url, message = self.onFailure(o, code)
+        # Redirect the end user and show her a translated message
+        o.resp.fleetingMessage = False
+        o.goto(url, message, fromAjax=o.H().isAjax())
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -210,6 +210,10 @@ class User(Base):
             # Some logins are not allowed.
             if login in self.specialUsers:
                 return self.translate('login_reserved')
+            elif ' ' in login:
+                return self.translate('login_space')
+            elif ' ' in login:
+                return self.translate('login_nbsp')
             # Check that no user or group already uses this login
             if self.count('User', login=login) or \
                self.count('Group', login=login):

@@ -138,17 +138,17 @@ class Response:
     def setCookie(self, name, value):
         '''Adds a cookie among response headers, in special key "Cookies" that
            will be converted to as many "Set-Cookie" HTTP header entries as
-           there are entries at this key.
-
-           If p_value is "deleted", the cookie is built in such a way that it
-           will be immediately disabled by the browser.'''
+           there are entries at this key.'''
+        # If p_value is "deleted", the cookie is built in such a way that it
+        # will be immediately disabled by the browser.
+        #
         # Create entry "Cookies" in response headers if it does not exist
         if 'Cookies' not in self.headers:
             self.headers['Cookies'] = {}
         # Set the value for the cookie. A special value is defined if the
         # objective is to disable the cookie.
-        if value == 'deleted': value = '%s; Max-Age=0' % value
-        self.headers['Cookies'][name] = '%s; Path=/' % value
+        if value == 'deleted': value = f'{value}; Max-Age=0'
+        self.headers['Cookies'][name] = f'{value}; Path=/'
 
     def deleteCookie(self, name):
         '''Deletes the cookie having this p_name'''

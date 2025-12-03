@@ -631,6 +631,14 @@ msgstr ""
 msgid "login_reserved"
 msgstr ""
 
+#. Default: "A login can't contain any space."
+msgid "login_space"
+msgstr ""
+
+#. Default: "A login can't contain any non-blocking space."
+msgid "login_nbsp"
+msgstr ""
+
 #. Default: "This login is already in use."
 msgid "login_in_use"
 msgstr ""
@@ -1229,6 +1237,10 @@ msgstr ""
 
 #. Default: "Please proceed with the payment via the “<b>${pay}</b>” button."
 msgid "please_pay"
+msgstr ""
+
+#. Default: "You are about to cancel the payment and the complete order.\n\nProceed?"
+msgid "pay_cancel_text"
 msgstr ""
 
 #. Default: "Your payment was successful."
