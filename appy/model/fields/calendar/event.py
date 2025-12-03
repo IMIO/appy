@@ -151,6 +151,8 @@ class Factory:
             # Create and store the event
             event = Event(eventType, timeslot=timeslot, comment=self.comment,
                           data=self.getData(cloned=cloneData))
+            # Complete event data if it exists
+            if event.data: event.data.complete(self.o, event)
             events.append(event)
             # Sort events in the order of timeslots
             if len(events) > 1:
@@ -174,7 +176,9 @@ class Factory:
         '''Create an unslotted event'''
         eventType = self.eventType
         event = Event(eventType, timeslot=None, start=self.date, end=self.end,
-                      comment=self.comment, data=self.data)
+                      comment=self.comment, data=self.getData())
+        # Complete event data if it exists
+        if self.data: self.data.complete(self.o, event)
         events = self.events
         events.append(event)
         if len(events) > 1:
@@ -205,8 +209,6 @@ class Factory:
         else:
             # Create an unslotted event
             event = self.makeUnslotted()
-        # Complete event data, if it exists
-        if self.data: self.data.complete(self.o, event)
         # Call a custom method if defined
         method = self.field.afterCreate
         if method: method(self.o, self.date, self.eventType, self.timeslot,
