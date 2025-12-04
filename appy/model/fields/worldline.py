@@ -18,10 +18,15 @@ CALL_MIS   = 'A method must be placed in attribute "%s".'
 
 API        = 'Worldline API ::'
 WL_HT_AUTH = f'{API} %s :: Got tokenization ID %s'
+INIT_KO    = f'Payment init (hostedtokenizations) failed.'
 PAY_TOK_KO = f'{API} %s :: Payment aborted :: No token in the request.'
 PAY_KO     = f'{API} %s :: Payment aborted :: Payment response error :: %s.'
 PAY_STATUS = f'{API} %s :: Payment %s (%d).'
 RECEIPT_KO = f'{API} %s:%s :: Empty payment :: Cannot generate receipt.'
+CONF_KO    = f'{API} %s :: Worldline /confirm redirect without payment ID.'
+CONF_WRONG = f'{API} %s :: Worldline messy /confirm redirect.'
+CONF_IDKO  = f'{API} %s :: Worldline /confirm payment ID mismatch: ours is ' \
+             f'%s, WL is %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bn = '\n'
@@ -34,8 +39,36 @@ class Config:
 
     # This module implements the "Hosted Tokenization Page" integration method,
     # where the payment form is embedded in an iframe on the called site.
+
     # See https://docs.direct.worldline-solutions.com/en/integration/
     #     basic-integration-methods/hosted-tokenization-page
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # How to integrate a Worldline field in your app ?
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # You must have an Appy class representing the notion of order /
+    # registration / basket / ... This class will be named "Registration" in the
+    # remainder of this explanation. On that class, define a Worldline field
+    # (name it, for example, "onlinePayment"). Do not touch its "show"
+    # attribute: the field will know when to render himself. Once a registration
+    # (self) is ready for online payment, initialise the payment process,
+    # typically in its m_onEdit method, by calling:
+
+    # r = self.getField('onlinePayment').initialise(self)
+
+    # This call will return a translated message, inviting the end user to pay
+    # (use it as return value for m_onEdit).
+
+    # After m_onEdit is called, Appy, by default, redirects the user to the
+    # object's /view layout. Ensure this is the case. On /view, your Worldline
+    # field will be rendered as an iframe, inviting the user to enter card
+    # details. Set, in the Wordline field's "onSuccess" and "onFailure"
+    # attributes, methods that will execute your custom code for managing a
+    # payment success or failure. Don't forget to also define, on the Worldline
+    # field, attribute "amount" that will define the amount to pay (and the
+    # related currency). Read the Worldline field constructor for more
+    # information.
 
     # Content-type for POST requests to the Worldline endpoints
     contentType = 'application/json; charset=utf-8'
@@ -55,7 +88,7 @@ class Config:
     dateFormat = '%a, %d %b %Y %H:%M:%S %Z'
 
     def __init__(self, env='test', pspid=n, apiKey=n, apiSecret=n,
-                 algo='sha256'):
+                 algo='sha256', timeout=20):
         # self.env refers to the target environment: can be "test" or "prod"
         self.env = env
         # You merchant Worldline ID
@@ -67,6 +100,8 @@ class Config:
         self.algo = algo
         # Default language
         self.language = 'en_UK'
+        # Timeout, in seconds, for server-2-server requests
+        self.timeout = timeout
 
     def getContentType(self, method):
         '''Define the content type for the HTTP request payload'''
@@ -141,10 +176,7 @@ class Worldline(Field):
        <div>
         <script>:f'var cancelText=`{o.translate("pay_cancel_text")}`;'</script>
         <input type="button" class="buttonFixed button"
-               value=":_('object_cancel')"
-               var="cancelUrl=f'{o.siteUrl}/{o.iid}/{field.name}/abort';
-                    cancelParams='{%s:%s}' % (q('code'), q('4'));
-                    cancelJs=f'Form.post({q(cancelUrl)},{cancelParams})'"
+               value=":_('object_cancel')" var="cancelJs=field.getAbortJs(o,4)"
                onclick=":f'askConfirm(`script`,`{cancelJs}`,cancelText)'"/>
        </div>
       </div>
@@ -249,47 +281,26 @@ class Worldline(Field):
         config = o.config.worldline
         base = config.baseUrl % config.urlParts[config.env]
         url = f'{base}/{config.baseSuffix}/{config.pspid}/{endpoint}'
-        server = Resource(url)
+        server = Resource(url, timeout=config.timeout)
         # Define headers, including the authorization header
         now = config.getNow()
         hash_ = config.getHash(endpoint, now, method)
         headers = {'Authorization': f'GCS v1HMAC:{config.apiKey}:{hash_}',
                    'Date': now, 'Content-Type': config.getContentType(method)}
-        if method == 'POST':
-            # Data to post is in dict p_data
-            r = server.json(data, url, headers=headers)
-        else:
-            r = server.get(url, headers=headers)
-        return r
-
-    def addXhtmlRow(self, rows, name=n, value=n):
-        '''Add, to this current list of XHTML p_rows, a new one rendering this
-           p_value for an attribute having this p_name.'''
-        if name: # A standard row
-            value = value or '?'
-            row = f'<tr><th>{name}</th><td>{value}</td></tr>'
-        else: # A separator row
-            row = f'<tr><th colspan="2">· • ·</th></tr>'
-        rows.append(row)
-
-    def getErrorDetails(self, o, error, withTitle=True):
-        '''Returns a XHTML table containing all details about the p_error that
-           occurred while contacting the Worldline API.'''
-        add = self.addXhtmlRow
-        rows = []
-        for k, v in error.items():
-            if isinstance(v, list):
-                # Sub-info: render every sub-item as a sub-table
-                subs = []
-                for sub in v:
-                    subs.append(self.getErrorDetails(o, sub, withTitle=False))
-                add(rows, k, bn.join(subs))
+        try:
+            if method == 'POST':
+                # Data to post is in dict p_data
+                r = server.json(data, url, headers=headers)
             else:
-                add(rows, k, v)
-        if withTitle:
-            title = o.translate('error_name')
-            rows.insert(0, f'<tr><th colspan="2">{title}</th></tr>')
-        return f'<table class="small">{bn.join(rows)}</table>'
+                r = server.get(url, headers=headers)
+        except Resource.Error as err:
+            # A network error occurred: abort the payment and return None
+            req = o.req
+            req.code = self.PAY_WRO
+            req.reason = str(err)
+            self.abort(o)
+            r = None
+        return r
 
     # Currently supported locales
     locales = {'en': 'UK', 'fr': 'BE', 'nl': 'BE'}
@@ -307,25 +318,44 @@ class Worldline(Field):
     def initialise(self, o):
         '''Call endpoint "hostedtokenizations", as a preamble to display the
            payment iframe. The endpoint returns a "hosted tokenization URL" that
-           will be used by the Wordline form being shown in the iframe.'''
+           will be used by the Worldline form being shown in the iframe.'''
         # API documentation:
         # https://docs.direct.worldline-solutions.com/en/api-reference#tag/
         #  HostedTokenization/operation/CreateHostedTokenizationApi
         data = O(locale=self.getLocale(o), askConsumerConsent=False)
         resp = self.call(o, 'hostedtokenizations', data=data)
-        if resp.errors:
-            r = False
-            message = self.getErrorDetails(o, resp)
-        else:
-            r = True
-            _ = o.translate
-            payText = _('pay')
-            message = _('please_pay', mapping={'pay': payText})
-            # Store, as field value, the complete endpoint response
-            o.values[self.name] = resp
-            tid = resp.hostedTokenizationId
-            o.log(WL_HT_AUTH % (o.strinG(path=False), tid))
-        return r, message
+        if resp:
+            if resp.errors:
+                # Abort the payment
+                req = o.req
+                req.code = self.PAY_WRO
+                req.reason = INIT_KO
+                self.abort(o)
+            else:
+                # Store, as field value, the complete endpoint response
+                o.values[self.name] = resp
+                # Log
+                tid = resp.hostedTokenizationId
+                o.log(WL_HT_AUTH % (o.strinG(path=False), tid))
+                # Invite the user to pay
+                _ = o.translate
+                payText = _('pay')
+                message = _('please_pay', mapping={'pay': payText})
+                o.resp.fleetingMessage = False
+                return f'<div class="focus">{message}</div>'
+
+    def getAbortJs(self, o, code, fromInit=False):
+        '''Return the JS code to call to abort a payment (with a specific reason
+           p_code) via a HTTP POST request.'''
+        # If p_fromInit is True, the JS code is called from the iframe
+        # initialisation step ("handshake").
+        iparam = ",'reason':reason" if fromInit else ''
+        # Get the URL to hit
+        url = f'{o.siteUrl}/{o.iid}/{self.name}/abort'
+        # Get the POST parameters
+        params = f"{{'code':'{code}'{iparam}}}"
+        # Return the call to Form.post
+        return f"Form.post('{url}',{params})"
 
     def getFrameInit(self, o):
         '''Get the JS code allowing to initialise the iframe'''
@@ -334,9 +364,10 @@ class Worldline(Field):
         url = getattr(o, self.name).hostedTokenizationUrl
         # Invoking tokenizer.initialize() will add the <iframe> inside the
         # div tag whose ID is p_self.divId.
+        abortJs = self.getAbortJs(o, 2, fromInit=True)
         return f"var tokenizer=new Tokenizer('{url}','{self.divId}'," \
                f" {{hideCardholderName:false}});{bn}tokenizer.initialize()" \
-               f".then(() => {{}}).catch(reason => {{console.log(reason);}})"
+               f".then(() => {{}}).catch(reason => {{{abortJs}}})"
 
     # Factors to apply to payment amounts, in order to get Wordline-compliant
     # integer amounts.
@@ -389,13 +420,16 @@ class Worldline(Field):
         rows = []
         add = self.addReceiptRow
         # Get the paid amount (with currency)
-        payOut = info.payment.paymentOutput
+        payment = info.payment
+        payOut = payment.paymentOutput
         amount = payOut.amountOfMoney
         add(o, rows, 'amount', self.getFormattedAmount(amount))
         # Get the payment date as transmitted by Worldline
         date = payOut.transactionDate
         if date:
             add(o, rows, 'date', o.tool.formatDate(DateTime(date)))
+        # Add the payment ID
+        add(o, rows, 'id', payment.id)
         title = o.translate('payment_details')
         descr = o.translate('payment_accepted')
         return f'<table class="small"><tr><th colspan="2">{title}</th></tr>' \
@@ -472,9 +506,43 @@ class Worldline(Field):
       )
     }
 
+    def onPayStatus(self, o, status):
+        '''Called by m_pay or m_confirm, this method analyses the payment
+           p_status and manages a payment refusal or acceptance.'''
+        # Get the payment status code. If the payment was successful,
+        # payment information encoded so far is satisfying: there is no
+        # need to redirect the user to an additional page.
+        code = status.statusOutput.statusCode
+        globalCodes = self.paymentCodes
+        if code in globalCodes[self.PAY_SUC]:
+            # The payment has been accepted
+            text = self.paymentTexts[self.PAY_SUC]
+            success = True
+        else:
+            success = False
+            # A payment failure. But which one ?
+            found = False
+            for failCode in self.failureCodes:
+                if code in globalCodes[failCode]:
+                    text = self.paymentTexts[failCode]
+                    found = True
+                    break
+            # The failure code could not be found: an uncertain payment
+            if not found:
+                failCode = self.PAY_UNK
+                text = self.paymentTexts[failCode]
+        o.log(PAY_STATUS % (o.strinG(path=False), text, code))
+        # Trigger app/ext code
+        if success:
+            url, message = self.onSuccess(o)
+        else:
+            url, message, self.onFailure(o, failCode)
+        o.resp.fleetingMessage = False
+        o.goto(url, message, fromAjax=o.H().isAjax())
+
     def onPay(self, o, resp):
         '''Manages a p_res(ponse) retrieved from the m_pay method'''
-        # In any case, a database commit is required
+        # Regardless of the payment status, a database commit is required
         o.H().commit = True
         if resp.errorId:
             # Something went wrong: abort the payment
@@ -497,36 +565,8 @@ class Worldline(Field):
                 url = action.redirectData.redirectURL
                 o.goto(url, fromAjax=True)
             else:
-                # Get the payment status code. If the payment was successful,
-                # payment information encoded so far is satisfying: there is no
-                # need to redirect the user to an additional page.
-                code = resp.payment.statusOutput.statusCode
-                globalCodes = self.paymentCodes
-                if code in globalCodes[self.PAY_SUC]:
-                    # The payment has been accepted
-                    text = self.paymentTexts[self.PAY_SUC]
-                    success = True
-                else:
-                    success = False
-                    # A payment failure. But which one ?
-                    found = False
-                    for failCode in self.failureCodes:
-                        if code in globalCodes[failCode]:
-                            text = self.paymentTexts[failCode]
-                            found = True
-                            break
-                    # The failure code could not be found: an uncertain payment
-                    if not found:
-                        failCode = self.PAY_UNK
-                        text = self.paymentTexts[failCode]
-                o.log(PAY_STATUS % (o.strinG(path=False), text, code))
-                # Trigger app/ext code
-                if success:
-                    url, message = self.onSuccess(o)
-                else:
-                    url, message, self.onFailure(o, failCode)
-                o.resp.fleetingMessage = False
-                o.goto(url, message, fromAjax=True)
+                # The payment has been accepted or rejected: finalize it
+                self.onPayStatus(o, resp.payment)
 
     traverse['pay'] = 'perm:read'
     def pay(self, o):
@@ -562,13 +602,56 @@ class Worldline(Field):
         data = O(hostedTokenizationId=token, order=order,
                  cardPaymentMethodSpecificInput=O(threeDSecure=secure3D))
         resp = self.call(o, 'payments', data=data)
-        self.onPay(o, resp)
+        # v_resp is None if a network error (like a timeout) occurred
+        if resp:
+            self.onPay(o, resp)
 
-    traverse['pay'] = 'perm:read'
+    def confirmIsCorrect(self, o):
+        '''Ensure the redirection to /confirm (see m_confirm) is correct. If
+           yes, it returns the payment ID.'''
+        req = o.req
+        paymentId = req.paymentId
+        if not paymentId:
+            # Info carried in the redirect is wrong. Hack ?
+            req.code = self.PAY_WRO
+            req.reason = CONF_KO % o.strinG(path=False)
+            self.abort(o)
+            return
+        try:
+            ours = getattr(o, self.name).payment.id
+        except AttributeError:
+            # p_self is not in a valid state for accepting a payment
+            # confirmation. Abort it.
+            req.code = self.PAY_WRO
+            req.reason = CONF_WRONG % o.strinG(path=False)
+            self.abort(o)
+            return
+        if paymentId != ours:
+            # The payment ID does not match: abort the payment
+            req.code = self.PAY_WRO
+            req.reason = CONF_IDKO % (o.strinG(path=False), ours, paymentId)
+            self.abort(o)
+            return
+        # Everything seems correct
+        return paymentId
+
+    traverse['confirm'] = 'perm:read'
     def confirm(self, o):
         '''Confirm the payment after the user went through an additional,
            3D-secure-related, confirmation page.'''
-        # XXX To be continued
+        # Worldline has redirected the user to here. Ensure the mentioned
+        # payment ID matches ours.
+        paymentId = self.confirmIsCorrect(o)
+        if not paymentId: return # Messy /confirm
+        # The payment ID is correct. Get the payment status. API documentation:
+        # https://docs.direct.worldline-solutions.com/en/api-reference#tag/
+        #   Payments/operation/GetPaymentDetailsApi
+        resp = self.call(o, f'payments/{paymentId}/details', method='GET')
+        if resp:
+            o.H().commit = True
+            # This v_resp(onse) is similar to the part of the response
+            # concerning the payment, as returned by m_pay.
+            self.onPayStatus(o, resp.data)
 
     traverse['abort'] = 'perm:read'
     def abort(self, o):
@@ -578,9 +661,9 @@ class Worldline(Field):
         # Several error cases are possible and are listed in v_paymentTexts.
         # Retrieve the code corresponding to the current case.
         req = o.req
-        code = req.code
+        code = req.code or self.PAY_UNK
         # The code may be found in the request
-        if code: code = int(code)
+        if isinstance(code, str): code = int(code)
         # More textual details may be found in v_req.reason
         text = self.paymentTexts[code]
         if req.reason:

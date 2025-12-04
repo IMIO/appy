@@ -1236,29 +1236,17 @@ msgstr "unknown"
 msgid "pay"
 msgstr "Pay"
 
-#. Default: "Please proceed with the payment via the “<b>${pay}</b>” button."
+#. Default: "Please proceed with the payment."
 msgid "please_pay"
-msgstr "Please proceed with the payment via the “<b>${pay}</b>” button."
+msgstr "Please proceed with the payment."
 
 #. Default: "You are about to cancel the payment and the complete order.\n\nProceed?"
 msgid "pay_cancel_text"
 msgstr "You are about to cancel the payment and the complete order.\n\nProceed?"
 
-#. Default: "Your payment was successful."
+#. Default: "Payment accepted"
 msgid "payment_accepted"
-msgstr "Your payment was successful."
-
-#. Default: "We are sorry, but your payment has been refused. The order has been canceled."
-msgid "payment_refused"
-msgstr "We are sorry, but your payment has been refused. The order has been canceled."
-
-#. Default: "You have canceled the payment. The order has been canceled, too."
-msgid "payment_canceled"
-msgstr "You have canceled the payment. The order has been canceled, too."
-
-#. Default: "We are sorry, but something went wrong with your payment. Please try again."
-msgid "payment_abandoned"
-msgstr "We are sorry, but something went wrong with your payment. Please try again."
+msgstr "Payment accepted"
 
 #. Default: "Amount"
 msgid "payment_amount"
@@ -1267,6 +1255,10 @@ msgstr "Amount"
 #. Default: "Date"
 msgid "payment_date"
 msgstr "Date"
+
+#. Default: "ID"
+msgid "payment_id"
+msgstr "Payment ID"
 
 #. Default: "Standard view"
 msgid "standard_view"
