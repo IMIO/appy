@@ -113,23 +113,23 @@ class Config:
         dt = datetime.datetime.now(tz)
         return dt.strftime(self.dateFormat)
 
-    def getStringToHash(self, endpoint, now, method):
+    def getStringToHash(self, endpoint, now, method, pspid):
         '''Get the string to hash, required to authenticate to this Worldline
            p_endpoint.'''
         contentType = self.getContentType(method)
         # Define the URL endpoint
-        url = f'/{self.baseSuffix}/{self.pspid}/{endpoint}'
+        url = f'/{self.baseSuffix}/{pspid}/{endpoint}'
         return f'{method}{bn}{contentType}{bn}{now}{bn}{url}{bn}'
 
-    def getHash(self, endpoint, now, method):
+    def getHash(self, endpoint, now, method, pspid, apiSecret):
         '''Get the hash to include as authorization token in a call to this
            Worldline p_endpoint.'''
         # Get the string to hash, made of various parts
-        s = self.getStringToHash(endpoint, now, method)
+        s = self.getStringToHash(endpoint, now, method, pspid)
         # The API secret and p_s must be converted to bytes
         algo = getattr(hashlib, self.algo)
         enc = 'utf-8'
-        hash_ = hmac.new(self.apiSecret.encode(enc), s.encode(enc), algo)
+        hash_ = hmac.new(apiSecret.encode(enc), s.encode(enc), algo)
         return base64.b64encode(hash_.digest()).decode(enc).rstrip(bn)
 
     def getBaseUrl(self):
@@ -224,6 +224,11 @@ class Worldline(Field):
         if data and data.hostedTokenizationId:
             return 'view'
 
+    def isOngoing(self, o):
+        '''Returns True if the payment is ongoing = the iframe is currently
+           shown.'''
+        return bool(self.show(o, self))
+
     def isRenderableOn(self, layout):
         '''This field may only be rendered on "view"'''
         return layout == 'view'
@@ -232,7 +237,8 @@ class Worldline(Field):
       move=0, readPermission='read', writePermission='write', width=n, height=n,
       colspan=1, master=n, masterValue=n, masterSnub=n, focus=False, mapping=n,
       generateLabel=n, label=n, view=n, cell=n, buttons=n, edit=n, custom=n,
-      xml=n, translations=n, amount=None, onSuccess=None, onFailure=None):
+      xml=n, translations=n, amount=None, onSuccess=None, onFailure=None,
+      credentials=None):
 
         # p_amount must hold a method accepting no arg and returning the amount
         # to pay, as a tuple (f_amount, s_currencyCode). Supported currency
@@ -257,6 +263,18 @@ class Worldline(Field):
         self.onFailure = onFailure
         self.checkCallable('onFailure')
 
+        # If your app uses several PSPIDs and/or API keys for connecting to
+        # Worldline, instead of using attributes config.pspid, config.apiKey and
+        # config.apiSecret, one may define a method in the following attribute.
+        # This method must must return a 3-tuple of strings:
+        #
+        #                   (pspid, apiKey, apiSecret)
+        #
+        # If the method is set but returns None, or if None is found at any
+        # position in the returned tuple, the corresponding fallback value is
+        # retrieved from the config.
+        self.credentials = credentials
+
         # Call the base constructor
         super().__init__(n, (0,1), n, n, show, renderable, page, group, layouts,
           move, False, True, n, n, False, n, n, readPermission, writePermission,
@@ -270,6 +288,20 @@ class Worldline(Field):
         if value is None or not callable(value):
             raise Exception(CALL_MIS % name)
 
+    def getCredentials(self, o):
+        '''Get the Worldline credentials: PSPID, API key and API secret'''
+        c = o.config.worldline
+        r = None
+        if self.credentials:
+            r = self.credentials(o)
+            if r and None in r:
+                # Ensure credentials are complete
+                r = r[0] or c.pspid, r[1] or c.apiKey, r[2] or c.apiSecret
+            print('Credentials completed=', r)
+        else:
+            r = c.pspid, c.apiKey, c.apiSecret
+        return r
+
     def call(self, o, endpoint, method='POST', data=n):
         '''Calls this Worldline p_endpoint, with this HTTP m_method, in the
            context of a payment about this p_o(bject), that represents a
@@ -280,13 +312,15 @@ class Worldline(Field):
         # Create a Resource object representing the distant server
         config = o.config.worldline
         base = config.baseUrl % config.urlParts[config.env]
-        url = f'{base}/{config.baseSuffix}/{config.pspid}/{endpoint}'
+        # Get credentials
+        pspid, apiKey, apiSecret = self.getCredentials(o)
+        url = f'{base}/{config.baseSuffix}/{pspid}/{endpoint}'
         server = Resource(url, timeout=config.timeout)
         # Define headers, including the authorization header
         now = config.getNow()
-        hash_ = config.getHash(endpoint, now, method)
-        headers = {'Authorization': f'GCS v1HMAC:{config.apiKey}:{hash_}',
-                   'Date': now, 'Content-Type': config.getContentType(method)}
+        hash_ = config.getHash(endpoint, now, method, pspid, apiSecret)
+        headers = {'Authorization': f'GCS v1HMAC:{apiKey}:{hash_}', 'Date': now,
+                   'Content-Type': config.getContentType(method)}
         try:
             if method == 'POST':
                 # Data to post is in dict p_data
@@ -430,6 +464,13 @@ class Worldline(Field):
             add(o, rows, 'date', o.tool.formatDate(DateTime(date)))
         # Add the payment ID
         add(o, rows, 'id', payment.id)
+        # Add the (partially masked) card number and card type
+        card = payment.paymentOutput.cardPaymentMethodSpecificOutput.card
+        add(o, rows, 'masked_card', card.cardNumber)
+        cardType = card.cardScheme or card.cardProductName or card.issuerName
+        if cardType:
+            add(o, rows, 'card_type', cardType)
+        # Build the complete receipt
         title = o.translate('payment_details')
         descr = o.translate('payment_accepted')
         return f'<table class="small"><tr><th colspan="2">{title}</th></tr>' \

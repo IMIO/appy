@@ -1248,6 +1248,10 @@ msgstr "You are about to cancel the payment and the complete order.\n\nProceed?"
 msgid "payment_accepted"
 msgstr "Payment accepted"
 
+#. Default: "On-line payment is ongoing..."
+msgid "payment_ongoing"
+msgstr "On-line payment is ongoing..."
+
 #. Default: "Amount"
 msgid "payment_amount"
 msgstr "Amount"
@@ -1259,6 +1263,14 @@ msgstr "Date"
 #. Default: "ID"
 msgid "payment_id"
 msgstr "Payment ID"
+
+#. Default: "Card number"
+msgid "payment_masked_card"
+msgstr "Card number"
+
+#. Default: "Card type"
+msgid "payment_card_type"
+msgstr "Card type"
 
 #. Default: "Standard view"
 msgid "standard_view"

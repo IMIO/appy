@@ -1247,6 +1247,10 @@ msgstr ""
 msgid "payment_accepted"
 msgstr "Ihre Zahlung wurde erfolgreich abgeschlossen."
 
+#. Default: "On-line payment is ongoing..."
+msgid "payment_ongoing"
+msgstr ""
+
 #. Default: "Amount"
 msgid "payment_amount"
 msgstr ""
@@ -1257,6 +1261,14 @@ msgstr "Datum"
 
 #. Default: "ID"
 msgid "payment_id"
+msgstr ""
+
+#. Default: "Card number"
+msgid "payment_masked_card"
+msgstr ""
+
+#. Default: "Card type"
+msgid "payment_card_type"
 msgstr ""
 
 #. Default: "Standard view"

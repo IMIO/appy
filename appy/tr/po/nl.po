@@ -1247,6 +1247,10 @@ msgstr "Wilt u de betaling en bestelling volledig annuleren?"
 msgid "payment_accepted"
 msgstr "Betaling aanvaard"
 
+#. Default: "On-line payment is ongoing..."
+msgid "payment_ongoing"
+msgstr "Online betaling in uitvoering..."
+
 #. Default: "Amount"
 msgid "payment_amount"
 msgstr "Bedrag"
@@ -1257,7 +1261,15 @@ msgstr "Datum"
 
 #. Default: "ID"
 msgid "payment_id"
-msgstr "Betaling"
+msgstr "Identificatienummer"
+
+#. Default: "Card number"
+msgid "payment_masked_card"
+msgstr "Kaartnummer"
+
+#. Default: "Card type"
+msgid "payment_card_type"
+msgstr "Kaarttype"
 
 #. Default: "Standard view"
 msgid "standard_view"

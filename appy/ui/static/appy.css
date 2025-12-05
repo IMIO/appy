@@ -94,6 +94,7 @@ div[contenteditable=true]:empty:before { content:attr(data-placeholder);
 .hourSel::before { content:':'; margin-right:1px }
 .auto { width:auto }
 .mono { font-family:monospace; font-size:120% }
+.alert { color:darkred; padding-right:0.5em; font-style:italic }
 
 /* Buttons */
 input.button {
