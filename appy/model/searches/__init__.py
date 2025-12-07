@@ -118,7 +118,7 @@ class Search:
         self.resultModes = resultModes
         # Similar to the homonym Ref attribute, "shownInfo" defines the columns
         # that must be shown on lists of result objects (mode "List" only). If
-        # not specified, class's "listColumns" attributes is used.
+        # not specified, class' "listColumns" attribute is used.
         self.shownInfo = shownInfo
         # Specify here Action fields that must be shown as custom actions that
         # will be triggered on search results.

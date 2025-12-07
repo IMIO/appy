@@ -227,7 +227,14 @@ class Worldline(Field):
     def isOngoing(self, o):
         '''Returns True if the payment is ongoing = the iframe is currently
            shown.'''
-        return bool(self.show(o, self))
+        show = self.show
+        if not show:
+            r = False
+        elif not callable(show):
+            r = bool(show)
+        else:
+            r = bool(self.show(o, self))
+        return r
 
     def isRenderableOn(self, layout):
         '''This field may only be rendered on "view"'''
