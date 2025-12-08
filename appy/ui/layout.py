@@ -492,10 +492,13 @@ class Layouts(dict):
     buttonLayouts = asDict(('buttons', 'sub', 'view', 'xml'))
 
     # Layouts that accept actions
-    actionLayouts = asDict(('buttons', 'sub', 'view', 'cell'))
+    actionLayouts = asDict(('buttons', 'sub', 'view', 'cell', 'sidebar'))
 
     # Layouts corresponding to cell content in a list of objects
     cellLayouts = asDict(('cell', 'sub'))
+
+    # View-assimilated layouts
+    viewLayouts = asDict(('view', 'cell'))
 
     # Some layouts must be explicitly specified in order to be taken into
     # account, while, for most of them, this is implicit. For example, when

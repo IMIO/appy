@@ -767,7 +767,7 @@ class Text(Multilingual, Field):
            value.'''
         if Field.isEmptyValue(self, o, value) and not showChanges: return ''
         r = value
-        if layout in ('view', 'cell'):
+        if layout in Layouts.viewLayouts:
             r = Escape.xhtml(r, p=True)
         # If value starts with a carriage return, add a space; else, it will
         # be ignored.

@@ -7,6 +7,7 @@ import re, random, sys, time
 from appy.px import Px
 from appy import utils, n
 from appy.data import Countries
+from appy.xml.escape import Escape
 from appy.utils.string import Normalize
 from appy.xml.cleaner import StringCleaner
 from appy.ui.layout import Layouts, Layout
@@ -407,8 +408,10 @@ class String(Multilingual, Field):
         '''Returns the formatted variant of p_value. If p_contentLanguage is
            specified, p_value is the p_contentLanguage part of a multilingual
            value.'''
-        return Field.getFormattedValue(self, o, value, layout, showChanges,
-                                       language)
+        # Escape v_value on /view layouts
+        if value and layout in Layouts.viewLayouts:
+            value = Escape.xhtml(value, p=False)
+        return value or ''
 
     def validateUniValue(self, o, value): return
 
