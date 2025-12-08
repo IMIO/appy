@@ -2794,7 +2794,8 @@ class Ref(Field):
             name = col.name
             refType = tied.getField(name)
             value = getattr(tied, name)
-            value = refType.getShownValue(tied, value) or '-'
+            # Cheat and set layout "xml": make sure there is no XHTML escaping
+            value = refType.getShownValue(tied, value, layout='xml') or '-'
             if refType.type == 'Rich':
                 value = self.xhtmlToText.sub(' ', value)
             elif isinstance(value, utils.sequenceTypes):
