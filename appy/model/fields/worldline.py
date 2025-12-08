@@ -19,8 +19,8 @@ CALL_MIS   = 'A method must be placed in attribute "%s".'
 API        = 'Worldline API ::'
 WL_HT_AUTH = f'{API} %s :: Got tokenization ID %s'
 INIT_KO    = f'Payment init (hostedtokenizations) failed.'
+PAY_KO     = f'Payment response error :: %s.'
 PAY_TOK_KO = f'{API} %s :: Payment aborted :: No token in the request.'
-PAY_KO     = f'{API} %s :: Payment aborted :: Payment response error :: %s.'
 PAY_STATUS = f'{API} %s :: Payment %s (%d).'
 RECEIPT_KO = f'{API} %s:%s :: Empty payment :: Cannot generate receipt.'
 CONF_KO    = f'{API} %s :: Worldline /confirm redirect without payment ID.'
@@ -304,7 +304,6 @@ class Worldline(Field):
             if r and None in r:
                 # Ensure credentials are complete
                 r = r[0] or c.pspid, r[1] or c.apiKey, r[2] or c.apiSecret
-            print('Credentials completed=', r)
         else:
             r = c.pspid, c.apiKey, c.apiSecret
         return r
@@ -524,17 +523,8 @@ class Worldline(Field):
 
     paymentCodes = {
       PAY_SUC: (
-        # Normally, the following statuses correspond to intermediary statuses,
-        # where "capturing" the payment has still to be done. That being said:
-        # - the page documenting the "hosted tokenization" payment process (see
-        #   step "flow") doesn't mention at all this "capturing" process ;
-        # - on the test site, most (if not all) successful payments return this
-        #   status.
-        # Consequently, at least for now, these statuses are considered
-        # representing final successful payments.
-        5, 56,
         # Successful, completely captured payment
-        9
+        9,
       ),
       PAY_REJ: (
         # Statuses considered as "cancelled" (maybe due to a technical problem?)
@@ -547,6 +537,11 @@ class Worldline(Field):
         # this status has no sense: we are, in any case, further in the payment
         # process.
         0,
+        # The following statuses correspond to intermediary statuses, where
+        # "capturing" the payment has still to be done. Because we work in
+        # "Direct sale" mode, receiving these statuses is considered as an
+        # error.
+        5, 56,
         # The following statuses are those received when the user is redirected
         # to a 3DS-related additional page. It cannot be received as a final
         # step.
@@ -597,7 +592,8 @@ class Worldline(Field):
             req = o.req
             req.code = self.PAY_WRO
             # More details could be dumped than the error ID
-            req.reason = PAY_KO % (o.strinG(path=False), resp.errorId)
+            req.reason = PAY_KO % str(resp)
+            breakpoint()
             # Clean any payment info possibly stored on p_o regarding p_self
             if self.name in o.values:
                 del o.values[self.name]
@@ -646,9 +642,13 @@ class Worldline(Field):
                               locale=self.getLocale(o),
                               timezoneOffsetUtcMinutes=tzOffset))
         order = O(amountOfMoney=self.getAmount(o), customer=customer)
-        # Build the complete request
+        # Build the complete request. The "Direct sale" authorization mode is
+        # applied.See documentation at:
+        #   https://docs.direct.worldline-solutions.com/en/integration/
+        #     api-developer-guide/authorisation-and-directsale
         data = O(hostedTokenizationId=token, order=order,
-                 cardPaymentMethodSpecificInput=O(threeDSecure=secure3D))
+                 cardPaymentMethodSpecificInput=O(authorizationMode='SALE',
+                                                  threeDSecure=secure3D))
         resp = self.call(o, 'payments', data=data)
         # v_resp is None if a network error (like a timeout) occurred
         if resp:
