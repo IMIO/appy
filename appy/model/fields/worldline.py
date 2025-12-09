@@ -21,7 +21,7 @@ WL_HT_AUTH = f'{API} %s :: Got tokenization ID %s'
 INIT_KO    = f'Payment init (hostedtokenizations) failed.'
 PAY_KO     = f'Payment response error :: %s.'
 PAY_TOK_KO = f'{API} %s :: Payment aborted :: No token in the request.'
-PAY_STATUS = f'{API} %s :: Payment %s (%d).'
+PAY_STATUS = f'{API} %s :: Payment %s (%s).'
 RECEIPT_KO = f'{API} %s:%s :: Empty payment :: Cannot generate receipt.'
 CONF_KO    = f'{API} %s :: Worldline /confirm redirect without payment ID.'
 CONF_WRONG = f'{API} %s :: Worldline messy /confirm redirect.'
@@ -88,7 +88,7 @@ class Config:
     dateFormat = '%a, %d %b %Y %H:%M:%S %Z'
 
     def __init__(self, env='test', pspid=n, apiKey=n, apiSecret=n,
-                 algo='sha256', timeout=20):
+                 algo='sha256', timeout=20, variant=None):
         # self.env refers to the target environment: can be "test" or "prod"
         self.env = env
         # You merchant Worldline ID
@@ -102,6 +102,8 @@ class Config:
         self.language = 'en_UK'
         # Timeout, in seconds, for server-2-server requests
         self.timeout = timeout
+        # Variant for customizing the payment popup
+        self.variant = variant
 
     def getContentType(self, method):
         '''Define the content type for the HTTP request payload'''
@@ -362,7 +364,10 @@ class Worldline(Field):
         # API documentation:
         # https://docs.direct.worldline-solutions.com/en/api-reference#tag/
         #  HostedTokenization/operation/CreateHostedTokenizationApi
+        config = o.config.worldline
         data = O(locale=self.getLocale(o), askConsumerConsent=False)
+        if config.variant:
+            data.variant = config.variant
         resp = self.call(o, 'hostedtokenizations', data=data)
         if resp:
             if resp.errors:
@@ -501,6 +506,9 @@ class Worldline(Field):
     # Codes representing rejected or wrong payments
     failureCodes = PAY_REJ, PAY_WRO
 
+    # Codes for which the full Worldline response will be logged
+    detailCodes = PAY_WRO, PAY_UNK
+
     # The following status code is Appy-specific
     PAY_CAN  = 4 # The payment process has been cancelled by the end user
 
@@ -549,55 +557,70 @@ class Worldline(Field):
       )
     }
 
-    def onPayStatus(self, o, status):
-        '''Called by m_pay or m_confirm, this method analyses the payment
-           p_status and manages a payment refusal or acceptance.'''
-        # Get the payment status code. If the payment was successful,
-        # payment information encoded so far is satisfying: there is no
-        # need to redirect the user to an additional page.
+    def getErrorType(self, resp, full=True):
+        '''Returns the error type and message that corresponds to the error as
+           returned by this Worldline p_resp(onse).'''
+        # Get the payment status
+        status = resp.paymentResult.payment if full else resp
+        # Get the payment status code
+        try:
+            code = status.statusOutput.statusCode
+        except AttributeError:
+            # The response is incomplete: note a technical problem
+            return self.PAY_WRO, str(resp)
+        # Determine our v_failCode based on the Worldline p_code
+        paymentCodes = self.paymentCodes
+        found = False
+        for failCode in self.failureCodes:
+            if code in paymentCodes[failCode]:
+                found = True
+                break
+        # The failure code could not be found: an uncertain payment
+        if not found:
+            failCode = self.PAY_UNK
+        # Determine the error text
+        text = str(resp) if failCode in self.detailCodes else f'WL={code}'
+        return failCode, text
+
+    def onError(self, o, resp, full=True):
+        '''Manages a non successful payment = a Worldline p_resp(onse) with an
+           errorId.'''
+        # Something went wrong: abort the payment. Find the error type.
+        req = o.req
+        req.code, req.reason = self.getErrorType(resp, full=full)
+        # Clean any payment info possibly stored on p_o regarding p_self
+        if self.name in o.values:
+            del o.values[self.name]
+        self.abort(o)
+
+    def onFinal(self, o, status):
+        '''Called by m_pay or m_confirm, this method analyses this final payment
+           p_status and finalizes the payment, be it a success or not.'''
+        # Get the payment status code. If the payment was successful, payment
+        # information encoded so far is satisfying: there is no need to redirect
+        # the user to an additional page.
         code = status.statusOutput.statusCode
-        globalCodes = self.paymentCodes
-        if code in globalCodes[self.PAY_SUC]:
-            # The payment has been accepted
-            text = self.paymentTexts[self.PAY_SUC]
-            success = True
-        else:
-            success = False
-            # A payment failure. But which one ?
-            found = False
-            for failCode in self.failureCodes:
-                if code in globalCodes[failCode]:
-                    text = self.paymentTexts[failCode]
-                    found = True
-                    break
-            # The failure code could not be found: an uncertain payment
-            if not found:
-                failCode = self.PAY_UNK
-                text = self.paymentTexts[failCode]
-        o.log(PAY_STATUS % (o.strinG(path=False), text, code))
+        paymentCodes = self.paymentCodes
+        if code not in paymentCodes[self.PAY_SUC]:
+            # The payment wasn't successful: abort it
+            self.onError(o, status, full=False)
+            return
+        # The payment has been accepted
+        text = self.paymentTexts[self.PAY_SUC]
+        o.log(PAY_STATUS % (o.strinG(path=False), text,
+                            f'{self.PAY_SUC}/WL={code}'))
         # Trigger app/ext code
-        if success:
-            url, message = self.onSuccess(o)
-        else:
-            url, message, self.onFailure(o, failCode)
+        url, message = self.onSuccess(o)
         o.resp.fleetingMessage = False
         o.goto(url, message, fromAjax=o.H().isAjax())
 
     def onPay(self, o, resp):
-        '''Manages a p_res(ponse) retrieved from the m_pay method'''
+        '''Manages a p_resp(onse) retrieved from the m_pay method'''
         # Regardless of the payment status, a database commit is required
         o.H().commit = True
         if resp.errorId:
             # Something went wrong: abort the payment
-            req = o.req
-            req.code = self.PAY_WRO
-            # More details could be dumped than the error ID
-            req.reason = PAY_KO % str(resp)
-            breakpoint()
-            # Clean any payment info possibly stored on p_o regarding p_self
-            if self.name in o.values:
-                del o.values[self.name]
-            self.abort(o)
+            self.onError(o, resp)
         else:
             # Store p_resp on p_o
             o.values[self.name] = resp
@@ -609,8 +632,8 @@ class Worldline(Field):
                 url = action.redirectData.redirectURL
                 o.goto(url, fromAjax=True)
             else:
-                # The payment has been accepted or rejected: finalize it
-                self.onPayStatus(o, resp.payment)
+                # The payment should have been accepted: finalize it
+                self.onFinal(o, resp.payment)
 
     traverse['pay'] = 'perm:read'
     def pay(self, o):
@@ -699,7 +722,7 @@ class Worldline(Field):
             o.H().commit = True
             # This v_resp(onse) is similar to the part of the response
             # concerning the payment, as returned by m_pay.
-            self.onPayStatus(o, resp.data)
+            self.onFinal(o, resp.data)
 
     traverse['abort'] = 'perm:read'
     def abort(self, o):
