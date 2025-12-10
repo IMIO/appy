@@ -612,14 +612,14 @@ class Page(Base):
         # A page created from the portlet (if class Page is declared as root)
         # has no container when under creation.
         container = self.container
-        return not container or container.class_.python != Page
+        return not container or container.class_.name != 'Page'
 
     def getRootObject(self):
         '''Returns the root object from which the tree of pages, that includes
            self, starts.'''
         cont = self.container
         if not cont: return
-        return cont.getRootObject() if cont.class_.python == Page else cont
+        return cont.getRootObject() if cont.class_.name == 'Page' else cont
 
     def inPublic(self, orParent=False):
         '''Is p_self (or one of its parents if p_orParent is True) currently
@@ -688,7 +688,7 @@ class Page(Base):
      <div class="pageS"
           var="pages=pages|tool.OPage.getRoot(tool, mobile, splitted=False)">
       <x if="pages"
-         var2="selected=o.getParents() if o.class_.python==tool.OPage else {}">
+         var2="selected=o.getParents() if o.class_.name == 'Page' else {}">
        <x for="page in pages"
           if="guard.mayView(page)">::page.inPortlet(selected)</x>
       </x>
