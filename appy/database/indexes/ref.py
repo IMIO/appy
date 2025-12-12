@@ -10,8 +10,11 @@ from appy.database.indexes import Index
 class RefIndex(Index):
     '''Index for a Ref field'''
 
+    # Python type for most values stored in a ref index (=object IIDs)
+    valuesType = int
+
     # Types of atomic values this index may store
-    atomicTypes = (int, str)
+    atomicTypes = int, str
 
     @classmethod
     def toIndexed(class_, value, field):

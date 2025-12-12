@@ -20,7 +20,7 @@ class RichIndex(TextIndex):
         # but there is no guarantee that this code contains a single root tag,
         # so add one.
         extractor = Extractor(normalize=True, keepCRs=False)
-        value = extractor.parse('<x>%s</x>' % value)
+        value = extractor.parse(f'<x>{value}</x>')
         # Tokenize the result, but text has already been normalized
         return TextIndex.toIndexed(value, field, normalize=False)
 
@@ -29,6 +29,6 @@ class RichIndex(TextIndex):
         '''Converts p_value to pure text via an XHTML text extractor'''
         # No need to normalize p_value here: it will be done by the global
         # "searchable" index.
-        return Extractor(keepCRs=False).parse('<x>%s</x>' % value) if value \
-                                                                   else None
+        return Extractor(keepCRs=False).parse(f'<x>{value}</x>') if value \
+                                                                 else None
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

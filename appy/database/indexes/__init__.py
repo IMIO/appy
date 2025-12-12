@@ -50,6 +50,9 @@ class Index(persistent.Persistent):
     # Values considered as empty, non-indexable values
     emptyValues = (None, [], ())
 
+    # Python type for index values (possibly overridden by Index subclasses)
+    valuesType = str
+
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # An index is made of 2 main dicts: "byValue" stores objects keyed by their
     # index values (this is the "forward" index), while "byObject" stores index

@@ -11,6 +11,9 @@ from appy.database.indexes import Index
 class FloatIndex(Index):
     '''Index for a Float field'''
 
+    # Python type for values stored in a float index
+    valuesType = float
+
     @classmethod
     def toIndexed(class_, value, field):
         '''Converts p_value to its internal representation, taking care of the

@@ -12,10 +12,13 @@ from appy.database.indexes import Index
 class DateIndex(Index):
     '''Index for a Date field'''
 
+    # Python type for values stored in a date index
+    valuesType = int
+
     @classmethod
     def toIndexed(class_, value, field):
-        '''Converts p_value, a DateTime instance, to its internal representation
-           in the index.'''
+        '''Converts p_value, a DateTime object, to its internal, integer
+           representation in the index.'''
         if not value: return
         elif isinstance(value, (list, tuple)):
             # A list of values. While a Date field cannot be multiple, a
@@ -27,7 +30,7 @@ class DateIndex(Index):
             # indexed (probably a default value to index from
             # p_field.emptyIndexValue).
             return value
-        # p_value is a DateTime instance that we will convert to an integer
+        # p_value is a DateTime object that we will convert to an integer
         #
         # This code is inspired by the Zope catalog
         year,month,day,hours,minutes,seconds,zone = value.toZone('UTC').parts()

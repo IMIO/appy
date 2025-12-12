@@ -580,10 +580,11 @@ class Field:
         #                or_(tiedObjectId1, tiedObjectId2, 0)
         #
         # 2. For a String, suppose emptyIndexValue is "-" (which is the default,
-        #    because the "minus" sign is smaller that any digit or letter). If
-        #    the field is named "name", you can get all objects having no name
-        #    by writing
-        #                       name='-'
+        #    because the "minus" sign's ASCII representation is smaller that any
+        #    digit or letter). If the field is named "name", you can get all
+        #    objects having no name by writing
+        #
+        #                             name='-'
         #
         # If you are sure you will not use your indexed field for sorting, then,
         # specify "emptyIndexValue" being None. Indeed, it will produce a
@@ -1409,7 +1410,7 @@ class Field:
             # If there is no value to index, get the special value representing
             # an empty value.
             r = self.emptyIndexValue if self.isEmptyValue(o, r) else r
-        # Return the value to index (or, if p_raw, the current value in "r")
+        # Return the value to index (or, if p_raw, the current value in v_r)
         if raw: return r
         index = self.getIndexType(True)
         return index.toString(o, r) if searchable else index.toIndexed(r, self)

@@ -450,7 +450,7 @@ class Px:
         # Does the named PX exist on the object ?
         obj = ctx[name]
         px = getattr(obj, px, None)
-        if (px is None) or not isinstance(px, Px):
+        if px is None or not isinstance(px, Px):
             raise class_.Error(PX_NAME_KO % (name, parts[1]))
         return px(ctx)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

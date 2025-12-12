@@ -104,6 +104,7 @@ class Dict(List):
       subLayouts=List.Layouts.sub, widths=n, view=n, cell=n, buttons=n, edit=n,
       custom=n, xml=n, translations=n, totalRows=n, totalCols=n,
       headerAlign='middle', contentAlign='top', listCss=n, valueIfEmpty='-'):
+
         # Call the base constructor
         super().__init__(fields, validator, multiplicity, default,
           defaultOnEdit, show, renderable, page, group, layouts, move,
@@ -113,19 +114,20 @@ class Dict(List):
           custom, xml, translations, totalRows=totalRows, totalCols=totalCols,
           headerAlign=headerAlign, contentAlign=contentAlign, listCss=listCss,
           valueIfEmpty=valueIfEmpty)
-        # Method in "keys" must return a list of tuples (key, title): "key"
+
+        # Method in p_keys must return a list of tuples (s_key, s_title): s_key
         # determines the key that will be used to store the entry in the
-        # database, while "title" will get the text that will be shown in the ui
+        # database, while s_title will get the text that will be shown in the ui
         # while encoding/viewing this entry.
 
         # WARNING: a key must be a string and cannot contain char "*". A key is
         # typically an object iid converted to a string.
 
         # For a nice rendering of your dict, some of the tuples returned by
-        # method "keys" can be "separator rows". The tuple representing such a
-        # row must have the form (None, sepRow). "None" indicates that this is
-        # not a row of data; "sepRow" must be a SepRow object (see hereabove)
-        # that will determine content and style for the separator row.
+        # p_keys can be "separator rows". The tuple representing such a row must
+        # have the form (None, sepRow). "None" indicates that this is not a row
+        # of data; "sepRow" must be a SepRow object (see hereabove) that will
+        # determine content and style for the separator row.
         self.keys = keys
 
     def getWidths(self, subFields):

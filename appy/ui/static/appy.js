@@ -493,7 +493,7 @@ function askAjax(hook, form, params, waiting) {
 }
 
 function askBunch(hook, start, maxPerPage, scrollTop) {
-  const params = {'start': start};
+  let params = {'start': start};
   if (maxPerPage) params['maxPerPage'] = maxPerPage;
   if (scrollTop) params['scrollTop'] = scrollTop;
   askAjax(hook, null, params);
