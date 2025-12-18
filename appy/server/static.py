@@ -102,7 +102,7 @@ class Config:
         #
         # Keys must correspond to file names, not prefixed with any path-related
         # info.
-        self.versions = {'appy.css':101, 'appy.js':63, 'calendar.js':17}
+        self.versions = {'appy.css':102, 'appy.js':63, 'calendar.js':17}
 
         # Log any file download representing more than this number of bytes. By
         # "download", we mean, a file downloaded by a Appy client on a Appy
@@ -173,12 +173,15 @@ class Static:
     ram = collections.OrderedDict()
 
     @classmethod
-    def notFound(class_, handler, config):
+    def notFound(class_, handler, config, detail=None):
         '''Raise a HTTP 404 error if the resource defined by p_handler.parts was
            not found.'''
         path = f'/{config.root}/{"/".join(handler.parts)}'
         code = HTTPStatus.NOT_FOUND # 404
-        handler.log('app', 'error', f'{code.value} @ {path}')
+        text = f'{code.value} @ {path}'
+        if detail:
+            text = f'{text} ({detail})'
+        handler.log('app', 'error', text)
         resp = handler.resp
         resp.code = code
         resp.build()

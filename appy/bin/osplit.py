@@ -235,5 +235,8 @@ class Split(Program):
         putils.FolderDeleter.delete(tempFolder)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if __name__ == '__main__': Split().run()
+# The following intermediate method allows to define osplit as a
+# [console_scripts] entry in setuptools.
+def main(): Split().run()
+if __name__ == '__main__': main()
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -579,6 +579,18 @@ msgstr ""
 msgid "upload_invalid"
 msgstr ""
 
+#. Default: "No preview is available for files of this type."
+msgid "file_unpreviewable_format"
+msgstr ""
+
+#. Default: "No preview is proposed for this file, because of its size being larger than ${size}."
+msgid "file_unpreviewable_size"
+msgstr ""
+
+#. Default: "An error occurred while generating the file preview."
+msgid "file_preview_ko"
+msgstr ""
+
 #. Default: "Made with <a href=\"https://appyframe.work\" target=\"_blank\">Appy</a>"
 msgid "footer_text"
 msgstr ""

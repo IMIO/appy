@@ -579,6 +579,18 @@ msgstr "Overschreven door ..."
 msgid "upload_invalid"
 msgstr "Gelieve een bestand van hetzelfde type up te loaden."
 
+#. Default: "No preview is available for files of this type."
+msgid "file_unpreviewable_format"
+msgstr "Voor dit bestandstype is geen overzicht beschikbaar."
+
+#. Default: "No preview is proposed for this file, because of its size being larger than ${size}."
+msgid "file_unpreviewable_size"
+msgstr "Overzicht is niet beschikbaar omdat dit bestand groter is dan ${size}."
+
+#. Default: "An error occurred while generating the file preview."
+msgid "file_preview_ko"
+msgstr "Er is een fout opgetreden tijdens het weergeven van het overzicht."
+
 #. Default: "Made with <a href=\"https://appyframe.work\" target=\"_blank\">Appy</a>"
 msgid "footer_text"
 msgstr "Fabriqué avec <a href=\"https://appyframe.work\" target=\"_blank\">Appy</a>"

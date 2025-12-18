@@ -9,9 +9,9 @@ import io, os, os.path, time, shutil, base64
 from appy.px import Px
 from appy import utils, n
 from appy.ui.layout import Layouts
+from appy.xml.escape import Escape
 from appy.model.fields import Field
 from appy.model.utils import Object
-from appy.utils import formatNumber
 from appy.server.static import Static
 from appy.utils import path as putils
 from appy.utils import string as sutils
@@ -23,6 +23,8 @@ BAD_FTUPLE = 'This is not the way to set a file. You can specify a 2-tuple ' \
              '(fileName, fileContent) or a 3-tuple (fileName, fileContent, ' \
              'mimeType).'
 CONV_ERR   = 'Pod::Converter error. %s'
+CONV_PDF_E = 'Pod::Converter error while converting the file to PDF.'
+CONV_PDF_T = 'converted as PDF'
 PATH_KO    = 'Missing absolute disk path for %s.'
 RESIZED    = '%s resized to %spx.'
 DOWNLOADED = "%s • %s :: Downloaded in %s''."
@@ -46,7 +48,7 @@ class FileInfo:
     uploadNameMax = 30
 
     # Fields to copy when cloning a FileInfo object
-    clonable = ('uploadName', 'size', 'mimeType', 'modified')
+    clonable = 'uploadName', 'size', 'mimeType', 'modified'
 
     def __init__(self, fsPath, inDb=True, uploadName=n):
         '''FileInfo constructor. p_fsPath is the path of the file on disk.'''
@@ -233,7 +235,7 @@ class FileInfo:
                      disposition=disposition, enableCache=cache)
         if log:
             # How long did it take to serve the file (in seconds) ?
-            duration = formatNumber(time.time() - start)
+            duration = utils.formatNumber(time.time() - start)
             text = DOWNLOADED % (path, self.getNameAndSize(False), duration)
             handler.log('app', 'info', text)
 
@@ -342,14 +344,13 @@ class FileInfo:
         self.size = os.stat(fsName).st_size
 
     def dump(self, o, filePath=n, format=n):
-        '''Exports this file to disk (outside the db-controlled filesystem).
-           The tied p_o(bject) is required. If p_filePath is specified, it
-           is the path name where the file will be dumped; folders mentioned in
-           it must exist. If not, the file will be dumped in the OS temp folder.
-           The absolute path name of the dumped file is returned. If an error
-           occurs, the method returns None. If p_format is specified,
-           LibreOffice will be called for converting the dumped file to the
-           desired format.'''
+        '''Exports this file to disk (outside the db-controlled filesystem)'''
+        # The tied p_o(bject) is required. If p_filePath is specified, it is the
+        # path name where the file will be dumped; folders mentioned in it must
+        # exist. If not, the file will be dumped in the OS temp folder. The
+        # method returns the absolute path name of the dumped file. If an error
+        # occurs, the method returns None. If p_format is specified, LibreOffice
+        # will be called for converting the dumped file to the desired format.
         if not filePath:
             tempFolder = putils.getOsTempFolder()
             filePath = f'{tempFolder}/file{time.time():.6f}.{self.fsName}'
@@ -432,10 +433,10 @@ class File(Field):
     resizableImages = imageMimeTypes
 
     # Classes that may contain information about a binary file
-    objectTypes = (Object, FileInfo, UnmarshalledFile)
+    objectTypes = Object, FileInfo, UnmarshalledFile
 
     # Types that may represent paths to a binary file
-    pathTypes = (str, Path)
+    pathTypes = str, Path
 
     # A file field may store a binary file in the object folder, within the
     # database-controlled filesystem.
@@ -443,6 +444,10 @@ class File(Field):
 
     # Make class FileInfo available here
     Info = FileInfo
+
+    # Extensions for files LibreOffice may convert to PDF in the objective of
+    # showing a file preview in the browser.
+    previewExts = 'odt', 'ods', 'doc', 'docx', 'xls', 'xlsx'
 
     class Layouts(Layouts):
         '''File-specific layouts'''
@@ -455,7 +460,7 @@ class File(Field):
             return class_.bg if field.inGrid() else class_.b
 
     view = cell = buttons = Px('''
-      <x>::field.getDownloadLink(o, layout, name)</x>''')
+      <x>::field.getLinkOrPreview(o, layout, name)</x>''')
 
     edit = Px('''
      <x var="fname=f'{name}_file'; rname=f'{name}_action'">
@@ -508,7 +513,9 @@ class File(Field):
       scolspan=1, swidth=n, sheight=n, view=n, cell=n, buttons=n, edit=n,
       custom=n, xml=n, xmlLocation=n, translations=n, render=n,
       icon='paperclip', disposition='attachment', nameStorer=n, cache=False,
-      resize=False, thumbnail=n, viewWidth=n, hash='md5'):
+      resize=False, thumbnail=n, preview=n, previewMaxSize=1048576*10, # 10Mb
+      previewConvertMaxSize=1048576, previewFormats=previewExts, viewWidth=n,
+      viewHeight=n, hash='md5'):
         # This boolean is True if the file is an image
         self.isImage = isImage
         # "downloadAction" can be a method called every time the file is
@@ -556,11 +563,17 @@ class File(Field):
         # in p_self, resized accordingly (provided you have defined it as
         # "resizable").
         self.thumbnail = thumbnail
-        # When the uploaded file is an image, on "view" and "cell" layouts, you
-        # may want to display it smaller than its actual size. In order to do
-        # that, specify a width (as a string, ie '700px') in the following
-        # attribute. The attribute may also hold a method returning the value.
+        # The following attribute allows to define a width for the file or image
+        # preview. For an image, it will be used on /view and /cell. For a non-
+        # image file, it will be used on /view. For an image, it can represent a
+        # width being smaller than the actual image width. For a non-image file,
+        # this width is the PDF viewer's width. p_viewWidth must hold a string
+        # (ie, '700px') or a method returning such a string.
         self.viewWidth = viewWidth
+        # Similarly, the following attribute allows to define a height for a
+        # file preview. It is ignored for an image, for which the aspect ratio
+        # is respected: its height is automatically computed based on its width.
+        self.viewHeight = viewHeight
         # The name of the file, in the object folder, will contain a digest
         # produced with the algo as defined in p_hash. This allows to avoid name
         # clashes when several transactions using, temporarily, the same object
@@ -570,6 +583,41 @@ class File(Field):
         # uploaded via the app, because the file name (that contains the digest)
         # is stored in the database, within the FileInfo object.
         self.hash = hash
+        # p_preview determines if the document, when possible, is visible on
+        # /view. This is achieved via the html "object" tag. This is possible
+        # for:
+        # - images that can be rendered within a browser ;
+        # - PDF files ;
+        # - any file format LibreOffice may convert to PDF, if LibreOffice runs
+        #   in server mode.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # If p_preview is ...
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  None  | (the default) a preview will be rendered only for images
+        #        | whose size does not exceed p_previewMaxSize (see below) ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  False | there will be no preview at all, whatever file/image type ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #  True  | a preview will be rendered, provided (a) it is possible to
+        #        | render a preview for this type of file and (b) the file does
+        #        | not exceed the max size for which a preview may be rendered
+        #        | (see below).
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        self.preview = preview
+        # For performance reasons, no preview is generated for files whose size
+        # exceeds this limit, expressed in bytes.
+        self.previewMaxSize = previewMaxSize
+        # While the previous size limit holds for files that do not need any
+        # conversion, the next one holds for those for which LibreOffice must be
+        # called to convert the file to PDF.
+        self.previewConvertMaxSize = previewConvertMaxSize
+        # Specify, in the following attribute, a list or tuple of file
+        # extensions for which a preview will be generated (provided the file
+        # size allows it) by converting the file to PDF. The default list is
+        # already built in File.previewExts. Use an alternate list if you want
+        # to disable some formats, or None to disable all formats, leaving PDF
+        # as the sole previewable file type.
+        self.previewFormats = previewFormats
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, False, True, n, n, False, n,
@@ -614,7 +662,7 @@ class File(Field):
         storer = self.nameStorer
         if not storer: return ''
         name = storer.name if isinstance(storer, Field) else storer
-        return 'updateFileNameStorer(this,"%s")' % name
+        return f'updateFileNameStorer(this,"{name}")'
 
     def getStyle(self):
         '''Get the content of the "style" attribute of the "input" tag on the
@@ -627,39 +675,128 @@ class File(Field):
             return layout not in Layouts.topLayouts
         return super().isRenderableOn(layout)
 
-    def getDownloadLink(self, o, layout='view', name=n):
-        '''Gets the HTML code for downloading the file as stored in field
-           named p_name on p_o.'''
-        name = name or self.name
-        value = self.getValueIf(o, name, layout)
-        # Display an empty value
-        if not value: return '' if layout == 'cell' else '-'
-        # On "edit", simply repeat the file title
-        if layout == 'edit': return value.getUploadName()
-        # Build the URL for downloading or displaying the file
-        url = f'{o.url}/{name}/download'
-        # For images, display them directly
-        if self.isImage:
-            # Define a max width when relevant
-            viewWidth = self.getAttribute(o, 'viewWidth')
-            css = f' style="max-width:{viewWidth}"' if viewWidth else ''
-            titleI = value.getNameAndSize(shorten=False)
-            return f'<img src="{url}" title="{titleI}"{css}/>'
-        # For non-images, display a link for downloading it, as an icon when
-        # relevant.
-        if self.render == 'icon':
-            iurl = o.buildUrl(self.icon, base=self.iconBase, ram=self.iconRam)
+    def notPreviewOversized(self, o, value, maxSize):
+        '''Is file @ p_value not oversized (=equal or below p_maxSize) for a
+           preview ?'''
+        if value.size > maxSize:
+            r = False
+            maP = {'size': value.getShownSize()}
+            text = o.translate('file_unpreviewable_size', mapping=maP)
+        else:
+            r = True
+            text = None
+        return r, text
+
+    def isPreviewable(self, o, value):
+        '''Is the file at p_value previewable ?'''
+        # If yes, it returns a tuple (True, None). Else, it returns a tuple
+        # (False, s_reason), s_reason being a translated text explaining why no
+        # preview could be rendered.
+        #
+        # 1. Is file @ p_value previewble according to its file format ?
+        r = False
+        text = None
+        mimeType = value.mimeType
+        isPdf = mimeType == utils.mimeTypes['pdf']
+        if isPdf:
+            r = True
+        else:
+            # Is this file format among self.previewFormats ?
+            formats = self.previewFormats
+            if formats:
+                # Get the file extension corresponding to v_mimeType
+                ext = utils.mimeTypesExts.get(mimeType)
+                r = ext and ext in formats
+            else:
+                r = False
+        if not r:
+            return r, o.translate('file_unpreviewable_format')
+        # 2. Is the file not oversized ?
+        maxSize = self.previewMaxSize if isPdf else self.previewConvertMaxSize
+        return self.notPreviewOversized(o, value, maxSize)
+
+    def mustPreview(self, o, value, layout):
+        '''Must the document at p_value be previewed ?'''
+        # If yes, it returns a tuple (True, None). Else, it returns a tuple
+        # (False, s_reason), s_reason being a translated text explaining why no
+        # preview could be rendered.
+        #
+        # Previewing docs is only possible on /view
+        if layout != 'view': return n, n
+        r = False
+        text = None
+        preview = self.preview
+        if preview is None:
+            # By default, preview (not-oversized) images only
+            if self.isImage:
+                r, text = self.notPreviewOversized(o, value,self.previewMaxSize)
+        elif preview:
+            # Previewing could be enabled: is the file previewable ?
+            r, text = self.isPreviewable(o, value)
+        return r, text
+
+    def getPreview(self, o, value, url, layout):
+        '''Return a preview for p_value, as an "object" tag'''
+        # Determine tag dimensions
+        width = self.getAttribute(o, 'viewWidth')
+        width = f' width="{width}"' if width else ''
+        height = self.getAttribute(o, 'viewHeight')
+        height = f' height="{height}"' if height else ''
+        # The link for downloading the file, if the preview can't be downloaded
+        text = o.translate('file_preview_ko')
+        link = self.getDownloadLink(o, value, url, layout, text, forceIcon=True)
+        mimeType = utils.mimeTypes['pdf']
+        return f'<object type="{mimeType}"{width}{height} ' \
+               f'data="{url}?disposition=inline&pdf=1">{link}</object>'
+
+    def getDownloadLink(self, o, value, url, layout, text, forceIcon=False):
+        '''Return a link for downloading p_self, as an icon when relevant'''
+        # Render the link as an icon or as text
+        if forceIcon or self.render == 'icon':
             title = value.getNameAndSize(shorten=False)
-            content = f'<img src="{iurl}" title="{title}"/>'
-            # On "view", we have place, so display "title" besides the icon
+            content = f'<span class="iconU8" title="{title}">↧</span>'
+            # On /view, we have place, so display a v_title besides the icon
             suffix = title if layout == 'view' else ''
         else:
-            # Display textual information only
+            # Display textual information only. If p_text is passed, it is a
+            # translated text explaining why no file preview could be produced.
             content = value.getNameAndSize()
             suffix = ''
         # Style the suffix
         if suffix: suffix = f'<span class="refLink">{suffix}</span>'
-        return f'<a href="{url}">{content}{suffix}</a>'
+        # Render the link
+        r = f'<a href="{url}">{content}{suffix}</a>'
+        # In front of the link, render this p_text if passed
+        if text:
+            r = f'<div class="noPreview"><div>{text}</div>{r}</div>'
+        return r
+
+    def getLinkOrPreview(self, o, layout='view', name=n):
+        '''Gets the HTML code for downloading the file as stored in field
+           named p_name on p_o, or for previewing it in the browser (depending
+           on p_self.preview).'''
+        name = name or self.name
+        value = self.getValueIf(o, name, layout)
+        # Display an empty value
+        if not value: return '' if layout == 'cell' else '-'
+        # On /edit, simply repeat the file title
+        if layout == 'edit': return value.getUploadName()
+        # Build the URL for downloading or displaying the file
+        url = f'{o.url}/{name}/download'
+        preview, text = self.mustPreview(o, value, layout)
+        # For previewable images, display them directly, in an "img" tag
+        if preview and self.isImage:
+            # Define a max width when relevant
+            viewWidth = self.getAttribute(o, 'viewWidth')
+            css = f' style="max-width:{viewWidth}"' if viewWidth else ''
+            titleI = value.getNameAndSize(shorten=False)
+            r = f'<img src="{url}" title="{titleI}"{css}/>'
+        elif preview:
+            # Return an object tag for previewing the file
+            r = self.getPreview(o, value, url, layout)
+        else:
+            r = self.getDownloadLink(o, value, url, layout, text)
+        return r
 
     def isCompleteValue(self, o, value):
         '''Always consider the value being complete, even if empty, in order to
@@ -775,6 +912,38 @@ class File(Field):
             # Delete the file on disk if it existed
             self.deleteFile(o)
 
+    def getDownloadInfo(self, o, info):
+        '''Returns the FileInfo object that represents the file to download via
+           m_download.'''
+        # In most cases, the resulting FileInfo object is p_info, being the one
+        # stored on this p_o(bject) for p_self. The result is not p_info when a
+        # PDF file is requested and p_info doesn't represent a PDF file but a
+        # file whose format can be converted to it. In that case, a temp PDF
+        # file is generated and wrapped as an outside-db-controlled-file-system
+        # FileInfo object, that is returned.
+        #
+        # The return value is a 2-tuple (FileInfo, error). If the file
+        # conversion generated an error, the first tuple element is None and the
+        # second one is an error message, as a string.
+        #
+        # Must p_info be converted to PDF ?
+        asPdf = o.req.pdf == '1' and info.mimeType != utils.mimeTypes['pdf'] \
+                and utils.mimeTypesExts.get(info.mimeType) in self.previewExts
+        if asPdf:
+            # A conversion to PDF is required: do it in the OS temp folder
+            path = info.dump(o, format='pdf')
+            if path is None:
+                r = None, CONV_PDF_E
+            else:
+                uploadName = info.uploadName or ''
+                uploadBase = uploadName.rsplit('.', 1)[0]
+                infoR = FileInfo(path, inDb=False,
+                                 uploadName=f'{uploadBase}.pdf')
+                r = infoR, None
+        else:
+            r = info, None
+        return r
+
     traverse['download'] = 'perm:read'
     def download(self, o):
         '''Triggered when a file download is requested from the ui'''
@@ -797,10 +966,21 @@ class File(Field):
                 self.downloadAction(o, info)
                 # In that case, a commit is required
                 o.H().commit = True
-            # Send the file to the browser
-            info.writeResponse(handler, str(path),
-                               disposition=self.getAttribute(o, 'disposition'),
-                               cache=self.getAttribute(o, 'cache'))
+            # Get the FileInfo object corresponding to the file to download
+            infoD, error = self.getDownloadInfo(o, info)
+            if error:
+                # Return a 404
+                Static.notFound(handler, config, detail=CONV_PDF_T)
+            else:
+                # Send the file to the client. The file disposition may be
+                # forced by a request parameter.
+                disposition = o.req.disposition or \
+                              self.getAttribute(o, 'disposition')
+                # Recompute the path to the file, if it has been converted
+                if infoD != info: path = info.getFilePath(o)
+                # Write the file content via the response object
+                infoD.writeResponse(handler, str(path), disposition=disposition,
+                                    cache=self.getAttribute(o, 'cache'))
         else:
             # Return a 404
             Static.notFound(handler, config)

@@ -24,7 +24,7 @@ def getShownSize(size, unbreakable=False):
     b = ' ' if unbreakable else ' '
     fmt = utils.formatNumber
     # Display the size in bytes if smaller than 1024 bytes
-    if size < 1024: return f'{size}{b}byte(s)'
+    if size < 1024: return f'{size}{b}byte·s'
     size /= 1024 # This is the size, in Kb
     if size < 1024: return f'{fmt(size, precision=1)}{b}Kb'
     size /= 1024 # This is the size, in Mb

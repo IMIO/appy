@@ -26,18 +26,21 @@ commercial = False
 noSwitchLayouts = asDict(('edit', 'search'))
 
 # MIME-related stuff - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 od = 'application/vnd.oasis.opendocument'
 ms = 'application/vnd.openxmlformats-officedocument'
 ms2 = 'application/vnd.ms'
 
 mimeTypes = {
-  'odt':  f'{od}.text',
-  'ods':  f'{od}.spreadsheet',
-  'doc':  'application/msword',
+  'odt' : f'{od}.text',
+  'ods' : f'{od}.spreadsheet',
+  'doc' : 'application/msword',
   'docx': f'{ms}.wordprocessingml.document',
-  'rtf':  'text/rtf',
-  'pdf':  'application/pdf',
-  'xml':  'text/xml'
+  'xls' : f'{ms2}-excel',
+  'xlsx': f'{ms}.spreadsheetml.sheet',
+  'rtf' : 'text/rtf',
+  'pdf' : 'application/pdf',
+  'xml' : 'text/xml'
 }
 
 mimeTypesExts = {

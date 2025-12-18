@@ -159,6 +159,8 @@ div.rbutton { float:right }
           border-bottom:1px dashed |itextBottomColor| }
 .nbref { text-align:center }
 .buttons { margin-left:4px }
+.noPreview { text-align:center; font-style:italic; margin-top:1em; width:100% }
+.noPreview > div { margin-bottom:1em; color:grey; font-size:90% }
 .rel { position:relative }
 .focus { margin:7px 0; padding:7px; background-color:|focusColorBg|;
          border-radius:2px 2px 2px 2px; box-shadow:0 2px 4px #A9A9A9;
@@ -220,6 +222,7 @@ div.rbutton { float:right }
 .iconXS { width:15px }
 .iconXXS { width:10px }
 .iconSEL { width:21px; cursor:pointer }
+.iconU8 { cursor:pointer; font-style:normal; padding:0 0.2em }
 .fdrop { display:inline-flex }
 .fdrop > img { width: 16px }
 .fdown { width: 100%; left:auto; right:-1em; text-align:right; margin-top:-2px }
