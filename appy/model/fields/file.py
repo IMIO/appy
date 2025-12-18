@@ -8,7 +8,6 @@ import io, os, os.path, time, shutil, base64
 
 from appy.px import Px
 from appy import utils, n
-from appy.ui.layout import Layouts
 from appy.xml.escape import Escape
 from appy.model.fields import Field
 from appy.model.utils import Object
@@ -16,6 +15,7 @@ from appy.server.static import Static
 from appy.utils import path as putils
 from appy.utils import string as sutils
 from appy.pod.converter import Converter
+from appy.ui.layout import Layouts, LayoutF
 from appy.xml.unmarshaller import UnmarshalledFile
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -460,7 +460,7 @@ class File(Field):
             return class_.bg if field.inGrid() else class_.b
 
     view = cell = buttons = Px('''
-      <x>::field.getLinkOrPreview(o, layout, name)</x>''')
+      <div class="flexc">::field.getLinkOrPreview(o, layout, name)</div>''')
 
     edit = Px('''
      <x var="fname=f'{name}_file'; rname=f'{name}_action'">
@@ -742,11 +742,17 @@ class File(Field):
         width = f' width="{width}"' if width else ''
         height = self.getAttribute(o, 'viewHeight')
         height = f' height="{height}"' if height else ''
+        mimePdf = utils.mimeTypes['pdf']
+        if value.mimeType != mimePdf:
+            # The preview is a PDF file converted from an original file. Add a
+            # link to download the original file.
+            pre = self.getDownloadLink(o, value, url, layout, None, forceIcon=True)
+        else:
+            pre = ''
         # The link for downloading the file, if the preview can't be downloaded
         text = o.translate('file_preview_ko')
         link = self.getDownloadLink(o, value, url, layout, text, forceIcon=True)
-        mimeType = utils.mimeTypes['pdf']
-        return f'<object type="{mimeType}"{width}{height} ' \
+        return f'{pre}<object type="{mimePdf}"{width}{height} ' \
                f'data="{url}?disposition=inline&pdf=1">{link}</object>'
 
     def getDownloadLink(self, o, value, url, layout, text, forceIcon=False):

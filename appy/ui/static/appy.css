@@ -159,7 +159,7 @@ div.rbutton { float:right }
           border-bottom:1px dashed |itextBottomColor| }
 .nbref { text-align:center }
 .buttons { margin-left:4px }
-.noPreview { text-align:center; font-style:italic; margin-top:1em; width:100% }
+.noPreview { text-align:center; font-style:italic; margin-top:1em }
 .noPreview > div { margin-bottom:1em; color:grey; font-size:90% }
 .rel { position:relative }
 .focus { margin:7px 0; padding:7px; background-color:|focusColorBg|;
@@ -313,6 +313,8 @@ div.rbutton { float:right }
 .flex1 { display:flex; align-items:baseline }
 .iflex1 { display:inline-flex; position:relative }
 .flexg { display:flex; gap:0.2em; align-items:center }
+.flexc { display:flex; gap:0.2em; align-items:center; flex-direction:column;
+         width:100% }
 .ghead { display:inline-flex; align-items:center; gap:0.2em }
 .ghead > :nth-child(2) { padding-left:0.7em }
 .rhead { display:inline-flex; align-items:flex-start; gap:0.4em }
