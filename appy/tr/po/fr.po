@@ -180,6 +180,10 @@ msgstr "Agrandir"
 msgid "restore"
 msgstr "Restaurer"
 
+#. Default: "Move"
+msgid "move"
+msgstr "Déplacer"
+
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"
 msgstr "Pas de résultat."

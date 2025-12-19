@@ -22,8 +22,8 @@ class Iframe:
       <div class="iIcons">
 
        <!-- Move -->
-       <span id="iframeMover" src=":svg('arrows')" class="iMove"
-             onmousedown="Iframe.dragStart(event)">👋</span>
+       <span if="not mobile" id="iframeMover" src=":svg('arrows')" class="iMove"
+             title=":_('move')" onmousedown="Iframe.dragStart(event)">👋</span>
 
        <!-- Enlarge / restore -->
        <span if="not mobile" class="clickable iMax"

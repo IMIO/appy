@@ -141,19 +141,19 @@ msgstr "Geselecteerde elementen"
 
 #. Default: "Move up"
 msgid "move_up"
-msgstr "Verplaats naar boven"
+msgstr "Naar boven verplaatsen"
 
 #. Default: "Move down"
 msgid "move_down"
-msgstr "Verplaats naar beneden"
+msgstr "Naar beneden verplaatsen"
 
 #. Default: "Move to top"
 msgid "move_top"
-msgstr "Verplaatsen naar eerste positie"
+msgstr "Naar eerste positie verplaatsen"
 
 #. Default: "Move to bottom"
 msgid "move_bottom"
-msgstr "Verplaatsen naar laatste positie"
+msgstr "Naar laatste positie verplaatsen"
 
 #. Default: "Update the hereabove number and click here to move this element to a new position."
 msgid "move_number"
@@ -178,6 +178,10 @@ msgstr "Vergroten"
 #. Default: "Restore"
 msgid "restore"
 msgstr "Herstellen"
+
+#. Default: "Move"
+msgid "move"
+msgstr "Verplaatsen"
 
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"

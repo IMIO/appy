@@ -606,6 +606,8 @@ class File(Field):
         #        | not exceed the max size for which a preview may be rendered
         #        | (see below).
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # p_preview may also hold a method that returns one of the hereabove
+        # values.
         self.preview = preview
         # For performance reasons, no preview is generated for files whose size
         # exceeds this limit, expressed in bytes.
@@ -728,7 +730,7 @@ class File(Field):
         if layout != 'view': return n, n
         r = False
         text = None
-        preview = self.preview
+        preview = self.getAttribute(o, 'preview')
         if preview is None:
             # By default, preview (not-oversized) images only
             if self.isImage:
@@ -773,7 +775,7 @@ class File(Field):
             title = value.getNameAndSize(shorten=False)
             content = f'<span class="iconU8" title="{title}">↧</span>'
             # On /view, we have place, so display a v_title besides the icon
-            suffix = title if layout == 'view' else ''
+            suffix = Px.truncateText(title, 80) if layout == 'view' else ''
         else:
             # Display textual information only. If p_text is passed, it is a
             # translated text explaining why no file preview could be produced.

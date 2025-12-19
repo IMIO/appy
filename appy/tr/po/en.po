@@ -170,15 +170,19 @@ msgstr "Shrink"
 
 #. Default: "Close"
 msgid "close"
-msgstr ""
+msgstr "Close"
 
 #. Default: "Enlarge"
 msgid "enlarge"
-msgstr ""
+msgstr "Enlarge"
 
 #. Default: "Restore"
 msgid "restore"
 msgstr "Restore"
+
+#. Default: "Move"
+msgid "move"
+msgstr "Move"
 
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"

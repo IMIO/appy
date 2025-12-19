@@ -179,6 +179,10 @@ msgstr ""
 msgid "restore"
 msgstr ""
 
+#. Default: "Move"
+msgid "move"
+msgstr ""
+
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"
 msgstr "No hay resultados."
