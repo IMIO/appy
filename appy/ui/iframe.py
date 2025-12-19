@@ -16,13 +16,14 @@ class Iframe:
 
     view = Px('''
      <div id="iframeMask"></div>
-     <div id="iframePopup" class="popup"
-          onmousedown="dragStart(event)" onmouseup="dragStop(event)"
-          onmousemove="dragIt(event)"
-          onmouseover="dragPropose(event)" onmouseout="dragStop(event)">
+     <div id="iframePopup" class="popup">
 
       <!-- Window icons -->
       <div class="iIcons">
+
+       <!-- Move -->
+       <span id="iframeMover" src=":svg('arrows')" class="iMove"
+             onmousedown="Iframe.dragStart(event)">👋</span>
 
        <!-- Enlarge / restore -->
        <span if="not mobile" class="clickable iMax"
@@ -36,13 +37,16 @@ class Iframe:
             onclick="closePopup('iframePopup',null,true)"/>
       </div>
 
-      <!-- Header icon -->
-      <img class="iconM popupI" src=":svg('arrows')"/>
+      <!-- The inner iframe -->
       <iframe id="appyIFrame" name="appyIFrame" frameborder="0"></iframe>
      </div>''',
 
      css='''
+      #iframePopup { background-color:white; border:1px |darkColor| solid }
+      #iframeMask { position:fixed; width:100%; height:100%; z-index:0;
+                    background-color:white; opacity:0; transition:opacity 0.4s }
       .iMax { font-size:136% }
+      .iMove { font-size: 116%; cursor:grab }
       .iIcons { display:flex; float:right; color:|altColor|; gap:1em }
      ''',
 
@@ -68,6 +72,10 @@ class Iframe:
          if (!mobile) this.setMask();
          // Remember the height of the first inner object tag, if any
          this.innerObjectHeight = null;
+         // Is a drag operation ongoing ?
+         this.dragOngoing = false;
+         // The mover icon
+         this.mover = document.getElementById('iframeMover');
        }
 
        // Initialises the popup position
@@ -139,18 +147,104 @@ class Iframe:
 
        // Toggle the popup appearance: enlarged <> standard dimensions
        static toggleAppearance(icon) {
-         const iframe = document.getElementById('iframePopup').appy;
-         let name;
+         const iframe = getNode('iframePopup').appy,
+               mover = getNode('iframeMover');
+         let name, display;
          if (iframe.enlarged) { // Reapply standard dimensions
            iframe.setStandard(false);
            name = 'enlarge';
+           display = 'block';
          }
          else { // Enlarge the popup
            iframe.setEnlarged();
            name = 'restore';
+           display = 'none';
          }
          iframe.setToggleIcon(icon, name);
          iframe.enlarged = !iframe.enlarged;
+         mover.style.display = display;
+       }
+
+       // Updates cursors (are we dragging or not) ?
+       setCursors(dragging) {
+         let docCursor, moverCursor;
+         if (dragging) {
+           docCursor = 'grabbing';
+           moverCursor = 'grabbing';
+         }
+         else {
+           docCursor = 'initial';
+           moverCursor = 'grab';
+         }
+         document.body.style.cursor = docCursor;
+         this.mover.style.cursor = moverCursor;
+       }
+
+       // Methods implementing drag and drop
+       static dragStart(event) {
+         // Don't do anything if the user didn't click the left button
+         if (event.button !== 0) return;
+         event.preventDefault();
+         // Get the Iframe object
+         const popup = event.target.parentNode.parentNode,
+               iframe = popup.appy,
+               rect = popup.getBoundingClientRect();
+         // Set the appropriate cursors
+         iframe.setCursors(true);
+         // Initialise the popup with absolute positioning
+         popup.style.transform = 'none';
+         popup.style.position = 'fixed';
+         popup.style.top = `${rect.top}px`;
+         popup.style.left = `${rect.left}px`;
+         // Initialise attributes related to the current drag operation
+         iframe.dragTop = rect.top;
+         iframe.dragLeft = rect.left;
+         // Remember where the user clicked
+         iframe.dragX = event.clientX;
+         iframe.dragY = event.clientY;
+         iframe.dragOngoing = true;
+         /* Add event listeners to implement the drag operation while the mouse
+            moves. */
+         const windows = [window, iframe.iframe.contentWindow];
+         for (const win of windows) {
+           win.addEventListener('mousemove', Iframe.move);
+           win.addEventListener('mouseup', Iframe.dragStop);
+         }
+       }
+
+       static move(event) {
+         const popup = getNode('iframePopup'), iframe = popup.appy;
+         if (!iframe.dragOngoing) return;
+         event.preventDefault();
+         // Get the current (x, y) coordinates
+         let x = event.clientX, y = event.clientY;
+         if (event.target.ownerDocument != popup.ownerDocument) {
+           // Within the iframe, coordinates must be converted to global ones
+           const rect = iframe.iframe.getBoundingClientRect();
+           x += rect.x;
+           y += rect.y;
+         }
+         // Compute the delta with the initial position
+         const deltaX = x - iframe.dragX,
+               deltaY = y - iframe.dragY;
+         // Move the popup
+         popup.style.top = `${iframe.dragTop + deltaY}px`;
+         popup.style.left = `${iframe.dragLeft + deltaX}px`;
+       }
+
+       static dragStop(event) {
+         // The user has released the mouse button: stop the drag
+         const iframe = getNode('iframePopup').appy;
+         // Unregister the event listeners
+         const windows = [window, iframe.iframe.contentWindow];
+         for (const win of windows) {
+           win.removeEventListener('mousemove', Iframe.move);
+           win.removeEventListener('mouseup', Iframe.dragStop);
+         }
+         // Stop the drag
+         iframe.dragOngoing = false;
+         // Reset the cursors
+         iframe.setCursors(false);
        }
      }''')
 
