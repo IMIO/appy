@@ -193,12 +193,11 @@ div.rbutton { float:right }
 .popup { display:none;  background-color:|darkColor|; padding:20px;
          position:fixed; top:50%; left:50%; z-index:100; color: |brightColor|;
          line-height: 1.3em; transform: translate(-50%,-50%) }
-.popupI { display:block; margin:-10px auto 10px auto; width:50% }
 #iframePopup { background-color:white; border:1px |darkColor| solid }
 #iframeMask { position:fixed; width:100%; height:100%; z-index:0;
               background-color:white; opacity:0; transition:opacity 0.4s }
-.iClose { position:absolute; top:15px; right:15px }
 #confirmActionPopup { max-height:500px; overflow-y:auto }
+.popupI { display:block; margin:0px auto; width:50%; cursor:move }
 .dropdown { display:none; position:absolute; top:18px; left:2px;
             border:1px solid #cccccc; background-color:white;
             padding:8px; font-weight:lighter; font-size:80%;

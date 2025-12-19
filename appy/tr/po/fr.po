@@ -168,6 +168,18 @@ msgstr "Élargir"
 msgid "shrink"
 msgstr "Rétrécir"
 
+#. Default: "Close"
+msgid "close"
+msgstr "Fermer"
+
+#. Default: "Enlarge"
+msgid "enlarge"
+msgstr "Agrandir"
+
+#. Default: "Restore"
+msgid "restore"
+msgstr "Restaurer"
+
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"
 msgstr "Pas de résultat."

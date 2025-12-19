@@ -304,7 +304,7 @@ class Template:
        <x if="config.analytics">::config.analytics.get(tool)</x>
 
        <!-- Popups -->
-       <x>::ui.Globals.getPopups(tool, svg, _, dleft, dright, popup)</x>
+       <x>::ui.Globals.getPopups(_ctx_)</x>
 
        <!-- The global ui variable -->
        <script if="not popup">var ui = new UiState();</script>

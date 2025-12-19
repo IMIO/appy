@@ -167,6 +167,18 @@ msgstr "Verbreden"
 msgid "shrink"
 msgstr "Krimpen"
 
+#. Default: "Close"
+msgid "close"
+msgstr "Sluiten"
+
+#. Default: "Enlarge"
+msgid "enlarge"
+msgstr "Vergroten"
+
+#. Default: "Restore"
+msgid "restore"
+msgstr "Herstellen"
+
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"
 msgstr "Geen resultaat."

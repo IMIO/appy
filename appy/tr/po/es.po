@@ -167,6 +167,18 @@ msgstr ""
 msgid "shrink"
 msgstr ""
 
+#. Default: "Close"
+msgid "close"
+msgstr ""
+
+#. Default: "Enlarge"
+msgid "enlarge"
+msgstr ""
+
+#. Default: "Restore"
+msgid "restore"
+msgstr ""
+
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"
 msgstr "No hay resultados."

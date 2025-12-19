@@ -1488,13 +1488,6 @@ function toggleCookie(cookieId,display,defaultValue,expandIcon,collapseIcon) {
   }
 }
 
-// Set the mask preventing clicking behind the iframe
-function setMask() {
-  let mask = document.getElementById('iframeMask');
-  mask.style.opacity = 0.7;
-  mask.style.zIndex = 99;
-}
-
 // Functions for opening and closing a popup
 function openPopup(popupId, msg, width, height, css, back, commentLabel) {
   // Put the message into the popup
@@ -1525,24 +1518,10 @@ function openPopup(popupId, msg, width, height, css, back, commentLabel) {
   // Set popup width and height, expressed in pixels
   if (w) popup.style.width = `${w}px`;
   if (h) popup.style.height = `${h}px`;
-  if (frame) {
-    // Set the enclosed iframe dimensions and show the mask
-    const iframe = document.getElementById('appyIFrame');
-    iframe.style.width = `${w-20}px`;
-    iframe.style.height = `${h-20}px`;
-    if (!mobile) {
-      // (Re)position the popup at the center of the screen
-      if (popup.style.top) {
-        popup.style.top = `${(Math.abs(winH-h)/2.5).toFixed()}px` }
-      if (popup.style.left) {
-        popup.style.left = `${(Math.abs(winW-w)/2.5).toFixed()}px` }
-      // Enable the mask
-      setMask();
-    }
-    popup.backHook = back;
-  }
+  // A custom object, stored on the v_popup, will manage iframe specificities
+  if (frame) new Iframe(popup, w, h, mobile, back);
   // Apply the CSS class to the popup
-  popup.className = (css)? 'popup ' + css: 'popup';
+  popup.className = (css)? `popup ${css}`: 'popup';
   // Show the popup
   popup.style.display = 'block';
 }

@@ -74,19 +74,18 @@ class Globals:
      </div>%s'''
 
     @classmethod
-    def getPopups(class_, tool, svg, _, dleft, dright, popup):
+    def getPopups(class_, c):
         '''Returns the popups to include in every page'''
         # The "iframe" popup must not be included if we are already in a popup
-        if popup:
-            iframe = ''
-        else:
-            iframe = Iframe.view % (svg('close'), svg('arrows'))
+        iframe = '' if c.popup else Iframe.view(c)
         # Define variables, per popup
+        _ = c._
+        svg = c.svg
         vars = (
          # Global Javascript variables
-         class_.getVariables(tool),
+         class_.getVariables(c.tool),
          # confirmActionPopup
-         svg('arrows'), dleft,
+         svg('arrows'), c.dleft,
          # uploadPopup
          _('object_save'), _('object_cancel'),
          # alertPopup

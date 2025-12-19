@@ -567,12 +567,15 @@ class File(Field):
         # preview. For an image, it will be used on /view and /cell. For a non-
         # image file, it will be used on /view. For an image, it can represent a
         # width being smaller than the actual image width. For a non-image file,
-        # this width is the PDF viewer's width. p_viewWidth must hold a string
-        # (ie, '700px') or a method returning such a string.
+        # this width is the PDF viewer's width. p_viewWidth must store a string
+        # (ie, '700px', '100%', '100vw') or a method that returns such a string.
         self.viewWidth = viewWidth
         # Similarly, the following attribute allows to define a height for a
         # file preview. It is ignored for an image, for which the aspect ratio
         # is respected: its height is automatically computed based on its width.
+        # For a non-file image, it must be a string or a method returning it.
+        # Using the viewport height unit (vh) is in general the best solution,
+        # ie, "80vh".
         self.viewHeight = viewHeight
         # The name of the file, in the object folder, will contain a digest
         # produced with the algo as defined in p_hash. This allows to avoid name
@@ -738,21 +741,29 @@ class File(Field):
     def getPreview(self, o, value, url, layout):
         '''Return a preview for p_value, as an "object" tag'''
         # Determine tag dimensions
+        dimensions = []
         width = self.getAttribute(o, 'viewWidth')
-        width = f' width="{width}"' if width else ''
+        if width: dimensions.append(f'width:{width}')
         height = self.getAttribute(o, 'viewHeight')
-        height = f' height="{height}"' if height else ''
+        if height: dimensions.append(f'height:{height}')
+        if dimensions:
+            dimensions = ';'.join(dimensions)
+            style = f' style="{dimensions}"'
+        else:
+            style = ''
         mimePdf = utils.mimeTypes['pdf']
         if value.mimeType != mimePdf:
             # The preview is a PDF file converted from an original file. Add a
             # link to download the original file.
-            pre = self.getDownloadLink(o, value, url, layout, None, forceIcon=True)
+            pre = self.getDownloadLink(o, value, url, layout, None,
+                                       forceIcon=True)
         else:
             pre = ''
         # The link for downloading the file, if the preview can't be downloaded
         text = o.translate('file_preview_ko')
         link = self.getDownloadLink(o, value, url, layout, text, forceIcon=True)
-        return f'{pre}<object type="{mimePdf}"{width}{height} ' \
+        # Build and return the complete object tag
+        return f'{pre}<object type="{mimePdf}"{style} ' \
                f'data="{url}?disposition=inline&pdf=1">{link}</object>'
 
     def getDownloadLink(self, o, value, url, layout, text, forceIcon=False):

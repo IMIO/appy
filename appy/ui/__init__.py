@@ -257,6 +257,7 @@ class Config:
         # Alternate text color, also used for button borders and other discreet
         # places.
         self.altColor = self.svg.showyColor
+        self.flashyColor = self.svg.flashyColor
         # Variant being lighter
         self.altColorLight = '#e9f2f3'
         # Color for some selected text
