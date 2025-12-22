@@ -187,40 +187,12 @@ class Worldline(Field):
         f = Layouts(view=LayoutF('f=', direction='column'))
         defaults = {'normal': f, 'grid': f}
 
-    def show(self, o):
-        '''Show the payment widget only if initialisation data has been stored
-           on the corresponding object.'''
-        if self.H().isAjax(): return
-        # Normally, this method is supposed to belong to the object, not to the
-        # field. Consequently, p_self is the object and p_o is the field.
-        data = getattr(self, o.name, None)
-        # p_data can also store the final payment response. Show the payment
-        # widget only if v_data corresponds to initialisation data.
-        if data and data.hostedTokenizationId:
-            return 'view'
-
-    def isOngoing(self, o):
-        '''Returns True if the payment is ongoing = the iframe is currently
-           shown.'''
-        show = self.show
-        if not show:
-            r = False
-        elif not callable(show):
-            r = bool(show)
-        else:
-            r = bool(self.show(o, self))
-        return r
-
-    def isRenderableOn(self, layout):
-        '''This field may only be rendered on "view"'''
-        return layout == 'view'
-
-    def __init__(self, show=show, renderable=n, page='main', group=n, layouts=n,
-      move=0, readPermission='read', writePermission='write', width=n, height=n,
-      colspan=1, master=n, masterValue=n, masterSnub=n, focus=False, mapping=n,
-      generateLabel=n, label=n, view=n, cell=n, buttons=n, edit=n, custom=n,
-      xml=n, translations=n, amount=None, onSuccess=None, onFailure=None,
-      credentials=None, variant=None):
+    def __init__(self, show=False, renderable=n, page='main', group=n,
+      layouts=n, move=0, readPermission='read', writePermission='write',
+      width=n, height=n, colspan=1, master=n, masterValue=n, masterSnub=n,
+      focus=False, mapping=n, generateLabel=n, label=n, view=n, cell=n,
+      buttons=n, edit=n, custom=n, xml=n, translations=n, amount=None,
+      onSuccess=None, onFailure=None, credentials=None, variant=None):
 
         # p_amount must hold a method accepting no arg and returning the amount
         # to pay, as a tuple (f_amount, s_currencyCode). Supported currency
@@ -266,6 +238,12 @@ class Worldline(Field):
           width, height, n, colspan, master, masterValue, masterSnub, focus,
           False, mapping, generateLabel, label, n, n, n, n, False, False, view,
           cell, buttons, edit, custom, xml, translations)
+
+        # Concrete class init complement
+        self.concreteInit()
+
+    def concreteInit(self):
+        '''To be overridden by child classes when appropriate'''
 
     def checkCallable(self, name):
         '''Ensure the attribute having this p_name is there and is callable'''
@@ -641,6 +619,37 @@ class Tokenization(Worldline):
          });
        }''')
 
+    def showIt(self, o, field):
+        '''Show the payment widget only if initialisation data has been stored
+           on the corresponding object.'''
+        if o.H().isAjax(): return
+        data = getattr(o, self.name, None)
+        # p_data can also store the final payment response. Show the payment
+        # widget only if v_data corresponds to initialisation data.
+        if data and data.hostedTokenizationId:
+            return 'view'
+
+    def concreteInit(self):
+        '''Tokenization-specific init steps'''
+        # Showing this field consists in showing the Worldline iframe
+        self.show = self.showIt
+
+    def isOngoing(self, o):
+        '''Returns True if the payment is ongoing = the iframe is currently
+           shown.'''
+        show = self.show
+        if not show:
+            r = False
+        elif not callable(show):
+            r = bool(show)
+        else:
+            r = bool(self.show(o, self))
+        return r
+
+    def isRenderableOn(self, layout):
+        '''This field may only be rendered on "view"'''
+        return layout == 'view'
+
     def getAbortJs(self, o, code, fromInit=False):
         '''Return the JS code to call to abort a payment (with a specific reason
            p_code) via a HTTP POST request.'''
@@ -810,6 +819,15 @@ class Checkout(Worldline):
 
     # Some elements will be traversable
     traverse = Field.traverse.copy()
+
+    def isRenderableOn(self, layout):
+        '''This field is never renderable'''
+        return
+
+    def isOngoing(self, o):
+        '''The payment is ongoing as soon as a Worldline response is stored on
+           p_o.'''
+        return not o.isEmpty(self.name)
 
     def initialise(self, o):
         '''Call endpoint "hostedcheckouts", to retrieve the URL of the page

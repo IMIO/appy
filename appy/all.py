@@ -5,14 +5,11 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n' # For f-strings
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
-from appy.utils import No
 from appy.ui.columns import Col
 from appy.ui.colset import ColSet
 from appy.model.workflow import *
+from appy.utils import No, bn, br
 from appy.xml.escape import Escape
 from appy.ui.sidebar import Sidebar
 from appy.model.fields.pod import Pod

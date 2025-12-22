@@ -16,9 +16,11 @@ def asDict(seq):
 
 # Global variables - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-listTypes = (list, PersistentList)
-sequenceTypes = listTypes + (tuple,)
+bn = '\n' # For f-strings
+br = '<br/>'
 commercial = False
+listTypes = list, PersistentList
+sequenceTypes = listTypes + (tuple,)
 
 # On these layouts, using a gobal selector and switching from one option to the
 # other is not allowed: it would reload the entire page. Examples are: the
