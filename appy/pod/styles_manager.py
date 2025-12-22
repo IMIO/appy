@@ -61,7 +61,9 @@ class TableProperties(Properties):
     '''In a styles mapping, the value @key "table" must be an instance of this
        class.'''
 
-    defaultMargins = (0.3, 0.0, 0.3, 0.0)
+    # Default margins
+    defaultMargins = 0.3, 0.0, 0.3, 0.0
+
     columnModifiersPrefixes = {'optimize': 'OCW', 'distribute': 'DC'}
 
     # Predefined width of 100%

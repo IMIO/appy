@@ -67,6 +67,7 @@
 </style:style>
 <style:style style:name="podCellContent" style:display-name="Table cell" style:family="paragraph" style:parent-style-name="Standard" style:class="extra">
  <style:paragraph-properties fo:margin-top="0cm" fo:margin-bottom="0cm" text:number-lines="false" text:line-number="0"/>
+ <style:text-properties fo:font-size="8pt" style:font-size-asian="8pt" style:font-size-complex="8pt"/>
 </style:style>
 <style:style style:name="podHeaderCellContent" style:display-name="Table heading" style:family="paragraph" style:parent-style-name="podCellContent" style:class="extra">
  <style:text-properties fo:font-weight="bold" style:font-weight-asian="bold" style:font-weight-complex="bold"/>
