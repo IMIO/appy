@@ -14,12 +14,19 @@ from appy.ui.includer import Includer
 class Iframe:
     '''Represents the unique Appy iframe popup'''
 
+    # Hook for adding custom icons to the range of icons defined in the
+    # top-right corner of the iframe.
+    pxIcons = None
+
     view = Px('''
      <div id="iframeMask"></div>
      <div id="iframePopup" class="popup">
 
       <!-- Window icons -->
       <div class="iIcons">
+
+       <!-- Hook for custom icons -->
+       <x>:ui.Iframe.pxIcons</x>
 
        <!-- Move -->
        <span if="not mobile" id="iframeMover" src=":svg('arrows')" class="iMove"
