@@ -325,7 +325,7 @@ def getStringFrom(o, stringify=True, c="'"):
        HTTP and manipulated in Javascript.'''
     # If p_stringify is True, non-string literals (None, integers, floats...)
     # are surrounded by this p_c(har). String literals are always surrounded by
-    # p_c(hars).
+    # p_c(hars), excepted if the string starts with char '~'.
     if isinstance(o, dict):
         r = []
         for k, v in o.items():
@@ -343,9 +343,13 @@ def getStringFrom(o, stringify=True, c="'"):
         isDate = not isString and o.__class__.__name__ == 'DateTime'
         r = o if isString else str(o)
         # Manage the special case of dates
-        if isDate and not stringify: r = f"DateTime('{r}')"
-        # Surround the value by quotes when appropriate
-        if isString or stringify:
+        if isDate and not stringify:
+            r = f"DateTime('{r}')"
+        # Manage the special case of a string that must not be quoted
+        elif isString and r.startswith('~'):
+            r = r[1:]
+        # Surround the value with quotes when appropriate
+        elif isString or stringify:
             r = r.replace(c, f'\\{c}')
             r = f'{c}{r}{c}'
     return r

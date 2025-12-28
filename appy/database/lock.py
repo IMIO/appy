@@ -188,7 +188,7 @@ class Lock:
     # Shows icons instead of the "edit" icon/button when a lock is defined
     px = Px('''
      <a if="editable and locked">
-      <img class=":'help ' + lockStyle"
+      <img class=":f'help {lockStyle}'"
        var="unlock=o.Lock.unlockableBy(o, user);
             lockDate=tool.Date.format(tool, locked[1]);
             lockMap={'user':user.getTitleFromLogin(locked[0]),'date':lockDate};
