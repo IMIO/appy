@@ -445,6 +445,9 @@ class Field:
                                                   q('view'), q(bp))"/>
      </div>''')
 
+    # Displays a vertical space
+    pxSpace = Px(lambda c: '<div> </div>')
+
     # Widgets for filtering objects (based on text) on search results
     pxFilterText = Px('''
      <div var="name=field.name;

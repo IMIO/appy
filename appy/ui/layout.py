@@ -130,6 +130,7 @@ class Layout:
     #                     (if relevant; typically only used on "edit" layouts)
     #  f - "field"        The field value, or input for entering a value.
     #  c - "changes"      The button for displaying changes to a field
+    #  s - "space"        A vertical, white space
     #  x - The unknown    A custom PX one may define on the field, in the
     #                     attribute named "custom".
 
@@ -140,7 +141,7 @@ class Layout:
       'e': 'pxHeader', 'w': 'pxFields', 'b': 'pxControls', 'p': 'pxPreamble',
       # Field-related elements
       'l': 'pxLabel', 'd': 'pxDescription', 'h': 'pxHelp', 'v': 'pxValidation',
-      'r': 'pxRequired', 'c': 'pxChanges', 'x': 'custom'
+      'r': 'pxRequired', 'c': 'pxChanges', 'x': 'custom', 's': 'pxSpace'
     }
 
     # Symbols to use within a layout string  - - - - - - - - - - - - - - - - - -

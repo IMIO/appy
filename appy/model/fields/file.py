@@ -515,7 +515,7 @@ class File(Field):
       icon='paperclip', disposition='attachment', nameStorer=n, cache=False,
       resize=False, thumbnail=n, preview=n, previewMaxSize=1048576*10, # 10Mb
       previewConvertMaxSize=1048576, previewFormats=previewExts, viewWidth=n,
-      viewHeight=n, hash='md5'):
+      viewHeight=n, hash='md5', noValueLabel='no_value'):
         # This boolean is True if the file is an image
         self.isImage = isImage
         # "downloadAction" can be a method called every time the file is
@@ -623,6 +623,11 @@ class File(Field):
         # to disable some formats, or None to disable all formats, leaving PDF
         # as the sole previewable file type.
         self.previewFormats = previewFormats
+        # On /view, if there is no file in the field, a dash is rendered, being
+        # the translation, in all languages, of the default label that exists
+        # for that purpose ("no_value"). If you prefer a customized message, set
+        # an alternate i18n label here.
+        self.noValueLabel = noValueLabel
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, False, True, n, n, False, n,
@@ -797,7 +802,8 @@ class File(Field):
         name = name or self.name
         value = self.getValueIf(o, name, layout)
         # Display an empty value
-        if not value: return '' if layout == 'cell' else '-'
+        if not value:
+            return '' if layout == 'cell' else o.translate(self.noValueLabel)
         # On /edit, simply repeat the file title
         if layout == 'edit': return value.getUploadName()
         # Build the URL for downloading or displaying the file
