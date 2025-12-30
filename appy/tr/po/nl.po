@@ -2043,6 +2043,14 @@ msgstr "Bij het bekijken van zoekresultaten gebeurt het weergeven of wijzigen va
 msgid "wrong_via_popup"
 msgstr "Toegestane waarden zijn: <ul><li>“False”, </li><li>de breedte en hoogte van een pop-up, in die volgorde, gescheiden door een spatie en uitgedrukt in pixels, zoals in “400px 300px” ,</li><li>of alleen de breedte van de pop-up, zoals in “400px”.</li></ul>"
 
+#. Default: "Resizable popup?"
+msgid "Query_popupResizable"
+msgstr "Aanpasbare pop-up?"
+
+#. Default: "If a search result, once opened, is shown in a popup, must this latter be resizable ?"
+msgid "Query_popupResizable_descr"
+msgstr "Als een zoekresultaat, eenmaal geopend, in een pop-upvenster verschijnt, moet dat pop-up dan in grootte aanpasbaar zijn?"
+
 #. Default: "Target page layout on « view »"
 msgid "Query_pageLayoutOnView"
 msgstr "Pagina doel “view” layout"

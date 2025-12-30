@@ -52,7 +52,7 @@ class Search:
                  pageLayoutOnView=None, thumbnailCss='thumbnail',
                  gridFiltersAlign='center', totalRows=None,
                  noResultLabel='query_no_result', **fields):
-        # "name" is mandatory, excepted in some special cases (ie, when used as
+        # p_name is mandatory, excepted in some special cases (ie, when used as
         # "select" param for a Ref field).
         self.name = name
         # Searches may be visually grouped in the portlet
@@ -67,8 +67,8 @@ class Search:
         # on main link.
         self.default = default
         self.colspan = colspan
-        # Attribute "viaPopup" has the same semantics as its homonym attribute
-        # on class appy.model.fields.Ref.
+        # p_viaPopup has the same semantics as its homonym attribute on class
+        # appy.model.fields.Ref.
         self.viaPopup = viaPopup
         # If a translated name or description is already given here, we will
         # use it instead of trying to translate from labels.
@@ -76,8 +76,8 @@ class Search:
         self.translatedDescr = translatedDescr
         # Condition for showing or not this search
         self.show = show
-        # Attributes "showActions" and "actionsDisplay" are similar to their
-        # homonyms on the Ref class.
+        # p_showActions and p_actionsDisplay are similar to their homonyms on
+        # the Ref class.
         self.showActions = showActions
         self.actionsDisplay = actionsDisplay
         # Various parts of search results may be shown or not
@@ -172,10 +172,10 @@ class Search:
         name = name or self.name
         return f'{self.container.name}_{name}'
 
-    mergeAttributes = ('sortBy', 'sortOrder', 'showActions', 'actionsDisplay',
-                       'actions', 'maxPerPage', 'resultModes', 'shownInfo',
-                       'checkboxes', 'checkboxesDefault', 'gridFiltersAlign',
-                       'totalRows')
+    mergeAttributes = 'sortBy', 'sortOrder', 'showActions', 'actionsDisplay', \
+                      'actions', 'maxPerPage', 'resultModes', 'shownInfo', \
+                      'checkboxes', 'checkboxesDefault', 'gridFiltersAlign', \
+                      'totalRows'
 
     def merge(self, other):
         '''Merge parameters from another search in p_other'''
@@ -805,12 +805,12 @@ class Search:
 
        // Manage an p_event triggered from the LS input field
        function onLiveSearchEvent(event, pre, class_, action) {
-         let dropdown = document.getElementById(pre + '_LSDropdown');
+         let dropdown = document.getElementById(`${pre}_LSDropdown`);
          if (lsTimeout) clearTimeout(lsTimeout);
          // Hide the dropdown if action is forced to 'hide'
          if (action == 'hide') { hideLSDropdown(dropdown, true); return; }
          // Detect if the dropdown must be shown or hidden
-         let input = document.getElementById(pre + '_LSinput'),
+         let input = document.getElementById(`${pre}_LSinput`),
              keywords = cleanKeywords(input.value || '');
          if (keywords.length > 2) {
            let eventType = detectEventType(event);
@@ -821,8 +821,8 @@ class Search:
              // Trigger an Ajax search and refresh the dropdown content
              let params = getLSParams(pre, class_);
              lsTimeout = setTimeout(function() {
-               askAjaxChunk(siteUrl + '/tool/Search/liveResults', 'POST',
-                            params, pre + '_LSResults');
+               askAjaxChunk(`${siteUrl}/tool/Search/liveResults`, 'POST',
+                            params, `${pre}_LSResults`);
                dropdown.style.display = 'block';}, 400);
              }
            else { // Move up or down within results
@@ -840,8 +840,8 @@ class Search:
 
        // Add the selected object to the initiator Ref field
        function addLSResult(oid, ifield, id, multi) {
-         let hook = oid + '_' + ifield,
-             url = siteUrl + '/' + oid;
+         const hook = `${oid}_${ifield}`,
+               url = `${siteUrl}/${oid}`;
          if (multi) {
            // Also get the already selected objects in ifield
            let sel = document.getElementById(ifield),

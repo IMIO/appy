@@ -2043,6 +2043,14 @@ msgstr ""
 msgid "wrong_via_popup"
 msgstr ""
 
+#. Default: "Resizable popup?"
+msgid "Query_popupResizable"
+msgstr ""
+
+#. Default: "If a search result, once opened, is shown in a popup, must this latter be resizable ?"
+msgid "Query_popupResizable_descr"
+msgstr ""
+
 #. Default: "Target page layout on « view »"
 msgid "Query_pageLayoutOnView"
 msgstr ""

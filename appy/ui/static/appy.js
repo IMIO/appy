@@ -1489,7 +1489,8 @@ function toggleCookie(cookieId,display,defaultValue,expandIcon,collapseIcon) {
 }
 
 // Functions for opening and closing a popup
-function openPopup(popupId, msg, width, height, css, back, commentLabel) {
+function openPopup(popupId, msg, width, height, resizable, css, back,
+                   commentLabel) {
   // Put the message into the popup
   if (msg) {
     let msgHook = (popupId == 'alertPopup')? 'appyAlertText': 'appyConfirmText',
@@ -1519,7 +1520,7 @@ function openPopup(popupId, msg, width, height, css, back, commentLabel) {
   if (w) popup.style.width = `${w}px`;
   if (h) popup.style.height = `${h}px`;
   // A custom object, stored on the v_popup, will manage iframe specificities
-  if (frame) new Iframe(popup, w, h, mobile, back);
+  if (frame) new Iframe(popup, w, h, resizable, mobile, back);
   // Apply the CSS class to the popup
   popup.className = (css)? `popup ${css}`: 'popup';
   // Show the popup
@@ -1606,7 +1607,8 @@ function askConfirm(actionType, action, msg, showComment, popupWidth,
   // Change the texts for buttons "Yes" and "No", when requested
   confirmForm.yesBtn.value = yesText || yes;
   confirmForm.noBtn.value = noText || no;
-  openPopup('confirmActionPopup', msg, popupWidth, null,null,null,commentLabel);
+  openPopup('confirmActionPopup', msg, popupWidth, null, null, null, null,
+            commentLabel);
 }
 
 // Get the comment possibly entered by the user on the confirm popup

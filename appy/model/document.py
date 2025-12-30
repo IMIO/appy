@@ -2,7 +2,9 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 from appy.model.base import Base
+from appy.ui.iframe import Iframe
 from appy.model.fields import Show
 from appy.ui.layout import Layouts
 from appy.xml.escape import Escape
@@ -24,7 +26,7 @@ class Document(Base):
 
     # Documents are not indexed by default
     indexable = False
-    popup = '500px', '500px'
+    popup = Iframe('500px', '500px')
     listColumns = 'thumb*60px|', 'title'
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

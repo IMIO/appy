@@ -410,6 +410,13 @@ class Config:
         self.sbPadding = '28px 8px 30px 0px'
         self.sbMargin = '0 0 0 8px'
 
+        # The iframe popup (ip)
+        self.ipBorder = f'1px {self.darkColor} solid'
+        self.ipiPadding = '' # Top *i*cons : padding
+        self.ipfBorderTop = '0' # Border top for the iframe tag = separation
+                                # between the top icons and the iframe content.
+        self.ipfHeight = '100%' # 100% may be too high in some cases
+
         # Advanced search link
         self.asMargin = '3px 0 10px 30px' # For link "*a*dvanced *s*earch"
         self.asFSize = '90%'
@@ -822,22 +829,30 @@ class LinkTarget:
 
     def __init__(self, class_=None, back=None, popup=None, forcePopup=False):
         '''The HTML "a" tag must lead to a page for viewing or editing an
-           instance of some p_class_. If this page must be opened in a popup
-           (depends on p_popup, if not None, or attribute p_class_.popup else),
-           and if p_back is specified, when coming back from the popup, we will
-           ajax-refresh a DOM node whose ID is specified in p_back.'''
+           instance of some p_class_.'''
+        # If this page must be opened in a popup (depends on p_popup) and if
+        # p_back is specified, when coming back from the popup, we will
+        # ajax-refresh a DOM node whose ID is specified in p_back.
+        #
+        # p_popup, when passed, is a "popup specifier" coming from a "viaPopup"
+        # attribute from a Ref or Search. If None, attribute p_class_.popup
+        # determines if the link leads to the iframe popup or not, unless
+        # p_forcePopup is True, forcing the popup use.
+        #
         # The link leads to a page related to an instance of some Python
         # p_class_ (the true Python class, not the metaclass).
         self.class_ = class_
         # Does the link lead to a popup ?
         if popup or forcePopup:
-            # p_popup may be a "popup specifier" coming from a "viaPopup"
-            # attribute defined on a Ref or Search.
+            # Dig into the popup
             toPopup = True
         elif popup is False:
+            # Force not using the popup
             toPopup = False
         else:
+            # Popup use is determined by the "popup" class attribute
             toPopup = class_ and hasattr(class_, 'popup')
+            if toPopup: popup = class_.popup
         # Determine the target of the "a" tag
         self.target = 'appyIFrame' if toPopup else '_self'
         # If p_self does not open a popup, a companion target could be defined
@@ -849,24 +864,18 @@ class LinkTarget:
         # anti-multi-click JS code.
         self.onClick = self.onClickIsDefault = None
         if toPopup:
-            # Create the chunk of JS code to open the popup
-            size = popup or getattr(class_, 'popup', '350px')
-            click = 'onClick'
-            if isinstance(size, str):
-                params = f'{size[:-2]},null' # Width only
+            # Beware: p_popup may be of the form (False, Iframe)
+            if isinstance(popup, tuple):
+                # We were wrong: finally, the current target isn't a popup
+                self.setDefaultOnClick()
+                self.target = '_self'
+                # Opening a popup will be for a future, other link target
+                click = 'otherClick'
             else:
-                # A 2- or 3-tuple
-                params = f'{size[-2][:-2]},{size[-1][:-2]}'
-                if len(size) == 3:
-                    # We were wrong: finally, the current target isn't a popup
-                    self.setDefaultOnClick()
-                    self.target = '_self'
-                    # Opening a popup will be for a future, other link target
-                    click = 'otherClick'
-            # If p_back is specified, included it in the JS call
-            if back:
-                params = f"{params},null,'{back}'"
-            setattr(self, click, f"openPopup('iframePopup',null,{params})")
+                click = 'onClick'
+            # Get the JS code for opening the link in the popup
+            jsOpen = Iframe.get(popup).getJsOpen(back)
+            setattr(self, click, jsOpen)
         else:
             # Add a protection against double-clicks
             self.setDefaultOnClick()
@@ -878,7 +887,7 @@ class LinkTarget:
 
     def getOnClick(self, back, o=None, onClick=None):
         '''Gets the "onClick" attribute, taking into account p_back DOM node ID
-           that was unknown at the time the LinkTarget instance was created.'''
+           that was unknown at the time the LinkTarget object was created.'''
         # If p_onClick is passed, force this code to execute instead of the
         # default code.
         if onClick: return onClick
@@ -893,7 +902,11 @@ class LinkTarget:
             css = f"'{css}'" if css else 'null'
         else:
             css = 'null'
-        return f"{r[:-1]},{css},'{back}')"
+        # Put, in v_r, the fixed v_css and p_back parameters
+        parts = r.rsplit(',', 2)
+        parts[-2] = css
+        parts[-1] = f"'{back}')"
+        return ','.join(parts)
 
     def get(self, popup, toPopup):
         '''Returns p_self.target, excepted if we are in the popup and we must

@@ -6,6 +6,7 @@ import re
 from persistent.mapping import PersistentMapping
 
 from appy.model.base import Base
+from appy.ui.iframe import Iframe
 from appy.ui.layout import Layouts
 from appy.model.utils import Object as O
 from appy.model.fields.string import String
@@ -34,7 +35,7 @@ class Mover(Base):
 
     creators = True # Open instance creation
     indexable = False
-    popup = ('500px', '400px')
+    popup = Iframe('500px', '400px')
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                            Main parameters

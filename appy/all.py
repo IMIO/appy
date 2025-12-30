@@ -8,6 +8,7 @@
 from appy.px import Px
 from appy.ui.columns import Col
 from appy.ui.colset import ColSet
+from appy.ui.iframe import Iframe
 from appy.model.workflow import *
 from appy.utils import No, bn, br
 from appy.xml.escape import Escape

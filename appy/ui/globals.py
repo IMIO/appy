@@ -14,8 +14,8 @@ class Globals:
     '''Global elements to inject in most or all pages'''
 
     # Translated messages computed in Javascript variables in most pages
-    variables = ('no_elem_selected', 'action_confirm', 'save_confirm',
-                 'warn_leave_form', 'workflow_comment', 'yes', 'no')
+    variables = 'no_elem_selected', 'action_confirm', 'save_confirm', \
+                'warn_leave_form', 'workflow_comment', 'yes', 'no'
 
     @classmethod
     def getVariables(class_, tool):
@@ -122,5 +122,5 @@ class Globals:
     @classmethod
     def getScripts(class_, tool, q, layout):
         '''Get the scripts that must be run on most pages'''
-        return '<script>initSlaves(%s,%s)</script>' % (q(tool.url), q(layout))
+        return f'<script>initSlaves("{tool.url}",`{layout}`)</script>'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

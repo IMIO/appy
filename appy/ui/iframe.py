@@ -14,6 +14,65 @@ from appy.ui.includer import Includer
 class Iframe:
     '''Represents the unique Appy iframe popup'''
 
+    # In static attribute AppyClass.popup, or in attributes like Ref.viaPopup or
+    # Search.viaPopup, an instance of this Iframe class may be placed, in order
+    # to customize the rendering of the iframe popup into which objects will be
+    # shown.
+
+    # A default Iframe instance, initialized below
+    default = None
+
+    def __init__(self, width, height=None, resizable=True):
+        # The popup width, that must be defined as a number of pixels, ie
+        # "600px". It can also be a negative number, ie "-100px". In that case,
+        # it represents a margin w.r.t the windows' inner dimension.
+        self.width = width
+        # While p_width is mandatory, p_height, that must be expressed with the
+        # same syntax as p_width, is not. If unspecified, the popup's height
+        # will take as much space as possible, leaving a minimal bottom margin
+        # w.r.t the container window.
+        self.height = height
+        # If the popup is p_resizable, which is the default value, an icon will
+        # be rendered, allowing to enlarge (full screen) or restore the standard
+        # popup dimensions. Currently, it is not possible to resize the popup by
+        # dragging its borders.
+        self.resizable = resizable
+
+    def __repr__(self):
+        '''p_self as a short string'''
+        return f'‹Iframe w={self.width},h={self.height},' \
+               f'resizable={self.resizable}›'
+
+    @classmethod
+    def get(class_, specifier=None):
+        '''Returns a true Iframe object corresponding to this p_specifier, that
+           may already be an Iframe object, a tuple or a boolean value.'''
+        if isinstance(specifier, tuple):
+            r = specifier[1]
+        elif isinstance(specifier, class_):
+            r = specifier
+        else:
+            # Get the default Iframe
+            r = class_.default
+        return r
+
+    def getJsOpen(self, css=None, back=None):
+        '''Return the JS code allowing to open the target object in the
+           iframe.'''
+        # Get the width and height, abandoning the "px" suffix
+        width = self.width[:-2]
+        height = self.height[:-2] if self.height else 'null'
+        # Is the popup resizable ?
+        resizable = 'true' if self.resizable else 'false'
+        # Get possible CSS class to use
+        css = f"'{css}'" if css else 'null'
+        # Get a possible hook to use for coming back once the popup is closed
+        back = f"'{back}'" if back else 'null'
+        # Build parameters
+        params = f'{width},{height},{resizable},{css},{back}'
+        # Return the complete JS call
+        return f"openPopup('iframePopup',null,{params})"
+
     # Hook for adding custom icons to the range of icons defined in the
     # top-right corner of the iframe.
     pxIcons = None
@@ -33,15 +92,15 @@ class Iframe:
              title=":_('move')" onmousedown="Iframe.dragStart(event)">👋</span>
 
        <!-- Enlarge / restore -->
-       <span if="not mobile" class="clickable iMax"
+       <span if="not mobile" class="clickable iMax" id="iframeER"
              onclick="Iframe.toggleAppearance(this)"
              data-enlarge=":_('enlarge')" data-restore=":_('restore')"
              data-esymbol="◳" data-rsymbol="□"
              title=":_('enlarge')">◳</span>
 
        <!-- Close -->
-       <img src=":svg('close')" class="clickable iconXS" title=":_('close')"
-            onclick="closePopup('iframePopup',null,true)"/>
+       <img src=":svg('close')" class="clickable iconSEL" title=":_('close')"
+            onclick="Iframe.close(this)"/>
       </div>
 
       <!-- The inner iframe -->
@@ -49,17 +108,19 @@ class Iframe:
      </div>''',
 
      css='''
-      #iframePopup { background-color:white; border:1px |darkColor| solid }
+      iframe { border-top:|ipfBorderTop|; width:100%; height:|ipfHeight| }
+      #iframePopup { background-color:white; border:|ipBorder| }
       #iframeMask { position:fixed; width:100%; height:100%; z-index:0;
                     background-color:white; opacity:0; transition:opacity 0.4s }
       .iMax { font-size:136% }
       .iMove { font-size: 116%; cursor:grab }
-      .iIcons { display:flex; float:right; color:|altColor|; gap:1em }
+      .iIcons { display:flex; float:right; color:|altColor|; gap:1em;
+                align-items:center; padding: |ipiPadding| }
      ''',
 
      js='''class Iframe {
 
-       constructor(popup, w, h, mobile, back) {
+       constructor(popup, w, h, resizable, mobile, back) {
          // Interconnect the DOM p_popup and the object under construction
          this.popup = popup;
          popup.appy = this;
@@ -81,8 +142,11 @@ class Iframe:
          this.innerObjectHeight = null;
          // Is a drag operation ongoing ?
          this.dragOngoing = false;
-         // The mover icon
+         // The mover and er (*e*nlarge/*r*estore) icons
          this.mover = document.getElementById('iframeMover');
+         this.er = document.getElementById('iframeER');
+         debugger;
+         this.er.style.display = (resizable)? 'block': 'none';
        }
 
        // Initialises the popup position
@@ -98,12 +162,15 @@ class Iframe:
            this.top = popup.style.top = '50%';
            this.left = popup.style.left = '50%';
            this.transform = popup.style.transform = 'translate(-50%,-50%)';
+           this.border = popup.style.border;
          }
          else { // (b)
            // Restore the dimensions having been saved on the Appy object
-           popup.style.top = this.top;
-           popup.style.left = this.left;
-           popup.style.transform = this.transform;
+           let style = popup.style;
+           style.top = this.top;
+           style.left = this.left;
+           style.transform = this.transform;
+           style.border = this.border;
          }
        }
 
@@ -121,9 +188,6 @@ class Iframe:
          // Update v_popup dimensions
          popup.style.width = `${w}px`;
          popup.style.height = `${h}px`;
-         // Update v_iframe dimensions
-         iframe.style.width = '100%';
-         iframe.style.height = '100%';
          // Position the popup
          this.setPosition(initial);
        }
@@ -136,11 +200,13 @@ class Iframe:
          this.left = popup.style.left;
          this.transform = popup.style.transform;
          // Enlarge the popup
-         popup.style.width = '98%';
-         popup.style.height = '97%';
-         popup.style.transform = 'none';
-         popup.style.left = '0px';
-         popup.style.top = '0px';
+         let style = popup.style;
+         style.width = '98.5%';
+         style.height = '97%';
+         style.transform = 'none';
+         style.border = '0';
+         style.left = '0px';
+         style.top = '0px';
        }
 
        // Update the toggle icon's symbol and title
@@ -170,6 +236,14 @@ class Iframe:
          iframe.setToggleIcon(icon, name);
          iframe.enlarged = !iframe.enlarged;
          mover.style.display = display;
+       }
+
+       // Close the popup
+       static close(icon) {
+         // Reset iframe dimensions
+         const iframe = getNode('iframePopup').appy;
+         if (iframe.enlarged) Iframe.toggleAppearance(getNode('iframeER'));
+         closePopup('iframePopup', null, true);
        }
 
        // Updates cursors (are we dragging or not) ?
@@ -283,4 +357,7 @@ class Iframe:
         # appy.js?6.
         return class_.back % (Includer.js(o.buildUrl(f'appy.js?{version}')),
                               Includer.vars(o), o.iid)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Iframe.default = Iframe('350px')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -2044,6 +2044,14 @@ msgstr "Quand vous consultez les résultats d'une recherche, afficher ou modifie
 msgid "wrong_via_popup"
 msgstr "Les valeurs permises sont:<ul><li>« False »,</li><li>la largeur et la hauteur d'une popup, dans cet ordre, séparées par un espace et exprimés en pixels, comme dans « 400px 300px »,</li><li>ou la largeur de la popup uniquement, comme dans « 400px ».</li></ul>"
 
+#. Default: "Resizable popup?"
+msgid "Query_popupResizable"
+msgstr "Popup redimensionnable ?"
+
+#. Default: "If a search result, once opened, is shown in a popup, must this latter be resizable ?"
+msgid "Query_popupResizable_descr"
+msgstr "Si un résultat de recherche, une fois ouvert, l'est dans une popup, celle-ci doit-elle être redimensionnable ?"
+
 #. Default: "Target page layout on « view »"
 msgid "Query_pageLayoutOnView"
 msgstr "Layout de page « view » cible"

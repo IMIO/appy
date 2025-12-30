@@ -2044,6 +2044,14 @@ msgstr "When consulting search results, viewing or editing every matched element
 msgid "wrong_via_popup"
 msgstr "Allowed values are:<ul><li>« False »,</li><li>a popup's width and height, in that order, separated by a space and expressed in pixels, as in « 400px 300px »,</li><li>or a popup's width only, as in « 400px ».</li></ul>"
 
+#. Default: "Resizable popup?"
+msgid "Query_popupResizable"
+msgstr "Resizable popup?"
+
+#. Default: "If a search result, once opened, is shown in a popup, must this latter be resizable ?"
+msgid "Query_popupResizable_descr"
+msgstr "If a search result, once opened, is shown in a popup, must this latter be resizable ?"
+
 #. Default: "Target page layout on « view »"
 msgid "Query_pageLayoutOnView"
 msgstr "Target page layout on « view »"

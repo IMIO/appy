@@ -4,6 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
 from appy.model.base import Base
+from appy.ui.iframe import Iframe
 from appy.ui.layout import Layouts
 from appy.model.searches import Search
 from appy.database.operators import or_
@@ -111,10 +112,11 @@ class Query(Base):
         return True
 
     viaPopup = String(layouts=Layouts.gd, validator=validViaPopup, **qp)
+    popupResizable = Boolean(layouts=Boolean.Layouts.gdl, **qp)
     pageLayoutOnView = String(layouts=Layouts.gd, **qp)
 
     def getSearch(self):
-        '''Creates the Search instance corresponding to this query'''
+        '''Creates the Search object corresponding to this query'''
         # Get the expression related to p_self.states
         states = self.states
         if len(states) == 1:
@@ -128,9 +130,11 @@ class Query(Base):
         elif ' ' in viaPopup: # Popup width and height are specified
             viaPopup = viaPopup.split()
             for i in (0, 1): viaPopup[i] = viaPopup[i].strip()
+            viaPopup = Iframe(*viaPopup, resizable=self.popupResizable)
         elif viaPopup: # Only the popup width is specified
             viaPopup = viaPopup.strip()
-        # Create the Search instance corresponding to p_self's attributes
+            viaPopup = Iframe(viaPopup, resizable=self.popupResizable)
+        # Create the Search object corresponding to p_self's attributes
         className = self.className
         class_ = self.model.classes.get(className)
         return Search(name=str(self.iid), maxPerPage=self.maxPerPage,

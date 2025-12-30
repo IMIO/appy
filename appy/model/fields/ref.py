@@ -1019,43 +1019,49 @@ class Ref(Field):
         # editing or simply viewing it, its target (=where it is rendered, in
         # the current window or in the popup window) depends on attribute
         # "popup" as defined on the referenced p_self.class_. This attribute
-        # also determines the popup dimensions. You can override this attribute
-        # in the context of this Ref field by using attribute "viaPopup"
-        # hereafter. Allowed values for this attribute are similar to those for
-        # attribute p_self.class_.popup. Values that can be used for p_viaPopup
-        # as well as p_self.class_.popup are the following. If p_viaPopup is a:
+        # also determines popup characteristics like its dimensions. You can
+        # override this attribute in the context of this Ref field by using
+        # attribute "viaPopup" hereafter. Allowed values for this attribute are
+        # similar to those for attribute p_self.class_.popup. Values that can be
+        # used for p_viaPopup as well as p_self.class_.popup are the following.
+        # If p_viaPopup is:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # string  | the tied object will be shown in a popup whose width is
-        #         | specified in pixels, as in '500px' ;
+        # None      | (the default) opening the tied object in a popup or not
+        #           | depends on its class' "popup" static attribute ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # 2-tuple | the tied object will be shown in a popup whose dimensions
-        #         | are passed, as a 2-tuple of strings of the form
-        #         | ~(s_width, s_height)~, as, for example:
-        #         |
-        #         |                   ('500px', '450px')
+        # an Iframe | the tied object will be shown in a popup whose dimensions
+        # object    | (and other characteristics) are specified by this object.
+        #           | Available in appy.all, the Iframe object is to be found in
+        #           | appy/ui/iframe.py.
+        #           |
+        #           | Examples:
+        #           |   Iframe('500px')
+        #           |     Only the width is defined, the height will take as
+        #           |     much space as possible.
+        #           |
+        #           |   Iframe('500px', '450px')
+        #           |     The height is specified as well.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # p_viaPopup can also hold these specific values. If p_viaPopup is:
+        # a 2-      | the link to the tied object will NOT display the tied
+        # tuple     | object in a popup, but an additional icon will allow to
+        #           | display it in a popup, whose characteristics are passed in
+        #           | an Iframe object. Passing a 2-tuple thus enables both ways
+        #           | to show the tied object. Such a tuple must be of the form
+        #           | ~(False, Iframe)~. Here is an example:
+        #           |
+        #           |               False, Iframe('-50px', '-50px')
+        #           |
+        #           | This latter example also demonstrates that a dimension
+        #           | (width and/or height) can be specified as a negative
+        #           | number of pixels. In that case, the actual dimension will
+        #           | be computed as the window dimension minus the specified
+        #           | number of pixels.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # None    | it is ignored and p_self.class_.popup will be used instead ;
+        # p_viaPopup can also hold the following specific value. If p_viaPopup
+        # is:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # False   | it is taken into account and the form will not be opened in
-        #         | a popup, even if p_self.class_.popup exists and is not
-        #         | empty.
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # a 3-    | the link to the tied object will NOT display the tied object
-        # tuple   | in a popup, but an additional icon will allow to display it
-        #         | in a popup, whose dimensions are passed in the 2 last tuple
-        #         | elements. Passing a 3-tuple thus enables both ways to show
-        #         | tied object. Such a tuple must be of the form
-        #         | ~(False, s_width, s_height)~. Here is an example:
-        #         |
-        #         |                (False, '-50px', '-50px')
-        #         |
-        #         | This latter example also demonstrates that a dimension
-        #         | (width and/or height) can be specified as a negative number
-        #         | of pixels. In that case, the actual dimension will be
-        #         | computed as the window dimension minus the specified number
-        #         | of pixels.
+        # False     | the tied object will not show up in a popup, even if
+        #           | p_self.class_.popup exists and is not None.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.viaPopup = viaPopup
 
