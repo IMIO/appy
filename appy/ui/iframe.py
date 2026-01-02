@@ -145,7 +145,6 @@ class Iframe:
          // The mover and er (*e*nlarge/*r*estore) icons
          this.mover = document.getElementById('iframeMover');
          this.er = document.getElementById('iframeER');
-         debugger;
          this.er.style.display = (resizable)? 'block': 'none';
        }
 
