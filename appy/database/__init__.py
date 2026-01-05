@@ -213,9 +213,9 @@ class Database:
     traverse = {'Catalog': 'Manager', 'Transaction': 'Manager'}
 
     # ZODB exceptions that identify a conflict error
-    ConflictErrors = (transaction.interfaces.TransactionFailedError,
-                      transaction.interfaces.TransientError,
-                      ZODB.POSException.ConflictError)
+    ConflictErrors = transaction.interfaces.TransactionFailedError, \
+                     transaction.interfaces.TransientError, \
+                     ZODB.POSException.ConflictError
 
     # Modulo for computing "ikeys" (see m_init's doc) from object's integer IDs
     MOD_IKEY = 10000

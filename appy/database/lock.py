@@ -24,12 +24,18 @@ class Lock:
     #
 
     @classmethod
+    def hasExpired(class_, config, date, now=None):
+        '''Has the lock set at this p_date expired ?'''
+        now = now or DateTime()
+        return (now - date) >= config.database.lockExpires
+
+    @classmethod
     def hasOn(class_, o, page=None, ignoreMine=True, lockInfo=False,
               formatted=True):
         '''Is a lock currently set on p_o ?'''
         # If a p_page is passed, the method returns True if this specific page
-        # is locked. Else, it returns True if at least one lock is found on at
-        # least one page on p_o.
+        # is locked. Else, it returns True if at least one lock is found at
+        # least on one page on p_o.
         #
         # If p_ignoreMine is True, the locks belonging to the current user are
         # ignored. While this may seem to have sense from the UI point of view
@@ -50,9 +56,9 @@ class Lock:
         locks = getattr(o, 'locks', None)
         if not locks: return
         # Return True if at least one not expired lock is found
-        userLogin = o.user.login
         now = DateTime()
-        expires = o.config.database.lockExpires
+        config = o.config
+        userLogin = o.user.login
         for aPage, info in locks.items():
             # Ignore inappropriate locks
             if page and aPage != page: continue
@@ -62,7 +68,7 @@ class Lock:
             if ignoreMine and login == userLogin:
                 continue
             # Ignore the lock if he has expired
-            if (now - date) >= expires:
+            if Lock.hasExpired(config, date, now):
                 continue
             # If we are here, a relevant lock has been found
             if not lockInfo:
@@ -150,14 +156,28 @@ class Lock:
             del(o.locks[page])
 
     @classmethod
-    def getLockers(class_, o, names=False, sep=None):
+    def getLockers(class_, o, names=False, sep=None, expired=False):
         '''Returns the logins (or names if p_names is True) of the users having
-           locked at least on page on p_o. The p_result is a list, excepted
+           locked at least one page on p_o. The p_result is a list, excepted
            if p_sep is given: in that case, it is a string, joined via p_sep.'''
+        # If p_expired is:
+        # - False (the default), any expired lock is ignored ;
+        # - True, only expired locks are taken into account ;
+        # - None, all locks are taken into account.
         r = set()
         if hasattr(o, 'locks'):
+            now = DateTime()
+            config = o.config
             for login, date in o.locks.values():
-                r.add(login)
+                # Must this lock be ignored ?
+                if expired is None:
+                    # All locks must be taken into account
+                    ignore = False
+                else:
+                    hasExpired = class_.hasExpired(config, date, now)
+                    ignore = hasExpired != expired
+                if not ignore:
+                    r.add(login)
         if not names: return r
         r = [o.search1('User', login=login).getTitle() for login in r]
         return sep.join(r) if sep else r
