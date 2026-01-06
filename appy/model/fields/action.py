@@ -444,8 +444,8 @@ class Action(Field):
             js = 'submitForm(%s,%s,%s,%s,%s,%s)' % \
                  (q(formId), q(confirmText), showComment, back, check, visible)
         else:
-            # Determine the parameters for creating an options instance
-            target = LinkTarget(class_=self.options, forcePopup=True, back=back)
+            # Determine the parameters for creating an options object
+            target = LinkTarget(class_=self.options, back=back)
             js = f'{target.onClick}; submitForm({q(formId)},null,null,null,' \
                  f'{check})'
         return js

@@ -827,7 +827,7 @@ class LinkTarget:
     # Default onClick JS code, being a anti-double-click protection
     defaultOnClick = 'clickOn(this)'
 
-    def __init__(self, class_=None, back=None, popup=None, forcePopup=False):
+    def __init__(self, class_=None, back=None, popup=None):
         '''The HTML "a" tag must lead to a page for viewing or editing an
            instance of some p_class_.'''
         # If this page must be opened in a popup (depends on p_popup) and if
@@ -835,15 +835,15 @@ class LinkTarget:
         # ajax-refresh a DOM node whose ID is specified in p_back.
         #
         # p_popup, when passed, is a "popup specifier" coming from a "viaPopup"
-        # attribute from a Ref or Search. If None, attribute p_class_.popup
-        # determines if the link leads to the iframe popup or not, unless
-        # p_forcePopup is True, forcing the popup use.
+        # attribute from a Ref or Search, or a popup . If None, attribute
+        # p_class_.popup determines if the link leads to the iframe popup or
+        # not.
         #
         # The link leads to a page related to an instance of some Python
         # p_class_ (the true Python class, not the metaclass).
         self.class_ = class_
         # Does the link lead to a popup ?
-        if popup or forcePopup:
+        if popup:
             # Dig into the popup
             toPopup = True
         elif popup is False:
