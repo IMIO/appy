@@ -11,6 +11,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import persistent
+from BTrees.check import check
 from BTrees.OOBTree import OOBTree
 from BTrees.IOBTree import IOBTree
 from ZODB.POSException import POSKeyError
@@ -48,7 +49,7 @@ class Index(persistent.Persistent):
     class Error(Exception): pass
 
     # Values considered as empty, non-indexable values
-    emptyValues = (None, [], ())
+    emptyValues = None, [], ()
 
     # Python type for index values (possibly overridden by Index subclasses)
     valuesType = str
@@ -174,7 +175,7 @@ class Index(persistent.Persistent):
                     i += 1
         return r
 
-    def removeByValueEntry(self, value, id, o=None):
+    def removeByValueEntry(self, value, iD, o=None):
         '''Removes (non-multiple) p_value from p_self.byValue, for this p_id'''
         try:
             ids = self.byValue.get(value)
@@ -183,9 +184,9 @@ class Index(persistent.Persistent):
                                   str(err)), type='error')
             return
         if ids is None: return
-        # Remove reference to p_id for this p_value
+        # Remove reference to p_iD for this p_value
         try:
-            ids.remove(id)
+            ids.remove(iD)
         except (ValueError, KeyError):
             pass
         # If no object uses p_value anymore, remove the whole entry
@@ -201,77 +202,77 @@ class Index(persistent.Persistent):
             if o: o.log(IISET_ERR % (self.catalog.name, self.name, str(value)),
                         type='warning')
 
-    def removeEntry(self, id, o=None):
-        '''Remove the currently indexed value for this p_id'''
+    def removeEntry(self, iD, o=None):
+        '''Remove the currently indexed value for this p_iD'''
         # Remove the entry in dict "byObject"
-        value = self.byObject[id]
-        del(self.byObject[id])
+        value = self.byObject[iD]
+        del(self.byObject[iD])
         # Remove the entry (or entries) in dict "byValue"
         if self.isMultiple(value, inIndex=True):
             # A multi-value
             for v in value:
-                self.removeByValueEntry(v, id, o)
+                self.removeByValueEntry(v, iD, o)
         else:
-            self.removeByValueEntry(value, id, o)
+            self.removeByValueEntry(value, iD, o)
 
-    def addEntry(self, id, value, o=None, byValueOnly=False):
-        '''Add, in this index, an entry with this p_id and p_value.
-
-           If p_byValueOnly is True, it updates p_self.byValue but not
-           p_self.byObject. It happens when m_addEntry is called recursively,
-           for adding multiple entries corresponding to a multi-value. '''
+    def addEntry(self, iD, value, o=None, byValueOnly=False):
+        '''Add, in this index, an entry with this p_iD and p_value'''
+        # If p_byValueOnly is True, it updates p_self.byValue but not
+        # p_self.byObject. It happens when m_addEntry is called recursively, for
+        # adding multiple entries corresponding to a multi-value.
         if self.isMultiple(value):
             # A multi-value. Get it as a ready-to-store value.
             value = self.getMultiple(value)
             # Add an entry in p_self.byObject
-            self.byObject[id] = value
+            self.byObject[iD] = value
             # Add one entry for every single value in p_self.byValue
             for v in value:
-                self.addEntry(id, v, o=o, byValueOnly=True)
+                self.addEntry(iD, v, o=o, byValueOnly=True)
         else:
             # A single value. Add it to p_self.byObject when relevant.
             if not byValueOnly:
-                self.byObject[id] = value
+                self.byObject[iD] = value
             # Add it in p_self.byValue
             if value in self.byValue:
                 try:
-                    self.byValue[value].insert(id)
+                    iids = self.byValue[value]
+                    iids.insert(iD)
                 except SystemError as err:
                     # Log the error if an p_o(bject) is available
                     if o:
                         o.log(ISBV_KO % (self.catalog.name, self.name,
-                                         str(value), str(id), str(err)),
+                                         str(value), str(iD), str(err)),
                                          type='error')
                     raise err
             else:
-                self.byValue[value] = IITreeSet((id,))
+                self.byValue[value] = IITreeSet((iD,))
 
     def indexObject(self, o):
         '''Index object p_o. Returns True if the index has been changed
            regarding p_o, ie, entries have been added or removed.'''
         # Get the value to index
         value = o.getField(self.name).getIndexValue(o)
-        id = o.iid
+        iD = o.iid
         if value in Index.emptyValues:
             # There is nothing to index for this object
-            if id not in self.byObject: return
+            if iD not in self.byObject: return
             # The object is yet indexed: remove the entry
-            self.removeEntry(id, o)
+            self.removeEntry(iD, o)
         else:
             try:
                 # This value must be indexed
-                if id not in self.byObject:
+                if iD not in self.byObject:
                     # No trace from this object in the index, add an entry
-                    self.addEntry(id, value, o)
+                    self.addEntry(iD, value, o)
                 else:
                     # The object is already indexed. Get the currently indexed
                     # value.
-                    current = self.byObject[id]
+                    current = self.byObject[iD]
                     # Do nothing if the current value is the right one
                     if self.valueEquals(value, current): return
                     # Remove the current entry and replace it with the new one
-                    self.removeEntry(id, o)
-                    self.addEntry(id, value, o)
+                    self.removeEntry(iD, o)
+                    self.addEntry(iD, value, o)
             except Exception as err:
                 o.log(INDEX_ERR % (o.iid, o.getShownValue(), o.class_.name,
                                    self.name), type='error')
@@ -323,6 +324,12 @@ class Index(persistent.Persistent):
         handler = o.H()
         root = handler.dbConnection.root
         catalog.populate(root, handler, {catalog.name:[self]}, forceLog=True)
+
+    def check(self, o):
+        '''Use the BTree.check module, p_self.byValue_check and
+           p_self.byValue._check methods to detect problems within p_self's
+           BTree-based data structures.'''
+        # To do
 
     traverse['reload'] = 'Manager'
     @classmethod
