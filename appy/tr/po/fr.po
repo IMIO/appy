@@ -1316,6 +1316,10 @@ msgstr "Assombrir"
 msgid "to_light"
 msgstr "Éclaircir"
 
+#. Default: "Initializing..."
+msgid "progress_init"
+msgstr "C'est en cours ..."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Créé par"

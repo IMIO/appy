@@ -1316,6 +1316,10 @@ msgstr "Darken"
 msgid "to_light"
 msgstr "Lighten"
 
+#. Default: "Initializing..."
+msgid "progress_init"
+msgstr "Initializing..."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "By"

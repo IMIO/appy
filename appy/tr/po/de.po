@@ -1315,6 +1315,10 @@ msgstr "Verdunkeln"
 msgid "to_light"
 msgstr "Aufhellen"
 
+#. Default: "Initializing..."
+msgid "progress_init"
+msgstr ""
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Erstellt von"

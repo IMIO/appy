@@ -1,5 +1,3 @@
-'''Global elements to include in HTML pages'''
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 

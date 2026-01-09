@@ -1315,6 +1315,10 @@ msgstr "Donkerden"
 msgid "to_light"
 msgstr "Verlichten"
 
+#. Default: "Initializing..."
+msgid "progress_init"
+msgstr "Het is in uitvoering..."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Door"

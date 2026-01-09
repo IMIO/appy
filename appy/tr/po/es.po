@@ -1315,6 +1315,10 @@ msgstr ""
 msgid "to_light"
 msgstr ""
 
+#. Default: "Initializing..."
+msgid "progress_init"
+msgstr ""
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr ""
