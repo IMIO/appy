@@ -2,11 +2,13 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os.path
+import os.path, urllib.parse
 
 from appy.px import Px
 from appy import utils, n
+from appy.utils import bn
 from appy.ui import LinkTarget
+from appy.ui.iframe import Iframe
 from appy.ui.layout import Layouts
 from appy.model.searches import Search
 from appy.model.fields import Field, Initiator, Show
@@ -106,8 +108,7 @@ class Action(Field):
                 css=ui.Button.getCss(label, onCell, field.render,
                                      iconOut=field.iconOut)"
         id=":formId" action=":field.getFormAction(_ctx_)"
-        target=":field.options and 'appyIFrame' or '_self'"
-        method="post" class="inline">
+        target=":field.getFormTarget(_ctx_)" method="post" class="inline">
 
       <!-- Form fields for direct action execution -->
       <x if="not field.options and not isFake">
@@ -171,7 +172,7 @@ class Action(Field):
       masterSnub=n, focus=False, historized=False, mapping=n, generateLabel=n,
       label=n, icon=n, sicon=n, view=n, cell=n, buttons=n, edit=n, custom=n,
       xml=n, translations=n, render='button', iconOut=False, iconCss='iconS',
-      iconSize=n, options=n, fake=False):
+      iconSize=n, options=n, fake=False, progress=None):
         # Attribute "action" must hold a method or a list/tuple of methods.
         # In most cases, every method will be called without arg, but there are
         # exceptions (see parameters "options" and "confirm").
@@ -371,6 +372,12 @@ class Action(Field):
         # standard message to appear.
         self.fake = fake
 
+        # If your action will take a long time, being unusual for a web app,
+        # place, in the following attribute, a Progress object. While the action
+        # is ongoing, the end user will see a progress bar in a popup. More info
+        # in appy/ui/progress.py.
+        self.progress = progress
+
         # Ensure validity of parameter values
         self.checkParameters()
 
@@ -385,26 +392,47 @@ class Action(Field):
     def renderLabel(self, layoutType):
         return # Label is rendered directly within the button
 
+    def getFinalFormAction(self, c, relative=False):
+        '''Returns the (absolute or p_relative) URL allowing to effectively
+           trigger the action.'''
+        # This "final" form action is to be distinguished from other form
+        # actions that lead to showing an options class or a progress bar.
+        if c.layout == 'query':
+            # We are running a multi-action from search results. Add the
+            # name of the class in the path.
+            part = f'@{self.container.name}/'
+        elif c.multi:
+            # We are running a multi-action from a Ref field. Add the
+            # initiator object in the action sub-path.
+            part = f'@:{c.o.iid}/'
+        else:
+            part = ''
+        # Absolute or relative ?
+        pre = c.o.iid if relative else c.o.url
+        return f'{pre}/{part}{self.name}/perform'
+
     def getFormAction(self, c):
         '''Get the value of the "action" parameter to the "form" tag
            representing the action.'''
         if self.options:
             # Submitting the form will lead to creating an object, in order to
             # retrieve action's options.
-            return f'{c.tool.url}/new'
+            r = f'{c.tool.url}/new'
+        elif self.progress:
+            # Submitting the form will open the Appy iframe with a progress bar
+            params = {'path': self.getFinalFormAction(c, relative=True),
+                      'form': c.formId, 'popup': True}
+            paramsE = urllib.parse.urlencode(params)
+            r = f'{c.tool.url}/ui/Progress/view?{paramsE}'
         else:
-            # Submitting the form will really trigger the action.
-            if c.layout == 'query':
-                # We are running a multi-action from search results. Add the
-                # name of the class in the path.
-                part = f'@{self.container.name}/'
-            elif c.multi:
-                # We are running a multi-action from a Ref field. Add the
-                # initiator object in the action sub-path.
-                part = f'@:{c.o.iid}/'
-            else:
-                part = ''
-            return f'{c.o.url}/{part}{self.name}/perform'
+            # Submitting the form will really trigger the action
+            r = self.getFinalFormAction(c)
+        return r
+
+    def getFormTarget(self, c):
+        '''Returns the html form target'''
+        # Dig into the Appy iframe when appropriate
+        return 'appyIFrame' if self.options or self.progress else '_self'
 
     def getOnClick(self, c):
         '''Gets the JS code to execute when the action button is clicked'''
@@ -426,11 +454,18 @@ class Action(Field):
                 back = None
             check = None
         check = q(check) if check else 'null'
-        if not self.options:
+        if self.options:
+            # Determine the parameters for creating an options object
+            target = LinkTarget(class_=self.options, back=back)
+            js = f'{target.onClick};submitForm({q(formId)},null,null,null,' \
+                 f'{check})'
+        else:
             # Determine the parameters for executing the action
             showComment = 'true' if self.confirm == 'comment' else 'false'
             confirmText = self.getConfirmText(o)
             back = q(back) if back else 'null'
+            # When a progress bar must be shown, set a specific flag
+            progress = 'true' if self.progress else 'false'
             # If the action produces a file, the page will not be refreshed. So
             # the action must remain visible: if, as it is done by default, it
             # is replaced with some animation to avoid double-clicks, the
@@ -441,13 +476,9 @@ class Action(Field):
                 back = 'null'
             else:
                 visible = 'false'
-            js = 'submitForm(%s,%s,%s,%s,%s,%s)' % \
-                 (q(formId), q(confirmText), showComment, back, check, visible)
-        else:
-            # Determine the parameters for creating an options object
-            target = LinkTarget(class_=self.options, back=back)
-            js = f'{target.onClick}; submitForm({q(formId)},null,null,null,' \
-                 f'{check})'
+            js = 'submitForm(%s,%s,%s,%s,%s,%s,null,null,%s)' % \
+                 (q(formId), q(confirmText), showComment, back, check, visible,
+                  progress)
         return js
 
     def getTargetObjects(self, o, req):
@@ -501,9 +532,9 @@ class Action(Field):
                 if type(res) in utils.sequenceTypes:
                     r[0] = r[0] and res[0]
                     if self.result.startswith('file'):
-                        r[1] = r[1] + res[1]
+                        r[1] = f'{r[1]}{res[1]}'
                     else:
-                        r[1] = r[1] + '\n' + res[1]
+                        r[1] = f'{r[1]}{bn}{res[1]}'
                 else:
                     r[0] = r[0] and res
         else:
@@ -580,7 +611,7 @@ class Action(Field):
         '''Get the text to display in the confirm popup'''
         if not self.confirm: return ''
         _ = o.translate
-        return _(self.labelId + '_confirm', blankOnError=True) or \
+        return _(f'{self.labelId}_confirm', blankOnError=True) or \
                _('action_confirm')
 
     def isRenderableOn(self, layout):

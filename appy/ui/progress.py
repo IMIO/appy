@@ -2,6 +2,10 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from appy.px import Px
+from appy.ui.template import Template
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Progress:
     '''Implements a progress bar for object actions or workflow transitions that
        last a long time.'''
@@ -23,4 +27,15 @@ class Progress:
         self.label = label or 'progress_init'
         # The interval, in seconds, between 2 client requests for progress
         self.interval = interval
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                                  PXs
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # The main progress PX
+
+    view = Px('''
+     <div id="progress">
+      <div>:req</div>
+     </div>''', template=Template.px, hook='content')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

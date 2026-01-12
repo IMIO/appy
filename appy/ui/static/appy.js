@@ -1285,28 +1285,49 @@ function setChecked(f, checkHook) {
 }
 
 function submitForm(formId, msg, showComment, back, checkHook, visible,
-                    yesText, noText) {
+                    yesText, noText, progress) {
   let f = document.getElementById(formId);
   // Initialise the status of checkboxes when appropriate
   if (checkHook) setChecked(f, checkHook);
-  if (!msg) {
-    /* Submit the form and either refresh the entire page (back is null)
-       or ajax-refresh a given part only (p_back corresponds to the id of the
-       DOM node to be refreshed. */
-    if (back) { askAjax(back, formId); }
+  if (msg) {
+    // Ask a confirmation to the user before proceeding
+    let action, detail;
+    if (progress) {
+      const last = (back)? ",'${back}'": '',
+            js = `openPopup('iframePopup',null,300,300,false,null${last})`;
+      action = 'form+script';
+      detail = `${formId}+${js}`;
+    }
+    else if (back) {
+      const js = `askAjax('${back}','${formId}');`;
+      action = 'form-script';
+      detail = `${formId}+${js}`;
+    }
     else {
+      action = 'form';
+      detail = formId;
+    }
+    askConfirm(action, detail, msg, showComment, null, null, null, null,
+               visible, yesText, noText);
+  }
+  else {
+    // Don't ask any confirmation and proceed
+    if (progress) {
+      /* Open the popup containing a progress bar and submit the form, that will
+         render PX Progress.view in it. */
+      openPopup('iframePopup', null, 300, 300, false, null, back);
+      f.submit();
+    }
+    else if (back) {
+      /* Submit the form by ajax-refreshing a given part of the page only.
+         p_back corresponds to the id of the DOM node to be refreshed. */
+      askAjax(back, formId);
+    }
+    else {
+      // Refresh the entire page (back is null)
       f.submit();
       if (!visible) clickOn(f);
     }
-  }
-  else {
-    // Ask a confirmation to the user before proceeding
-    if (back) {
-      let js = "askAjax('" + back + "', '" + formId + "');";
-      askConfirm('form-script', formId + '+' + js, msg, showComment,
-                 null, null, null, null, visible, yesText, noText); }
-    else askConfirm('form', formId, msg, showComment,
-                    null, null, null, null, visible, yesText, noText);
   }
 }
 

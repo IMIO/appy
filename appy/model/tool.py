@@ -69,8 +69,8 @@ class Tool(Base):
 
     # While most users have generally the read permission on the tool and
     # translations, they must not be allowed to consult tool/view and sub-pages.
-    # Traversing tool/view is thus by default restricted to those having the
-    # write permission on the tool.
+    # Consequently, traversing tool/view is by default restricted to those
+    # having the write permission on the tool.
     traverse = Base.traverse.copy()
     traverse.update({'ui':True, 'guard':True, 'AuthContext': 'Authenticated',
                      'Database':True, 'Server':True, 'view': 'perm:write'})

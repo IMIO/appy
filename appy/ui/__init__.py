@@ -12,25 +12,26 @@ from appy.utils.string import Variables
 from appy.model.utils import Object as O
 
 # Make classes from sub-packages available here  - - - - - - - - - - - - - - - -
-from appy.ui.js import Quote
-from appy.ui.dark import Dark
-from appy.ui.title import Title
-from appy.ui.iframe import Iframe
-from appy.ui.message import Message
-from appy.ui.portlet import Portlet
-from appy.ui.globals import Globals
-from appy.ui.columns import Columns
-from appy.ui.sidebar import Sidebar
-from appy.ui.template import Template
-from appy.ui.navigate import Siblings
-from appy.ui.includer import Includer
-from appy.ui.language import Language
-from appy.ui.validate import Validator
-from appy.ui.svg import Config as SvgConfig
-from appy.ui.dark import Config as DarkConfig
+from .js import Quote
+from .dark import Dark
+from .title import Title
+from .iframe import Iframe
+from .message import Message
+from .portlet import Portlet
+from .globals import Globals
+from .columns import Columns
+from .sidebar import Sidebar
+from .template import Template
+from .navigate import Siblings
+from .includer import Includer
+from .language import Language
+from .progress import Progress
+from .validate import Validator
+from .svg import Config as SvgConfig
+from .dark import Config as DarkConfig
 
 # Some elements in this module will be traversable - - - - - - - - - - - - - - -
-traverse = {'Language': True}
+traverse = {'Language': True, 'Progress': True}
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:

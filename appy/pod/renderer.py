@@ -9,6 +9,7 @@ import zipfile, shutil, xml.sax, os, os.path, re, mimetypes, time
 import appy.pod
 from appy import utils
 from appy.xml import Tag
+from appy.utils import bn
 from appy.xml.escape import Escape
 from appy.pod.lo_pool import LoPool
 from appy.pod.graphic import Graphic
@@ -38,9 +39,6 @@ DOC_FMT_KO  = 'POD was unable to deduce the document format. Please specify ' \
               'it through parameter named "format" (=odt, gif, png, ...).'
 DOC_FMT_NS  = 'Format "%s" is not supported.'
 WARN_FIN_KO = 'Warning: error while calling finalize function. %s'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Make sure any file on disk is opened as UTF-8. Windows' default encoding is
