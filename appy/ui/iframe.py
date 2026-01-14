@@ -7,6 +7,7 @@ import base64
 from appy.px import Px
 from appy.ui.js import Quote
 from appy.ui.includer import Includer
+from appy.utils.string import Normalize
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Iframe:
@@ -36,11 +37,6 @@ class Iframe:
         # dragging its borders.
         self.resizable = resizable
 
-    def __repr__(self):
-        '''p_self as a short string'''
-        return f'‹Iframe w={self.width},h={self.height},' \
-               f'resizable={self.resizable}›'
-
     @classmethod
     def get(class_, specifier=None):
         '''Returns a true Iframe object corresponding to this p_specifier, that
@@ -54,14 +50,37 @@ class Iframe:
             r = class_.default
         return r
 
+    def __repr__(self):
+        '''p_self as a short string'''
+        return f'‹Iframe w={self.width},h={self.height},' \
+               f'resizable={self.resizable}›'
+
+    def getJsWidth(self):
+        '''Returns the width in a form that can be manipulated from JS'''
+        return self.width[:-2]
+
+    def getJsHeight(self):
+        '''Returns the width in a form that can be manipulated from JS'''
+        return self.height[:-2] if self.height else 'null'
+
+    def getJsResizable(self):
+        '''Returns p_self.resizable in a form that can be manipulated from JS'''
+        return 'true' if self.resizable else 'false'
+
+    def getJsData(self):
+        '''Returns, as a string, a Javascript array containing p_self's
+           attributes.'''
+        return f"[{self.getJsWidth()},{self.getJsHeight()}," \
+               f"{self.getJsResizable()}]"
+
     def getJsOpen(self, css=None, back=None):
         '''Return the JS code allowing to open the target object in the
            iframe.'''
         # Get the width and height, abandoning the "px" suffix
-        width = self.width[:-2]
-        height = self.height[:-2] if self.height else 'null'
+        width = self.getJsWidth()
+        height = self.getJsHeight()
         # Is the popup resizable ?
-        resizable = 'true' if self.resizable else 'false'
+        resizable = self.getJsResizable()
         # Get possible CSS class to use
         css = f"'{css}'" if css else 'null'
         # Get a possible hook to use for coming back once the popup is closed

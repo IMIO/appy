@@ -12,7 +12,6 @@ class Decoder:
 
     # Boolean and None values are different in JSON and Python
     context = {'true': True, 'false': False, 'null': None}
-    
 
     @classmethod
     def convertDict(class_, d):

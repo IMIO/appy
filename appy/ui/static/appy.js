@@ -1396,8 +1396,9 @@ function submitForm(formId, msg, showComment, back, checkHook, visible,
     // Ask a confirmation to the user before proceeding
     let action, detail;
     if (progress) {
-      const last = (back)? `,'${back}'`: '',
-            js = `openPopup('iframePopup',null,300,300,false,null${last})`;
+      const [w, h, resize] = progress,
+            last = (back)? `,'${back}'`: '',
+            js= `openPopup('iframePopup',null,${w},${h},${resize},null${last})`;
       action = 'form+script';
       detail = `${formId}+${js}`;
     }
@@ -1418,7 +1419,8 @@ function submitForm(formId, msg, showComment, back, checkHook, visible,
     if (progress) {
       /* Open the popup containing a progress bar and submit the form, that will
          render PX Progress.view in it. */
-      openPopup('iframePopup', null, 300, 300, false, null, back);
+      const [w, h, resize] = progress;
+      openPopup('iframePopup', null, w, h, resize, null, back);
       f.submit();
     }
     else if (back) {

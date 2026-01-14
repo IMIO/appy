@@ -465,8 +465,9 @@ class Action(Field):
             showComment = 'true' if self.confirm == 'comment' else 'false'
             confirmText = self.getConfirmText(o)
             back = q(back) if back else 'null'
-            # When a progress bar must be shown, set a specific flag
-            progress = 'true' if self.progress else 'false'
+            # When a progress bar must be shown, set progress-related
+            # characteristics in a JS array.
+            progress = self.progress.getJsData() if self.progress else 'null'
             # If the action produces a file, the page will not be refreshed. So
             # the action must remain visible: if, as it is done by default, it
             # is replaced with some animation to avoid double-clicks, the

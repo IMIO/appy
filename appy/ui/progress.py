@@ -2,11 +2,12 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy.px import Px
-from appy.utils import bn
-from appy.model.fields import Field
-from appy.ui.template import Template
-from appy.model.utils import Object as O
+from ..px import Px
+from ..utils import bn
+from .iframe import Iframe
+from .template import Template
+from ..model.fields import Field
+from ..model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Progress:
@@ -16,18 +17,20 @@ class Progress:
     # Some elements will be traversable
     traverse = {}
 
-    # How does it work ? If an Action field or a workflow transition will
+    # How does it work ? If an Action field or a workflow Transition will
     # probably take a long time, place, in his "progress" attribute, an instance
     # of this class. Within the code that implements the action or transition,
-    # once you have progress-related info, call method m_set on the Progress
-    # object. This method must be called with 2 args:
+    # once you have progress-related info, call method m_setProgress on the
+    # Action or Transition object for which a progress bar has been defined.
+    # This method must be called with 3 args:
 
-    # 1) an integer number between 1 and 100 that represents the progress
+    # 1) the related Appy object;
+    # 2) an integer number between 1 and 100 that represents the progress
     #    percentage ;
-    # 2) a translated text, that will be shown in the user interface. It can be
+    # 3) a translated text, that will be shown in the user interface. It can be
     #    raw text or XHTML; if you choose the "append" mode, it MUST be XHTML.
 
-    def __init__(self, label=None, interval=5, append=False):
+    def __init__(self, label=None, interval=5, append=False, popup=None):
         # This i18n p_label, if specified, will be used to show the initial text
         # around the progress bar, before the first progress request is made.
         # If p_label is None, a default text will be shown.
@@ -39,6 +42,10 @@ class Progress:
         # is replaced with the last retrieved one. If you prefer it to be
         # appended to the previous text, set p_append to True.
         self.append = append
+        # The progress bar will be shown in the Appy iframe popup. If you want
+        # to control iframe characteristics, place here an Iframe object, as
+        # found in appy/ui/iframe.py.
+        self.popup = popup or Iframe('300px', '300px', resizable=False)
 
     def getMainHook(self, tool):
         '''Return the JS code allowing to create a Hook object and link it to
@@ -65,6 +72,11 @@ class Progress:
         # If the server runs in the foreground, fetching status cannot be done
         fetchS = '' if fg else ';document.querySelector("#bar").hook.fetch();'
         return f'document.currentScript.parentNode.hook.fetch(){fetchS}'
+
+    def getJsData(self):
+        '''Returns, in a JS array, popup characteristics as defined by the used
+           p_self.popup.'''
+        return self.popup.getJsData()
 
     def getPath(self, o, name):
         '''Get, as a Path object, the absolute path to the temp file where
