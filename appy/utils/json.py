@@ -75,6 +75,10 @@ class Encoder:
         # The result, as a list of string tokens
         self.r = []
 
+    def isAppy(self, o):
+        '''Returns True if p_o is an Appy object'''
+        return hasattr(o, 'class_') and o.class_
+
     def encodeString(self, s):
         '''Encodes this p_s(tring)'''
         # The JSON standard requires strings to be surrounded by double quotes,
@@ -115,6 +119,10 @@ class Encoder:
                 r.append(',')
         r.append('}')
 
+    def encodeAppy(self, o):
+        '''Encode this Appy p_o(bject)'''
+        # TODO
+
     def encodeValue(self, v):
         '''Encodes this Python p_v(alue) into its JSON equivalent and add it
            into p_self.r.'''
@@ -124,6 +132,8 @@ class Encoder:
             self.encodeDict(v)
         elif isinstance(v, sequenceTypes):
             self.encodeList(v)
+        elif self.isAppy(v):
+            self.encodeAppy(v)
         else:
             r = self.r
             if isinstance(v, bool):

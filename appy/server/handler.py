@@ -355,6 +355,10 @@ class HttpHandler(Handler):
         agent = headers.get('User-Agent')
         return False if not agent else bool(HttpHandler.mobileRex.search(agent))
 
+    def inTheForeground(self):
+        '''Does the server run in foreground mode ?'''
+        return self.server.mode == 'fg'
+
     def logHeaders(self):
         '''Logs HTTP headers for the current request'''
         self.log('app', 'info', HEAD_ST % self.path)

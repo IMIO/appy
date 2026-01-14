@@ -628,11 +628,11 @@ class Action(Field):
     traverse['perform'] = 'perm:write'
     def perform(self, o, options=None, minimal=False):
         '''Called when the action is triggered from the UI'''
-        result = self.result
-        # Most actions will update the database
-        handler = o.H()
-        handler.commit = result != 'file'
         resp = o.resp
+        handler = o.H()
+        result = self.result
+        progress = self.progress
+        handler.commit = result != 'file' # Most actions will update the DB
         # Execute the action
         success, msg = self.execute(o, options=options)
         if not msg:
@@ -663,6 +663,8 @@ class Action(Field):
             # If we are called from an Ajax request, simply return msg
             if handler.isAjax():
                 r = msg
+                # If the caller is a progress bar, return it, forced to 100%
+                if progress: r = progress.getFinishedBar(r, success)
             else:
                 # Respect the wish to return to a specific page if the action
                 # has specified it: redirect only if no redirect has already
@@ -677,7 +679,7 @@ class Action(Field):
             # the user. Redirecting is different if we are in an Ajax request.
             r = o.goto(msg, fromAjax=handler.isAjax())
         # Delete any progress file when appropriate
-        if self.progress: self.progress.deletePath(o, self.name)
+        if progress: progress.deletePath(o, self.name)
         return r
 
     def getMulti(self, back, check):

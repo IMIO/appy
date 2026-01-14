@@ -1327,6 +1327,10 @@ msgstr ""
 msgid "progress_already"
 msgstr ""
 
+#. Default: "⚠️ The server runs in the foreground.\n\nNo parallel status request can be launched while the main action is executed."
+msgid "progress_fg"
+msgstr ""
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr ""

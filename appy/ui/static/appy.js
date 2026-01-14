@@ -449,6 +449,9 @@ class Hook {
     }
     // Make the Request object, that implements the request to p_url
     const args = {method:method, body:body, headers:headers}
+    /* Once data is fetched, must it replace the data defined on the hook, or
+       must it be added to existing data ? */
+    this.append = false; // Can be set by m_setAppend
     this.request = new Request(url, args);
     /* If the following attribute is not null nor 0, it represents a duration in
        seconds: the hook will be fetched every p_this.interval seconds, instead
@@ -459,8 +462,18 @@ class Hook {
   }
 
   setInterval(interval) {
-    // Configure this hook to fetch data every p_interval seconds
+    /* Configure this hook to fetch data every p_interval seconds. Set O or null
+       to disable fetch recurrence. */
     this.interval = interval;
+    return this;
+  }
+
+  setAppend(append) {
+    /* Configure this hook to p_append fetched data to existent data, instead of
+       replacing it (if p_append is set to true). Note that if this flag is used
+       by a Hook sub-class fetching JSON data, its precise semantics depends on
+       this sub-class, that must manage this flag itself. */
+    this.append = append;
     return this;
   }
 
@@ -1383,7 +1396,7 @@ function submitForm(formId, msg, showComment, back, checkHook, visible,
     // Ask a confirmation to the user before proceeding
     let action, detail;
     if (progress) {
-      const last = (back)? ",'${back}'": '',
+      const last = (back)? `,'${back}'`: '',
             js = `openPopup('iframePopup',null,300,300,false,null${last})`;
       action = 'form+script';
       detail = `${formId}+${js}`;
@@ -1675,6 +1688,8 @@ function closePopup(popupId, clean, tryCancel) {
     let imask = getNode(':iframeMask');
     imask.style.opacity = 0;
     imask.style.zIndex = 0;
+    // Ajax-refresh the popup caller if a back hook is found
+    if (!canceled && popup.backHook) askAjax(popup.backHook);
   }
   return popup;
 }

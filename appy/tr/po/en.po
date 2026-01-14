@@ -1328,6 +1328,10 @@ msgstr "Ongoing..."
 msgid "progress_already"
 msgstr "🚫 This action is already ongoing.\n\nIt cannot be run twice at the same time."
 
+#. Default: "⚠️ The server runs in the foreground.\n\nNo parallel status request can be launched while the main action is executed."
+msgid "progress_fg"
+msgstr "⚠️ The server runs in the foreground.\n\nNo parallel status request can be launched while the main action is executed."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "By"

@@ -1325,7 +1325,11 @@ msgstr "Operatie bezig..."
 
 #. Default: "🚫 This action is already ongoing.\n\nIt cannot be run twice at the same time."
 msgid "progress_already"
-msgstr ""
+msgstr "🚫 Deze actie is al bezig.\n\nDeze kan niet tegelijkertijd een tweede keer worden gestart."
+
+#. Default: "⚠️ The server runs in the foreground.\n\nNo parallel status request can be launched while the main action is executed."
+msgid "progress_fg"
+msgstr "⚠️ De server is in de <i>voorgrond</i>-modus.\n\nEr kunnen geen statusverzoeken parallel met de hoofdactie worden uitgevoerd."
 
 #. Default: "By"
 msgid "Base_creator"

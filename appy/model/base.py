@@ -1328,16 +1328,21 @@ class Base:
         return r.replace('<br/>', '\n') if asText else r
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                               XML export
+    #                           XML and JSON exports
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    traverse['xml'] = 'perm:read'
-    def xml(self):
-        '''Returns p_self's XML version'''
-        self.resp.setContentType('xml')
+    def raw(self, aS='xml'):
+        '''Returns p_self as raw data, p_aS "xml" or "json"'''
+        self.resp.setContentType(aS)
         # m_mayView checks more than the standard read permission
         self.guard.mayView(self, None, raiseError=True)
         return self # p_self will be automatically marshalled by the traversal
+
+    traverse['xml'] = 'perm:read'
+    def xml(self): return self.raw()
+
+    traverse['json'] = 'perm:read'
+    def json(self): return self.raw(aS='json')
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                   PXs

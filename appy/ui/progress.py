@@ -24,15 +24,21 @@ class Progress:
 
     # 1) an integer number between 1 and 100 that represents the progress
     #    percentage ;
-    # 2) a translated text, that will be shown in the user interface.
+    # 2) a translated text, that will be shown in the user interface. It can be
+    #    raw text or XHTML; if you choose the "append" mode, it MUST be XHTML.
 
-    def __init__(self, label=None, interval=5):
+    def __init__(self, label=None, interval=5, append=False):
         # This i18n p_label, if specified, will be used to show the initial text
         # around the progress bar, before the first progress request is made.
         # If p_label is None, a default text will be shown.
         self.label = label or 'progress_init'
         # The interval, in seconds, between 2 client requests for progress
         self.interval = interval
+        # By default (p_append is False), everytime status information is
+        # retrieved from the server, the text that accompanies the progress bar
+        # is replaced with the last retrieved one. If you prefer it to be
+        # appended to the previous text, set p_append to True.
+        self.append = append
 
     def getMainHook(self, tool):
         '''Return the JS code allowing to create a Hook object and link it to
@@ -47,15 +53,18 @@ class Progress:
         params = f'iid={o.iid}&name={elem.name}'
         # Progress status will be done every v_interval seconds
         interval = elem.progress.interval
+        # Must status text be replaced at each status change, or appended ?
+        append = '.setAppend(true)' if self.append else ''
         return f'new BarHook(document.currentScript.parentNode, ' \
                f'`${{siteUrl}}/tool/ui/Progress/get?{params}`).' \
-               f'setInterval({interval});'
+               f'setInterval({interval}){append};'
 
-    def getStartJs(self):
+    def getStartJs(self, fg):
         '''Returns the JS code allowing to run the long operation and the first
            status check.'''
-        return 'document.currentScript.parentNode.hook.fetch();' \
-               'document.querySelector("#bar").hook.fetch()'
+        # If the server runs in the foreground, fetching status cannot be done
+        fetchS = '' if fg else ';document.querySelector("#bar").hook.fetch();'
+        return f'document.currentScript.parentNode.hook.fetch(){fetchS}'
 
     def getPath(self, o, name):
         '''Get, as a Path object, the absolute path to the temp file where
@@ -126,6 +135,30 @@ class Progress:
             r = O(percentage=0, text=tool.translate('progress_ongoing'))
         return r
 
+    def getFinishedBar(self, text, success=True):
+        '''Renders p_self.bar,, forced to 100%, with this final p_text'''
+        context = {'progress': self, 'finished': True, 'text':text,
+                   'success': success}
+        return self.bar(context)
+
+    def getDoneParts(self, finished, success=True):
+        '''Returns, as a 3-tuple, elements to be rendered in the "done" part of
+           the progress bar.'''
+        # The 3 elements are:
+        # 1) its width ;
+        # 2) the CSS styles to apply to it ;
+        # 3) its inner text.
+        width = 100 if finished else 0
+        widthF = f'{width}%' # The width, formatted
+        styles = f'width:{widthF}'
+        if finished:
+            # Once finished, slow down the CSS animation
+            styles = f'{styles};animation-duration:20s'
+            text = f'{widthF} 🥳' if success else '😢'
+        else:
+            text = '&nbsp;'
+        return width, styles, text
+
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                    PXs
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -136,7 +169,9 @@ class Progress:
      <div id="progress"
           var="o, elem=tool.ui.Progress.getFromRequest(tool);
                progress=elem.progress;
-               ongoing=progress.hasPath(o, name)">
+               fg = tool.H().inTheForeground();
+               ongoing=progress.hasPath(o, name);
+               text=None; finished=False; success=True">
 
       <!-- Display an error message if the action is still ongoing -->
       <div if="ongoing" class="pbError">::_('progress_already')</div>
@@ -144,27 +179,98 @@ class Progress:
       <x if="not ongoing" var2="x=progress.init(o, name)">
        <script>::progress.getMainHook(tool)</script>
 
+       <!-- Display a warning if the server runs in the foreground: because a
+            single thread is there, status cannot be fetched in parallel. -->
+       <div if="fg" class="pbError">::_('progress_fg')</div>
+
        <!-- The progress bar -->
-       <div id="bar">
-         <script>::progress.getBarHook(o, elem)</script>
-         <div class="pbAll">
-          <!-- The "done" part -->
-          <div id="pbDone" style="width:0%">&nbsp;</div>
-          <!-- The "to do" part -->
-          <div id="pbTodo" style="width:100%">&nbsp;</div>
-         </div>
-         <div id="pbText">:_(progress.label)</div>
-       </div>
+       <x>:progress.bar</x>
 
        <!-- Launch the action and recurrent status getter -->
-       <script>::progress.getStartJs()</script>
+       <script>::progress.getStartJs(fg)</script>
       </x>
      </div>''', template=Template.px, hook='content',
+
+     css='.pbError { margin-top:1em }',
+
+     js='''
+       class BarHook extends Hook {
+
+         // Update the text that accompanies the progress bar
+         updateText(json, changed) {
+           const text = this.node.querySelector('#pbText');
+           if (this.append) {
+             /* Append the text only if we are sure we do not retrieve an
+                already retrieved status. */
+             if (changed) {
+               text.innerHTML = `${text.innerHTML}${json.text}`;
+             }
+           }
+           else text.innerHTML = json.text || '';
+         }
+
+         // Override m_fetchJson in order to refresh the progress bar
+         fetchJson(json) {
+           const node = this.node,
+                 percent = json.percentage,
+                 done = node.querySelector('#pbDone'),
+                 todo = node.querySelector('#pbTodo'),
+                 changed = (percent && parseInt(done.style.width) != percent);
+           // Update the "done" part
+           if (percent) {
+             if (changed) done.style.width = `${percent}%`;
+             done.style.borderRight = '1px solid black';
+             // Display the percentage in the progress bar if there is space
+             if (percent > 15) done.innerText = done.style.width;
+             // Remove a dot in the "to do" part (if some dots are still there)
+             if (changed) {
+               const dots = todo.innerText;
+               if (dots) todo.innerText = dots.slice(0,-1);
+             }
+           }
+           // Update the "to do" part
+           const remain = 100 - percent;
+           if (remain) {
+             todo.style.display = 'block';
+             todo.style.width = `${remain}%`;
+           }
+           else todo.style.display = 'none';
+           // Update the text
+           this.updateText(json, changed);
+         }
+
+         // Continue to fetch status while the main action is not finished
+         continueFetch() {
+           return !this.node.parentNode.hook.fetched;
+         }
+       }''')
+
+    # The progress bar
+    bar = Px('''
+     <div id="bar">
+
+      <!-- The hook allowing to retrieve, in JSON, the progress status -->
+      <script if="not finished">::progress.getBarHook(o, elem)</script>
+
+      <!-- Render the bar -->
+      <div class="pbAll">
+
+       <!-- The "done" part -->
+       <div var="width,styles,dtext=progress.getDoneParts(finished, success)"
+            id="pbDone" style=":styles">:dtext</div>
+
+       <!-- The "to do" part -->
+       <div if="not finished" id="pbTodo" class="blinkT"
+            style="width:100%">···</div>
+      </div>
+
+      <!-- The text that accompanies the progress bar -->
+      <div id="pbText">::text or _(progress.label)</div>
+     </div>''',
 
      css='''
        .pbAll { border:1px solid black; width:98%;
                 margin:1.5em 0 1em 0; display:flex; gap:0 }
-       .pbError { margin-top:1em }
        @keyframes animBG {
         0%   { background-position:   0% 50%; }
         50%  { background-position: 100% 50%; }
@@ -176,39 +282,6 @@ class Progress:
                    lightgrey 100%);
                  background-size: 400% 400%;
                  animation: animBG 2s ease infinite }
-       #pbTodo { background-color:white; height:1.5em }
-     ''',
-
-     js='''
-       class BarHook extends Hook {
-
-         // Override m_fetchJson in order to refresh the progress bar
-         fetchJson(json) {
-           const node = this.node,
-                 percentage = json.percentage,
-                 done = node.querySelector('#pbDone'),
-                 todo = node.querySelector('#pbTodo');
-           // Update the "done" part
-           if (percentage) {
-             done.style.width = `${percentage}%`;
-             done.style.borderRight = '1px solid black';
-             // Display the percentage in the progress bar if there is space
-             if (percentage > 15) done.innerText = done.style.width;
-           }
-           // Update the "to do" part
-           const remain = 100 - percentage;
-           if (remain) {
-             todo.style.display = 'block';
-             todo.style.width = `${remain}%`;
-           }
-           else todo.style.display = 'none';
-           // Update the text
-           node.querySelector('#pbText').innerHTML = json.text || '';
-         }
-
-         // Continue to fetch status while the main action is not finished
-         continueFetch() {
-           return !this.node.parentNode.hook.fetched;
-         }
-       }''')
+       #pbTodo { background-color:white; height:1.5em; text-align:center }
+     ''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

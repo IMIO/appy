@@ -1328,6 +1328,10 @@ msgstr "Opération en cours..."
 msgid "progress_already"
 msgstr "🚫 Cette action est déjà en cours..\n\nOn ne peut la lancer une seconde fois en même temps."
 
+#. Default: "⚠️ The server runs in the foreground.\n\nNo parallel status request can be launched while the main action is executed."
+msgid "progress_fg"
+msgstr "⚠️ Le serveur est en <i>foreground</i>.\n\nAucune requête de statut ne peut être lancée en parallèle de l'action principale."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Créé par"
