@@ -423,6 +423,96 @@ class AjaxData {
   }
 }
 
+class Hook {
+
+  /* Wrapper on top of the fetch API. A hook represents a DOM node whose content
+     will be impacted or replaced by fetching content of an Ajax request whose
+     result is XHTML or JSON. */
+
+  constructor(node, url, params=null, method='post', parentId=null) {
+    // The DOM node that will host this hook object, in its hook attribute
+    this.node = node;
+    node.hook = this;
+    // Store params in a URLSearchParams object, be the request a GET or POST
+    let body = {};
+    if (params) {
+      for (const name in params) body[name] = params[name];
+    }
+    // Tell the Appy site that it is called in the context of an Ajax request
+    body['ajax'] = 'True';
+    // Build the URLSearchParams object
+    body = new URLSearchParams(body);
+    // Set correct headers, depending on p_method
+    let headers = new Headers();
+    if (method === 'post') {
+      headers.append('Content-Type', 'application/x-www-form-urlencoded');
+    }
+    // Make the Request object, that implements the request to p_url
+    const args = {method:method, body:body, headers:headers}
+    this.request = new Request(url, args);
+    /* If the following attribute is not null nor 0, it represents a duration in
+       seconds: the hook will be fetched every p_this.interval seconds, instead
+       of being fetched only once. */
+    this.interval = null;
+    // Will be true once the unique or first fetch will have occurred
+    this.fetched = false;
+  }
+
+  setInterval(interval) {
+    // Configure this hook to fetch data every p_interval seconds
+    this.interval = interval;
+    return this;
+  }
+
+  // If we are in the context of a recurrent fetch, must one more fetch occur ?
+  continueFetch() {
+    return true; // Can be overridden by a sub-class
+  }
+
+  // Extract XHTML content from this fetched p_response and update this.node
+  fetchXhtml(xhtml) {
+    this.node.outerHTML = xhtml;
+    const msg = readCookie('AppyMessage');
+    if (msg) { updateAppyMessage(msg); createCookie('AppyMessage', ''); }
+  }
+
+  // Override this method in a Hook sub-class to handle fetched JSON data
+  fetchJson(json) {}
+
+  // Fetch this.url
+  async fetch(now=null) {
+    // The fetch may need to be delayed. If it is the case, launch a timeout
+    if ((this.interval) && !now) {
+      setTimeout(()=>{this.fetch(true)}, this.interval * 1000);
+      return;
+    }
+    // Fetch data now
+    try {
+      // Clone the request if multiple fetch operations are foreseen
+      const req = (this.interval)? this.request.clone(): this.request,
+            response = await fetch(req);
+      // Analyse the response: get its type
+      const responseType = response.headers.get('Content-Type');
+      // Manage a JSON or XHTML response
+      if (responseType.startsWith('application/json')) {
+        const json = await response.json();
+        this.fetchJson(json);
+      }
+      else { // XHTML is expected
+        const xhtml = await response.text();
+        this.fetchXhtml(xhtml);
+      }
+      // Note that the fetch has occurred
+      this.fetched = true;
+      // Plan the next fetch, if we are in the context of a recurrent fetch
+      if (this.interval && this.continueFetch()) this.fetch();
+    }
+    catch (error) {
+      console.log(error);
+    }
+  }
+}
+
 function getSearchInfo(key, siblings) {
    // Get the search info stored at this p_key in the session storage
   let suffix = (siblings)? '': ':P',

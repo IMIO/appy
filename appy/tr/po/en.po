@@ -1320,6 +1320,14 @@ msgstr "Lighten"
 msgid "progress_init"
 msgstr "Initializing..."
 
+#. Default: "Ongoing..."
+msgid "progress_ongoing"
+msgstr "Ongoing..."
+
+#. Default: "🚫 This action is already ongoing.\n\nIt cannot be run twice at the same time."
+msgid "progress_already"
+msgstr "🚫 This action is already ongoing.\n\nIt cannot be run twice at the same time."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "By"

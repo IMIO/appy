@@ -6,6 +6,7 @@ import inspect
 from persistent import Persistent
 
 from appy.px import Px
+from appy.utils import json
 from appy.ui.js import Quote
 from appy.model.base import Base
 from appy.model.fields import Field
@@ -383,12 +384,13 @@ class Traversal:
         if r is None: return r
         resp = self.resp
         if resp.contentType == 'xml':
-            # Currently, only XML marshalling is there. Determine the name of
-            # the root tag.
+            # Determine the name of the root tag
             tag = rootTag or resp.rootTag
             if not tag:
                 tag = r.class_.name if isinstance(r, Base) else self.parts[-1]
             r = Marshaller(rootTag=tag).marshall(r)
+        elif resp.contentType == 'json':
+            r = json.Encoder(r).encode()
         return r
 
     def run(self):

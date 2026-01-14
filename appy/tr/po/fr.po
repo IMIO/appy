@@ -1318,7 +1318,15 @@ msgstr "Éclaircir"
 
 #. Default: "Initializing..."
 msgid "progress_init"
-msgstr "C'est en cours ..."
+msgstr "Démarrage de l'opération ..."
+
+#. Default: "Ongoing..."
+msgid "progress_ongoing"
+msgstr "Opération en cours..."
+
+#. Default: "🚫 This action is already ongoing.\n\nIt cannot be run twice at the same time."
+msgid "progress_already"
+msgstr "🚫 Cette action est déjà en cours..\n\nOn ne peut la lancer une seconde fois en même temps."
 
 #. Default: "By"
 msgid "Base_creator"

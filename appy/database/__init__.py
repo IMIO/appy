@@ -1033,6 +1033,26 @@ class Database:
             text = FOLDER_NDEL
         o.log(text % source)
 
+    def getTempFolder(self, sub=None):
+        '''Returns, as a Path object, the temp folder, within the OS temp
+           folder, where the current Appy site may dump temporary files and
+           sub-folders.'''
+        # Create this folder if it does not exist yet. His name includes the
+        # process ID.
+        #
+        # The dedicated temp folder, for a given Appy site, is this one:
+        # <OS temp folder>/appysite<process ID>
+        #  |_ progress :: stores status of actions or transitions for which a
+        #                 progress bar is shown
+        #
+        base = putils.getOsTempFolder(asPath=True)
+        r = base / f'appysite{os.getpid()}'
+        r.mkdir(parents=True, exist_ok=True)
+        if sub:
+            r = r / sub
+            r.mkdir(exist_ok=True)
+        return r
+
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                 PXs
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -421,7 +421,8 @@ class Action(Field):
         elif self.progress:
             # Submitting the form will open the Appy iframe with a progress bar
             params = {'path': self.getFinalFormAction(c, relative=True),
-                      'form': c.formId, 'popup': True}
+                      'form': c.formId, 'popup': True, 'iid': c.o.iid,
+                      'name': self.name}
             paramsE = urllib.parse.urlencode(params)
             r = f'{c.tool.url}/ui/Progress/view?{paramsE}'
         else:
@@ -619,6 +620,11 @@ class Action(Field):
            or "top" layouts.'''
         return layout in Layouts.actionLayouts
 
+    def setProgress(self, o, percentage, text):
+        '''For an action with a p_self.progress bar, use this method to set the
+           current progress.'''
+        self.progress.set(o, self.name, percentage, text)
+
     traverse['perform'] = 'perm:write'
     def perform(self, o, options=None, minimal=False):
         '''Called when the action is triggered from the UI'''
@@ -666,13 +672,13 @@ class Action(Field):
                     exists = o.getObject(o.iid)
                     url = o.tool.computeHomePage() if not exists else None
                     r = o.goto(url=url, message=msg)
-            return r
         elif result == 'redirect':
             # msg does not contain a message, but the URL where to redirect
             # the user. Redirecting is different if we are in an Ajax request.
-            return o.goto(msg, fromAjax=handler.isAjax())
-        else:
-            return r
+            r = o.goto(msg, fromAjax=handler.isAjax())
+        # Delete any progress file when appropriate
+        if self.progress: self.progress.deletePath(o, self.name)
+        return r
 
     def getMulti(self, back, check):
         '''In the context of a multi-action, create and return a Multi instance

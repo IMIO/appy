@@ -1319,6 +1319,14 @@ msgstr "Aufhellen"
 msgid "progress_init"
 msgstr ""
 
+#. Default: "Ongoing..."
+msgid "progress_ongoing"
+msgstr ""
+
+#. Default: "🚫 This action is already ongoing.\n\nIt cannot be run twice at the same time."
+msgid "progress_already"
+msgstr ""
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Erstellt von"

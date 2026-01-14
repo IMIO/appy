@@ -1319,6 +1319,14 @@ msgstr "Verlichten"
 msgid "progress_init"
 msgstr "Het is in uitvoering..."
 
+#. Default: "Ongoing..."
+msgid "progress_ongoing"
+msgstr "Operatie bezig..."
+
+#. Default: "🚫 This action is already ongoing.\n\nIt cannot be run twice at the same time."
+msgid "progress_already"
+msgstr ""
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Door"
