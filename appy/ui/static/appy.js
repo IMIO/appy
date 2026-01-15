@@ -459,7 +459,12 @@ class Hook {
     this.interval = null;
     // Will be true once the unique or first fetch will have occurred
     this.fetched = false;
+    // Call a custom m_init method that may be overridden by a class
+    this.init();
   }
+
+  // Custom hook initialisation a child class may override
+  init() {}
 
   setInterval(interval) {
     /* Configure this hook to fetch data every p_interval seconds. Set O or null

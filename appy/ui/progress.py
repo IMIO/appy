@@ -2,20 +2,29 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from DateTime import DateTime
+
 from ..px import Px
-from ..utils import bn
 from .iframe import Iframe
+from ..utils import bn, br
 from .template import Template
 from ..model.fields import Field
 from ..model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-PC_KO   = 'Progress for %s:%s:: Ignoring status with wrong percentage (%d%%).'
+PC_KO    = 'Progress for %s:%s:: Ignoring status with wrong percentage (%d%%).'
+PATH_KO  = 'The progress file does not exist.'
+PATH_DEL = 'Progress information about %s:%s has been cleaned.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Progress:
     '''Implements a progress bar for object actions or workflow transitions that
        last a long time.'''
+
+    # The confirmation message when cleaning a status file
+    CLEAN_TEXT = f'You are about to delete status info for this operation.' \
+                 f'{br}{br}Do it only if you are stuck with it.{br}{br}' \
+                 'Proceed ?'
 
     # Some elements will be traversable
     traverse = {}
@@ -28,7 +37,7 @@ class Progress:
     # This method must be called with 3 args:
 
     # 1) the related Appy object;
-    # 2) an integer number between 1 and 100 that represents the progress
+    # 2) an integer number between 0 and 100 that represents the progress
     #    percentage ;
     # 3) a translated text, that will be shown in the user interface. It can be
     #    raw text or XHTML; if you choose the "append" mode, it MUST be XHTML.
@@ -49,6 +58,17 @@ class Progress:
         # to control iframe characteristics, place here an Iframe object, as
         # found in appy/ui/iframe.py.
         self.popup = popup or Iframe('300px', '300px', resizable=False)
+        # For a given progress, every status dumped at the server side via
+        # m_setProgress will get a number. The first one will get number 1. If
+        # the browser fetches a status, but not server status has yet been
+        # dumped, it will get a virtual status with number 0.
+
+        # ⚠️ Important note. Depending on the browser's status fetch pace,
+        #    defined by p_interval, and the pace at which the server code
+        #    produces statuses via m_setProgress, the browser may retrieve
+        #    several times the same server status; or, inversely, a server
+        #    status may never be fetched by the browser, because too quickly
+        #    replaced with a new one.
 
     def getMainHook(self, tool):
         '''Return the JS code allowing to create a Hook object and link it to
@@ -100,23 +120,39 @@ class Progress:
             path.unlink()
 
     def set(self, o, name, percentage, text='', check=True):
-        '''Called by the app/ext to set the progress: a p_percentage between 1
-           and 100, and some explanatory p_text about the current status.'''
+        '''Called by the app/ext to set, in the temp file whose path is computed
+           by m_getPath, the progress status: a p_percentage between 1 and 100,
+           and some explanatory p_text about the current status.'''
         # Ensure the percentage is correct
-        if check and percentage < 1 or percentage > 100:
+        if check and (percentage < 0 or percentage > 100):
             o.log(PC_KO % (o.iid, name, percentage), type='error')
             return
-        # Get the file into which to dump progress
+        # Get the file into which to dump progress. Check m_getPathInfo to have
+        # an idea of the structure of the data being dumped in such files.
         path = self.getPath(o, name)
+        if path.is_file():
+            # A status file already exists. Before overwriting it, read its
+            # start, in order to retrieve the user login, the date of file
+            # creation and the file number.
+            with open(str(path)) as f:
+                login = f.readline().strip()
+                created = f.readline().strip()
+                nb = int(f.readline().strip())
+        else:
+            login = o.user.login
+            created = str(DateTime())
+            nb = -1
+        # Increment the file number
+        nb += 1
         with open(str(path), 'w') as f:
-            f.write(f'{percentage}{bn}{text}')
+            f.write(f'{login}{bn}{created}{bn}{nb}{bn}{percentage}{bn}{text}')
 
     def init(self, o, name):
         '''Initialise the progress by dumping a status file with 0 percentage'''
         self.set(o, name, 0, o.translate('progress_ongoing'), check=False)
 
     def getFinishedBar(self, text, success=True):
-        '''Renders p_self.bar,, forced to 100%, with this final p_text'''
+        '''Renders p_self.bar, forced to 100%, with this final p_text'''
         context = {'progress': self, 'finished': True, 'text':text,
                    'success': success}
         return self.bar(context)
@@ -172,15 +208,56 @@ class Progress:
         tool.resp.setContentType('json')
         # Get the file on disk where the progress is dumped
         r = None
+        progress = elem.progress
+        path = progress.getPath(o, elem.name)
+        if path.is_file():
+            r = progress.getPathInfo(path)
+        else:
+            r = O(percentage=0, text=tool.translate('progress_ongoing'),
+                  login=tool.user.login, created=None, nb=0)
+        return r
+
+    @classmethod
+    def getPathInfo(class_, path):
+        '''Extracts an object with info as dumped in the the status file having
+           this p_path.'''
+        r = O()
+        # The info dumped in the file is made of the following lines:
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # 1 | the login of the user performing the action ;
+        # 2 | the date of file creation ;
+        # 3 | the file number: an integer number starting at 1, that is
+        #   | incremented every time the status is updated ;
+        # 4 | the percentage, as an integer number between 0 and 100 ;
+        # 5 | the text, that may span several lines.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        with open(str(path)) as f:
+            r.login = f.readline().strip()
+            r.created = DateTime(f.readline().strip())
+            r.nb = int(f.readline().strip())
+            r.percentage = int(f.readline().strip())
+            r.text = f.read() # The remaining of the file is the text
+            print('READ text is', r.text, len(r.text))
+        return r
+
+    traverse['clean'] = 'Manager'
+    @classmethod
+    def clean(class_, tool):
+        '''Deletes the status file about the progress whose parameters are in
+           the request.'''
+        # Get progress info from the request
+        o, elem = class_.getFromRequest(tool)
+        # Get the file to delete
         path = elem.progress.getPath(o, elem.name)
         if path.is_file():
-            with open(str(path)) as f:
-                content = f.read()
-                percentage, text = content.split(bn, 1)
-                r = O(percentage=int(percentage), text=text)
+            # Delete the fle
+            path.unlink()
+            text = PATH_DEL % (o.iid, elem)
         else:
-            r = O(percentage=0, text=tool.translate('progress_ongoing'))
-        return r
+            text = PATH_KO
+        # No need to commit: it's just about deleting a file on disk
+        tool.say(text, fleeting=False)
+        tool.goto()
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #      Class methods related to all ongoing long-running operations
@@ -193,14 +270,17 @@ class Progress:
         # Walk the temp folder into wich progress operations dump their status
         folder = tool.database.getTempFolder('progress')
         for path in folder.iterdir():
-            # Ignore files whose name would not confrm to a status file
+            # Ignore files whose name would not conform to a status file
             name = path.name
             if name.count('_') != 1 or name.count('.'): continue
             # Extract info from the file name: object iid and field/transition
             # name.
             iid, name = name.split('_')
-            # Collect info in an Object and add it to v_r
-            info = O(iid=iid, name=name)
+            # Collect, from the file name and content, info in an Object and
+            # add it to v_r.
+            info = class_.getPathInfo(path)
+            info.iid = iid
+            info.name = name
             r.append(info)
         return r
 
@@ -241,6 +321,15 @@ class Progress:
      js='''
        class BarHook extends Hook {
 
+         // Custom initialisation: remember the last status number
+         init() {
+           /* If we haven't retrieve any server status yet, the last status is
+              -1. If we have fetched a status but no server status has yet been
+              dumped, the last status is 0. In any other case, the last status
+              is the number of the last fetched server status. */
+           this.lastStatus = -1;
+         }
+
          // Update the text that accompanies the progress bar
          updateText(json, changed) {
            const text = this.node.querySelector('#pbText');
@@ -260,13 +349,13 @@ class Progress:
                  percent = json.percentage,
                  done = node.querySelector('#pbDone'),
                  todo = node.querySelector('#pbTodo'),
-                 changed = (percent && parseInt(done.style.width) != percent);
+                 changed = json.nb != this.lastStatus;
            // Update the "done" part
            if (percent) {
              if (changed) done.style.width = `${percent}%`;
              done.style.borderRight = '1px solid black';
              // Display the percentage in the progress bar if there is space
-             if (percent > 15) done.innerText = done.style.width;
+             if (percent > 10) done.innerText = done.style.width;
              // Remove a dot in the "to do" part (if some dots are still there)
              if (changed) {
                const dots = todo.innerText;
@@ -282,6 +371,8 @@ class Progress:
            else todo.style.display = 'none';
            // Update the text
            this.updateText(json, changed);
+           // Update last status number
+           this.lastStatus = json.nb;
          }
 
          // Continue to fetch status while the main action is not finished
@@ -331,7 +422,8 @@ class Progress:
      ''')
 
     viewAll = Px('''
-     <x var="progs=tool.ui.Progress.listAll(tool)">
+     <x var="Progress=tool.ui.Progress;
+             progs=Progress.listAll(tool)">
 
       <!-- There is currently no progress action -->
       <div if="not progs" class="discreet">:_('progress_nil')</div>
@@ -340,15 +432,36 @@ class Progress:
       <table if="progs" class="small">
 
        <!-- Headers -->
-       <tr><th>Object</th><th>Action or transition</th></tr>
-
-       <!-- Data -->
-       <tr for="prog in progs">
-        <td var="target=tool.getObject(prog.iid)">
-         <x>:prog.iid</x> · <x>:target.getShownValue() if target else '?'</x>
-        </td>
-        <td>:prog.name</td>
+       <tr>
+        <th>Object</th><th>Action or transition</th><th>By</th>
+        <th>Created</th><th>Status #</th><th>%</th><th></th>
        </tr>
+       <!-- Data -->
+       <x for="prog in progs">
+        <!-- A first row for main data -->
+        <tr var="iid=prog.iid; name=prog.name; target=tool.getObject(iid)">
+         <td>
+          <x>:iid</x> · 
+          <x>:(target.getShownValue() or target.id) if target else '?'</x>
+         </td>
+         <td>:name</td>
+         <td>:prog.login</td>
+         <td>:tool.formatDate(prog.created)</td>
+         <td>:prog.nb</td>
+         <td>:prog.percentage</td>
+
+         <!-- Allow to delete the status file -->
+         <td>
+          <img src=":svg('delete')" class="clickable iconS"
+             var="url=f'{tool.url}/ui/Progress/clean?iid={iid}&amp;name={name}'"
+            onclick=":f'askConfirm(%s,%s,%s)' %
+                        (q('url'), q(url),q(Progress.CLEAN_TEXT))"/></td>
+        </tr>
+        <!-- A second row for text -->
+        <tr>
+         <td colspan="7">::prog.text or '-'</td>
+        </tr>
+       </x>
       </table>
      </x>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
