@@ -2143,6 +2143,18 @@ msgstr ""
 msgid "Tool_logsViewer"
 msgstr ""
 
+#. Default: "In progress"
+msgid "Tool_page_progress"
+msgstr ""
+
+#. Default: "Ongoing long-running operations"
+msgid "Tool_progress"
+msgstr ""
+
+#. Default: "There is currently no ongoing long-running operation."
+msgid "progress_nil"
+msgstr ""
+
 #. Default: "Synchronize external users"
 msgid "Tool_synchronizeExternalUsers"
 msgstr ""

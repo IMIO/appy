@@ -7,43 +7,44 @@ from DateTime import DateTime
 import re, urllib.parse, subprocess
 
 import appy.ui
-from appy.tr import po
-from appy.px import Px
-from appy import Config
-from appy.server import Server
-from appy.utils import Function
-from appy.model.base import Base
-from appy.model.user import User
-from appy.model.root import Model
-from appy.data import nativeNames
-from appy.model.group import Group
-from appy.model.fields import Show
-from appy.utils.mail import Mailer
-from appy.model.query import Query
-from appy.model.mover import Mover
-from appy.database import Database
-from appy.ui.layout import Layouts
-from appy.xml.escape import Escape
-from appy.database.log import Viewer
-from appy.ui.template import Template
-from appy.model.fields.ref import Ref
-from appy.server.backup import Backup
-from appy.model.searches import Search
-from appy.utils import dates as dutils
-from appy.model.fields.rich import Rich
-from appy.model.fields import Initiator
-from appy.model.carousel import Carousel
-from appy.model.fields.phase import Page
-from appy.model.utils import Object as O
-from appy.model.page import Page as OPage
-from appy.database.catalog import Catalog
-from appy.model.fields.string import String
-from appy.model.fields.action import Action
-from appy.test.monitoring import Monitoring
-from appy.model.translation import Translation
-from appy.model.fields.calendar import Calendar
-from appy.model.fields.computed import Computed
-from appy.server.context import AuthenticationContext
+from ..tr import po
+from ..px import Px
+from .. import Config
+from .base import Base
+from .user import User
+from .root import Model
+from .group import Group
+from .fields import Show
+from .query import Query
+from .mover import Mover
+from .fields.ref import Ref
+from ..server import Server
+from ..utils import Function
+from .searches import Search
+from .fields import Initiator
+from .fields.rich import Rich
+from .carousel import Carousel
+from .fields.phase import Page
+from .utils import Object as O
+from ..data import nativeNames
+from .page import Page as OPage
+from ..utils.mail import Mailer
+from ..database import Database
+from ..ui.layout import Layouts
+from ..xml.escape import Escape
+from .fields.string import String
+from .fields.action import Action
+from ..database.log import Viewer
+from ..ui.template import Template
+from ..ui.progress import Progress
+from ..server.backup import Backup
+from ..utils import dates as dutils
+from .translation import Translation
+from .fields.calendar import Calendar
+from .fields.computed import Computed
+from ..database.catalog import Catalog
+from ..test.monitoring import Monitoring
+from ..server.context import AuthenticationContext
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 RS_FG_KO   = 'Server cannot be restarted if running in the foreground.'
@@ -418,6 +419,10 @@ class Tool(Base):
     logsViewer = Computed(method=Viewer.run,
       page=Page('logsViewer', phase='admin', show=forAdmin,
                 label='Tool_page_logsViewer'), **ta)
+
+    progress = Computed(method=Progress.viewAll,
+      page=Page('progress', phase='admin', show=forAdmin,
+                label='Tool_page_progress'), **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                             Monitoring

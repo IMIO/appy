@@ -2140,6 +2140,18 @@ msgstr "Contenu du fichier config.py de ce site"
 msgid "Tool_page_logsViewer"
 msgstr "Logs"
 
+#. Default: "In progress"
+msgid "Tool_page_progress"
+msgstr "En cours"
+
+#. Default: "Ongoing long-running operations"
+msgid "Tool_progress"
+msgstr "Opérations de longue durée en cours"
+
+#. Default: "There is currently no ongoing long-running operation."
+msgid "progress_nil"
+msgstr "Il n'y a actuellement aucune opération de longue durée en cours."
+
 #. Default: "Log files' content"
 msgid "Tool_logsViewer"
 msgstr "Contenu des fichiers de log"

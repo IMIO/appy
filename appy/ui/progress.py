@@ -10,6 +10,9 @@ from ..model.fields import Field
 from ..model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+PC_KO   = 'Progress for %s:%s:: Ignoring status with wrong percentage (%d%%).'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Progress:
     '''Implements a progress bar for object actions or workflow transitions that
        last a long time.'''
@@ -96,9 +99,13 @@ class Progress:
         if path.is_file():
             path.unlink()
 
-    def set(self, o, name, percentage, text=''):
+    def set(self, o, name, percentage, text='', check=True):
         '''Called by the app/ext to set the progress: a p_percentage between 1
            and 100, and some explanatory p_text about the current status.'''
+        # Ensure the percentage is correct
+        if check and percentage < 1 or percentage > 100:
+            o.log(PC_KO % (o.iid, name, percentage), type='error')
+            return
         # Get the file into which to dump progress
         path = self.getPath(o, name)
         with open(str(path), 'w') as f:
@@ -106,7 +113,35 @@ class Progress:
 
     def init(self, o, name):
         '''Initialise the progress by dumping a status file with 0 percentage'''
-        self.set(o, name, 0, o.translate('progress_ongoing'))
+        self.set(o, name, 0, o.translate('progress_ongoing'), check=False)
+
+    def getFinishedBar(self, text, success=True):
+        '''Renders p_self.bar,, forced to 100%, with this final p_text'''
+        context = {'progress': self, 'finished': True, 'text':text,
+                   'success': success}
+        return self.bar(context)
+
+    def getDoneParts(self, finished, success=True):
+        '''Returns, as a 3-tuple, elements to be rendered in the "done" part of
+           the progress bar.'''
+        # The 3 elements are:
+        # 1) its width ;
+        # 2) the CSS styles to apply to it ;
+        # 3) its inner text.
+        width = 100 if finished else 0
+        widthF = f'{width}%' # The width, formatted
+        styles = f'width:{widthF}'
+        if finished:
+            # Once finished, slow down the CSS animation
+            styles = f'{styles};animation-duration:20s'
+            text = f'{widthF} 🥳' if success else '😢'
+        else:
+            text = '&nbsp;'
+        return width, styles, text
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #    Class methods related to a specific ongoing long-running operation
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     @classmethod
     def getFromRequest(class_, tool):
@@ -147,29 +182,27 @@ class Progress:
             r = O(percentage=0, text=tool.translate('progress_ongoing'))
         return r
 
-    def getFinishedBar(self, text, success=True):
-        '''Renders p_self.bar,, forced to 100%, with this final p_text'''
-        context = {'progress': self, 'finished': True, 'text':text,
-                   'success': success}
-        return self.bar(context)
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #      Class methods related to all ongoing long-running operations
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    def getDoneParts(self, finished, success=True):
-        '''Returns, as a 3-tuple, elements to be rendered in the "done" part of
-           the progress bar.'''
-        # The 3 elements are:
-        # 1) its width ;
-        # 2) the CSS styles to apply to it ;
-        # 3) its inner text.
-        width = 100 if finished else 0
-        widthF = f'{width}%' # The width, formatted
-        styles = f'width:{widthF}'
-        if finished:
-            # Once finished, slow down the CSS animation
-            styles = f'{styles};animation-duration:20s'
-            text = f'{widthF} 🥳' if success else '😢'
-        else:
-            text = '&nbsp;'
-        return width, styles, text
+    @classmethod
+    def listAll(class_, tool):
+        '''Returns info about all currently ongoing long-running operations'''
+        r = []
+        # Walk the temp folder into wich progress operations dump their status
+        folder = tool.database.getTempFolder('progress')
+        for path in folder.iterdir():
+            # Ignore files whose name would not confrm to a status file
+            name = path.name
+            if name.count('_') != 1 or name.count('.'): continue
+            # Extract info from the file name: object iid and field/transition
+            # name.
+            iid, name = name.split('_')
+            # Collect info in an Object and add it to v_r
+            info = O(iid=iid, name=name)
+            r.append(info)
+        return r
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                    PXs
@@ -269,7 +302,7 @@ class Progress:
 
        <!-- The "done" part -->
        <div var="width,styles,dtext=progress.getDoneParts(finished, success)"
-            id="pbDone" style=":styles">:dtext</div>
+            id="pbDone" style=":styles">::dtext</div>
 
        <!-- The "to do" part -->
        <div if="not finished" id="pbTodo" class="blinkT"
@@ -296,4 +329,26 @@ class Progress:
                  animation: animBG 2s ease infinite }
        #pbTodo { background-color:white; height:1.5em; text-align:center }
      ''')
+
+    viewAll = Px('''
+     <x var="progs=tool.ui.Progress.listAll(tool)">
+
+      <!-- There is currently no progress action -->
+      <div if="not progs" class="discreet">:_('progress_nil')</div>
+
+      <!-- Info about ongoing actions -->
+      <table if="progs" class="small">
+
+       <!-- Headers -->
+       <tr><th>Object</th><th>Action or transition</th></tr>
+
+       <!-- Data -->
+       <tr for="prog in progs">
+        <td var="target=tool.getObject(prog.iid)">
+         <x>:prog.iid</x> · <x>:target.getShownValue() if target else '?'</x>
+        </td>
+        <td>:prog.name</td>
+       </tr>
+      </table>
+     </x>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
