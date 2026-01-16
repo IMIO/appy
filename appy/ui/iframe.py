@@ -116,8 +116,8 @@ class Iframe:
              title=":_('enlarge')">◳</span>
 
        <!-- Close -->
-       <img src=":svg('close')" class="clickable iconSEL" title=":_('close')"
-            onclick="Iframe.close(this)"/>
+       <img id="iframeClose" src=":svg('close')" class="clickable iconSEL"
+            title=":_('close')" onclick="Iframe.close(this)"/>
       </div>
 
       <!-- The inner iframe -->
@@ -163,6 +163,9 @@ class Iframe:
          this.mover = document.getElementById('iframeMover');
          this.er = document.getElementById('iframeER');
          this.er.style.display = (resizable)? 'block': 'none';
+         /* May this popup be closed ? It could not be the case if the operation
+            triggered from the popup can't be interrupted. */
+         this.closable = true;
        }
 
        // Initialises the popup position
@@ -234,6 +237,23 @@ class Iframe:
          icon.setAttribute('title', title);
        }
 
+       // Enable or disable the "close" button
+       setClosable(closable) {
+         // Set flag "closable" on the Iframe object
+         this.closable = closable;
+         // Update the cursor on the "close" icon
+         const icon = this.popup.querySelector('#iframeClose'),
+               classes = icon.classList;
+         if (closable) {
+           classes.add('clickable');
+           classes.remove('unallowed');
+         }
+         else {
+           classes.add('unallowed');
+           classes.remove('clickable');
+         }
+       }
+
        // Toggle the popup appearance: enlarged <> standard dimensions
        static toggleAppearance(icon) {
          const iframe = getNode('iframePopup').appy,
@@ -256,9 +276,12 @@ class Iframe:
 
        // Close the popup
        static close(icon) {
-         // Reset iframe dimensions
          const iframe = getNode('iframePopup').appy;
+         // Don't do anything if the popup is currently not closable
+         if (!iframe.closable) return;
+         // Reset iframe dimensions
          if (iframe.enlarged) Iframe.toggleAppearance(getNode('iframeER'));
+         // Close the popup
          closePopup('iframePopup', null, true);
        }
 

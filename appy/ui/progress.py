@@ -75,8 +75,12 @@ class Progress:
            the progress' main DOM node.'''
         path = tool.req.path
         append = '.setAppend(true)' if self.append else ''
-        return f'new ProgressHook(document.currentScript.parentNode, ' \
-               f'`${{siteUrl}}/{path}`){append};'
+        r = f'new ProgressHook(document.currentScript.parentNode, ' \
+            f'`${{siteUrl}}/{path}`){append}'
+        # By the way, disable the iframe "close" button: the operation can't be
+        # aborted at this time.
+        disableClose = 'getNode(":iframePopup").appy.setClosable(false)'
+        return f'{r};{disableClose}'
 
     def getBarHook(self, o, elem):
         '''Return the JS code allowing to create a Hook object and link it to
@@ -344,6 +348,9 @@ class Progress:
            }
            // Call the base method
            super.fetchXhtml(chunk);
+           // Enable the iframe "close" button, that was disabled
+           const iframe = getNode(':iframePopup').appy;
+           iframe.setClosable(true);
          }
        }
 
