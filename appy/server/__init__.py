@@ -11,11 +11,11 @@ from appy import utils, version
 from appy.model.root import Model
 from appy.database import Database
 from appy.utils import url as uutils
-from appy.utils import executeCommand
 from appy.server.pool import ThreadPool
 from appy.utils.path import getShownSize
 from appy.model.utils import Object as O
 from appy.server.scheduler import Scheduler
+from appy.utils import executeCommand, bn, br
 from appy.server.static import Config as StaticConfig
 from appy.server.handler import HttpHandler, VirtualHandler
 
@@ -42,9 +42,6 @@ BROKEN_PIPE   = 'Broken pipe (client port %d).'
 MIN_THR_KO    = 'At least one thread must be in use.'
 THR_LIMITS_KO = 'killThreadLimit (%d) should be > hungThreadLimit (%d)'
 SPAWN_IF_KO   = 'spawnIfUnder (%d) should be < than the number of threads (%d)'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -289,6 +286,20 @@ class Config:
         spawnIf = self.spawnIfUnder
         threads = self.threads
         assert spawnIf <= threads, (SPAWN_IF_KO % (spawnIf, threads))
+
+    def getAddress(self, details=False, sep=br):
+        '''Gets p_self.address with potential p_details'''
+        # If p_details are set, it tries to retrieve the server's IP address(es)
+        # and alias(es).
+        r = self.address
+        if details:
+            more = socket.gethostbyname_ex(socket.gethostname())
+            aliases, ips = more[1], more[2]
+            if aliases:
+                r = f'{r}{sep}Aliases: {", ".join(aliases)}'
+            if ips:
+                r = f'{r}{sep}IPs: {", ".join(ips)}'
+        return r
 
     def getOsInfo(self):
         '''Returns, as a chunk of XHTML, info about the OS running the current
@@ -716,7 +727,7 @@ class Server:
       <h2>Server configuration</h2>
       <table class="small">
        <tr><th>Name</th><td>:info.node()</td></tr>
-       <tr><th>Address</th><td>:cfg.address</td></tr>
+       <tr><th>Address</th><td>::cfg.getAddress(details=True)</td></tr>
        <tr><th>Port</th><td>:cfg.port</td></tr>
        <tr><th>Protocol</th><td>:cfg.protocol</td></tr>
        <tr><th>Mode</th><td>:server.mode</td></tr>

@@ -74,8 +74,9 @@ class Progress:
         '''Return the JS code allowing to create a Hook object and link it to
            the progress' main DOM node.'''
         path = tool.req.path
-        return f'new Hook(document.currentScript.parentNode, ' \
-               f'`${{siteUrl}}/{path}`);'
+        append = '.setAppend(true)' if self.append else ''
+        return f'new ProgressHook(document.currentScript.parentNode, ' \
+               f'`${{siteUrl}}/{path}`){append};'
 
     def getBarHook(self, o, elem):
         '''Return the JS code allowing to create a Hook object and link it to
@@ -149,7 +150,8 @@ class Progress:
 
     def init(self, o, name):
         '''Initialise the progress by dumping a status file with 0 percentage'''
-        self.set(o, name, 0, o.translate('progress_ongoing'), check=False)
+        text = self.divTranslate(o, 'progress_ongoing')
+        self.set(o, name, 0, text, check=False)
 
     def getFinishedBar(self, text, success=True):
         '''Renders p_self.bar, forced to 100%, with this final p_text'''
@@ -174,6 +176,11 @@ class Progress:
         else:
             text = '&nbsp;'
         return width, styles, text
+
+    def divTranslate(self, o, label=None):
+        '''Translates this p_label and put the result in a div tag'''
+        r = o.translate(label or self.label)
+        return f'<div>{r}</div>'
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #    Class methods related to a specific ongoing long-running operation
@@ -213,8 +220,8 @@ class Progress:
         if path.is_file():
             r = progress.getPathInfo(path)
         else:
-            r = O(percentage=0, text=tool.translate('progress_ongoing'),
-                  login=tool.user.login, created=None, nb=0)
+            r = O(percentage=0, login=tool.user.login, created=None, nb=0,
+                  text=progress.divTranslate(o, 'progress_ongoing'))
         return r
 
     @classmethod
@@ -317,7 +324,30 @@ class Progress:
 
      css='.pbError { margin-top:1em }',
 
+     # The JS progress hook is customized, via JS class ProgressHook. The
+     # objective is to retrieve, in "append" mode, the cumulated text at the end
+     # of the process, and integrate it in the final message.
+
+     # The bar hook is extended via JS class BarHook in order to handle json
+     # status fetches.
+
      js='''
+       class ProgressHook extends Hook {
+         fetchXhtml(xhtml) {
+           let chunk = xhtml;
+           // If we are in "append" mode, retrieve the cumulated text
+           if (this.append) {
+             const text = this.node.querySelector('#pbText').innerHTML;
+             if (text) {
+               chunk = `${chunk}<div class="discreet topSpace">${text}</div>`;
+             }
+           }
+           // Call the base method
+           super.fetchXhtml(chunk);
+         }
+       }
+
+       // Create a BarHook class for handling json status fetches
        class BarHook extends Hook {
 
          // Custom initialisation: remember the last status number
@@ -400,7 +430,7 @@ class Progress:
       </div>
 
       <!-- The text that accompanies the progress bar -->
-      <div id="pbText">::text or _(progress.label)</div>
+      <div id="pbText">::text or progress.divTranslate(o)</div>
      </div>''',
 
      css='''
