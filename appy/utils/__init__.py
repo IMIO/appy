@@ -8,6 +8,7 @@ import sys, re
 
 from persistent.list import PersistentList
 import traceback, mimetypes, subprocess, types
+from persistent.mapping import PersistentMapping
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def asDict(seq):
@@ -21,6 +22,7 @@ br = '<br/>'
 commercial = False
 listTypes = list, PersistentList
 sequenceTypes = listTypes + (tuple,)
+dictTypes = dict, PersistentMapping
 
 # On these layouts, using a gobal selector and switching from one option to the
 # other is not allowed: it would reload the entire page. Examples are: the

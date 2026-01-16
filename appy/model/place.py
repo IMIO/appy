@@ -2,13 +2,10 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from persistent.mapping import PersistentMapping
-
 from appy.px import Px
 from appy.model.base import Base
 from appy.model.fields import Show
 from appy.xml.escape import Escape
-from appy.utils import formatNumber
 from appy.utils.google import Google
 from appy.model.utils import Object as O
 from appy.model.fields.float import Float
@@ -16,11 +13,9 @@ from appy.model.fields.group import Group
 from appy.model.fields.string import String
 from appy.ui.layout import Layouts, LayoutF
 from appy.model.fields.boolean import Boolean
+from appy.utils import formatNumber, dictTypes
 from appy.model.workflow.standard import Owner
 from appy.model.fields.computed import Computed
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-mappingTypes = (dict, PersistentMapping)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Place(Base):
@@ -129,7 +124,7 @@ class Place(Base):
         # Instead of being an Appy objet, p_o may also be a (persistent) dict.
         # In that case, dict keys must correspond to the standard address-based
         # fields.
-        o = O(**o) if isinstance(o, mappingTypes) else o
+        o = O(**o) if isinstance(o, dictTypes) else o
         # Return the p_empty string if address is empty
         street = getattr(o, streetField)
         if not street: return empty

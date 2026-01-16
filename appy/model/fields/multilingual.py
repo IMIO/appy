@@ -3,9 +3,9 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from DateTime import DateTime
-from persistent.mapping import PersistentMapping
 
 from appy.px import Px
+from appy.utils import dictTypes
 from appy.model.fields import Field
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -17,8 +17,8 @@ VAL_KO     = '%s :: Multilingual field "%s" contains wrong value "%s".'
 class Multilingual:
     '''Mixin class injected into any Field whose content can be multilingual'''
 
-    # Possible types for values stored as multilingual
-    types = (dict, PersistentMapping)
+    # Possible types for multilingual values
+    types = dictTypes
 
     # Default values to render when field values are empty
     emptyDefault = {'view': '-', 'edit': '', 'cell': ''}

@@ -237,7 +237,6 @@ class Progress:
             r.nb = int(f.readline().strip())
             r.percentage = int(f.readline().strip())
             r.text = f.read() # The remaining of the file is the text
-            print('READ text is', r.text, len(r.text))
         return r
 
     traverse['clean'] = 'Manager'

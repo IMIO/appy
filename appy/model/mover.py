@@ -3,9 +3,9 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import re
-from persistent.mapping import PersistentMapping
 
 from appy.model.base import Base
+from appy.utils import dictTypes
 from appy.ui.iframe import Iframe
 from appy.ui.layout import Layouts
 from appy.model.utils import Object as O
@@ -92,7 +92,7 @@ class Mover(Base):
             if page.isEmpty('content'): continue
             content = page.content
             rcount = counts.replacements
-            if isinstance(content, PersistentMapping):
+            if isinstance(content, dictTypes):
                 # This may happen for those having configured pages as being
                 # multilingual.
                 content = content.copy()
