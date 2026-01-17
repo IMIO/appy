@@ -4,6 +4,9 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from appy.px import Px
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 F_FILE_KO   = 'Appy does not have custom font "%s".'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -22,9 +25,14 @@ class Includer:
 
     @classmethod
     def js(class_, url, version=None):
-        '''Produces a chunk of XHTML for including JS file with this p_url'''
-        v = f'?{version}' if version else ''
-        return f'<script src="{url}{v}"></script>'
+        '''Produces a chunk of XHTML for including JS file with this p_url, or
+           injecting the JS code related to a PX if p_url is a PX.'''
+        if isinstance(url, Px):
+            r = f'<script>{url.js}</script>'
+        else:
+            v = f'?{version}' if version else ''
+            r = f'<script src="{url}{v}"></script>'
+        return r
 
     @classmethod
     def vars(class_, tool):

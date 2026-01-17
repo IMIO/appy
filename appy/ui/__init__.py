@@ -875,7 +875,7 @@ class LinkTarget:
             else:
                 click = 'onClick'
             # Get the JS code for opening the link in the popup
-            jsOpen = Iframe.get(popup).getJsOpen(back)
+            jsOpen = Iframe.get(popup).getJsOpen(back=back)
             setattr(self, click, jsOpen)
         else:
             # Add a protection against double-clicks

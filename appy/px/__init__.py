@@ -8,7 +8,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import xml.sax
 
-from appy.utils import css
+from appy.utils import css, bn
 from appy.pod import Evaluator
 from appy.model.utils import Object as O
 from appy.pod.buffers import MemoryBuffer
@@ -20,9 +20,6 @@ SPEC_KO      = 'wrong specifier. A specifier must be of the form ' \
                '"<objectName>*<pxName>", like in "tool*pxTest".'
 SPEC_NAME_KO = 'name "%s" does not correspond to any object in the context.'
 PX_NAME_KO   = 'attribute "%s.%s" does not exist or is not a Px instance.'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Px:
@@ -176,7 +173,7 @@ class Px:
         '''A p_parsingError occurred. Complete the error message with the
            erroneous line from self.content.'''
         # Split lines from self.content
-        splitted = self.content.split('\n')
+        splitted = self.content.split(bn)
         i = parsingError.getLineNumber() - 1
         # Get the erroneous line, and add a subsequent line for indicating
         # the erroneous column.

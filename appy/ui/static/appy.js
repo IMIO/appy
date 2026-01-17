@@ -1340,8 +1340,8 @@ function initSlaves(objectUrl, layoutType) {
 function setBackCode(hook, id) {
   /* Set, on the iframe popup, info allowing to back from it by ajax-refreshing
      the initiator field having this p_id and being rendered in this p_hook. */
-  let popup = getNode('iframePopup', true),
-      code = `askField(':${hook}','${siteUrl}/${id}','edit',params,false)`;
+  const popup = getNode('iframePopup', true),
+        code = `askField(':${hook}','${siteUrl}/${id}','edit',params,false)`;
   popup.backHook = hook;
   popup.backCode = code;
 }
@@ -1352,7 +1352,7 @@ function backFromPopup(id) {
   if (close == 'no') return;
   // Reset the timer, the cookie and close the popup
   createCookie('closePopup', 'no');
-  const popup = closePopup('iframePopup'),
+  const popup = Iframe.close(),
         timer = popup.popupTimer;
   clearInterval(timer);
   if (close != 'yes') {
@@ -1658,45 +1658,15 @@ function openPopup(popupId, msg, width, height, resizable, css, back,
   popup.style.display = 'block';
 }
 
-function closePopup(popupId, clean, tryCancel) {
+function closePopup(popupId, clean) {
   // Get the popup
-  let container = (popupId == 'iframePopup') ?
-                  window.parent.document: window.document,
-      popup = container.getElementById(popupId);
+  const popup = document.getElementById(popupId);
   // Close the popup
   popup.style.display = 'none';
   // Clean field "clean" if specified
   if (clean) {
     let elem = popup.getElementsByTagName('form')[0].elements[clean];
     if (elem) elem.value = '';
-  }
-  if (popupId == 'iframePopup') {
-    // Try to click on a cancel button if found
-    let canceled = false, icontent=null, iframe=null;
-    if (tryCancel) {
-      iframe = popup.getElementsByTagName('iframe')[0];
-      // "contentDocument" may be null if the iframe points to an external site
-      icontent = iframe.contentDocument;
-      let cancels = (icontent)? icontent.getElementsByName('cancel'): [],
-          cancel = (cancels.length > 0)? cancels[0]: null;
-      if (cancel && (cancel.tagName == 'A')) {
-        cancel.click();
-        canceled = true;
-      }
-    }
-    if (!canceled) {
-      /* Leave the form silently if we are on an edit page. If the iframe
-         pointed to a page from an external site, this action will be blocked by
-         the browser. */
-      if (icontent) iframe.contentWindow.onbeforeunload = null;
-    }
-    if (icontent) icontent.removeChild(icontent.documentElement);
-    // Hide the mask
-    let imask = getNode(':iframeMask');
-    imask.style.opacity = 0;
-    imask.style.zIndex = 0;
-    // Ajax-refresh the popup caller if a back hook is found
-    if (!canceled && popup.backHook) askAjax(popup.backHook);
   }
   return popup;
 }
@@ -1902,7 +1872,7 @@ function onSelectObjects(popupId, initiatorId, objectUrl, mode, onav,
     return;
   }
   // Close the popup
-  closePopup('iframePopup');
+  Iframe.close();
   /* When refreshing the Ref field we will need to pass all those parameters,
      for replaying the popup query. */
   let params = {'selected': uids, 'semantics': semantics,
@@ -1943,7 +1913,7 @@ function onSelectObject(checkboxId, initiatorId, id, ckNum, onav) {
     else {
       /* Close the popup and directly refresh the initiator field with the
          selected object. */
-      closePopup('iframePopup');
+      Iframe.close();
       let params = {'selected': checkbox.value, 'semantics': 'checked'};
       if (onav) params['nav'] = onav;
       askField(`:${initiatorId}`, `${siteUrl}/${id}`, 'edit', params, false);
@@ -1956,7 +1926,7 @@ function onSelectTemplateObject(checkboxId, formName, insert) {
   let addForm = window.parent.document.forms[formName];
   addForm.template_.value = document.getElementById(checkboxId).value;
   addForm.insert.value = insert;
-  closePopup('iframePopup');
+  Iframe.close();
   addForm.submit();
 }
 

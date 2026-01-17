@@ -153,6 +153,8 @@ class Iframe:
          this.setStandard(true);
          // Initialise the back hook, if any
          popup.backHook = back;
+         // The mask preventing clicking around the iframe
+         this.mask = getNode('iframeMask');
          // Show the mask behind the popup
          if (!mobile) this.setMask();
          // Remember the height of the first inner object tag, if any
@@ -166,6 +168,9 @@ class Iframe:
          /* May this popup be closed ? It could not be the case if the operation
             triggered from the popup can't be interrupted. */
          this.closable = true;
+         /* Once closed, must the caller level (a back hook or the main window)
+            be reloaded ? */
+         this.backReload = false;
        }
 
        // Initialises the popup position
@@ -195,9 +200,16 @@ class Iframe:
 
        // Set the mask preventing clicking around the iframe
        setMask() {
-         let mask = document.getElementById('iframeMask');
-         mask.style.opacity = 0.7;
-         mask.style.zIndex = 99;
+         if (this.mobile) return;
+         this.mask.style.opacity = 0.7;
+         this.mask.style.zIndex = 99;
+       }
+
+       // Hide the mask
+       hideMask() {
+         if (this.mobile) return;
+         this.mask.style.opacity = 0;
+         this.mask.style.zIndex = 0;
        }
 
        /* Set standard dimensions and positioning for the popup. Its position
@@ -274,15 +286,49 @@ class Iframe:
          mover.style.display = display;
        }
 
+       // When closing the popup, try to cancel the Appy form, if found in it
+       tryCancelForm() {
+         const iframe = this.iframe,
+               icontent = iframe.contentDocument;
+         /* The iframe's "contentDocument" may be null if the iframe points to
+            an external site. */
+         let canceled = false;
+         const cancels = (icontent)? icontent.getElementsByName('cancel'): [],
+               cancel = (cancels.length > 0)? cancels[0]: null;
+         if (cancel && cancel.tagName === 'A') {
+           cancel.click();
+           canceled = true;
+         }
+         if (!canceled) {
+          /* Leave the form silently if we are on an edit page. If the iframe
+             pointed to a page from an external site, this action will be
+             blocked by the browser. */
+          if (icontent) iframe.contentWindow.onbeforeunload = null;
+         }
+         if (icontent) icontent.removeChild(icontent.documentElement);
+         return canceled;
+       }
+
        // Close the popup
-       static close(icon) {
-         const iframe = getNode('iframePopup').appy;
+       static close() {
+         const popup = getNode('iframePopup', true),
+               iframe = popup.appy;
          // Don't do anything if the popup is currently not closable
-         if (!iframe.closable) return;
+         if (!iframe.closable) return popup;
          // Reset iframe dimensions
          if (iframe.enlarged) Iframe.toggleAppearance(getNode('iframeER'));
          // Close the popup
-         closePopup('iframePopup', null, true);
+         popup.style.display = 'none';
+         // Try to cancel the Appy form if found in the popup
+         const canceled = iframe.tryCancelForm();
+         // Hide the mask
+         iframe.hideMask();
+         // Refresh the iframe caller when appropriate
+         if (!canceled && iframe.backReload) {
+           if (popup.backHook) askAjax(popup.backHook);
+           else window.parent.location = window.parent.location;
+         }
+         return popup;
        }
 
        // Updates cursors (are we dragging or not) ?
@@ -369,7 +415,7 @@ class Iframe:
      }''')
 
     # HTML page to render for closing the popup
-    back = '<!DOCTYPE html>\n<html><head>%s%s</head><body>' \
+    back = '<!DOCTYPE html>\n<html><head>%s%s</head><body>%s' \
            '<script>backFromPopup(%d)</script></body></html>'
 
     @classmethod
@@ -395,7 +441,7 @@ class Iframe:
         # the effective appy.js. In short, for the browser, appy.js is not
         # appy.js?6.
         return class_.back % (Includer.js(o.buildUrl(f'appy.js?{version}')),
-                              Includer.vars(o), o.iid)
+                              Includer.vars(o), Includer.js(class_.view), o.iid)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Iframe.default = Iframe('350px')

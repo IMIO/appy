@@ -351,6 +351,8 @@ class Progress:
            // Enable the iframe "close" button, that was disabled
            const iframe = getNode(':iframePopup').appy;
            iframe.setClosable(true);
+           // When closing the popup, reload the caller (page or hook)
+           iframe.backReload = true;
          }
        }
 
