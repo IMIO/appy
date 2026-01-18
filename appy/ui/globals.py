@@ -4,10 +4,9 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy.ui.iframe import Iframe
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n'
+from ..utils import bn
+from .iframe import Iframe
+from .includer import Includer
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Globals:
@@ -76,8 +75,10 @@ class Globals:
     @classmethod
     def getPopups(class_, c):
         '''Returns the popups to include in every page'''
-        # The "iframe" popup must not be included if we are already in a popup
-        iframe = '' if c.popup else Iframe.view(c)
+        # The "iframe" popup must not be included if we are already in a popup.
+        # In that case, though, the JS code defining the Iframe class must be
+        # there.
+        iframe = Includer.js(Iframe.view) if c.popup else Iframe.view(c)
         # Define variables, per popup
         _ = c._
         svg = c.svg
@@ -90,7 +91,7 @@ class Globals:
          _('object_save'), _('object_cancel'),
          # alertPopup
          svg('warning'), _('appy_ok'),
-         # iframePopup
+         # iframe popup or its JS code only
          iframe
         )
         return class_.popups % vars

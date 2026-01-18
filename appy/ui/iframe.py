@@ -152,7 +152,12 @@ class Iframe:
          this.enlarged = false;
          this.setStandard(true);
          // Initialise the back hook, if any
-         popup.backHook = back;
+         this.backHook = back;
+         // A specific JS code may be evaluated for going back from the popup
+         this.backCode = null;
+         /* Once closed, must the caller level (a p_back hook or the main
+            window) be reloaded ? */
+         this.backReload = false;
          // The mask preventing clicking around the iframe
          this.mask = getNode('iframeMask');
          // Show the mask behind the popup
@@ -168,9 +173,6 @@ class Iframe:
          /* May this popup be closed ? It could not be the case if the operation
             triggered from the popup can't be interrupted. */
          this.closable = true;
-         /* Once closed, must the caller level (a back hook or the main window)
-            be reloaded ? */
-         this.backReload = false;
        }
 
        // Initialises the popup position
@@ -314,7 +316,7 @@ class Iframe:
          const popup = getNode('iframePopup', true),
                iframe = popup.appy;
          // Don't do anything if the popup is currently not closable
-         if (!iframe.closable) return popup;
+         if (!iframe.closable) return iframe;
          // Reset iframe dimensions
          if (iframe.enlarged) Iframe.toggleAppearance(getNode('iframeER'));
          // Close the popup
@@ -325,10 +327,67 @@ class Iframe:
          iframe.hideMask();
          // Refresh the iframe caller when appropriate
          if (!canceled && iframe.backReload) {
-           if (popup.backHook) askAjax(popup.backHook);
+           if (iframe.backHook) askAjax(iframe.backHook);
            else window.parent.location = window.parent.location;
          }
-         return popup;
+         return iframe;
+       }
+
+      /* When the Appy form is submitted inside the iframe popup, this latter
+         must be closed, but not before the form has been handled by the server.
+         This is achieved via m_initBack, that sets a "close popup" cookie and a
+         timer (m_goBack) that checks its value. If set to "no", it is not time
+         yet to close it. Once the form will be handled by the server, this
+         latter will set the cookie to true and the popup will be closed. */
+
+       static goBack(id) {
+         // Close the iframe popup if it is time to do it
+         const close = readCookie('closePopup');
+         if (close == 'no') return;
+         // Reset the timer, the cookie and close the popup
+         createCookie('closePopup', 'no');
+         const iframe = Iframe.close();
+         clearInterval(iframe.closeTimer);
+         if (close != 'yes') {
+           // Load a specific URL in the main page
+           window.parent.location = atob(close.slice(2,-1));
+         }
+         else {
+           /* Ajax-refresh, on the main page, the node as defined in the popup,
+              or execute a custom JS code if specified. */
+           const backId = iframe.backHook,
+                 backCode = iframe.backCode,
+                 back = (backId)? getNode(`:${backId}`): null;
+           if (back) {
+             if (backCode) {
+               /* Put p_id as parameter to pass to the back code, if it does not
+                  correspond to a temp object. */
+               const params = (id<1)? {}: {'selected':id,'semantics':'checked'};
+               eval(backCode);
+             }
+             else askAjax(`:${backId}`);
+           }
+           // Reload the whole page
+           else window.parent.location = window.parent.location;
+         }
+       }
+
+       static initBack() {
+         createCookie('closePopup', 'no');
+         const iframe = getNode('iframePopup', true).appy;
+         // Set the timer that checks when the iframe popup must be closed
+         iframe.closeTimer = setInterval(Iframe.goBack, 700);
+       }
+
+       static setBackCode(hook, id) {
+         /* Set, on the iframe popup, info allowing to back from it by ajax-
+            refreshing the initiator field having this p_id and being rendered
+            in this p_hook. */
+         const iframe = getNode('iframePopup', true).appy,
+               url = `${siteUrl}/${id}`,
+               code = `askField(':${hook}','${url}','edit',params,false)`;
+         iframe.backHook = hook;
+         iframe.backCode = code;
        }
 
        // Updates cursors (are we dragging or not) ?
@@ -416,7 +475,7 @@ class Iframe:
 
     # HTML page to render for closing the popup
     back = '<!DOCTYPE html>\n<html><head>%s%s</head><body>%s' \
-           '<script>backFromPopup(%d)</script></body></html>'
+           '<script>Iframe.goBack(%d)</script></body></html>'
 
     @classmethod
     def goBack(class_, o, initiator=None):

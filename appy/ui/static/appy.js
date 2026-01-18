@@ -925,15 +925,9 @@ class Form {
     if (action != 'cancel') { this.complete(); this.enableDisabled(); }
     const f = this.form;
     f.action.value = action;
-    if (f.popup.value == 'True') {
-      /* Initialize the "close popup" cookie. If set to "no", it is not time
-         yet to close it. The timer hereafter will regularly check if the
-         popup must be closed. */
-      createCookie('closePopup', 'no');
-      const popup = getNode('iframePopup', true);
-      // Set a timer for checking when we must close the iframe popup
-      popup.popupTimer = setInterval(backFromPopup, 700);
-    }
+    /* If the form is posted from the iframe popup, initialise the "go back from
+       the popup" process. More info in the Iframe class. */
+    if (f.popup.value == 'True') Iframe.initBack();
     f.gotoPage.value = gotoPage;
     f.gotoLayout.value = gotoLayout;
     this.retrieveContentEditable();
@@ -1334,47 +1328,6 @@ function initSlaves(objectUrl, layoutType) {
     // If master is not here, we can't hide its slaves when appropriate
     if (master) updateSlaves(master,slaves[i],objectUrl,layoutType,null,false);
     i -= 1;
-  }
-}
-
-function setBackCode(hook, id) {
-  /* Set, on the iframe popup, info allowing to back from it by ajax-refreshing
-     the initiator field having this p_id and being rendered in this p_hook. */
-  const popup = getNode('iframePopup', true),
-        code = `askField(':${hook}','${siteUrl}/${id}','edit',params,false)`;
-  popup.backHook = hook;
-  popup.backCode = code;
-}
-
-function backFromPopup(id) {
-  // Close the iframe popup when required
-  const close = readCookie('closePopup');
-  if (close == 'no') return;
-  // Reset the timer, the cookie and close the popup
-  createCookie('closePopup', 'no');
-  const popup = Iframe.close(),
-        timer = popup.popupTimer;
-  clearInterval(timer);
-  if (close != 'yes') {
-    // Load a specific URL in the main page
-    window.parent.location = atob(close.slice(2,-1));
-  }
-  else {
-    /* Ajax-refresh, on the main page, the node as defined in the popup, or
-       execute a custom JS code if specified. */
-    const nodeId = popup.backHook,
-          backCode = popup.backCode,
-          node = (nodeId)? getNode(`:${nodeId}`): null;
-    if (node) {
-      if (backCode) {
-        /* Put p_id as parameter to pass to the back code, if it does not
-           correspond to a temp object. */
-        const params = (id < 1)? {}: {'selected':id, 'semantics':'checked'};
-        eval(backCode);
-      }
-      else askAjax(`:${nodeId}`);
-    }
-    else window.parent.location = window.parent.location;
   }
 }
 

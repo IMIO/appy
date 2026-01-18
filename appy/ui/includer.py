@@ -5,6 +5,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
+from appy.utils import bn
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 F_FILE_KO   = 'Appy does not have custom font "%s".'
@@ -89,7 +90,7 @@ class Includer:
             r.append(class_.getFontFaces(tool, ui.customFonts))
         # Initialise global JS variables
         r.append(class_.vars(tool))
-        return '\n'.join(r)
+        return bn.join(r)
 
     @classmethod
     def getUrl(class_, url, tool):
@@ -106,5 +107,5 @@ class Includer:
             for url in css: r.append(class_.css(class_.getUrl(url, tool)))
         if js:
             for url in js:  r.append(class_.js(class_.getUrl(url, tool)))
-        return '\n'.join(r)
+        return bn.join(r)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

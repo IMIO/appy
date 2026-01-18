@@ -70,7 +70,7 @@ class MayAdd:
                 self.value = MayAdd.REF
             # Initialise attributes "backCode" and "inav" when relevant
             if self.value:
-                self.backCode = "setBackCode('%s','%s',id)" % \
+                self.backCode = "Iframe.setBackCode('%s','%s',id)" % \
                                 (init.hook, init.o.iid)
                 self.inav = init.o.req.search
 
