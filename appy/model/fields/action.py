@@ -665,7 +665,7 @@ class Action(Field):
             if handler.isAjax():
                 r = msg
                 # If the caller is a progress bar, return it, forced to 100%
-                if progress: r = progress.getFinishedBar(r, success)
+                if progress: r = progress.getFinishedBar(o, r, success)
             else:
                 # Respect the wish to return to a specific page if the action
                 # has specified it: redirect only if no redirect has already

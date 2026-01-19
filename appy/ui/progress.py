@@ -157,10 +157,10 @@ class Progress:
         text = self.divTranslate(o, 'progress_ongoing')
         self.set(o, name, 0, text, check=False)
 
-    def getFinishedBar(self, text, success=True):
+    def getFinishedBar(self, o, text, success=True):
         '''Renders p_self.bar, forced to 100%, with this final p_text'''
         context = {'progress': self, 'finished': True, 'text':text,
-                   'success': success}
+                   'success': success, 'o': o, 'svg': o.buildSvg}
         return self.bar(context)
 
     def getDoneParts(self, finished, success=True):
@@ -438,6 +438,13 @@ class Progress:
             style="width:100%">···</div>
       </div>
 
+      <!-- A button allowing to close the popup -->
+      <div class="pbClose">
+       <input if="finished" type="button" class="buttonFixed button"
+              onclick="Iframe.close(this)" value=":o.translate('close')"
+              style=":svg('close', bg='12px 12px')"/>
+      </div>
+
       <!-- The text that accompanies the progress bar -->
       <div id="pbText">::text or progress.divTranslate(o)</div>
      </div>''',
@@ -445,6 +452,7 @@ class Progress:
      css='''
        .pbAll { border:1px solid black; width:98%;
                 margin:1.5em 0 1em 0; display:flex; gap:0 }
+       .pbClose { text-align:center; margin-bottom:0.5em }
        @keyframes animBG {
         0%   { background-position:   0% 50%; }
         50%  { background-position: 100% 50%; }
