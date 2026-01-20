@@ -13,6 +13,7 @@ from persistent.mapping import PersistentMapping
 import ZODB, ZODB.POSException, transaction, transaction.interfaces
 
 from appy.px import Px
+from appy.utils import br
 from appy.database.lock import Lock
 from appy.database.lazy import Lazy
 from appy.utils import path as putils
@@ -54,6 +55,13 @@ SITE_RUN     = ':: Method "%s" called ::'
 M_TRANS_ERR  = 'Running tool.%s :: Unresolved conflict occurred :: %s.'
 M_RETRY      = 'Running tool.%s :: Conflict occurred :: %s :: Transaction ' \
                'replay #%d...'
+TOG_TO_RO    = f'You are about to make the database read-only.{br}{br}This ' \
+               f'is probably not a good idea.{br}{br}Proceed ?'
+TOG_TO_RW    = f'You are about to toggle the database in read/write mode.' \
+               f'{br}{br}A long operation, possibly still in progress, may ' \
+               f'be responsible for making the database read-only.{br}{br}' \
+               f'Proceed anyway?'
+TOG_DONE     = 'Database is now %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -220,6 +228,11 @@ class Database:
     # Modulo for computing "ikeys" (see m_init's doc) from object's integer IDs
     MOD_IKEY = 10000
 
+    # The following static attribute may, in exceptional cases, be set to True
+    # in order to set the database in read-only mode. When it is the case, any
+    # database commit will be aborted and will raise an error message.
+    readOnly = False
+
     def __init__(self, path, server):
         # The ZODB database object
         self.db = ZODB.DB(path)
@@ -245,13 +258,19 @@ class Database:
         return self.db.connectionDebugInfo()
 
     def commit(self, handler, description=None):
-        '''Commits the current transaction related to p_handler'''
-        # Define, on the underlying ZODB transaction object, the login of the
-        # current user and the "path" of the committed action.
-        trans = transaction.get()
-        trans.user = handler.getUserLogin()
-        trans.description = description or handler.path
-        transaction.commit()
+        '''Commits the current transaction related to p_handler, excepted if the
+           database is in read-only mode.'''
+        if Database.readOnly:
+            # Raise a message
+            tool = handler.tool
+            tool.raiseMessage(tool.translate('database_write_no'))
+        else:
+            # Define, on the underlying ZODB transaction object, the login of
+            # the current user and the "path" of the committed action.
+            trans = transaction.get()
+            trans.user = handler.getUserLogin()
+            trans.description = description or handler.path
+            transaction.commit()
 
     def abort(self, connection=None, message=None, logger=None):
         '''Abort the current transaction'''
@@ -469,6 +488,35 @@ class Database:
         text = tool.database.pack(logger=logger, fromUi=True)
         tool.resp.fleetingMessage = False
         return True, text
+
+    @classmethod
+    def setReadOnly(class_, readOnly):
+        '''Sets the database in read-only or read/write mode, depending on
+           boolean p_readOnly.'''
+        Database.readOnly = readOnly
+
+    @classmethod
+    def getModeText(class_, tool, readOnly=None, html=False):
+        '''Returns a formatted string, in english, explaining if the database is
+           in read/write or read-only mode (boolean p_readOnly or
+           p_class_.readOnly).'''
+        # What mode are we talking about? Read-only or read/write ?
+        if readOnly is None:
+            readOnly = class_.readOnly
+        if readOnly:
+            r = 'Read-only'
+            if html:
+                r = f'<span class="alert">{r}</span>'
+        else:
+            r = 'Read / write'
+        return r
+
+    traverse['toggleReadOnly'] = 'Manager'
+    @classmethod
+    def toggleReadOnly(class_, tool):
+        '''Toggle RAM boolean p_class_.readOnly'''
+        class_.setReadOnly(not class_.readOnly)
+        tool.goto(message=TOG_DONE % class_.getModeText(tool), fleeting=False)
 
     def cleanTemp(self, handler, logger, count=None):
         '''Removes any object from the temp store'''
@@ -1057,10 +1105,14 @@ class Database:
     #                                 PXs
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+    # Confirm texts when toggling the database mode (read-only / read/write)
+    modeConfirmTexts = {True: TOG_TO_RO, False: TOG_TO_RW}
+
     view = Px('''
      <x var="cfg=config.database;
              root=handler.dbConnection.root;
-             connections=tool.database.listConnections()">
+             database=tool.database;
+             connections=database.listConnections()">
 
      <h2>Main configuration</h2>
      <table class="small">
@@ -1082,6 +1134,25 @@ class Database:
       <tr><th>Last object ID</th><td>:root.lastId</td></tr>
       <tr><th>Last temp ID</th><td>:root.lastTempId</td></tr>
       <tr><th>Conflict retries</th><td>:cfg.conflictRetries</td></tr>
+
+      <!-- The database mode (read/write or read-only), and the action to
+           toggle it. -->
+      <tr>
+       <th>Mode</th>
+        <td>
+         <x>::database.getModeText(tool, html=True)</x>
+         <div class="tdr"
+              var="action=f'{tool.url}/Database/toggleReadOnly';
+                   to_=not database.readOnly;
+                   target=database.getModeText(tool, to_);
+                   text=f'→ {target}';
+                   confirmText=database.modeConfirmTexts[to_]">
+          <input type="button" class="button" value=":text"
+                 onclick=":f'askConfirm(`url`,`{action}`,`{confirmText}`)'"
+                 style=":svg('refresh', bg='12px 12px')"/>
+         </div>
+        </td>
+      </tr>
      </table>
 
      <h2>Active connections <x>:f'({len(connections)})'</x></h2>

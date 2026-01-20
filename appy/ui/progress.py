@@ -42,7 +42,8 @@ class Progress:
     # 3) a translated text, that will be shown in the user interface. It can be
     #    raw text or XHTML; if you choose the "append" mode, it MUST be XHTML.
 
-    def __init__(self, label=None, interval=5, append=False, popup=None):
+    def __init__(self, label=None, interval=5, append=False, popup=None,
+                 exclusive=False):
         # This i18n p_label, if specified, will be used to show the initial text
         # around the progress bar, before the first progress request is made.
         # If p_label is None, a default text will be shown.
@@ -58,6 +59,17 @@ class Progress:
         # to control iframe characteristics, place here an Iframe object, as
         # found in appy/ui/iframe.py.
         self.popup = popup or Iframe('300px', '300px', resizable=False)
+        # A long action may slow down the entire site and potentially be
+        # troubled by other database commits. If you want to block any other
+        # long action and database commit while performing the action tied to
+        # this Progress object, set p_exclusive to True.
+        # ⚠️ Use this with caution: its sets the entire database in read-only
+        #    mode. This is violent and can be problematic for all the other
+        #    users. Moreover, if your operation crashes, the database may be
+        #    left in read-only mode; a manual operation via the admin-zone is
+        #    required to set the database in read/write mode again.
+        self.exclusive = exclusive
+
         # For a given progress, every status dumped at the server side via
         # m_setProgress will get a number. The first one will get number 1. If
         # the browser fetches a status, but not server status has yet been
@@ -156,9 +168,18 @@ class Progress:
         '''Initialise the progress by dumping a status file with 0 percentage'''
         text = self.divTranslate(o, 'progress_ongoing')
         self.set(o, name, 0, text, check=False)
+        # Put the database in read-only mode when relevant
+        if self.exclusive:
+            o.database.setReadOnly(True)
 
-    def getFinishedBar(self, o, text, success=True):
-        '''Renders p_self.bar, forced to 100%, with this final p_text'''
+    def finalize(self, o, text, success=True):
+        '''Finalizes the long operation and returns p_self.bar, rendered at
+           100%, with this final p_text.'''
+        # Set the database in read/write mode again, if the operation was
+        # exclusive.
+        if self.exclusive:
+            o.database.setReadOnly(False)
+        # Renders the progress bar, forced to 100%
         context = {'progress': self, 'finished': True, 'text':text,
                    'success': success, 'o': o, 'svg': o.buildSvg}
         return self.bar(context)
@@ -306,12 +327,15 @@ class Progress:
                progress=elem.progress;
                fg = tool.H().inTheForeground();
                ongoing=progress.hasPath(o, name);
+               readOnly=tool.database.readOnly;
                text=None; finished=False; success=True">
 
-      <!-- Display an error message if the action is still ongoing -->
-      <div if="ongoing" class="pbError">::_('progress_already')</div>
+      <!-- Display an error message if the action is already ongoing or the
+           database is in read-only mode. -->
+      <div if="ongoing or readOnly" class="pbError">::_('progress_already' 
+        if ongoing else 'progress_read_only')</div>
 
-      <x if="not ongoing" var2="x=progress.init(o, name)">
+      <x if="not ongoing and not readOnly" var2="x=progress.init(o, name)">
        <script>::progress.getMainHook(tool)</script>
 
        <!-- Display a warning if the server runs in the foreground: because a

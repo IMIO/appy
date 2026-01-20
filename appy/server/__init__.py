@@ -732,12 +732,14 @@ class Server:
        <tr><th>Protocol</th><td>:cfg.protocol</td></tr>
        <tr><th>Mode</th><td>:server.mode</td></tr>
        <tr><th>Registered client sockets</th><td>:server.registered</td></tr>
+
+       <!-- The debug level, with actions to increment and/or decrement it -->
        <tr var="level=config.server.debugLevel;
                 baseUrl=f'{tool.url}/Server/updateDebugLevel?delta'">
         <th>Log level</th>
         <td><x>:level</x>
          <!-- Increment / decrement the log level -->
-         <div style="display:inline-flex;float:right;gap:1em;font-weight:bold">
+         <div class="tdr">
           <a if="level &lt; 4" title="Increment" href=":f'{baseUrl}=1'"> + </a>
           <a if="level &gt; 0" title="Decrement" href=":f'{baseUrl}=-1'"> - </a>
          </div>

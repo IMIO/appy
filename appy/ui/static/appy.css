@@ -96,6 +96,8 @@ div[contenteditable=true]:empty:before { content:attr(data-placeholder);
 .mono { font-family:monospace; font-size:120% }
 .alert { color:darkred; padding-right:0.5em; font-style:italic;
          text-transform:none }
+/* Actions to be added in a td cell, on the right */
+.tdr { display:flex; float:right; gap:1em; font-weight:bold }
 
 /* Buttons */
 input.button {

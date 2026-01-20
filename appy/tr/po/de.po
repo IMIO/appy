@@ -839,6 +839,10 @@ msgstr "Hallo,\n\nAuf der Website ${siteUrl} wurde ein Konto für Sie erstellt. 
 msgid "first_password_sent"
 msgstr "Dem Benutzer wurde eine E-Mail mit seinem Benutzernamen, seinem Passwort und der URL für den Zugriff auf diese Website gesendet."
 
+#. Default: "🚫 Operation aborted.\n\nThe database is currently in read-only mode.\n\nThe action you tried to perform can't be done for the moment."
+msgid "database_write_no"
+msgstr ""
+
 #. Default: "Last access"
 msgid "last_user_access"
 msgstr "Letzter Zugriff"
@@ -1325,6 +1329,10 @@ msgstr ""
 
 #. Default: "🚫 This action is already ongoing.\n\nIt cannot be run twice at the same time."
 msgid "progress_already"
+msgstr ""
+
+#. Default: "🚫 The database is currently in read-only mode.\n\nNo long operation may be triggered."
+msgid "progress_read_only"
 msgstr ""
 
 #. Default: "⚠️ The server runs in the foreground.\n\nNo parallel status request can be launched while the main action is executed."

@@ -109,6 +109,7 @@ class Handler:
     #                | other similar cases, like scheduler jobs, an instance of
     #                | VirtualHandler is created.
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     # In the following static attribute, we maintain a registry of the currently
     # instantiated handlers. Every handler is keyed by the ID of the thread that
     # is running it.

@@ -661,11 +661,12 @@ class Action(Field):
         # Stop here if p_minimal is True
         if minimal: return r
         if result == 'computation' or not success:
-            # If we are called from an Ajax request, simply return msg
+            # If we are called from an Ajax request, simply return v_msg
             if handler.isAjax():
                 r = msg
-                # If the caller is a progress bar, return it, forced to 100%
-                if progress: r = progress.getFinishedBar(o, r, success)
+                # If the caller is a progress bar, finalize the long operation
+                # and return the progress bar, forced to 100%.
+                if progress: r = progress.finalize(o, r, success)
             else:
                 # Respect the wish to return to a specific page if the action
                 # has specified it: redirect only if no redirect has already
