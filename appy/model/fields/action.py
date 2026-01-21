@@ -71,6 +71,14 @@ class Action(Field):
     # machinery for this.
     customGetValue = True
 
+    # Possible values for the "back" attribute, that determines where to go once
+    # the action is performed from a cell layout.
+
+    BACK_PAGE = 0 # Refresh the whole page
+    BACK_LIST = 1 # Ajax-refresh the current list of objects
+    BACK_OBJ  = 2 # Ajax-refresh the row representing the object being the
+                  # target of the action.
+
     class Layouts(Layouts):
         '''Action-specific layouts'''
         b = Layouts(edit='lf', view='lf')
@@ -172,7 +180,7 @@ class Action(Field):
       masterSnub=n, focus=False, historized=False, mapping=n, generateLabel=n,
       label=n, icon=n, sicon=n, view=n, cell=n, buttons=n, edit=n, custom=n,
       xml=n, translations=n, render='button', iconOut=False, iconCss='iconS',
-      iconSize=n, options=n, fake=False, progress=None):
+      iconSize=n, options=n, fake=False, progress=None, back=BACK_OBJ):
         # Attribute "action" must hold a method or a list/tuple of methods.
         # In most cases, every method will be called without arg, but there are
         # exceptions (see parameters "options" and "confirm").
@@ -378,6 +386,17 @@ class Action(Field):
         # in appy/ui/progress.py.
         self.progress = progress
 
+        # When the action is triggered from a cell layout (ie, a list of objects
+        # is shown), by default, on action completion, the row containing the
+        # object being the target of the action is ajax-refreshed (p_back is
+        # BACK_OBJ). It can be inappropriate if, for example, the object has
+        # been moved from the current list. Other possibilities are:
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # BACK_LIST | the whole list is ajax-refreshed ;
+        # BACK_PAGE | the whole web page is refreshed (no ajax).
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        self.back = back
+
         # Ensure validity of parameter values
         self.checkParameters()
 
@@ -435,26 +454,38 @@ class Action(Field):
         # Dig into the Appy iframe when appropriate
         return 'appyIFrame' if self.options or self.progress else '_self'
 
+    def getBackHook(self, c):
+        '''Gets the back hook to ajax-refresh on action completion (or None if
+           the whole page must be ajax-refreshed).'''
+        if c.multi:
+            # This Multi object defines the back hook
+            r = c.multi.back
+        elif c.layout in Layouts.cellLayouts:
+            # It depends on self.back
+            back = self.back
+            if back == Action.BACK_OBJ:
+                # Try to get the object hook, if possible
+                r = c.ohook or c.backHook or c.hook
+            elif back == Action.BACK_LIST:
+                # Try to get the list hook, if possible
+                r = c.backHook or c.hook
+            else: # v_back is Action.BACK_PAGE: no back hook
+                r = None
+        else:
+            # We are not on a cell layout: v_r is None
+            r = None
+        return r
+
     def getOnClick(self, c):
         '''Gets the JS code to execute when the action button is clicked'''
         # Determine the ID of the form to submit
         o = c.o
         q = c.q
         formId = f'{o.iid}_{c.name}_form'
-        # Determine the back hook and check hook (if multi)
-        multi = c.multi
-        if multi:
-            back = multi.back
-            check = multi.check
-        else:
-            if c.layout in Layouts.cellLayouts:
-                # Try the object hook first (the closest possible hook, if
-                # available), then the back hook, then the main hook.
-                back = c.ohook or c.backHook or c.hook
-            else:
-                back = None
-            check = None
-        check = q(check) if check else 'null'
+        # Determine the back hook
+        back = self.getBackHook(c)
+        # For a multi-action, determine the check hook
+        check = q(c.multi.check) if c.multi else 'null'
         if self.options:
             # Determine the parameters for creating an options object
             target = LinkTarget(class_=self.options, back=back)

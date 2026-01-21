@@ -1636,6 +1636,22 @@ msgstr "Topics"
 msgid "Page_toParent"
 msgstr "Back"
 
+#. Default: "↑ Within"
+msgid "Page_moveInside"
+msgstr "↑ Within"
+
+#. Default: "Your are about to move this page within the hereabove one.\n\nIt will become one of its sub-pages.\n\nProceed ?"
+msgid "Page_moveInside_confirm"
+msgstr "Your are about to move this page within the hereabove one.\n\nIt will become one of its sub-pages.\n\nProceed ?"
+
+#. Default: "↖ Outside"
+msgid "Page_moveOutside"
+msgstr "↖ Outside"
+
+#. Default: "Your are about to move this page outside its container page.\n\nIt will be moved at the same level of this latter.\n\nProceed ?"
+msgid "Page_moveOutside_confirm"
+msgstr "Your are about to move this page outside its container page.\n\nIt will be moved at the same level of this latter.\n\nProceed ?"
+
 #. Default: "Expression"
 msgid "Page_expression"
 msgstr "Expression"

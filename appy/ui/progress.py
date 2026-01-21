@@ -15,6 +15,8 @@ from ..model.utils import Object as O
 PC_KO    = 'Progress for %s:%s:: Ignoring status with wrong percentage (%d%%).'
 PATH_KO  = 'The progress file does not exist.'
 PATH_DEL = 'Progress information about %s:%s has been cleaned.'
+DB_RW    = 'The database has been switched to read/write again.'
+PROD_INI = 'Progress operation started for %s:%s (exclusive=%s).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Progress:
@@ -168,9 +170,12 @@ class Progress:
         '''Initialise the progress by dumping a status file with 0 percentage'''
         text = self.divTranslate(o, 'progress_ongoing')
         self.set(o, name, 0, text, check=False)
+        o.log(PROD_INI % (o.iid, name, str(self.exclusive)))
         # Put the database in read-only mode when relevant
         if self.exclusive:
-            o.database.setReadOnly(True)
+            db = o.database
+            if not db.readOnly:
+                db.toggleReadOnly(o.tool, ui=False)
 
     def finalize(self, o, text, success=True):
         '''Finalizes the long operation and returns p_self.bar, rendered at
@@ -286,8 +291,15 @@ class Progress:
             text = PATH_DEL % (o.iid, elem)
         else:
             text = PATH_KO
+        # Make the database read-write again if the progress was exclusive
+        if elem.progress.exclusive:
+            db = tool.database
+            if db.readOnly:
+                db.toggleReadOnly(tool, ui=False)
+                text = f'{text}{br}{br}{DB_RW}'
         # No need to commit: it's just about deleting a file on disk
         tool.say(text, fleeting=False)
+        tool.log(text)
         tool.goto()
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

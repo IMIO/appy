@@ -729,19 +729,22 @@ class Base:
                                   executeMethods=executeMethods,
                                   reindex=reindex)
 
-    def relink(self, source, target, o):
+    def relink(self, source, target, o, targetO=None):
         '''Unlinks this p_o(bject) from Ref p_self.<p_source> and link it to Ref
-           p_self.p_target.'''
-        self.link(target, o, reindex=True)
+           p_self.<p_target>, or p_targetO.<p_target> if specified.'''
+        # Link p_o via the new p_target
+        targetO = targetO or self
+        targetO.link(target, o, reindex=True)
+        # Unlink p_o from its previous p_source
         self.unlink(source, o, reindex=True)
         # Recompute index "cid" when relevant
         fieldS = self.getField(source)
-        fieldT = self.getField(target)
+        fieldT = targetO.getField(target)
         if (fieldS.composite or fieldT.composite) and o.class_.isIndexable():
             o.reindex(fields=('cid',))
         # Log
-        self.log(RELINK_OK % (o.class_.name, o.iid, self.class_.name,
-                              self.iid, source, self.iid, target))
+        self.log(RELINK_OK % (o.class_.name, o.iid, self.class_.name, self.iid,
+                              source, targetO.iid, target))
 
     def sort(self, name, sortKey='title', reverse=False):
         '''Sorts referred elements linked to p_self via Ref field named p_name

@@ -486,6 +486,47 @@ class Page(Base):
 
     toParent = Computed(show=showToParent, method=getToParent, layouts='f')
 
+    # Move a page inside its predecessor page = as a sub-page of it
+
+    def showMoveInside(self):
+        '''Show this only if p_self has a predecessor page'''
+        cont = self.container
+        if cont.getIndexOf('pages', self) > 0:
+            return 'sub'
+
+    def doMoveInside(self):
+        '''Move p_self inside its predecessor page, as its last sub-page'''
+        container, name = self.getContainer(forward=True)
+        previous = self.getSibling()
+        container.relink(name, name, self, previous)
+
+    moveInside = Action(action=doMoveInside, show=showMoveInside, confirm=True,
+                        back=Action.BACK_LIST)
+
+    # Move a page outside its parent page, becoming ts immediate successor
+
+    def showMoveOutside(self):
+        '''Allow to move p_self outside its container if the super container is
+           still a page holder.'''
+        container, name = self.getContainer(forward=True)
+        if not container: return
+        container = container.container
+        if container and container.getField(name):
+            return 'sub'
+
+    def doMoveOutside(self):
+        '''Move p_self outside its container, juste below it in the super-
+           container.'''
+        container, name = self.getContainer(forward=True)
+        supeR = container.container
+        container.relink(name, name, self, supeR)
+        # Go to the super-container, at the page where pages are shown
+        superPage = supeR.getField(name).page.name
+        return True, f'{supeR.url}/view?page={superPage}'
+
+    moveOutside = Action(action=doMoveOutside, show=showMoveOutside,
+                         result='redirect', confirm=True, back=Action.BACK_PAGE)
+
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                                Editors
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -

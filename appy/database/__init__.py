@@ -513,10 +513,14 @@ class Database:
 
     traverse['toggleReadOnly'] = 'Manager'
     @classmethod
-    def toggleReadOnly(class_, tool):
+    def toggleReadOnly(class_, tool, ui=True):
         '''Toggle RAM boolean p_class_.readOnly'''
         class_.setReadOnly(not class_.readOnly)
-        tool.goto(message=TOG_DONE % class_.getModeText(tool), fleeting=False)
+        text = TOG_DONE % class_.getModeText(tool)
+        tool.log(text)
+        if ui:
+            # We are called from the UI
+            tool.goto(message=text, fleeting=False)
 
     def cleanTemp(self, handler, logger, count=None):
         '''Removes any object from the temp store'''

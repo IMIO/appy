@@ -1636,6 +1636,22 @@ msgstr "Rubriques"
 msgid "Page_toParent"
 msgstr "Retour"
 
+#. Default: "↑ Within"
+msgid "Page_moveInside"
+msgstr "↑ Incruster"
+
+#. Default: "Your are about to move this page within the hereabove one.\n\nIt will become one of its sub-pages.\n\nProceed ?"
+msgid "Page_moveInside_confirm"
+msgstr "Vous êtes sur le point de déplacer cette page à l'intérieur de celle ci-dessus.\n\nElle en deviendra une de ses sous-pages.\n\nOn y va ?"
+
+#. Default: "↖ Outside"
+msgid "Page_moveOutside"
+msgstr "↖ Extraire"
+
+#. Default: "Your are about to move this page outside its container page.\n\nIt will be moved at the same level of this latter.\n\nProceed ?"
+msgid "Page_moveOutside_confirm"
+msgstr "Vous êtes sur le point de déplacer cette page à l'extérieur de sa page contenante.\n\nElle sera au même niveau que cette dernière.\n\nOn y va ?"
+
 #. Default: "Expression"
 msgid "Page_expression"
 msgstr "Expression"

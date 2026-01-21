@@ -575,12 +575,12 @@ function askAjax(hook, form, params, waiting) {
         saction = f.getAttribute('data-sub');
     mode = 'POST';
     /* Deduce the action from the form action, either via custom field
-       "action-sub", already containing the correct action sub-path, or by
+       "data-sub", already containing the correct action sub-path, or by
        extracting it from the "action" field. */
     if (saction) d.params['action'] = saction;
     else if (action != 'none'){
-      let i = (action.indexOf('@') == -1)? 3: 4,
-          parts = _rsplit(action, '/', i).slice(1);
+      const parts = new URL(action).pathname.split('/').slice(1);
+      console.log('Parts are ' + parts.join('*'));
       d.params['action'] = parts.join('*');
     }
     // Get the other params
