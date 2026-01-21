@@ -732,7 +732,7 @@ class File(Field):
         # preview could be rendered.
         #
         # Previewing docs is only possible on /view
-        if layout != 'view': return n, n
+        if layout != 'view' and not self.isImage: return n, n
         r = False
         text = None
         preview = self.getAttribute(o, 'preview')

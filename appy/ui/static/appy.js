@@ -580,7 +580,6 @@ function askAjax(hook, form, params, waiting) {
     if (saction) d.params['action'] = saction;
     else if (action != 'none'){
       const parts = new URL(action).pathname.split('/').slice(1);
-      console.log('Parts are ' + parts.join('*'));
       d.params['action'] = parts.join('*');
     }
     // Get the other params

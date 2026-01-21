@@ -560,5 +560,5 @@ class Rich(Multilingual, Field):
         r = {'uploaded': 1, 'fileName': doc.title,
              'url': f'{doc.url}/file/download'}
         o.log(UPLOADED % (ofile.name, o.iid, self.documents, self.name))
-        return sutils.getStringFrom(r, c='"')
+        return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
