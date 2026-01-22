@@ -667,16 +667,19 @@ class Server:
             del params['unique']
         return uutils.encode(params, ignoreNoneValues=True)
 
-    def getUrl(self, o, sub=None, relative=False, **params):
+    def getUrl(self, o, sub=None, relative=False, iid=True, **params):
         '''Gets the URL of some p_o(bject)'''
         # Parameters are as follows.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # sub      | If specified, it denotes a part that will be added to the
         #          | object base URL for getting one of its specific sub-pages,
-        #          | like "view" or "edit".
+        #          | like /view or /edit.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # relative | If True, the base URL <protocol>://<domain> will not be
         #          | part of the result.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # iid      | If True, the URL part representing the object will be its
+        #          | IID. Else, it will be its ID.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # params   | Every entry in p_params will be added as-is as a parameter
         #          | to the URL, excepted if the value is None or key is
@@ -693,7 +696,8 @@ class Server:
         # The base app URL
         r = self.config.server.getUrl(o.H(), relative=relative)
         # Add the object ID
-        r = f'{r}/{o.id}'
+        iD = o.iid if iid else o.id
+        r = f'{r}/{iD}'
         # Manage p_sub
         r = f'{r}/{sub}' if sub else r
         # Manage p_params

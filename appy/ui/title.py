@@ -76,7 +76,7 @@ class Title:
         '''Builds the URL to p_o'''
         # Build the standard URL to p_o or patch p_base URL, if passed
         if base is None:
-            r = o.getUrl(sub='view', **params)
+            r = o.getUrl(sub='view', iid=False, **params)
         else:
             r = o.H().server.patchUrl(base, **params)
         return r

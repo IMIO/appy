@@ -541,6 +541,23 @@ function getSearchInfo(key, siblings) {
   return r
 }
 
+
+function ajaxActionFrom(url) {
+  /* Extracts the p_url's pathname part being related to an object, in order to
+     build an action that can be associated to an Ajax request. */
+  const parts = url.split('/');
+  let r = [], i = parts.length - 1, stop=false, part=null;
+  while (i >= 0) {
+    part = parts[i];
+    // If an object (iid) is found, don't go further
+    if (!isNaN(parseInt(part))) stop = true;
+    r.unshift(part);
+    if (stop) break;
+    i -= 1;
+  }
+  return r.join('*');
+}
+
 function askAjax(hook, form, params, waiting) {
   /* Call askAjaxChunk by getting an AjaxData instance from p_hook, a
       potential action from p_form and additional parameters from p_param. */
@@ -578,10 +595,7 @@ function askAjax(hook, form, params, waiting) {
        "data-sub", already containing the correct action sub-path, or by
        extracting it from the "action" field. */
     if (saction) d.params['action'] = saction;
-    else if (action != 'none'){
-      const parts = new URL(action).pathname.split('/').slice(1);
-      d.params['action'] = parts.join('*');
-    }
+    else if (action !== 'none') d.params['action'] = ajaxActionFrom(action);
     // Get the other params
     form2dict(f, d.params);
   }

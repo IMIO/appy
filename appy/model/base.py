@@ -450,9 +450,9 @@ class Base:
         H = self.H()
         return H.server.buildUrl(H, f'{name}.svg', ram=True, bg=bg)
 
-    def getUrl(self, sub=None, **params):
+    def getUrl(self, sub=None, iid=True, **params):
         '''See doc in appy.server.Server::getUrl'''
-        return self.H().server.getUrl(self, sub=sub, **params)
+        return self.H().server.getUrl(self, sub=sub, iid=iid, **params)
 
     def getGotoUrl(self):
         '''Get p_self's URL, at the page and layout as defined by request

@@ -430,7 +430,7 @@ class Traversal:
                         self.r = self.o = self.getObject(part)
                 # Manage any not-empty part
                 elif part:
-                    if part.isdigit(): # An object (again): reset the traversal.
+                    if part.isdigit(): # An object (again): reset the traversal
                         self.reset(self.tool.getObject(part))
                     else:
                         # Try to get attribute or method named "part" on self.r
