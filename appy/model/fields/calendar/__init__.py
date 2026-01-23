@@ -177,7 +177,7 @@ class Calendar(Field):
 
     view = cell = buttons = Px('''
      <div var="view=field.View.get(o, field);
-               hook=f'{o.iid}{name}';
+               hook=f'{o.iid}{field.name}';
                timeslots=field.Timeslot.getAll(o, field);
                eventTypes=field.getEventTypes(o);
                allowedEventTypes=field.getAllowedEventTypes(o, eventTypes);
