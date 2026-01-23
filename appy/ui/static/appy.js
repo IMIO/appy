@@ -550,7 +550,7 @@ function ajaxActionFrom(url) {
   while (i >= 0) {
     part = parts[i];
     // If an object (iid) is found, don't go further
-    if (!isNaN(parseInt(part))) stop = true;
+    if (!isNaN(part)) stop = true;
     r.unshift(part);
     if (stop) break;
     i -= 1;
