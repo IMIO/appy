@@ -222,6 +222,7 @@ class Month(View):
     pxPeriodSelector = Px('''
      <div var="around=view.around;
                iid=str(o.iid);
+               name=field.name;
                goBack=view.mayGo(back=True);
                goForward=view.mayGo(back=False)">
 
