@@ -460,7 +460,8 @@ class File(Field):
             return class_.bg if field.inGrid() else class_.b
 
     view = cell = buttons = Px('''
-      <div class="flexc">::field.getLinkOrPreview(o, layout, name)</div>''')
+      <div class=":field.getMainCss(_ctx_)">::field.getLinkOrPreview(o, layout,
+                                            name)</div>''')
 
     edit = Px('''
      <x var="fname=f'{name}_file'; rname=f'{name}_action'">
@@ -678,6 +679,15 @@ class File(Field):
         '''Get the content of the "style" attribute of the "input" tag on the
            "edit" layout for this field.'''
         return 'width: %s' % self.inputWidth if self.inputWidth else ''
+
+    def getMainCss(self, c):
+        '''Gets the CSS class to apply to the main html tag representing
+           p_self.'''
+        if self.preview is None or c.layout == 'edit':
+            r = ''
+        else:
+            r = 'flexc' # A centered layout
+        return r
 
     def isRenderableOn(self, layout):
         '''A file with 'icon' rendering is potentially renderable everywhere'''

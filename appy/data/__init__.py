@@ -8,7 +8,10 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from pathlib import Path
 
+from ..utils import bn
+
 # Languages names in their own language  - - - - - - - - - - - - - - - - - - - - 
+
 nativeNames = {
   'aa' : 'магIарул мацI',
   'ab' : 'бызшәа',
@@ -66,7 +69,7 @@ nativeNames = {
   'is' : 'Íslenska',
   'it' : 'Italiano',
   'iu' : 'ᐃᓄᒃᑎᑐᑦ',
-  'ja' : '日本語',
+  'ja' : 'Japanese',
   'jbo': 'lojban',
   'jw' : 'Basa Jawi',
   'ka' : 'ქართული',
@@ -74,7 +77,7 @@ nativeNames = {
   'kl' : 'Greenlandic',
   'km' : 'ខ្មែរ',
   'kn' : 'ಕನ್ನಡ',
-  'ko' : '한국어',
+  'ko' : 'Korean',
   'ks' : 'काऽशुर',
   'ku' : 'Kurdí',
   'kw' : 'Kernewek',
@@ -157,11 +160,11 @@ nativeNames = {
   'yi' : 'ײִדיש',
   'yo' : 'Yorùbá',
   'za' : 'Zhuang',
-  'zh' : '中文',
+  'zh' : 'Chinese',
   'zu' : 'isiZulu'
 }
 # List of languages having direction right-to-left (RTL) - - - - - - - - - - - -
-rtlLanguages = ('ar', 'he', 'fa')
+rtlLanguages = 'ar', 'he', 'fa'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Languages:
@@ -182,19 +185,23 @@ class Languages:
     def parseFile(self):
         '''Parses the language codes and names in the ISO file and puts them in
            self.languageCodes, self.languageNames and self.nativeNames.'''
+        codes = self.languageCodes
+        names = self.languageNames
+        native = self.nativeNames
         with self.path.open(encoding='utf-8') as f:
             for line in f:
-                if line.strip():
-                    lineElems = line.split('|')
-                    if lineElems[2].strip():
-                        # I take only those that have a 2-chars ISO-639-1 code
-                        self.languageCodes.append(lineElems[2])
-                        self.languageNames.append(lineElems[3])
-                        if lineElems[2] in nativeNames:
-                            self.nativeNames.append(nativeNames[lineElems[2]])
-                        else:
-                            # Put the english name nevertheless.
-                            self.nativeNames.append(lineElems[3])
+                stripped = line.strip()
+                if not stripped: continue
+                parts = line.split('|')
+                # Keep only languages having a 2-chars ISO-639-1 code
+                code = parts[2].strip()
+                if not code: continue
+                name = parts[3] # The name of the language, in English
+                codes.append(code)
+                names.append(name)
+                # Get nevertheless the name in English if the native name is not
+                # found.
+                native.append(nativeNames.get(code) or name)
 
     def exists(self, code):
         '''Is p_code a valid 2-digits language code ?'''
@@ -211,14 +218,15 @@ class Languages:
 
     def __repr__(self):
         i = -1
-        res = ''
-        for languageCode in self.languageCodes:
+        r = ''
+        names = self.languageNames
+        for code in self.languageCodes:
             i += 1
-            res += 'Language: ' + languageCode + ' - ' + self.languageNames[i]
-            res += '\n'
-        return res
+            r = f'{r}Language: {code} - {names[i]}{bn}'
+        return r
 
 # Country codes ISO 3166-1 - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class Countries:
     '''This class gives access to the country codes and names as standardized by
        ISO 3166-1. The file has been downloaded in March 2011 from
