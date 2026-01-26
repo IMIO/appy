@@ -408,8 +408,11 @@ class String(Multilingual, Field):
         '''Returns the formatted variant of p_value. If p_contentLanguage is
            specified, p_value is the p_contentLanguage part of a multilingual
            value.'''
-        # Escape v_value on /view layouts
-        if value and layout in Layouts.viewLayouts:
+        # Escape v_value on /view layouts, excepted if p_value is detected as
+        # being XHTML content. Indeed, a String value being a diff contains
+        # XHTML data.
+        if value and layout in Layouts.viewLayouts and \
+           not value.startswith('<'):
             value = Escape.xhtml(value, p=False)
         return value or ''
 

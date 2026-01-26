@@ -168,8 +168,10 @@ class Iframe:
          this.dragOngoing = false;
          // The mover and er (*e*nlarge/*r*estore) icons
          this.mover = document.getElementById('iframeMover');
-         this.er = document.getElementById('iframeER');
-         this.er.style.display = (resizable)? 'block': 'none';
+         if (!mobile) {
+           this.er = document.getElementById('iframeER');
+           this.er.style.display = (resizable)? 'block': 'none';
+         }
          /* May this popup be closed ? It could not be the case if the operation
             triggered from the popup can't be interrupted. */
          this.closable = true;
