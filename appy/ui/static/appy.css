@@ -222,6 +222,7 @@ div.rbutton { float:right }
 .iconXXS { width:10px }
 .iconSEL { width:21px; cursor:pointer }
 .iconU8 { cursor:pointer; font-style:normal; padding:0 0.2em }
+.icons { display:inline-flex; gap:0.3em }
 .fdrop { display:inline-flex }
 .fdrop > img { width: 16px }
 .fdown { width: 100%; left:auto; right:-1em; text-align:right; margin-top:-2px }
