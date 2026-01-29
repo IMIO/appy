@@ -242,7 +242,7 @@ class HttpHandler(Handler):
     supportedHttpMethods = asDict(['GET', 'POST', 'PUT', 'DELETE'])
 
     # Regex used to detect a mobile browser from the User-Agent header
-    mobileRex = re.compile('Android|iPhone|iPod')
+    mobileRex = re.compile('Android|Mobi|iPhone|iPod|webOS|Opera Mini')
 
     # Maximum number of chars for reading one line when reading HTTP headers
     HEADERS_MAX_LINE = 65536

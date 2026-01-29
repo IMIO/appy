@@ -1,6 +1,13 @@
 var lsTimeout,  // Timout for the live search
-    podTimeout, // Timeout for checking status of pod downloads
-    queryMobile = 'only screen and (hover:none) and (pointer:coarse)';
+    podTimeout; // Timeout for checking status of pod downloads
+
+// Is the client device a mobile device ?
+function isMobile() {
+   /* Detect it via a regex on the userAgent property. The Appy server does
+      exactly the same check. */
+   const userAgent = navigator.userAgent;
+   return /Android|Mobi|iPhone|iPod|webOS|Opera Mini/i.test(userAgent);
+}
 
 class ClassState {
   /* Used by UiState class below, a ClassState object represents UI-state data
@@ -1602,7 +1609,7 @@ function openPopup(popupId, msg, width, height, resizable, css, back,
   // Get the popup
   let popup = document.getElementById(popupId),
       frame = popupId == 'iframePopup', // Is it the "iframe" popup ?
-      mobile = window.matchMedia(queryMobile).matches, // Mobile device ?
+      mobile = isMobile(), // Mobile device ?
       winW = window.innerWidth, winH = window.innerHeight,
       deltaX = (mobile)? 40: 300, deltaY = (mobile)? 40: 100,
       w = width, h = height;
