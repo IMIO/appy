@@ -158,17 +158,18 @@ class Iframe:
          /* Once closed, must the caller level (a p_back hook or the main
             window) be reloaded ? */
          this.backReload = false;
-         // The mask preventing clicking around the iframe
-         this.mask = getNode('iframeMask');
-         // Show the mask behind the popup
-         if (!mobile) this.setMask();
+         // Define and show the mask preventing clicking around the iframe
+         if (!mobile) {
+           this.mask = getNode('iframeMask');
+           this.setMask();
+         }
          // Remember the height of the first inner object tag, if any
          this.innerObjectHeight = null;
          // Is a drag operation ongoing ?
          this.dragOngoing = false;
          // The mover and er (*e*nlarge/*r*estore) icons
-         this.mover = document.getElementById('iframeMover');
          if (!mobile) {
+           this.mover = document.getElementById('iframeMover');
            this.er = document.getElementById('iframeER');
            this.er.style.display = (resizable)? 'block': 'none';
          }
