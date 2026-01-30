@@ -58,7 +58,16 @@ class Config:
         self.address = '0.0.0.0'
         # The server port
         self.port = 8000
-        # The protocol in use. Valid values are "http" or "https"
+        # The protocol in use. Valid values are "http" or "https". This
+        # attribute value is used only when handling a fake, non-http request
+        # (see class VirtualHandler in appy/server/handler.py). Indeed, when
+        # handling a HTTP request, the protocol by default is 'http', unless
+        # header key 'X-Forwarded-Protocol' defines it as 'https'. When handling
+        # a non-http, virtual request, like a method executed at server startup
+        # or by a job (like a "nightlife"), URLs may need to be built, but no
+        # HTTP header info allows the server to do it. This is where
+        # p_self.protocol comes into play, together with attribute p_self.domain
+        # (see below).
         self.protocol = 'http'
         # The public domain name under which this server is known. Can be
         # useful, in combination with p_self.protocol, to generate site URLs
@@ -245,7 +254,10 @@ class Config:
         else:
             host = self.getHost(handler)
             # Get protocol from header key "X-Forwarded-Proto" when present
-            protocol = headers.get('X-Forwarded-Proto') or self.protocol
+            protocol = headers.get('X-Forwarded-Proto')
+            if not protocol:
+                # p_self.protocol is only used in the context of a fake request
+                protocol = self.protocol if handler.fake else 'http'
             # Build the base of the URL
             base = f'{protocol}://{host}'
         # Add a potential path prefix to URLs
