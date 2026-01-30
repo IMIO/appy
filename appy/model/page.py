@@ -490,29 +490,32 @@ class Page(Base):
 
     def showMoveInside(self):
         '''Show this only if p_self has a predecessor page'''
-        cont = self.container
-        if cont.getIndexOf('pages', self) > 0:
-            return 'sub'
+        cont, name = self.getContainer(forward=True)
+        if cont.getIndexOf(name, self) > 0:
+            perm = cont.getField(name).writePermission
+            return 'sub' if cont.allows(perm) else None
 
     def doMoveInside(self):
         '''Move p_self inside its predecessor page, as its last sub-page'''
-        container, name = self.getContainer(forward=True)
+        cont, name = self.getContainer(forward=True)
         previous = self.getSibling()
-        container.relink(name, name, self, previous)
+        cont.relink(name, name, self, previous, secure=True)
 
     moveInside = Action(action=doMoveInside, show=showMoveInside, confirm=True,
                         back=Action.BACK_LIST)
 
-    # Move a page outside its parent page, becoming ts immediate successor
+    # Move a page outside its parent page, becoming its immediate successor
 
     def showMoveOutside(self):
         '''Allow to move p_self outside its container if the super container is
            still a page holder.'''
-        container, name = self.getContainer(forward=True)
-        if not container: return
-        container = container.container
-        if container and container.getField(name):
-            return 'sub'
+        cont, name = self.getContainer(forward=True)
+        if not cont or not cont.allows(cont.getField(name).writePermission):
+            return
+        dcont = cont.container
+        if dcont and dcont.getField(name):
+            perm = dcont.getField(name).writePermission
+            return 'sub' if dcont.allows(perm) else None
 
     def doMoveOutside(self):
         '''Move p_self outside its container, juste below it in the super-

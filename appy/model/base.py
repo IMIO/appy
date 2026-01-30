@@ -729,14 +729,14 @@ class Base:
                                   executeMethods=executeMethods,
                                   reindex=reindex)
 
-    def relink(self, source, target, o, targetO=None):
+    def relink(self, source, target, o, targetO=None, secure=False):
         '''Unlinks this p_o(bject) from Ref p_self.<p_source> and link it to Ref
            p_self.<p_target>, or p_targetO.<p_target> if specified.'''
         # Link p_o via the new p_target
         targetO = targetO or self
-        targetO.link(target, o, reindex=True)
+        targetO.link(target, o, secure=secure, reindex=True)
         # Unlink p_o from its previous p_source
-        self.unlink(source, o, reindex=True)
+        self.unlink(source, o, secure=secure, reindex=True)
         # Recompute index "cid" when relevant
         fieldS = self.getField(source)
         fieldT = targetO.getField(target)
