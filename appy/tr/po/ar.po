@@ -1680,12 +1680,24 @@ msgstr ""
 msgid "Page_backgroundImage_descr"
 msgstr ""
 
+#. Default: "Background style"
+msgid "Page_group_bgStyle"
+msgstr ""
+
 #. Default: "Background size"
 msgid "Page_backgroundSize"
 msgstr ""
 
 #. Default: "When the background image hereabove is in use, specify here how it will be rendered. This is the equivalent of CSS attribute « background-size ». Value « cover » resizes the image to cover the entire page (keeping the width/height ratio). For most pages, it produces the best results. However, if the page is very long (ie, it contains search results), prefer value « auto », that simply displays the image in its original size."
 msgid "Page_backgroundSize_descr"
+msgstr ""
+
+#. Default: "Background position"
+msgid "Page_backgroundPosition"
+msgstr ""
+
+#. Default: "When background-size is « auto », choose the background position."
+msgid "Page_backgroundPosition_descr"
 msgstr ""
 
 #. Default: "Editors"

@@ -1679,6 +1679,10 @@ msgstr "Achtergrondafbeelding"
 msgid "Page_backgroundImage_descr"
 msgstr "Als deze pagina op de openbare pagina van uw app verschijnt, wordt de achtergrondafbeelding die u hier uploadt toegepast. Overal elders wordt de standaardachtergrondafbeelding gebruikt."
 
+#. Default: "Background style"
+msgid "Page_group_bgStyle"
+msgstr "Stijl"
+
 #. Default: "Background size"
 msgid "Page_backgroundSize"
 msgstr "Weergave"
@@ -1686,6 +1690,14 @@ msgstr "Weergave"
 #. Default: "When the background image hereabove is in use, specify here how it will be rendered. This is the equivalent of CSS attribute « background-size ». Value « cover » resizes the image to cover the entire page (keeping the width/height ratio). For most pages, it produces the best results. However, if the page is very long (ie, it contains search results), prefer value « auto », that simply displays the image in its original size."
 msgid "Page_backgroundSize_descr"
 msgstr "Wanneer de bovenstaande achtergrondafbeelding wordt gebruikt, specificeert u hier hoe deze wordt weergegeven. Dit attribuut is het equivalent van het CSS-attribuut “background-size”. Met de waarde “cover” wordt het formaat van de afbeelding aangepast, zodat deze de hele pagina bedekt (waarbij de breedte/hoogte-verhouding behouden blijft). Voor de meeste pagina's geeft deze waarde de beste resultaten. Dat gezegd hebbende, geeft u voor zeer lange pagina's (bijvoorbeeld pagina's die zoekresultaten weergeven) de voorkeur aan de waarde “auto”, waarmee de afbeelding eenvoudigweg in de oorspronkelijke grootte wordt weergegeven."
+
+#. Default: "Background position"
+msgid "Page_backgroundPosition"
+msgstr "Positie"
+
+#. Default: "When background-size is « auto », choose the background position."
+msgid "Page_backgroundPosition_descr"
+msgstr "Als het vorige attribuut « auto » is, kies dan de positie van de achtergrondafbeelding."
 
 #. Default: "Editors"
 msgid "Page_page_editors"

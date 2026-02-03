@@ -363,7 +363,17 @@ class Page(Base):
     # When the background image hereabove is used, the following parameter
     # determines how it is rendered. It is the equivalent of CSS attribute
     # "background-size".
-    backgroundSize = Select(validator=('cover', 'auto'), default='cover', **bip)
+    bip['group'] = Group('bgStyle', group=bip['group'])
+    del bip['layouts']
+
+    backgroundSize = Select(validator=('cover', 'auto'), default='cover',
+                            render='radio', layouts=Layouts.d, **bip)
+
+    # When the background size is "auto", one may define the background position
+    backgroundPosition = Select(master=backgroundSize, masterValue='auto',
+                                validator=('left', 'right', 'center'),
+                                default='left', render='radio',
+                                layouts=Layouts.dt, **bip)
 
     def initialiseLocalPage(self, req):
         '''A page can be specifically rendered as a root public page or as
@@ -371,9 +381,13 @@ class Page(Base):
            context must be adapted.'''
         # p_self may propose a specific background image
         if not self.isEmpty('backgroundImage'):
-            style = 'background-image:url(%s/backgroundImage/download); ' \
-                    'background-repeat:no-repeat; background-size:%s' % \
-                    (self.url, self.backgroundSize)
+            if self.backgroundSize == 'auto':
+                pos = f'; background-position:{self.backgroundPosition}'
+            else:
+                pos = ''
+            style = f'background-image:url({self.url}/backgroundImage/' \
+                    f'download); background-repeat:no-repeat; background-' \
+                    f'size:{self.backgroundSize}{pos}'
         else:
             style = None
         # Use a minimal page layout that only includes the "w" part (=widgets)
