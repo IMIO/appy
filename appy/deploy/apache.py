@@ -47,6 +47,7 @@ https = '''<IfModule mod_ssl.c>
   RewriteRule ^(.*) http://localhost:|port|$1 [P]
  </VirtualHost>
  <Proxy "http://localhost:|port|">
+  RequestHeader set X-Forwarded-Proto "https"
   ProxySet keepalive=On
  </Proxy>
 </IfModule>'''
@@ -89,7 +90,7 @@ class Config:
             for name in self.destAttributes:
                 src = getattr(self, name)
                 dest = self.destPath / Path(src).name
-                setattr(self, 'dest%s' % name.capitalize(), str(dest))
+                setattr(self, f'dest{name.capitalize()}', str(dest))
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Apache:
@@ -98,7 +99,7 @@ class Apache:
 
     # The folder where virtual hosts reside
     configFolder = '/etc/apache2'
-    sitesFolder = '%s/sites-enabled' % configFolder
+    sitesFolder = f'{configFolder}/sites-enabled'
 
     # Restart command
     restart = 'apache2ctl restart'
@@ -120,8 +121,8 @@ class Apache:
         # Dump the virtual host definition in a local temp file
         template = eval(type)
         localPath = self.get(config, template)
-        suffix = '' if type == 'httpSingle' else ('_%s' % type)
-        dest = '%s/%s%s.conf' % (Apache.sitesFolder, target.siteName, suffix)
+        suffix = '' if type == 'httpSingle' else f'_{type}'
+        dest = f'{Apache.sitesFolder}/{target.siteName}{suffix}.conf'
         target.copy(localPath, dest)
         os.remove(localPath)
 
@@ -147,9 +148,9 @@ class Apache:
             # Copy certificate files to the target. Overwrite any existing file.
             # As a preamble, ensure the destination folder for these files
             # exist.
-            target.execute('mkdir -p %s' % config.destPath)
+            target.execute(f'mkdir -p {config.destPath}')
             for name in config.destAttributes:
-                dest = getattr(config, 'dest%s' % name.capitalize())
+                dest = getattr(config, f'dest{name.capitalize()}')
                 target.copy(getattr(config, name), dest)
             # Restart Apache
             target.execute(Apache.restart)
