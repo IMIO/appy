@@ -257,7 +257,8 @@ class Config:
             protocol = headers.get('X-Forwarded-Proto')
             if not protocol:
                 # p_self.protocol is only used in the context of a fake request
-                protocol = self.protocol if handler.fake else 'http'
+                #protocol = self.protocol if handler.fake else 'http'
+                protocol = self.protocol
             # Build the base of the URL
             base = f'{protocol}://{host}'
         # Add a potential path prefix to URLs

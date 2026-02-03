@@ -204,6 +204,15 @@ class Date:
             r = f'{r}{hourSep}{hourS}{hourEnd}'
         return r
 
+    @classmethod
+    def addMinutes(class_, date, minutes):
+        '''Adds this integer or float number of minutes to this date and returns
+           a new DateTime object.'''
+        # Dates arithmetic is based on float number of days. So convert
+        # p_minutes to a number of days.
+        days = minutes / (60*24)
+        return date + days
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DayIterator:
     '''Class allowing to iterate over a range of days'''
