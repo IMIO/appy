@@ -486,6 +486,7 @@ class File(Field):
       </x>
       <!-- The upload field -->
       <input type="file" name=":fname" id=":fname" style=":field.getStyle()"
+             multiple=":field.multiple and o.isTemp()"
              onChange=":field.getJsOnChange()"/>
       <script var="isDisabled=not value \
              and 'false' or 'true'">:'document.getElementById(%s).disabled=%s'%\
@@ -516,7 +517,7 @@ class File(Field):
       icon='paperclip', disposition='attachment', nameStorer=n, cache=False,
       resize=False, thumbnail=n, preview=n, previewMaxSize=1048576*10, # 10Mb
       previewConvertMaxSize=1048576, previewFormats=previewExts, viewWidth=n,
-      viewHeight=n, hash='md5', noValueLabel='no_value'):
+      viewHeight=n, hash='md5', noValueLabel='no_value', multiple=False):
         # This boolean is True if the file is an image
         self.isImage = isImage
         # "downloadAction" can be a method called every time the file is
@@ -629,6 +630,19 @@ class File(Field):
         # for that purpose ("no_value"). If you prefer a customized message, set
         # an alternate i18n label here.
         self.noValueLabel = noValueLabel
+        # If p_multiple is True, when creating an object o1 containing this
+        # field, its widget will allow to upload multiple files at once, leading
+        # to the creation of o1 plus a series of its clones, each one hosting a
+        # single file. Suppose you are creating object o1 and have uploaded 3
+        # files f1, f2 and f3: o1 will be created, hosting f1, and clones o2 and
+        # o3 will be created as well, hosting, respectively, f2 and f3. Note
+        # that if the object creation is done in the context of a ref(add=True),
+        # the clones will, as the initially created object, be added to the
+        # initiator object via this ref, too. When p_multiple is True, also note
+        # that validation methods receiving file data (m_validate, or an
+        # individual field validator method) may receive lists of files instead
+        # of individual files.
+        self.multiple = multiple
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, False, True, n, n, False, n,
