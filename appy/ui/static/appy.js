@@ -929,6 +929,12 @@ class Form {
     }
   }
 
+  // Ensure any input[type=file] is empty
+  cleanFiles() {
+    const inputs = this.form.querySelectorAll('input[type=file]');
+    for (const input of inputs) input.value = '';
+  }
+
   // Poor fields: copy, in textareas, content stored in content-editable divs
   retrieveContentEditable() {
     const divs = this.form.querySelectorAll('[contenteditable=true]');
@@ -942,7 +948,13 @@ class Form {
   // Submits the form the Appy way
   appySubmit(action, gotoPage, gotoLayout) {
     // Complete the form via the "_get_" element if present
-    if (action != 'cancel') { this.complete(); this.enableDisabled(); }
+    if (action === 'cancel') {
+      // Don't upload any file: it would send useless data over the network
+      this.cleanFiles();
+    }
+    else {
+      this.complete(); this.enableDisabled();
+    }
     const f = this.form;
     f.action.value = action;
     /* If the form is posted from the iframe popup, initialise the "go back from

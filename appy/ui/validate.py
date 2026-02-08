@@ -1,4 +1,4 @@
-'''Validation-related stuff'''
+'''Web request data validation'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
@@ -8,8 +8,10 @@ from appy.px import Px
 from appy.utils import string as sutils
 from appy.model.utils import Object as O
 
-# Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 FIELD_NF  = 'field %s::%s was not found.'
+MULTI_MUL = '%s :: File fields "%s" and "%s" have both multiple file ' \
+            'uploads: this is not supported.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Validator:
@@ -43,6 +45,52 @@ class Validator:
         self.errorMessage = o.translate(errorLabel)
         # If a confirmation was requested, has it already be done ?
         self.saveConfirmed = saveConfirmed
+        # If a multiple File field is found among p_self.fields, and if, for
+        # that field, several files are carried in the request, the first file
+        # will be kept in p_self.values and the other ones will go in attribute
+        # p_self.moreValues below. Extracting surnumerary file values from
+        # p_self.values to p_self.moreValues will occur once intra- and inter-
+        # field validation will be finished, in order to be able to validate all
+        # uploaded files.
+        self.moreField = None
+        self.moreValues = None
+
+    def consumeMore(self):
+        '''Return a tuple made of (p_self.moreField, p_self.moreValues) and
+           reset these fields.'''
+        # No, this method is not a capitalist injunction
+        r = self.moreField, self.moreValues
+        self.moreField = self.moreValues = None
+        return r
+
+    def storeValue(self, o, field, value):
+        '''Store, after potential treatment, p_value in p_self.values'''
+        if field.type == 'File' and field.multiple and isinstance(value, list):
+            # Several files are there. It is not possible to have more than one
+            # multiple file field having several uploaded files.
+            if self.moreField:
+                raise Exception(MULTI_MUL % (o.strinG(), self.moreField.name,
+                                             field.name))
+            self.moreField = field
+            # Keep, for the moment all values in p_self.values. Once all
+            # validation steps will be finished, the first value will be kept in
+            # p_self.values and the other ones will be tranferred to
+            # p_self.moreValues.
+            for i in range(len(value)):
+                value[i] = field.getStorableValue(o, value[i], single=True)
+        self.values[field.name] = field.getStorableValue(o, value, single=True)
+
+    def manageMoreFiles(self):
+        '''A multiple file field has been encountered: keep the first file
+           value in p_self.values and transfer the other values in
+           p_self.moreValues.'''
+        name = self.moreField.name
+        values = self.values[name]
+        # Keep the first value in p_self.values
+        self.values[name] = values[0]
+        del values[0]
+        # Store the remaining values in p_self.moreValues
+        self.moreValues = values
 
     def intraFieldValidation(self, fields=None):
         '''Performs field-specific validation for every field from the page
@@ -65,8 +113,8 @@ class Validator:
             if message:
                 self.errors[field.name] = message
             else:
-                self.values[field.name] = field.getStorableValue(o, value,
-                                                                 single=True)
+                # Store p_value in p_self.values
+                self.storeValue(o, field, value)
             # Store this field
             self.fields.append(field)
             self.fieldsByName[field.name] = field
@@ -187,6 +235,10 @@ class Validator:
         if self.errors:
             o.say(msg, fleeting=False)
             return self.gotoEdit()
+
+        # Manage additional file values in the context of a multiple file field
+        if self.moreField:
+            self.manageMoreFiles()
 
         # Before saving data, must we ask a confirmation by the user ?
         if not self.saveConfirmed and hasattr(o, 'confirm'):

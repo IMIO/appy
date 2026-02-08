@@ -825,9 +825,9 @@ class Field:
         return self.__repr__(start='', end='')
 
     def isMultiValued(self):
-        '''Does this type definition allow to define multiple values?'''
-        maxOccurs = self.multiplicity[1]
-        return maxOccurs is None or maxOccurs > 1
+        '''Does this type definition allow to define multiple values ?'''
+        maX = self.multiplicity[1]
+        return maX is None or maX > 1
 
     def umlMultiplicities(self):
         '''Return p_self's multiplicities in UML format'''

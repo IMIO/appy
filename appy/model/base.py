@@ -1577,7 +1577,7 @@ class Base:
         # Create a validator: he will manage validation of request data
         validator = self.H().validator = Validator(self, saveConfirmed)
         r = validator.run()
-        # If a result is returned, the "edit" page must be shown again:
+        # If a result is returned, the /edit page must be shown again:
         # validation failed or a confirmation is required.
         if r: return r
         # Update the object in the database

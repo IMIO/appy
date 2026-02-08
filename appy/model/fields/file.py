@@ -28,6 +28,8 @@ CONV_PDF_T = 'converted as PDF'
 PATH_KO    = 'Missing absolute disk path for %s.'
 RESIZED    = '%s resized to %spx.'
 DOWNLOADED = "%s • %s :: Downloaded in %s''."
+MULTI_KO   = 'It is not possible to define a max multiplicity being higher ' \
+             'than 1, but check arg "multiple", that offers an alternative.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class FileInfo:
@@ -517,7 +519,8 @@ class File(Field):
       icon='paperclip', disposition='attachment', nameStorer=n, cache=False,
       resize=False, thumbnail=n, preview=n, previewMaxSize=1048576*10, # 10Mb
       previewConvertMaxSize=1048576, previewFormats=previewExts, viewWidth=n,
-      viewHeight=n, hash='md5', noValueLabel='no_value', multiple=False):
+      viewHeight=n, hash='md5', noValueLabel='no_value', multiple=False,
+      multiplePatch=None):
         # This boolean is True if the file is an image
         self.isImage = isImage
         # "downloadAction" can be a method called every time the file is
@@ -640,9 +643,19 @@ class File(Field):
         # the clones will, as the initially created object, be added to the
         # initiator object via this ref, too. When p_multiple is True, also note
         # that validation methods receiving file data (m_validate, or an
-        # individual field validator method) may receive lists of files instead
-        # of individual files.
+        # individual field validator method) may receive a list of files instead
+        # of an individual file.
         self.multiple = multiple
+        # When p_multiple is True, each additionally created object will have
+        # exactly the same field values as the initial object, p_self's content
+        # excepted. If you wish to add more differences between objects, place a
+        # method in the following attribute, that will be called everytime an
+        # additional object will be created, accepting, as unique arg, request
+        # values, as an object being similar to p_new arg passed to m_validate
+        # methods. That being said, if you leave p_self.multiplePatch to None, a
+        # default method will be set and will replace the object title by the
+        # name of the uploaded file, minus its extension.
+        self.multiplePatch = multiplePatch or self.patchMultiple
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, False, True, n, n, False, n,
@@ -658,6 +671,12 @@ class File(Field):
         # This method will accept no arg and return the alternate location, as
         # a string.
         self.xmlLocation = xmlLocation
+        self.checkParameters()
+
+    def checkParameters(self):
+        '''Ensures this File is correctly defined'''
+        if self.isMultiValued():
+            raise Exception(MULTI_KO)
 
     def getRequestValue(self, o, requestName=n):
         name = requestName or self.name
@@ -1033,4 +1052,10 @@ class File(Field):
         else:
             # Return a 404
             Static.notFound(handler, config)
+
+    def patchMultiple(self, o, new):
+        '''In the context of p_self being multiple, this method replaces the
+           title of the additional object under creation, based, on p_new, by
+           the name of the file corresponding to p_self as stored on p_new.'''
+        new.title = os.path.splitext(new.file.name)[0]
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

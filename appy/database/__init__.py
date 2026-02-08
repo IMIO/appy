@@ -817,11 +817,35 @@ class Database:
         if custom:
             root.objects[id] = o
 
+    def more(self, o, validator, initiator):
+        '''Called by m_update, this method creates additional objects in the
+           context of a multiple file upload.'''
+        handler = o.H()
+        className = o.class_.name
+        # Get the content of the additional files, retrieved by the p_validator
+        moreField, moreValues = validator.consumeMore()
+        # For each object to create, request data may be altered, in order to
+        # fine-tune the object creation process.
+        patch = moreField.multiplePatch
+        # Create one additional object for each additional file as found in
+        # v_moreValues.
+        for value in moreValues:
+            # Create an additional object, with a negative ID, to reproduce
+            # the same context as for p_o.
+            oMore = self.new(handler, className, temp=True)
+            # Patch the p_validator to define the appropriate set of values
+            # to store on it.
+            validator.values[moreField.name] = value
+            if patch: patch(o, validator.values)
+            # Push p_validator.values on v_oMore
+            self.update(oMore, validator, initiator)
+
     def update(self, o, validator, initiator=None):
         '''Update object p_o from data collected from the UI via a p_validator.
            The possible p_initiator object may be given. Returns a message to
            return to the UI, or None if p_o has already been deleted.'''
-        o.H().commit = True
+        handler = o.H()
+        handler.commit = True
         isTemp = o.isTemp()
         # If p_o is temp, convert it to a "final" object, by changing its ID and
         # moving it from dict "temp" to "objects" or "iobjects".
@@ -831,7 +855,7 @@ class Database:
         currentValues = None if isTemp \
                              else o.history.getCurrentValues(o,validator.fields)
         # Call the custom "beforeEdit" if available, just before setting or
-        # updating p_self's fields. At this step, o's container is not there
+        # updating p_self's fields. At this step, p_o's container is not there
         # yet. p_initiator is passed if m_beforeEdit requires it.
         multicall(o, 'beforeEdit', False, isTemp, initiator)
         if not self.exists(o=o): return
@@ -839,14 +863,13 @@ class Database:
         for field in validator.fields:
             value = validator.values[field.name]
             if field.type == 'Dict':
-                # Prevent loosing entries that would not become editable anymore
-                # via the UI.
+                # Prevent loosing entries that would not be editable anymore via
+                # the UI.
                 field.store(o, value, overwrite=False)
             else:
                 field.store(o, value)
         # Keep in history potential changes on historized fields
-        if currentValues:
-            o.history.historize(currentValues)
+        if currentValues: o.history.historize(currentValues)
         # In the remaining of this method, at various places, we will check if
         # p_o has already been deleted or not. Indeed, p_o may just have been a
         # transient object whose only use was to collect data from the UI.
@@ -854,7 +877,7 @@ class Database:
         # Call the custom "onEditEarly" if available. This method is called
         # *before* potentially linking p_o to its initiator.
         if isTemp:
-            # At this step, o's container is not there yet. p_initiator is
+            # At this step, p_o's container is not there yet. p_initiator is
             # passed if m_onEditEarly requires it.
             multicall(o, 'onEditEarly', False, initiator)
             if not self.exists(o=o): return
@@ -870,8 +893,10 @@ class Database:
         # Unlock the currently saved page on the object
         Lock.remove(o, o.req.page)
         # Reindex the object when appropriate
-        if o.class_.isIndexable():
-            o.reindex()
+        if o.class_.isIndexable(): o.reindex()
+        # If we are in the context of creating multiple objects, due to a
+        # multiple file upload, create the other objects.
+        if validator.moreField: self.more(o, validator, initiator)
         return r or o.translate('object_saved')
 
     def delete(self, o, historize=False, executeMethods=True, root=None,
