@@ -470,7 +470,7 @@ class File(Field):
 
     dropZone = Px('''
      <x var="zname=f'{name}_zone'; clname=f'{name}_clean'">
-      <label class="dropZone"
+      <label class="dropZone" style=":field.getDropZoneStyle()"
              id=":zname" onDragOver="Dropper.onDragOver(event)"
              onDrop="Dropper.onDrop(event)">
        <div class="dropContent" data-text=":_('please_drop')"></div>
@@ -490,7 +490,7 @@ class File(Field):
      css='''
       .dropZone { display:flex; padding:0.5em 1em; cursor:pointer;
                   border:1px solid lightgrey; border-radius:6px;
-                  width:50vw; height:10vh; max-height:10vh; overflow-y:auto }
+                  overflow-x:auto; overflow-y:auto }
       .dropContent { text-transform:none; font-style:italic }
       .dropZone input[type=file] { display:none }
      ''',
@@ -499,10 +499,12 @@ class File(Field):
      js='''
        class Dropper {
 
-         constructor(zoneId) {
+         constructor(zoneId, storerId) {
            const zone = document.getElementById(zoneId);
            this.zone = zone;
            zone.dropper = this;
+           // The ID of another field that possibly stores the file name
+           this.storerId = storerId;
            // The zone content
            this.content = zone.querySelector('.dropContent');
            // The icon allowing to clean the list of files to upload
@@ -595,6 +597,10 @@ class File(Field):
            dropper.content.innerHTML = dropper.content.dataset.text;
            // Clean the files in the input field
            dropper.input.value = '';
+           // Clean the "name storer" field, if any
+           if (dropper.storerId) {
+             document.getElementById(dropper.storerId).value = '';
+           }
            // Hide the "clean" icon
            dropper.clean.style.display = 'none';
          }
@@ -669,7 +675,7 @@ class File(Field):
       resize=False, thumbnail=n, preview=n, previewMaxSize=1048576*10, # 10Mb
       previewConvertMaxSize=1048576, previewFormats=previewExts, viewWidth=n,
       viewHeight=n, hash='md5', noValueLabel='no_value', multiple=False,
-      multiplePatch=None):
+      multiplePatch=None, dropWidth=None, dropHeight=None):
         # This boolean is True if the file is an image
         self.isImage = isImage
         # "downloadAction" can be a method called every time the file is
@@ -805,6 +811,9 @@ class File(Field):
         # default method will be set and will replace the object title by the
         # name of the uploaded file, minus its extension.
         self.multiplePatch = multiplePatch or self.patchMultiple
+        # The dimensions of the drop zone, when in use
+        self.dropWidth = dropWidth or '50vw'
+        self.dropHeight = dropHeight or '10vh'
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, False, True, n, n, False, n,
@@ -869,12 +878,20 @@ class File(Field):
         '''If p_self is multiple, get a JS Dropper object that will manage the
            drop zone.'''
         # Pass the nameStorer when there is one
-        return f"new Dropper('{zoneId}')"
+        storer = self.nameStorer
+        name = f"'{storer.name}'" if storer else 'null'
+        return f"new Dropper('{zoneId}',{name})"
 
     def getStyle(self):
         '''Get the content of the "style" attribute of the "input" tag on the
            "edit" layout for this field.'''
         return f'width:{self.inputWidth}' if self.inputWidth else ''
+
+    def getDropZoneStyle(self):
+        '''Get the dimensions of the drop zone'''
+        w = self.dropWidth
+        h = self.dropHeight
+        return f'width:{w}; max-width:{w}; height:{h}; max-height:{h}'
 
     def getMainCss(self, c):
         '''Gets the CSS class to apply to the main html tag representing
