@@ -595,6 +595,10 @@ msgstr "Overschreven door ..."
 msgid "upload_invalid"
 msgstr "Gelieve een bestand van hetzelfde type up te loaden."
 
+#. Default: "Drop files here, or click to upload."
+msgid "please_drop"
+msgstr "Sleep bestanden hierheen of klik om ze te uploaden."
+
 #. Default: "No preview is available for files of this type."
 msgid "file_unpreviewable_format"
 msgstr "Voor dit bestandstype is geen overzicht beschikbaar."

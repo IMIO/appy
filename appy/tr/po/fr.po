@@ -596,6 +596,10 @@ msgstr "Écraser par..."
 msgid "upload_invalid"
 msgstr "Veuillez uploader un fichier du même type."
 
+#. Default: "Drop files here, or click to upload."
+msgid "please_drop"
+msgstr "Glissez des fichiers ici, ou cliquez pour en uploader."
+
 #. Default: "No preview is available for files of this type."
 msgid "file_unpreviewable_format"
 msgstr "L'aperçu n'est pas disponible pour les fichiers de ce type."

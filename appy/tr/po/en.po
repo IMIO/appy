@@ -596,6 +596,10 @@ msgstr "Upload a new file"
 msgid "upload_invalid"
 msgstr "Please upload a file of the same type."
 
+#. Default: "Drop files here, or click to upload."
+msgid "please_drop"
+msgstr "Drop files here, or click to upload."
+
 #. Default: "No preview is available for files of this type."
 msgid "file_unpreviewable_format"
 msgstr "No preview is available for files of this type."

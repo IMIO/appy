@@ -595,6 +595,10 @@ msgstr "Überschreiben durch..."
 msgid "upload_invalid"
 msgstr "Bitte laden Sie eine Datei desselben Typs hoch."
 
+#. Default: "Drop files here, or click to upload."
+msgid "please_drop"
+msgstr ""
+
 #. Default: "No preview is available for files of this type."
 msgid "file_unpreviewable_format"
 msgstr ""

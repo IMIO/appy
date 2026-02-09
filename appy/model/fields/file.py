@@ -143,7 +143,7 @@ class FileInfo:
             r = self.getTempFilePath(o, folder)
         return r
 
-    def getUploadName(self, shorten=True):
+    def getUploadName(self, shorten=True, readOnly=False):
         '''Returns the upload name, nicely formatted'''
         # The upload name may be missing
         r = self.uploadName
@@ -152,7 +152,8 @@ class FileInfo:
         keep = FileInfo.uploadNameMax
         if not shorten or len(r) <= keep: return r
         # Return an "acronym" tag with the first chars of the name
-        return f'<abbr title="{r}" style="cursor:pointer">{r[:keep]}...</abbr>'
+        pointer = 'help' if readOnly else 'pointer'
+        return f'<abbr title="{r}" style="cursor:{pointer}">{r[:keep]}…</abbr>'
 
     def exists(self, o):
         '''Does the file really exist on the filesystem ?'''
@@ -465,34 +466,182 @@ class File(Field):
       <div class=":field.getMainCss(_ctx_)">::field.getLinkOrPreview(o, layout,
                                             name)</div>''')
 
+    # The drop zone, allowing to upload multiple files
+
+    dropZone = Px('''
+     <x var="zname=f'{name}_zone'; clname=f'{name}_clean'">
+      <label class="dropZone"
+             id=":zname" onDragOver="Dropper.onDragOver(event)"
+             onDrop="Dropper.onDrop(event)">
+       <div class="dropContent" data-text=":_('please_drop')"></div>
+       <input type="file" name=":fname" id=":fname" multiple="multiple"
+              onChange=":field.getJsOnChange(True)"/>
+      </label>
+
+      <!-- Clean the zone -->
+      <img id=":clname" src=":svg('deleteS')" class="clickable iconM"
+           style="display:none" title="::_('clean_all')"
+           onclick=":f'Dropper.clean({q(zname)})'"/>
+
+      <!-- A Dropper object will manage the drop zone -->
+      <script>:field.getJsDropper(zname)</script>
+     </x>''',
+
+     css='''
+      .dropZone { display:flex; padding:0.5em 1em; cursor:pointer;
+                  border:1px solid lightgrey; border-radius:6px;
+                  width:50vw; height:10vh; max-height:10vh; overflow-y:auto }
+      .dropContent { text-transform:none; font-style:italic }
+      .dropZone input[type=file] { display:none }
+     ''',
+
+     # A Dropper object will manage the drop zone
+     js='''
+       class Dropper {
+
+         constructor(zoneId) {
+           const zone = document.getElementById(zoneId);
+           this.zone = zone;
+           zone.dropper = this;
+           // The zone content
+           this.content = zone.querySelector('.dropContent');
+           // The icon allowing to clean the list of files to upload
+           this.clean = zone.nextElementSibling;
+           // The input field
+           this.input = zone.querySelector('input[type=file]');
+           // Set a default text while no file is uploaded
+           this.content.innerHTML = this.content.dataset.text;
+
+           // Disable the "drop" event at the window level
+           window.addEventListener('drop', (e) => {
+             // Do it only when dropping files
+             if ([...e.dataTransfer.items].some((it) => it.kind === 'file')) {
+               e.preventDefault();
+             }
+           });
+
+           // Disable the "dragover" event at the window level
+           window.addEventListener('dragover', (e) => {
+             // Do it only when dragging files
+             const fileItems = [...e.dataTransfer.items].filter(
+                                 (it) => it.kind === 'file');
+             if (fileItems.length > 0) {
+               e.preventDefault();
+               if (!zone.contains(e.target)) {
+                 e.dataTransfer.dropEffect = 'none';
+               }
+             }
+           });
+         }
+
+         /* Get the dropper object from the drop zone node or one of its sub-
+            nodes. */
+
+         static get(node) {
+           if (!node) return;
+           let dropper = node.dropper;
+           return (dropper)? dropper: Dropper.get(node.parentNode);
+         }
+
+         // Render the names of the files into the drop zone
+
+         showFileNames(files) {
+           // Renders file names as bullets
+           let r = ['<ul>'];
+           for (const f of files) {
+             r.push(`<li>${f.name}</li>`);
+           }
+           r.push('</ul>');
+           r = r.join('');
+           this.zone.querySelector('[class=dropContent]').innerHTML = r;
+           // Allow to clean the zone
+           this.clean.style.display = 'block';
+         }
+
+         // Display the right icon while dragging files
+
+         static onDragOver(e) {
+           const fileItems = [...e.dataTransfer.items].filter(
+                               (item) => item.kind === 'file');
+           if (fileItems.length > 0) {
+             e.preventDefault();
+             e.dataTransfer.dropEffect = 'copy';
+           }
+         }
+
+         // When files are dropped into the zone, display their names in it
+
+         static onDrop(e) {
+           e.preventDefault();
+           const input = Dropper.get(e.target).input;
+           // Update the input file and trigger a change event on it
+           input.files = e.dataTransfer.files;
+           const change = new Event('change');
+           input.dispatchEvent(change);
+         }
+
+         /* When files are uploaded via the input field, display their names in
+            the drop zone, too. */
+
+         static onInputChange(e) {
+           const dropper = Dropper.get(e.target);
+           dropper.showFileNames(e.target.files);
+         }
+
+         // Clean the drop zone
+         static clean(zoneId) {
+           const dropper = document.getElementById(zoneId).dropper;
+           // Reset the text in the zone
+           dropper.content.innerHTML = dropper.content.dataset.text;
+           // Clean the files in the input field
+           dropper.input.value = '';
+           // Hide the "clean" icon
+           dropper.clean.style.display = 'none';
+         }
+       }''')
+
     edit = Px('''
-     <x var="fname=f'{name}_file'; rname=f'{name}_action'">
+     <x var="fname=f'{name}_file'; rname=f'{name}_action'; isTemp=o.isTemp();
+             isMultiple=isTemp and field.multiple">
       <x if="value">
+
+       <!-- Render the file name or preview on /edit -->
        <x>:field.view</x><br/>
+
+       <!-- Radio buttons: keep / delete / replace the file -->
+
        <!-- Keep the file unchanged -->
        <input type="radio" value="keep" checked=":bool(value)" name=":rname"
               id=":f'{name}_keep'"
               onclick=":f'document.getElementById({q(fname)}).disabled=true'"/>
        <label lfor=":f'{name}_keep'">:_('keep_file')</label><br/>
+
        <!-- Delete the file -->
        <x if="not field.required">
         <input type="radio" value="delete" name=":rname" id=":f'{name}_delete'"
                onclick=":f'document.getElementById({q(fname)}).disabled=true'"/>
         <label lfor=":f'{name}_delete'">:_('delete_file')</label><br/>
        </x>
+
        <!-- Replace with a new file -->
        <input type="radio" value="replace" id=":f'{name}_upload'"
               checked=":None if value else 'checked'" name=":rname"
               onclick=":f'document.getElementById({q(fname)}).disabled=false'"/>
        <label lfor=":f'{name}_upload'">:_('replace_file')</label><br/>
       </x>
-      <!-- The upload field -->
-      <input type="file" name=":fname" id=":fname" style=":field.getStyle()"
-             multiple=":field.multiple and o.isTemp()"
-             onChange=":field.getJsOnChange()"/>
-      <script var="isDisabled=not value \
-             and 'false' or 'true'">:'document.getElementById(%s).disabled=%s'%\
-                                     (q(fname), isDisabled)</script></x>''')
+
+      <!-- Upload multiple files via the drop zone -->
+      <x if="isMultiple">:field.dropZone</x>
+
+      <!-- Upload a single file via a simple input[type=file] -->
+      <x if="not isMultiple">
+       <input type="file" name=":fname" id=":fname"
+              style=":field.getStyle()" onChange=":field.getJsOnChange()"/>
+       <script var="disabled='true' if value else 
+        'false'">:f'document.getElementById({q(fname)}).disabled={disabled}'
+       </script>
+      </x>
+     </x>''')
 
     search = ''
 
@@ -701,17 +850,31 @@ class File(Field):
         # If "keep", the value must not be considered as empty
         return o.req[f'{self.name}_action'] != 'keep'
 
-    def getJsOnChange(self):
-        '''Gets the JS code for updating the name storer when defined'''
+    def getJsOnChange(self, multiple=False):
+        '''Gets the JS code for updating the name storer (when defined) and,
+           when in the case of a m_multiple upload, for updating the drop zone
+           with the names of the files.'''
+        r = []
+        # Get the name storer
         storer = self.nameStorer
-        if not storer: return ''
-        name = storer.name if isinstance(storer, Field) else storer
-        return f'updateFileNameStorer(this,"{name}")'
+        if storer:
+            name = storer.name if isinstance(storer, Field) else storer
+            r.append(f'updateFileNameStorer(this,"{name}")')
+        # Get the JS code for updating the drop zone
+        if multiple:
+            r.append('Dropper.onInputChange(event)')
+        return ';'.join(r)
+
+    def getJsDropper(self, zoneId):
+        '''If p_self is multiple, get a JS Dropper object that will manage the
+           drop zone.'''
+        # Pass the nameStorer when there is one
+        return f"new Dropper('{zoneId}')"
 
     def getStyle(self):
         '''Get the content of the "style" attribute of the "input" tag on the
            "edit" layout for this field.'''
-        return 'width: %s' % self.inputWidth if self.inputWidth else ''
+        return f'width:{self.inputWidth}' if self.inputWidth else ''
 
     def getMainCss(self, c):
         '''Gets the CSS class to apply to the main html tag representing
@@ -848,7 +1011,7 @@ class File(Field):
         if not value:
             return '' if layout == 'cell' else o.translate(self.noValueLabel)
         # On /edit, simply repeat the file title
-        if layout == 'edit': return value.getUploadName()
+        if layout == 'edit': return value.getUploadName(readOnly=True)
         # Build the URL for downloading or displaying the file
         url = f'{o.url}/{name}/download'
         preview, text = self.mustPreview(o, value, layout)

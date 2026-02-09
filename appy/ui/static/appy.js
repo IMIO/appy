@@ -1247,6 +1247,24 @@ function getSlaves(master) {
   return r;
 }
 
+// Show a DOM node
+function showNode(node) {
+  // Show p_node... if not shown yet
+  if (node.style.display === 'none') {
+    /* Appy-specific attribute "appyDisplay" remembers the standard p_node
+       display, before hiding it. */
+    node.style.display = node.appyDisplay || '';
+  }
+}
+// Hide a DOM node
+function hideNode(node) {
+  // Hide p_node ... if not hidden yet
+  if (node.style.display !== 'none') {
+    node.appyDisplay = node.style.display;
+    node.style.display = 'none';
+  }
+}
+
 // Retrieve form values and validation errors in an array
 function getFormData() {
   // Get the Appy or search form
@@ -1265,7 +1283,7 @@ function getFormData() {
   }
   // Then, add error-related info when present
   if (!errors) return r;
-  for (let key in errors) r[key + '_error'] = errors[key];
+  for (let key in errors) r[`${key}_error`] = errors[key];
   return r
 }
 
@@ -1292,14 +1310,14 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
         let innerId = slave.id.split('_').pop(),
             innerField = document.getElementById(innerId);
         // Inner-field may be absent (ie, in the case of a group)
-        if (innerField && (innerField.className == ('master_' + innerId))) {
+        if (innerField && (innerField.className == `master_${innerId}`)) {
           subMaster = innerField;
         }
       }
       // Show or hide this slave
       if (showSlave) {
         // Show the slave
-        slave.style.display = '';
+        showNode(slave);
         if (subMaster) {
           // Recompute its own slave's visibility
           updateSlaves(subMaster, null, objectUrl, layoutType, className);
@@ -1307,13 +1325,10 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
       }
       else {
         // Hide the slave
-        slave.style.display = 'none';
-        if (subMaster && (subMaster.style.display != 'none')) {
+        hideNode(slave);
+        if (subMaster && (subMaster.style.display !== 'none')) {
           // Hide its own slaves, too
-          let subSlaves = getSlaves(subMaster);
-          for (let l=0; l < subSlaves.length; l++) {
-            subSlaves[l].style.display = 'none';
-          }
+          for (const sub of getSlaves(subMaster)) hideNode(sub);
         }
       }
     }
@@ -1322,11 +1337,11 @@ function updateSlaves(master, slave, objectUrl, layoutType, className, ajax){
          below. Update slaves' values depending on master values. */
       let slaveId = slave.id,
           slaveName = slaveId.split('_')[1],
+          masterName = master.id || master.name,
           params = getFormData();
-          if (slaveName in params) delete params[slaveName];
-          masterName = master.id || master.name;
-          if (masterName.startsWith('w_')) masterName = masterName.substr(2);
-          params['_master_'] = masterName;
+      if (slaveName in params) delete params[slaveName];
+      if (masterName.startsWith('w_')) masterName = masterName.substr(2);
+      params['_master_'] = masterName;
       if (className) params['className'] = className;
       askField(slaveId, objectUrl, layoutType, params, false, className,'POST');
     }
