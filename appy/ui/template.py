@@ -22,7 +22,7 @@ class Template:
             r = tool.translate('app_name_raw')
         else:
             # The page title is based on p_o's title
-            r = o.getShownValue() or ''
+            r = o.getShownValue(layout='xml') or ''
         # Ensure this is a string
         r = r if isinstance(r, str) else str(r)
         # If a XHTML paragraph is found, keep the part before it
