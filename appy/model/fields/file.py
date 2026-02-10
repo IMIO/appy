@@ -1237,5 +1237,5 @@ class File(Field):
         '''In the context of p_self being multiple, this method replaces the
            title of the additional object under creation, based, on p_new, by
            the name of the file corresponding to p_self as stored on p_new.'''
-        new.title = os.path.splitext(new.file.name)[0]
+        new.title = os.path.splitext(new[self.name].name)[0]
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
