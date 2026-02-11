@@ -33,8 +33,8 @@ class Date(Field):
     # Possible values for "format"
     WITH_HOUR    = 0
     WITHOUT_HOUR = 1
-    dateParts = ('year', 'month', 'day')
-    hourParts = ('hour', 'minute')
+    dateParts = 'year', 'month', 'day'
+    hourParts = 'hour', 'minute'
     editSep = ':' # Separator between hours and minutes
 
     # Types of the native HTML inputs, for every format
@@ -435,8 +435,15 @@ class Date(Field):
     def getNativeValue(self, value):
         '''Ensure p_value is a string being understood by the native HTML
            inputs.'''
-        return value.strftime(Date.nativeFormats[self.format]) \
-               if isinstance(value, DateTime) else value
+        if isinstance(value, DateTime):
+            try:
+                r = value.strftime(Date.nativeFormats[self.format])
+            except ValueError as err:
+                # Something is wrong with that date
+                r = None
+        else:
+            r = value
+        return r
 
     def getDateStyle(self, o):
         '''Gets the content of the "style" attribute for the input date widget

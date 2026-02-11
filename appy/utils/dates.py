@@ -197,7 +197,12 @@ class Date:
                                            tool.translate, nb=m.group(2))
         fmt = Date.rexPart.sub(fun, fmt)
         # Resolve all other, standard, symbols
-        r = date.strftime(fmt)
+        try:
+            r = date.strftime(fmt)
+        except ValueError as err:
+            # There is something wrong with that date. What has been experienced
+            # is a year made of 5 figures.
+            r = f'-/-/{date.year()}'
         # Append hour from tool.hourFormat
         if withHour:
             hourS = date.strftime(tool.config.ui.hourFormat)
