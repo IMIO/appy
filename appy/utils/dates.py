@@ -48,6 +48,7 @@ class Date:
         '''Resolve this date p_part'''
         # p_part corresponds to one of the symbols as defined in Date.rexPart
         if part == 'dd':
+            # Day number, without leading '0' for day numbers < 10
             r = str(date.day())
         else:
             # Get the translated text corresponding to this p_part
