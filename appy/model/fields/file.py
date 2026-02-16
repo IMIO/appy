@@ -607,8 +607,8 @@ class File(Field):
        }''')
 
     edit = Px('''
-     <x var="fname=f'{name}_file'; rname=f'{name}_action'; isTemp=o.isTemp();
-             isMultiple=isTemp and field.multiple">
+     <div var="fname=f'{name}_file'; rname=f'{name}_action'; isTemp=o.isTemp();
+               isMultiple=isTemp and field.multiple">
       <x if="value">
 
        <!-- Render the file name or preview on /edit -->
@@ -637,7 +637,7 @@ class File(Field):
       </x>
 
       <!-- Upload multiple files via the drop zone -->
-      <x if="isMultiple">:field.dropZone</x>
+      <div if="isMultiple" class="flex1">:field.dropZone</div>
 
       <!-- Upload a single file via a simple input[type=file] -->
       <x if="not isMultiple">
@@ -647,7 +647,7 @@ class File(Field):
         'false'">:f'document.getElementById({q(fname)}).disabled={disabled}'
        </script>
       </x>
-     </x>''')
+     </div>''')
 
     search = ''
 
