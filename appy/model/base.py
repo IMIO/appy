@@ -673,6 +673,12 @@ class Base:
         value = field.getValue(self, single=False) if value is None else value
         return field.getShownValue(self, value, layout, language=language)
 
+    def getSub(self, name, attribute):
+        '''Returns p_self.[name].[attribute]. If p_self.[name] is None, the
+           method returns None instead of raising an error.'''
+        if self.isEmpty(name): return
+        return getattr(getattr(self, name), attribute)
+
     def countRefs(self, name):
         '''Counts the nb of objects linked to this one via Ref field p_name'''
         tied = self.values.get(name)
