@@ -19,9 +19,6 @@ CONF_ERR  = 'When using options, a popup will already be shown, with the ' \
             'confirmation via attribute "confirm".'
 OPT_P_ERR = "Missing attribute 'popup' for class %s. An options class must " \
             "be opened in a popup, ie: popup = Iframe('500px', '500px')."
-OPT_P_IDX = "Option class %s is unduly indexable. Instances of option " \
-            "classes are, by nature, transient. Consequently, no index must " \
-            "be created for them: set indexable=False on the class."
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ActionInitiator(Initiator):
@@ -417,9 +414,6 @@ class Action(Field):
             popup = getattr(options, 'popup', None)
             if not popup:
                 raise Exception(OPT_P_ERR % options.__name__)
-            indexable = getattr(options, 'indexable', True)
-            if indexable:
-                raise Exception(OPT_P_IDX % options.__name__)
 
     def renderLabel(self, layoutType):
         return # Label is rendered directly within the button
