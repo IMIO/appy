@@ -9,10 +9,11 @@ from pathlib import Path
 
 from DateTime import DateTime
 
-from appy.pod import formatsByTemplate
-from appy.model.utils import Object as O
-from appy.utils import executeCommand, Traceback
-from appy.utils.path import getShownSize, getOsTempFolder
+from ..database.vault import Vault
+from ..pod import formatsByTemplate
+from ..model.utils import Object as O
+from ..utils import executeCommand, Traceback
+from ..utils.path import getShownSize, getOsTempFolder
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # If you want to configure the backup of your Appy server, place, in the main
@@ -55,7 +56,7 @@ class Config:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # logs  | will create a backup of log files app.log and site.log
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # If attribute "path" is None, the backup is considered to be disabled.
+        # If attribute "path" is None, the backup is considered to be disabled
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.path = None
 
@@ -151,7 +152,8 @@ class Backup:
     def __init__(self, tool):
         self.tool = tool
         self.config = tool.config.backup
-        self.server = tool.H().server
+        self.handler = tool.H()
+        self.server = self.handler.server
         # All log messages will also be stored in this list, to be sent by email
         self.messages = []
 
@@ -298,11 +300,30 @@ class Backup:
         if undeleted:
             self.log(UNDELETED % undeleted)
 
+    def nonBackup(self):
+        '''Perform tasks not being functionally related to the backup, but for
+           which their execution is opportune at the time of the backup. Returns
+           True if an error occurred.'''
+        # 1. Execute p_self.config.method if defined
+        handler = self.handler
+        if self.config.method:
+            success = self.runMethod()
+            # Stop here if the method produced an error, in order to avoid
+            # committing some partial result.
+            if not success:
+                handler.commit = False
+                return True
+        # p_self.config.method may have set handler.commit to False. Force it to
+        # True, because in the context of the currently running backup job, a
+        # commit is always required (a minima, temp objects are removed from the
+        # database).
+        handler.commit = True
+        # 2. Update, when relevant, the vault of iids (appy/database/vault.py)
+        Vault.update(self.tool)
+
     def run(self):
         '''Performs the backup and related tasks'''
         config = self.config
-        tool = self.tool
-        handler = tool.H()
         # The backup can't be done unless correcty configured
         if not config or not config.path:
             self.log(BKP_DIS, type='warning')
@@ -310,23 +331,13 @@ class Backup:
         # Is that a full backup or not ?
         full = self.isFull()
         self.log(BKP_TYPE % (self.type[full], config.fullDay))
-        # Execute config.method if defined
-        if config.method:
-            success = self.runMethod()
-            # Stop here if the method produced an error, in order to avoid
-            # committing some partial result.
-            if not success:
-                handler.commit = False
-                return
-        # config.method may have set handler.commit to False. Force it to True,
-        # because in the context of the currently running "backup" job, a commit
-        # is always required (a minima, temp objects are removed from the
-        # database).
-        handler.commit = True
+        # Perform non-backup tasks executed at backup time
+        error = self.nonBackup()
+        if error: return
         # Remove temp objects within the database
         database = self.server.database
         logger = self.server.loggers.app
-        database.cleanTemp(handler, logger)
+        database.cleanTemp(self.handler, logger)
         # Remove temp files in the OS temp folder
         self.cleanTempFiles()
         # Pack the database file if requested
@@ -352,5 +363,5 @@ class Backup:
         if config.emails: self.sendMails()
         # Restart the Appy server if required
         if config.restart:
-            tool.restart(wait=config.restart, command=config.restartCommand)
+            self.tool.restart(wait=config.restart,command=config.restartCommand)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

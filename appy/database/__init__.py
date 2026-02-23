@@ -9,17 +9,21 @@ import os, os.path, sys, time, pathlib, shutil
 from DateTime import DateTime
 from zc.lockfile import LockError
 from BTrees.IOBTree import IOBTree
+from BTrees.IIBTree import IITreeSet
 from persistent.mapping import PersistentMapping
 import ZODB, ZODB.POSException, transaction, transaction.interfaces
 
-from appy.px import Px
-from appy.utils import br
-from appy.database.lock import Lock
-from appy.database.lazy import Lazy
-from appy.utils import path as putils
-from appy.database.catalog import Catalog
-from appy.utils import multicall, Function
-from appy.database.trans import Transaction
+from ..px import Px
+from ..utils import br
+from .lock import Lock
+from .lazy import Lazy
+from .vault import Vault
+from .catalog import Catalog
+from .trans import Transaction
+from ..utils import path as putils
+from ..utils import multicall, Function
+from .vault import Config as VaultConfig
+
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 DB_CREATED   = 'Database created @%s.'
@@ -105,6 +109,8 @@ class Config:
         # to these thresholds.
         self.refThresholdLow = 1000
         self.refThresholdHigh = 10000
+        # Vault configuration (see appy/database/vault.py)
+        self.vault = VaultConfig()
 
     def set(self, folder, filePath=None, phantomFolder=None):
         '''Sets site-specific configuration elements. If filePath is None,
@@ -214,6 +220,7 @@ class Database:
     class Error(Exception): pass
 
     # Make some classes available here
+    Vault = Vault
     Catalog = Catalog
     Transaction = Transaction
 
@@ -303,8 +310,9 @@ class Database:
         # Get the root object
         root = connection.root
         # If the database is being p_created, add the following attributes to
-        # the root object. Class "PersistentMapping" is named "PM" for
-        # conciseness.
+        # the root object. For conciseness:
+        # - class PersistentMapping is named "PM" ;
+        # - class IITreeSet is named "II".
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # name       |  type  | description
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -369,6 +377,11 @@ class Database:
         # lastTempId |  int   | An integer storing the last ID granted to a
         #            |        | temporary object stored in "temp".
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # vault      |  II    | A vault of free iids to use, as an alternative,
+        #            |        | for some requests, to getting an incremental iid
+        #            |        | based on lastId. See appy/database/vault.py for
+        #            |        | more details.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # catalogs   |  PM    | A persistent mapping of catalogs. For every
         #            |        | "indexable" class in the model, there will be
         #            |        | one entry whose key is the class name and whose
@@ -380,6 +393,7 @@ class Database:
             root.objects = PersistentMapping()
             root.temp = PersistentMapping()
             root.lastId = root.lastTempId = 0
+            toot.vault = IITreeSet()
             root.catalogs = PersistentMapping()
         # The "iobjects" structure, made of 2 levels, allows to have the first
         # level as an always-in-memory persistent mapping made of at most
@@ -661,15 +675,22 @@ class Database:
             raise self.Error(CUS_ID_NO_IK % id)
         return abs(id) % Database.MOD_IKEY
 
-    def newId(self, root, temp=False):
+    def newId(self, root, handler, temp=False):
         '''Computes and returns a new integer ID for an object to create'''
-        # Get the attribute storing the last used ID
-        attr = 'lastTempId' if temp else 'lastId'
-        # Get the last ID in use
-        last = getattr(root, attr)
-        r = last + 1
-        setattr(root, attr, r)
-        return -r if temp else r
+        if temp or not Vault.use(root, handler):
+            # Get an incremental iid, based on the p_root attribute storing the
+            # last used iid.
+            attr = 'lastTempId' if temp else 'lastId'
+            # Get the last ID in use
+            last = getattr(root, attr)
+            r = last + 1
+            setattr(root, attr, r)
+            if temp:
+                r = -r
+        else:
+            # Pop an iid from the vault
+            r = Vault.popId(root)
+        return r
 
     def getStore(self, o=None, id=None, root=None, create=False):
         '''Get the store where p_o is supposed to be contained according to its
@@ -701,7 +722,7 @@ class Database:
                     r = None
         return r
 
-    def exists(self, o=None, id=None, store=None, raiseError=False):
+    def exists(self, o=None, id=None, store=None, raiseError=False, root=None):
         '''Checks whether an object exists in the database, or an ID is already
            in use.'''
 
@@ -710,8 +731,10 @@ class Database:
         # not None | p_id and p_store are ignored, and the method checks if p_o
         #          | is present in the database.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #   None   | p_id and p_store must be non empty and the method checks if
-        #          | p_id is already in use in p_store.
+        #   None   | p_id must be non empty, and the method checks if p_id is
+        #          | already in use in p_store. If p_store is None, p_root must
+        #          | be passed and the applicable store, if any, is retrieved
+        #          | via a call to m_getStore.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If p_raiseError is True, if the object or ID exists, the method raises
         # an error. Else, it returns a boolean value.
@@ -720,6 +743,8 @@ class Database:
         if id is None:
             id = o.id
             store = self.getStore(o)
+        else:
+            store = store or self.getStore(id=id, root=root)
         # Check the existence of the ID in the store
         r = id in store if store else None
         # Return the result or raise an error when appropriate
@@ -775,7 +800,7 @@ class Database:
         root = handler.dbConnection.root
         # Define the object IDs: "id" and "iid"
         if custom and temp: raise self.Error(NEW_TMP_W_ID)
-        iid = self.newId(root, temp=temp)
+        iid = self.newId(root, handler, temp=temp)
         # Determine the place to store the object
         store = self.getStore(id=iid, root=root, create=True)
         # Prevent object creation if "iid" or "id" refer to an existing object
@@ -795,12 +820,13 @@ class Database:
         '''Move the temp object p_o from the "temp" store to one of the final
            stores, "objects" or "iobjects".'''
         # The root database object
-        root = o.H().dbConnection.root
+        handler = o.H()
+        root = handler.dbConnection.root
         # A method named "generateId" may exist on p_o's class, for producing a
         # database ID for the object. If such method is found, it must return a
         # string ID and the object will be added to store "objects" in addition
         # to store "iobjects".
-        iid = self.newId(root, temp=False)
+        iid = self.newId(root, handler, temp=False)
         id = o.class_.generateId(o) or iid
         custom = id != iid
         # Determine the store where to move the object. Create the ad-hoc
@@ -1137,6 +1163,25 @@ class Database:
     # Confirm texts when toggling the database mode (read-only / read/write)
     modeConfirmTexts = {True: TOG_TO_RO, False: TOG_TO_RW}
 
+    # The database mode (read/write or read-only), and the action to toggle it
+    pxMode = Px('''
+     <tr>
+      <th>Mode</th>
+      <td>
+       <x>::database.getModeText(tool, html=True)</x>
+       <div class="tdr"
+            var="action=f'{tool.url}/Database/toggleReadOnly';
+                 to_=not database.readOnly;
+                 target=database.getModeText(tool, to_);
+                 text=f'→ {target}';
+                 confirmText=database.modeConfirmTexts[to_]">
+        <input type="button" class="button" value=":text"
+               onclick=":f'askConfirm(`url`,`{action}`,`{confirmText}`)'"
+               style=":svg('refresh', bg='12px 12px')"/>
+       </div>
+      </td>
+     </tr>''')
+
     view = Px('''
      <x var="cfg=config.database;
              root=handler.dbConnection.root;
@@ -1164,24 +1209,11 @@ class Database:
       <tr><th>Last temp ID</th><td>:root.lastTempId</td></tr>
       <tr><th>Conflict retries</th><td>:cfg.conflictRetries</td></tr>
 
-      <!-- The database mode (read/write or read-only), and the action to
-           toggle it. -->
-      <tr>
-       <th>Mode</th>
-        <td>
-         <x>::database.getModeText(tool, html=True)</x>
-         <div class="tdr"
-              var="action=f'{tool.url}/Database/toggleReadOnly';
-                   to_=not database.readOnly;
-                   target=database.getModeText(tool, to_);
-                   text=f'→ {target}';
-                   confirmText=database.modeConfirmTexts[to_]">
-          <input type="button" class="button" value=":text"
-                 onclick=":f'askConfirm(`url`,`{action}`,`{confirmText}`)'"
-                 style=":svg('refresh', bg='12px 12px')"/>
-         </div>
-        </td>
-      </tr>
+      <!-- The database mode -->
+      <x>:database.pxMode</x>
+
+      <!-- Info about the vault of IDs -->
+      <x>:cfg.vault.px</x>
      </table>
 
      <h2>Active connections <x>:f'({len(connections)})'</x></h2>

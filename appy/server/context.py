@@ -46,9 +46,9 @@ class AuthenticationContext:
     pxOnLogin = Px('''
      <x>:_('login_context')</x>
      <select id="__ac_ctx" name="__ac_ctx"
-             var="ctxDefault=ctx.getDefaultContext(tool)">
+             var="ctxDefault=ctx.getDefaultContext(tool, user)">
       <option value="">:_('choose_a_value')</option>
-      <option for="opt in ctx.getContexts(tool)" value=":opt[0]"
+      <option for="opt in ctx.getContexts(tool, user)" value=":opt[0]"
               selected=":opt[0] == ctxDefault">:opt[1]</option>
      </select>''')
 
