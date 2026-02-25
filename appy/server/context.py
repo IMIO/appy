@@ -44,12 +44,11 @@ class AuthenticationContext:
 
     # Part of the login form for choosing the context
     pxOnLogin = Px('''
-     <x>:_('login_context')</x>
-     <select id="__ac_ctx" name="__ac_ctx"
+     <select id="context" name="context"
              var="ctxDefault=ctx.getDefaultContext(tool, user)">
-      <option value="">:_('choose_a_value')</option>
-      <option for="opt in ctx.getContexts(tool, user)" value=":opt[0]"
-              selected=":opt[0] == ctxDefault">:opt[1]</option>
+      <option value="">:_('login_context')</option>
+      <option for="cid, ctitle in ctx.getContexts(tool, user)" value=":cid"
+              selected=":cid == ctxDefault">:ctitle</option>
      </select>''')
 
     # Zone where to display (or switch) the context when the user is logged

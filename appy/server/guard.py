@@ -567,8 +567,8 @@ class Guard:
                 placeholder=":_('app_password')" required="required"/></center>
 
        <!-- The authentication context -->
-       <x var="ctx=cfg.authContext"
-          if="ctx and ctx.chooseOnLogin">:ctx.pxOnLogin</x>
+       <center var="ctx=cfg.authContext"
+               if="ctx and ctx.chooseOnLogin">:ctx.pxOnLogin</center>
 
        <!-- Additional authentication data to carry -->
        <input type="hidden" name="authInfo" id="authInfo"
@@ -616,7 +616,7 @@ class Guard:
          font-size:|loginTitleSize|; font-weight:|loginTitleWeight|;
          text-transform:|loginTitleTransform| }
       .loginBox .sub { font-size:120% }
-      #loginForm input {
+      #loginForm input, #loginForm select {
         background-color:|loginBgColor|; width:|loginWidth|; border:none;
         padding:|loginPadding|; margin:|loginMargin|; color:|loginColor|;
         border-radius:|loginRadius|; font-size:|loginInputSize| }
@@ -628,6 +628,7 @@ class Guard:
         margin-top:|submitTop|; text-transform:uppercase;
         padding:|submitPadding|
       }
+      #loginForm select {width:|submitWidth|; background-color:|altColorLight| }
       .lostPassword { padding:10px 0; font-size:80%; text-align:|loginAlign| }
       .autoRegister { text-align:|loginAlign| }
 
