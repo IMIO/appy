@@ -117,7 +117,7 @@ class Iframe:
 
        <!-- Close -->
        <img id="iframeClose" src=":svg('close')" class="clickable iconSEL"
-            title=":_('close')" onclick="Iframe.close(this)"/>
+            title=":_('close')" onclick="Iframe.close(true)"/>
       </div>
 
       <!-- The inner iframe -->
@@ -255,9 +255,10 @@ class Iframe:
        }
 
        // Enable or disable the "close" button
-       setClosable(closable) {
-         // Set flag "closable" on the Iframe object
-         this.closable = closable;
+       setClosable(closable, setFlag=true) {
+         /* Update flag "closable" on the Iframe object, excepted if p_setFlag
+            is False. */
+         if (setFlag) this.closable = closable;
          // Update the cursor on the "close" icon
          const icon = this.popup.querySelector('#iframeClose'),
                classes = icon.classList;
@@ -293,6 +294,8 @@ class Iframe:
 
        // When closing the popup, try to cancel the Appy form, if found in it
        tryCancelForm() {
+         // Don't try it if a "close timer" is already ongoing
+         if (this.closeTimer) return false;
          const iframe = this.iframe,
                icontent = iframe.contentDocument;
          /* The iframe's "contentDocument" may be null if the iframe points to
@@ -310,12 +313,14 @@ class Iframe:
              blocked by the browser. */
           if (icontent) iframe.contentWindow.onbeforeunload = null;
          }
-         if (icontent) icontent.removeChild(icontent.documentElement);
+         if (icontent && icontent.documentElement) {
+           icontent.removeChild(icontent.documentElement);
+         }
          return canceled;
        }
 
        // Close the popup
-       static close() {
+       static close(tryCancel) {
          const popup = getNode('iframePopup', true),
                iframe = popup.appy;
          // Don't do anything if the popup is currently not closable
@@ -325,7 +330,7 @@ class Iframe:
          // Close the popup
          popup.style.display = 'none';
          // Try to cancel the Appy form if found in the popup
-         const canceled = iframe.tryCancelForm();
+         const canceled = (tryCancel)? iframe.tryCancelForm(): false;
          // Hide the mask
          iframe.hideMask();
          // Refresh the iframe caller when appropriate
@@ -346,12 +351,12 @@ class Iframe:
        static goBack(id) {
          // Close the iframe popup if it is time to do it
          const close = readCookie('closePopup');
-         if (close == 'no') return;
+         if (close === 'no') return;
          // Reset the timer, the cookie and close the popup
          createCookie('closePopup', 'no');
-         const iframe = Iframe.close();
+         const iframe = Iframe.close(false);
          clearInterval(iframe.closeTimer);
-         if (close != 'yes') {
+         if (close !== 'yes') {
            // Load a specific URL in the main page
            window.parent.location = atob(close.slice(2,-1));
          }
@@ -378,6 +383,9 @@ class Iframe:
        static initBack() {
          createCookie('closePopup', 'no');
          const iframe = getNode('iframePopup', true).appy;
+         /* The popup will be closed in a few seconds: prevent the user for
+            manually closing it. */
+         iframe.setClosable(false, false);
          // Set the timer that checks when the iframe popup must be closed
          iframe.closeTimer = setInterval(Iframe.goBack, 700);
        }
