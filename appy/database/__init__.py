@@ -393,7 +393,7 @@ class Database:
             root.objects = PersistentMapping()
             root.temp = PersistentMapping()
             root.lastId = root.lastTempId = 0
-            toot.vault = IITreeSet()
+            root.vault = IITreeSet()
             root.catalogs = PersistentMapping()
         # The "iobjects" structure, made of 2 levels, allows to have the first
         # level as an always-in-memory persistent mapping made of at most
@@ -419,15 +419,19 @@ class Database:
             raise Database.Error(DB_CORRUPTED % self.db.storage._file_name)
         try:
             # Create the tool if it does not exist yet
-            tool = root.objects.get('tool') or \
-                   self.new(handler, 'Tool', id='tool', secure=False)
+            tool = root.objects.get('tool')
+            fresh = tool is None
+            if fresh:
+                tool = self.new(handler, 'Tool', id='tool', secure=False)
             # Update the initialisation handler
             handler.tool = tool
             # Create or update catalogs
             Catalog.manageAll(root, handler)
+            # Initialise the vault when appropriate
+            if fresh: Vault.update(tool)
             # Let the tool initialise itself and create sub-objects as required
             tool.init(handler, poFiles, method=method)
-            # Commit changes (forced, even if handler.commit is False)
+            # Commit changes (forced, even if v_handler.commit is False)
             self.commit(handler, description=SITE_INIT)
         except self.Error as e:
             transaction.abort()
@@ -675,21 +679,36 @@ class Database:
             raise self.Error(CUS_ID_NO_IK % id)
         return abs(id) % Database.MOD_IKEY
 
-    def newId(self, root, handler, temp=False):
+    def newId(self, root, handler, temp=False, forceIncremental=False):
         '''Computes and returns a new integer ID for an object to create'''
-        if temp or not Vault.use(root, handler):
+        if temp or forceIncremental or not Vault.use(root, handler):
             # Get an incremental iid, based on the p_root attribute storing the
             # last used iid.
             attr = 'lastTempId' if temp else 'lastId'
             # Get the last ID in use
             last = getattr(root, attr)
+            # Increment v_last until an available iid is found
             r = last + 1
+            # For a v_temp iid, v_last+1 is the right candidate
+            found = temp
+            while not found:
+                # Is p_r the right candidate ?
+                if self.exists(id=r, root=root) or Vault.hasId(root, r):
+                    # No
+                    r += 1
+                else:
+                    # Yes
+                    found = True
+            # v_r corresponds to an appropriate, free iid
             setattr(root, attr, r)
             if temp:
                 r = -r
         else:
             # Pop an iid from the vault
-            r = Vault.popId(root)
+            r = Vault.popId(root, handler)
+            if r is None:
+                # The vault is empty: force getting an incremental iid
+                r = self.newId(root, handler, forceIncremental=True)
         return r
 
     def getStore(self, o=None, id=None, root=None, create=False):
@@ -743,8 +762,8 @@ class Database:
         if id is None:
             id = o.id
             store = self.getStore(o)
-        else:
-            store = store or self.getStore(id=id, root=root)
+        elif store is None:
+            store = self.getStore(id=id, root=root)
         # Check the existence of the ID in the store
         r = id in store if store else None
         # Return the result or raise an error when appropriate
@@ -798,13 +817,14 @@ class Database:
             guard.mayInstantiate(class_, checkInitiator=True, raiseOnError=True)
         # The root database object
         root = handler.dbConnection.root
-        # Define the object IDs: "id" and "iid"
+        # Define the object IDs: p_id and v_iid
         if custom and temp: raise self.Error(NEW_TMP_W_ID)
         iid = self.newId(root, handler, temp=temp)
         # Determine the place to store the object
         store = self.getStore(id=iid, root=root, create=True)
-        # Prevent object creation if "iid" or "id" refer to an existing object
-        self.exists(id=iid, store=store, raiseError=True)
+        # Prevent object creation if the potentially custom p_id refers to an
+        # existing object. Regarding the object p_iid, m_newId has already
+        # checked that it is free.
         if custom: self.exists(id=id, store=root.objects, raiseError=True)
         # Create the object
         id = id or iid
@@ -832,8 +852,9 @@ class Database:
         # Determine the store where to move the object. Create the ad-hoc
         # sub-store in store "iobjects" if it does not exist yet.
         store = self.getStore(id=iid, root=root, create=True)
-        # Prevent object creation if "iid" or "id" refer to an existing object
-        self.exists(id=iid, store=store, raiseError=True)
+        # Prevent object creation if the potentially custom p_id refers to an
+        # existing object. Regarding the object p_iid, m_newId has already
+        # checked that it is free.
         if custom: self.exists(id=id, store=root.objects, raiseError=True)
         # Perform the move
         del(root.temp[o.iid])

@@ -6,6 +6,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import random
+
 from BTrees.IIBTree import IITreeSet
 
 from appy.px import Px
@@ -167,7 +169,14 @@ class Config:
         '''Is the request currently managed by this p_handler allowed to access
            the vault ?'''
         allowed = self.allowed
-        return True if allowed is None else allowed(handler.guard.user)
+        if allowed is None:
+            # This special case implies a random use of the vault. It's like if
+            # the request is sometimes allowed, sometimes not, depending on
+            # randomness.
+            r = random.randint(0,1)
+        else:
+            r = allowed(handler.guard.user)
+        return r
 
     # Config details, as a PX. Variable v_cfg, in the context, is the main
     # database configuration.
@@ -243,9 +252,31 @@ class Vault:
         return True
 
     @classmethod
-    def popId(class_, root):
+    def hasId(class_, root, iid):
+        '''Is this p_iid in the vault ?'''
+        vault = getattr(root, 'vault', None)
+        if vault is None or len(vault) == 0: return
+        return iid in vault
+
+    @classmethod
+    def popId(class_, root, handler):
         '''Pops an iid from the vault'''
-        return root.vault.pop()
+        # An iid stored in the vault may not be free: it may happen in the case
+        # of a future iid, after a vault configuration change. Consequently,
+        # this method pops iids until it finds one that does not correspond to
+        # an existing object. If, during this potentially multi-pop operation,
+        # the vault is emptied, this method returns None.
+        vault = root.vault
+        length = len(vault)
+        if length == 0: return
+        database = handler.server.database
+        while length > 0:
+            # Pop an iid from the vault
+            iid = vault.pop()
+            if not database.exists(id=iid, root=root):
+                # This iid is free: return it
+                return iid
+            length = len(vault)
 
     @classmethod
     def updateBackward(class_, tool, root, handler):
