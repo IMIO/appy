@@ -31,7 +31,7 @@ class Config:
     '''Security configuration'''
 
     # Allowed value for field "loginTransform"
-    transformValues = ('lower', 'upper', 'capitalize')
+    transformValues = 'lower', 'upper', 'capitalize'
 
     def __init__(self):
         # Activate or not the button on home page for asking a new password
