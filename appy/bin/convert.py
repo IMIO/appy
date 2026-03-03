@@ -17,8 +17,8 @@ defaultCsvOptions = '59,34,76,1'
 
 # Help messages
 HELP_SERVER = 'The server IP or hostname that runs LibreOffice ' \
-  '(defaults to "%s").' % DEFAULT_SERVER
-HELP_PORT = "The port on which LibreOffice runs (default is %d)." % DEFAULT_PORT
+  '(defaults to "%s").' % DEF_SV
+HELP_PORT = "The port on which LibreOffice runs (default is %d)." % DEF_PORT
 HELP_TEMPLATE = 'The path to a LibreOffice template from which you may ' \
   'import styles.'
 MANAGE_COLUMNS = 'Set this option to "True" if you want LibreOffice to %s ' \
@@ -173,7 +173,7 @@ class ConverterScript:
           options.verbose)
         try:
             converter.run()
-        except ConverterError:
+        except Converter.Error:
             e = sys.exc_info()[1]
             sys.stderr.write(str(e))
             sys.stderr.write(bn)
