@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 import os.path, threading
 
-import appy
+import appy.bin
 from appy.pod import PodError
 from appy.pod.converter import Converter
 from appy.shared.utils import executeCommand, getOsTempFolder
@@ -73,7 +73,7 @@ class LO:
                     raise PodError(NO_PY_PATH % format)
                 if not os.path.isfile(pyPath):
                     raise PodError(PY_PATH_KO % pyPath)
-                convScript = '%s/bin/convert.py'% os.path.dirname(appy.__file__)
+                convScript = '%s/convert.py'% os.path.dirname(appy.bin.__file__)
                 cmd = [pyPath, convScript, resultName, result,
                        '-e', server, '-p', str(self.port)]
                 add = cmd.append
