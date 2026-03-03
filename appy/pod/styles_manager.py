@@ -210,8 +210,9 @@ class TableProperties(Properties):
     def init(class_):
         '''Sets, on this p_class_, some static attributes related to column
            width optimization.'''
-        # The regular expressions to give to converter.py for it to recognize
-        # tables whose column widths must be optimized or evenly distributed.
+        # The regular expressions to give to appy/bin/convert.py for it to
+        # recognize tables whose column widths must be optimized or evenly
+        # distributed.
         class_.ocwRex = 'OCW_.*'
         class_.dcRex = 'DC_.*'
         # The default TableProperties instance

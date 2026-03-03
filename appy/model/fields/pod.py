@@ -776,9 +776,9 @@ class Pod(Field):
         # For these parameters, see appy.pod.renderer.Renderer's docstring
         self.optimalColumnWidths = optimalColumnWidths
         self.distributeColumns = distributeColumns
-        # "script" can be used to customize the process of rendering the POD
-        # result via LibreOffice UNO. See option "-s" of appy/pod/converter.py
-        # for more information. "script" can hold the absolute path to a Python
+        # p_script can be used to customize the process of rendering the POD
+        # result via LibreOffice UNO. See option "-s" of appy/bin/convert.py
+        # for more information. p_script can hold the absolute path to a Python
         # file or a method that returns it. If you specify a method, it will
         # accept 2 parameters:
         # * template     the name of the current template (important when

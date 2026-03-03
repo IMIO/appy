@@ -3,6 +3,9 @@
 '''Removes any formatting within notes in an odt or ods document'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# ~license~
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from pathlib import Path
 
 from appy.bin import Program

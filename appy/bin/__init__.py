@@ -12,6 +12,14 @@ from appy.model.utils import Object as O
 class Program:
     '''Abstract base class for all command-line programs'''
 
+    # The docstring of a Program sub-class will be used as main description for
+    # the program and will appear when launching the program with -h or --help
+    # option.
+
+    # Similarly, if a Program sub-class defines a string in this variable, it
+    # will be shown at the end of the help message.
+    epilog = None
+
     def __init__(self, **kwargs):
         # p_kwargs may be passed, if this program is not called via the
         # command-line, but programmatically.
@@ -19,7 +27,9 @@ class Program:
             self.args = O(**kwargs)
         else:
             # Create the argument parser
-            self.parser = argparse.ArgumentParser()
+            sub = self.__class__
+            self.parser = argparse.ArgumentParser(description=sub.__doc__,
+                                                  epilog=sub.epilog)
             # Define arguments
             self.defineArguments()
             # Parse arguments

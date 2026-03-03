@@ -40,14 +40,13 @@ class LO(Program):
 
     def defineArguments(self):
         '''Define the allowed arguments for this program'''
-        parser = self.parser
+        add = self.parser.add_argument
         # Optional arguments: LO server and port
-        parser.add_argument('-s', '--server', dest='server', help=HELP_SERVER,
-                            default=DEFAULT_SERVER)
-        parser.add_argument('-p', '--port', dest='port', type=int,
-                            help=HELP_PORT, default=DEFAULT_PORT)
-        parser.add_argument('-t', '--test', dest='test', help=HELP_TEST,
-                            default=DEFAULT_TEST)
+        add('-s', '--server', dest='server', help=HELP_SERVER,
+            default=DEFAULT_SERVER)
+        add('-p', '--port', dest='port', type=int, help=HELP_PORT,
+            default=DEFAULT_PORT)
+        add('-t', '--test', dest='test', help=HELP_TEST, default=DEFAULT_TEST)
 
     def analyseArguments(self):
         '''Check and store arguments'''

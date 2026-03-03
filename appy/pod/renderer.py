@@ -67,7 +67,7 @@ class CsvOptions:
         self.textDelimiter = textDelimiter
         # The ODT result's file encoding. Defaults is "utf-8". "latin-1" is also
         # allowed, or any numeric value as defined at the URL mentioned in
-        # appy/pod/converter.py, at variable HELP_CSV_URL.
+        # appy/bin/convert.py, at variable CSV_DOC.
         self.encoding = encoding
 
     def asString(self):
@@ -221,21 +221,21 @@ class Renderer:
         # file) whose styles will be imported within the result.
 
         # p_optimalColumnWidths corresponds to the homonym option to
-        # converter.py, excepted that values "True" or "False" must be boolean
-        # values. Note that the POD function "xhtml" requires this parameter to
-        # be "OCW_.*" to be fully operational. When p_optimalColumnWidths is not
-        # False, forceOoCall is forced to True.
+        # appy/bin/convert.py, excepted that values "True" or "False" must be
+        # boolean values. Note that the POD function "xhtml" requires this
+        # parameter to be "OCW_.*" to be fully operational. When
+        # p_optimalColumnWidths is not False, forceOoCall is forced to True.
 
-        # p_distributeColumns corresponds to the homonym option to converter.py,
-        # excepted that values "True" or "False" must be boolean values. Note
-        # that the POD function "xhtml" requires this parameter to be "DC_.*" to
-        # be fully operational. When p_distributeColumns is not False,
-        # forceOoCall is forced to True.
+        # p_distributeColumns corresponds to the homonym option to
+        # appy/bin/convert.py, excepted that values "True" or "False" must be
+        # boolean values. Note that the POD function "xhtml" requires this
+        # parameter to be "DC_.*" to be fully operational. When
+        # p_distributeColumns is not False, forceOoCall is forced to True.
 
         # p_script is the absolute path to a Python script containing functions
         # that the converter will call in order to customize the process of
         # manipulating the document via the LibreOffice UNO interface. For more
-        # information, see appy/pod/converter.py, option "-s". Note that when
+        # information, see appy/bin/convert.py, option "-s". Note that when
         # such p_script is specified, p_forceOoCall is forced to True.
 
         # By default, POD expressions and statement parts are evaluated using
@@ -300,7 +300,7 @@ class Renderer:
 
         #            ExportNotes=False,PageRange=1-20,Watermark=Sample
 
-        # More info in appy/pod/converter.py.
+        # More info in appy/bin/convert.py.
 
         # If the result must be produced in CSV, options being specific to this
         # format can be passed in p_csvOptions, as an instance of class

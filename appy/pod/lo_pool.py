@@ -4,7 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import os.path, threading
 
-import appy.pod
+import appy
 from appy import utils
 from appy.pod import PodError
 from appy.pod.converter import Converter
@@ -75,8 +75,7 @@ class LO:
                     raise PodError(NO_PY_PATH % format)
                 if not os.path.isfile(pyPath):
                     raise PodError(PY_PATH_KO % pyPath)
-                convScript = '%s/converter.py' % \
-                             os.path.dirname(appy.pod.__file__)
+                convScript = f'{os.path.dirname(appy.__file__)}/bin/convert.py'
                 cmd = [pyPath, convScript, resultName, result,
                        '-e', server, '-p', str(self.port)]
                 add = cmd.append

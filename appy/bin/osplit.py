@@ -4,6 +4,9 @@
    page breaks.'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# ~license~
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from pathlib import Path
 
 from appy.bin import Program
@@ -235,7 +238,7 @@ class Split(Program):
         putils.FolderDeleter.delete(tempFolder)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# The following intermediate method allows to define osplit as a
+# The following intermediate method allows to define the script as a
 # [console_scripts] entry in setuptools.
 def main(): Split().run()
 if __name__ == '__main__': main()

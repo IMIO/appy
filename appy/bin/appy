@@ -33,7 +33,7 @@ class MetaScript:
                 'appy help <command>.' % \
                 (termColorize('Appy'), appyPath, ', '.join(scripts))
     CMD_NO    = 'Please specify a command: appy help <command>.'
-    CMD_KO    = 'Unkknown command "%%s". Available commands are: %s.' % \
+    CMD_KO    = 'Unknown command "%%s". Available commands are: %s.' % \
                 ', '.join(scripts)
 
     def exit(self, message):
@@ -44,18 +44,11 @@ class MetaScript:
     def runCommand(self, command, showHelp=False):
         '''If p_showHelp is True, this method output help for this p_command.
            Else, it executes p_command, with args retrieved from sys.argv.'''
-        # Command "convert" has a non-standard location and name, in appy/pod
-        if command == 'convert':
-            part = 'pod'
-            name = 'converter'
-        else:
-            part = 'bin'
-            name = command
         # setuptools does not seem to set permissions correctly on files. So,
         # the <script>.py to run here may not have any "execute" permission.
         # Consequently, we execute it as a parameter to the "python3"
         # executable. That way, no execute permission is required on it.
-        args = ['python3', f'{appyPath}/{part}/{name}.py']
+        args = ['python3', f'{appyPath}/bin/{command}.py']
         if os.name == 'posix':
             args.insert(0, '/usr/bin/env')
         if showHelp:
