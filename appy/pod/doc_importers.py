@@ -348,7 +348,8 @@ class ConvertImporter(DocImporter):
 class Image:
     '''Represents an image on disk. This class is used to detect the image type
        and size.'''
-    jpgTypes = ('jpg', 'jpeg')
+
+    jpgTypes = 'jpg', 'jpeg'
 
     def __init__(self, path, format, unit='cm'):
         self.path = path # The image absolute path on disk
@@ -406,7 +407,8 @@ class ImageImporter(DocImporter):
        externally.'''
 
     # Ways to anchor images in an ODF document
-    anchorTypes = ('page', 'paragraph', 'char', 'as-char')
+    anchorTypes = 'page', 'paragraph', 'char', 'as-char'
+
     WRONG_ANCHOR = 'Wrong anchor. Valid values for anchors are: %s.'
 
     # The folder, within an unzipped ODF file, containing images

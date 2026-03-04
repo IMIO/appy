@@ -6,9 +6,9 @@ from DateTime import DateTime
 from ZODB import utils as zutils
 
 from appy.px import Px
+from appy.utils import br, bn
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn         = '\n'
 UNDO_TRANS = ':: Undoed ::'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -47,7 +47,17 @@ class Transaction:
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     @classmethod
-    def list(class_, database, first=0, count=20):
+    def matches(class_, filterValue, info):
+        '''Returns True if this transaction's p_description matches this
+           p_filterValue.'''
+        # The current transaction matches if there is no filter value
+        if not filterValue: return True
+        # Get the current transaction's description
+        descr = info['description']
+        return descr and filterValue in descr
+
+    @classmethod
+    def list(class_, database, first=0, count=20, filteR=None):
         '''Lists the slice of at most p_count database transactions starting at
            index p_first. The result is a list of Transaction objects.'''
         # p_first and p_count define a slice of transactions among all database
@@ -55,7 +65,10 @@ class Transaction:
         # slice (0 being the index of the most recent transaction). p_count is
         # the number of transactions that will be retrieved.
         db = database.db
-        return [Transaction(info) for info in db.undoLog(first, -count)]
+        # Only transactions matching a given text may be retrieved
+        if filteR: filteR = filteR.encode() # Must be bytes
+        fun = (lambda info: class_.matches(filteR, info)) if filteR else None
+        return [Transaction(inf) for inf in db.undoLog(first, -count, fun)]
 
     @classmethod
     def get(class_, database, index):
@@ -134,7 +147,7 @@ class Transaction:
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     # Confirm message when performing a transaction undo
-    cr = '<br/><br/>'
+    cr = f'{br}{br}'
     UNDO_CF = f'You are about to undo the selected transaction(s).{cr}' \
               f'Depending on the presence of earlier transactions impacting ' \
               f'common objects, the operation may fail.{cr}Proceed ?'
@@ -150,14 +163,12 @@ class Transaction:
      <div class="flexg">
 
       <!-- Goto first page -->
-      <a if="first != 0" href=":pageUrl % 0">
-       <img src=":svg('arrows')" class="iconS" style=":rotate % 90"/>
-      </a>
+      <img if="first != 0" src=":svg('arrows')" class="clickable iconS"
+           style=":rotate % 90" onclick="transNav(0)"/>
 
       <!-- Goto previous page -->
-      <a if="first != 0" href=":pageUrl % (first - batchSize)">
-       <img src=":svg('arrow')" class="iconS" style=":rotate % 90"/>
-      </a>
+      <img if="first != 0" src=":svg('arrow')" class="clickable iconS"
+           style=":rotate % 90" onclick=":f'transNav({first - batchSize})'"/>
 
       <!-- Display current range -->
       <div if="not(first == 0 and counT &lt; batchSize)">
@@ -165,9 +176,8 @@ class Transaction:
       </div>
 
       <!-- Goto next page -->
-      <a if="counT == batchSize" href=":pageUrl % (first + batchSize)">
-       <img src=":svg('arrow')" class="iconS" style=":rotate % 270"/>
-      </a>
+      <img if="counT == batchSize" src=":svg('arrow')" class="clickable iconS"
+           style=":rotate % 270" onclick=":f'transNav({first + batchSize})'"/>
      </div>''')
 
     # Show a bunch of transactions
@@ -177,12 +187,20 @@ class Transaction:
              Transaction=database.Transaction;
              first=int(req.first) if 'first' in req else 0;
              batchSize=int(req.batchSize) if 'batchSize' in req else 20;
-             transactions=Transaction.list(database, first, batchSize);
+             transactions=Transaction.list(database, first, batchSize,
+                                           req.filter);
              counT=len(transactions);
              pageUrl=f'{tool.url}/view?page=transactions&amp;first=%s';
              rotate='transform:rotate(%ddeg)'">
 
       <h2>Transactions <span class="discreet"> · Most recent first</span></h2>
+
+      <!-- Filter -->
+      <div class="transFilter">
+       <input type="text" name="filter" placeholder="Filter..."
+              value=":req.filter or ''"/>
+       <input type="button" value="Set" onclick="transFilter(this)"/>
+      </div>
 
       <!-- Navigation -->
       <x>:Transaction.pxNav</x>
@@ -216,5 +234,31 @@ class Transaction:
 
      css='''
       .transId { font-family:monospace }
-      .small td.transId { padding-top:0.3em }''')
+      .transFilter { display:flex; margin-bottom:0.4em }
+      .transFilter input[type=button] { color:black }
+      .small td.transId { padding-top:0.3em }''',
+
+    js='''
+      function transNav(first) {
+        let url = new URL(window.location),
+            params = url.searchParams;
+        params.set('first', first);
+        window.location = url.href;
+      }
+
+      function transFilter(button) {
+        // Retrieve the value from the filter
+        let value = (button.previousElementSibling.value || '').trim(),
+            url = new URL(window.location),
+            params = url.searchParams;
+        // Go back to the first page, be there a v_value or not
+        if (params.has('first')) params.delete('first');
+        // Set the filter
+        if (value) params.set('filter', value);
+        else {
+          if (params.has('filter')) params.delete('filter');
+        }
+        window.location = url.href;
+      }
+    ''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
