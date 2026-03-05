@@ -165,19 +165,18 @@ class Viewer:
       </select>
 
       <!-- Refresh every x seconds -->
-      <div class="iflex1">
+      <div class="logControl">
        <input name="refreshAuto" id="refreshAuto" type="checkbox"
               checked=":req.refreshAuto in (None, '1')"/>
        <label lfor="refreshAuto" class="textual">Refresh every</label>
        <input var="b=viewer.bounded.refreshRate" name="refreshRate"
               type="number" min=":b.min" max=":b.max" step=":b.min"
-              class="editNB rateR"
-              value=":viewer.getBounded(req, 'refreshRate')"/>
+              class="rateR" value=":viewer.getBounded(req, 'refreshRate')"/>
        <label class="textual">seconds</label>
       </div>
 
       <!-- Mode (tail or full) -->
-      <div class="iflex1">
+      <div class="logControl">
 
        <!-- Tail mode -->
        <input type="radio" value="tail"  name="mode" id="tail"
@@ -186,7 +185,7 @@ class Viewer:
        <!-- Get last x lines -->
        <label class="textual" lfor="tail">Get last</label>
        <input var="b=viewer.bounded.n" name="n" type="number" min=":b.min"
-              max=":b.max" class="editNB tailN" step=":b.min"
+              max=":b.max" class="tailN" step=":b.min"
               value=":viewer.getBounded(req, 'n')"/>
        <label class="textual">lines</label>
 
@@ -197,7 +196,7 @@ class Viewer:
       </div>
 
       <!-- Log HTTP headers for some requests ? -->
-      <div class="iflex1">
+      <div class="logControl">
        <label class="textual">Log HTTP headers for</label>
        <input type="text" var="rex=tool.config.server.logHeadersStatic"
               name="logHeadersStatic" placeholder="Static content regex"
@@ -248,17 +247,19 @@ class Viewer:
         content.scrollTop = content.scrollHeight;
       }''',
 
-     css='''.logControls { display:flex; align-items:center; gap:0.3em;
+     css='''.logControls { display:flex; align-items:center; gap:0.5em;
                            flex-wrap:wrap }
             .logControls select, .logControls input[type=text] {
               padding:0; margin:0; font-size:90% }
             .logControls input[type=text] { width:11em }
+            .logControl { display:inline-flex }
+            .logControl input[type=number] { margin:0 0.4em 0 0;
+                                             text-align:center }
             .textual { display:flex; align-items:center; font-size:90%;
                        color:grey; text-transform:none }
             .logText { overflow:auto;width:65vw;height:55vh;font-size:90% }
-            .editNB { margin:0 0.1em 0 0.3em; text-align:center }
-            .rateR { width:2.5em; margin-right:0.4em }
-            .tailN { width:4em; margin-right:0.4em }
+            .rateR { width:2.5em }
+            .tailN { width:4em }
             #logForm input[type=button] {
               color:inherit; padding:0.3em 0.7em; text-transform:none;
               font-size:80%; border:1px solid grey }''')
