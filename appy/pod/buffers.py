@@ -57,7 +57,8 @@ VAR_KO   = 'Bad variable definition "%s". A variable definition must have ' \
            'statement, pod will define, in the specified part of the ' \
            'document, variables {name}, {name2}, etc, whose values will be ' \
            'initialized by evaluating {expression}.'
-VAR_S_KO = 'A multi-variable definition must be of the form: * = {expr}'
+VAR_S_KO = 'A multi-variable definition must be of the form: * = {expr}. ' \
+           'Wrong statement: %s.'
 VAR_N_KO = 'Bad variable name "%s".'
 EVAL_KO  = 'Error while evaluating expression "%s". %s'
 MTA_C_KO = 'Wrong meta-condition "%s". A meta-condition must be a Python ' \
@@ -555,7 +556,7 @@ class MemoryBuffer(Buffer):
             names = match.group(1).strip()
             if '*' in names:
                 if len(names) > 1:
-                    raise ParsingError(VAR_S_KO % name)
+                    raise ParsingError(VAR_S_KO % names)
             elif ',' in names:
                 # Several variable names
                 names = names.split(',')

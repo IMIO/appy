@@ -112,6 +112,24 @@ class Date:
         return r
 
     @classmethod
+    def fromTuple(class_, t, hour='12:00'):
+        '''Return a DateTime object from a p_t(uple) (i_year, i_month, i_day) or
+           a 5-tuple containing the same info + hour and minutes.'''
+        # p_hour will be used of p_t does not define any hour (=has length 3)
+        if len(t) == 3:
+            year, month, day = t
+            h = m = None
+        else:
+            year, month, day, h, m = t
+        s = f'{year}/{str(month).zfill(2)}/{str(day).zfill(2)}'
+        # Add the hour
+        if h is not None:
+            s = f'{s} {str(h).zfill(2)}:{str(m).zfill(2)}'
+        else:
+            s = f'{s} {hour}'
+        return DateTime(s)
+
+    @classmethod
     def sameWeek(class_, d1, d2):
         '''Returns True if p_d1 and p_d2 (DateTime objects) occur during the
            same week.'''

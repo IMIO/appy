@@ -657,6 +657,7 @@ class History(PersistentList):
         #
         # If p_eventType is passed, only events of this type will be taken into
         # account. If it is none, all history events, of any type, are walked.
+        # p_eventType can also be a list/tuple of event types.
         #
         # If p_history is passed, it is used instead of p_self.o.history.
         #

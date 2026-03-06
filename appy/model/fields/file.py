@@ -853,6 +853,14 @@ class File(Field):
         return FileInfo(str(info.getFilePath(o)), inDb=False,
                         uploadName=info.uploadName)
 
+    def getHistoryValue(self, o, value, i, language=None, empty='-'):
+        '''Returns p_value as must be shown in the UI within p_o's history'''
+        if value:
+            r = f'{value.getUploadName()} · {value.getShownSize()}'
+        else:
+            r = empty
+        return r
+
     def isEmptyValue(self, o, value):
         '''Must p_value be considered as empty ?'''
         if value: return
