@@ -96,7 +96,7 @@ class Col:
     pxCellRef = Px('''<td>:field.pxTied</td>''')
 
     # Attributes storing CSS properties or rules
-    cssAttributes = ('th', 'ths', 'td', 'tds')
+    cssAttributes = 'th', 'ths', 'td', 'tds'
 
     def __init__(self, columnLayout, th=None, td=None, ths=None, tds=None,
                  otd=None, headerLabel=None, phLabel='search_button'):

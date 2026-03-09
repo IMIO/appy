@@ -176,6 +176,7 @@ class Iframe:
          /* May this popup be closed ? It could not be the case if the operation
             triggered from the popup can't be interrupted. */
          this.closable = true;
+         this.setClosable(true, false);
        }
 
        // Initialises the popup position
@@ -274,8 +275,8 @@ class Iframe:
 
        // Toggle the popup appearance: enlarged <> standard dimensions
        static toggleAppearance(icon) {
-         const iframe = getNode('iframePopup').appy,
-               mover = getNode('iframeMover');
+         const iframe = getNode('iframePopup', true).appy,
+               mover = iframe.mover;
          let name, display;
          if (iframe.enlarged) { // Reapply standard dimensions
            iframe.setStandard(false);
@@ -326,7 +327,7 @@ class Iframe:
          // Don't do anything if the popup is currently not closable
          if (!iframe.closable) return iframe;
          // Reset iframe dimensions
-         if (iframe.enlarged) Iframe.toggleAppearance(getNode('iframeER'));
+         if (iframe.enlarged) Iframe.toggleAppearance(iframe.er);
          // Close the popup
          popup.style.display = 'none';
          // Try to cancel the Appy form if found in the popup

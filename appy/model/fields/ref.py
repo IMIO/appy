@@ -234,7 +234,8 @@ class Ref(Field):
                          q(selector.ckNum)) if selector else ''">
       <x if="not selectable">::ifield.getSupTitle(io, o, navInfo) or ''</x>
       <x>::ui.Title.get(o, mode=titleMode, nav=navInfo, target=target,
-                        page=pageName, popup=popup, selectJs=selectJs)</x>
+                        page=pageName, popup=popup, selectJs=selectJs,
+                        backHook=backHook or ohook)</x>
       <x if="not selectable">
        <span style=":'display:%s' % ('inline' if showSubTitles else 'none')"
              class="subTitle" var="sub=ifield.getSubTitle(io, o)"
