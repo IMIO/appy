@@ -165,7 +165,7 @@ class Event(persistent.Persistent):
             return '?' if title else None
         user = o.search1('User', login=login)
         if not user:
-            return '?' if title else None
+            return login if title else None
         # Return the found user or its p_title
         if title:
             r = eval(expression) if expression else (user.getTitle() or login)

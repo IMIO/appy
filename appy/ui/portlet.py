@@ -124,7 +124,7 @@ class Portlet:
 
      <!-- Pages and custom zone -->
      <div class="pzone">
-      <div class="colorZ" style=":f'background-color:{cfg.svg.lightColor}'">
+      <div class="colorZ" style=":f'background-color:{cfg.headerPcColor}'">
       </div>
       <div class="vflex">
        <!-- Custom links (I & II) -->
@@ -249,7 +249,8 @@ class Portlet:
 
       <!-- Portlet footer -->
       <div if="showFooterP" class="portletFooter">
-       <img src=":url('portletLogoF')" class="portletLogoF"/>
+       <img src=":url(cfg.cget('portletLogoFName', _ctx_))"
+            class="portletLogoF"/>
       </div>
      </div>''',
 

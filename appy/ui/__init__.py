@@ -289,6 +289,8 @@ class Config:
         self.warnColor = '#e15151'
         # Text color in the header
         self.headerColor = self.brightColor
+        self.headerPcColor = '#cecece' # *p*ages and *u*stom zone, in the
+                                       # portlet when inlaid in the header.
         # Background color for the header
         self.headerBgColor = self.darkColor
         self.headerSpanColor = self.brightColor # Color for standard text
@@ -368,10 +370,11 @@ class Config:
 
         # Portlet
         self.portletShowLogo = True # Logo on top of the portlet
-        # The name of the portlet logo is defined here. It can hold a function
-        # that receives the current PX and its context as args, and returns the
-        # name of the logo image.
+        # The name of the portlet logo portlet footer logos are defined here.
+        # Each one can hold a function that receives the current PX and its
+        # context as args, and returns the name of the logo image.
         self.portletLogoName = 'portletLogo'
+        self.portletLogoFName = 'portletLogoF'
         self.portletShowFooter = False # Portlet-specific footer
         self.portletWidth = '250px'
         self.portletMinWidth = '140px'
