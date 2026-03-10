@@ -358,7 +358,8 @@ class Ref(Field):
           var2="navInfo=ifield.getNavInfo(io, batch.start + currentNumber,
                                           batch.total) if not inMenu else 'no'"
           href=":o.getUrl(sub='edit', page='main', nav=navInfo, popup=toPopup)"
-          target=":target.get(popup, toPopup)" onclick=":target.onClick">
+          target=":target.get(popup, toPopup)"
+          onclick=":target.getOnClick(backHook or ohook)">
         <img src=":svg('edit')" class="iconS" title=":text"/>
        </a>
        <x if="locked" var2="lockStyle='iconS'; page='main'">::o.Lock.px</x>
@@ -1568,6 +1569,7 @@ class Ref(Field):
         # integrated as a background-image inside it. Else, it will be
         # positioned outside the button.
         self.iconOut = iconOut
+
         # The CSS class to apply to the button icon, in "icon out" mode
         self.iconCss = iconCss
 

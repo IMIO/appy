@@ -63,13 +63,17 @@ class Title:
         return f' class="{r}"' if r else ''
 
     @classmethod
-    def getIcon(class_, o, base, params, target):
+    def getIcon(class_, o, base, params, target, backHook=None):
         '''Compute, when appropriate, a companion, iconic link, for opening the
            same link, but in a popup.'''
         if not target.otherClick: return ''
         params['popup'] = 'True'
+        if backHook:
+            otherClick = target.getOnClick(backHook, other=True)
+        else:
+            otherClick = target.otherClick
         return f'<a href="{class_.getUrl(o, base, params)}" class="pop" ' \
-               f'target="appyIFrame" onclick="{target.otherClick}">◳</a>'
+               f'target="appyIFrame" onclick="{otherClick}">◳</a>'
 
     @classmethod
     def getUrl(class_, o, base, params):
@@ -170,7 +174,7 @@ class Title:
             # Set a "title" parameter when relevant
             lt = f' title="{linkTitle}"' if linkTitle else ''
             # Add a companion icon when appropriate
-            icon = class_.getIcon(o, baseUrl, params, target)
+            icon = class_.getIcon(o, baseUrl, params, target, backHook)
             if mode[0] == 'd':
                 # Wrap the link into a "div". In that case, the CSS class(es)
                 # apply to the div.

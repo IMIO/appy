@@ -889,7 +889,7 @@ class LinkTarget:
         self.onClick = LinkTarget.defaultOnClick
         self.onClickIsDefault = True
 
-    def getOnClick(self, back, o=None, onClick=None):
+    def getOnClick(self, back, o=None, onClick=None, other=False):
         '''Gets the "onClick" attribute, taking into account p_back DOM node ID
            that was unknown at the time the LinkTarget object was created.'''
         # If p_onClick is passed, force this code to execute instead of the
@@ -897,8 +897,8 @@ class LinkTarget:
         if onClick: return onClick
         # If we must not come back from a popup, return an empty string (or the
         # default JS action).
-        r = self.onClick
-        if not r or self.onClickIsDefault: return r
+        r = self.otherClick if other else self.onClick
+        if not r or (not other and self.onClickIsDefault): return r
         # Add parameters to the JS call that opens the popup
         if o:
             # Get the CSS class to apply to the popup
