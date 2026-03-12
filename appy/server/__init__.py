@@ -4,7 +4,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os, sys, time, socket, logging, pathlib, selectors, threading, platform
+import os, sys, time, platform, pwd
+import socket, logging, pathlib, selectors, threading
 
 from appy.px import Px
 from appy import utils, version
@@ -728,11 +729,20 @@ class Server:
             parameters = params
         return f'{r}?{self.getUrlParams(parameters)}'
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                                Misc
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     def getLoVersion(self):
         '''Gets the version of LibreOffice being installed on the server I am
            currently running.'''
         out, err = executeCommand(('soffice', '--version'))
         return err or out or '?'
+
+    def getOsUser(self):
+        '''Returns the OS user running this server'''
+        userId = os.getuid()
+        return pwd.getpwuid(userId).pw_name
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                 PXs
@@ -748,6 +758,7 @@ class Server:
        <tr><th>Protocol</th><td>:cfg.protocol</td></tr>
        <tr><th>Mode</th><td>:server.mode</td></tr>
        <tr><th>Registered client sockets</th><td>:server.registered</td></tr>
+       <tr><th>OS user running this site</th><td>:server.getOsUser()</td></tr>
 
        <!-- The debug level, with actions to increment and/or decrement it -->
        <tr var="level=config.server.debugLevel;

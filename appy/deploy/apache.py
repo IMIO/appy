@@ -21,7 +21,7 @@ httpSingle = '''<VirtualHost *:80>
  RewriteRule ^(.*) http://localhost:|port|$1 [P]
 </VirtualHost>
 <Proxy "http://localhost:|port|">
- ProxySet keepalive=On
+ ProxySet keepalive=On responsefieldsize=16384
 </Proxy>'''
 
 # Template virtual host for http (redirect to https)
@@ -31,6 +31,11 @@ http = '''<VirtualHost *:80>
 </VirtualHost>'''
 
 # Template virtual host for https
+#
+# Within the Proxy directive, responsefieldsize is greater than the default,
+# being 8192 (8Kb). This is because Appy uses cookies to store textual messages
+# returned to the browser. Often, these messages contain more than 8Kb.
+
 https = '''<IfModule mod_ssl.c>
  <VirtualHost _default_:443>
   ServerName |domain|
@@ -48,7 +53,7 @@ https = '''<IfModule mod_ssl.c>
  </VirtualHost>
  <Proxy "http://localhost:|port|">
   RequestHeader set X-Forwarded-Proto "https"
-  ProxySet keepalive=On
+  ProxySet keepalive=On responsefieldsize=16384
  </Proxy>
 </IfModule>'''
 
@@ -61,7 +66,7 @@ class Config:
        host.'''
 
     # Names of the attributes storing HTTPS-related certificate files
-    destAttributes = ('cert', 'key', 'chain')
+    destAttributes = 'cert', 'key', 'chain'
 
     def __init__(self, email, domain, protocol='https', cert=None, key=None,
                  chain=None, destFolder='ssl'):

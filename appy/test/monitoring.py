@@ -3,15 +3,16 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy import version
-from appy.utils import executeCommand
+from appy.utils import executeCommand, bn
 from appy.model.fields.pod import Config as PodConfig
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Monitoring:
-    '''Implements stuff allowing to perform monitoring on a Appy application.
-       * URL <yourapp>/tool/check can be called to get monitoring info;
-       * Configure monitoring parameters by updating attributes of the
-         Monitoring instance defined in the Config class.'''
+    '''Implements stuff allowing to perform monitoring on a Appy application.'''
+
+    # - URL <yourapp>/tool/check can be called to get monitoring info;
+    # - Configure monitoring parameters by updating attributes of the
+    #   Monitoring instance defined in the Config class.
 
     def __init__(self, forceComplete=False, checkLo=False):
         # When returning a success status code, what code to return ?
@@ -30,12 +31,12 @@ class Monitoring:
 
     def asText(self, r):
         '''Returns monitoring info p_r as pure text'''
-        return '\n'.join('%s: %s' % (k, v) for k, v in r)
+        return bn.join(f'{k}: {v}' for k, v in r)
 
     def asHtml(self, r):
         '''Returns monitoring info p_r as HTML'''
-        rows = ['<tr><th>%s</th><td>%s</td>' % (k, v) for k, v in r]
-        return '<table class="small">%s</table>' % '\n'.join(rows)
+        rows = [f'<tr><th>{k}</th><td>{v}</td>' for k, v in r]
+        return f'<table class="small">{bn.join(rows)}</table>'
 
     def get(self, tool, html=False):
         '''Returns monitoring-related info'''
@@ -45,7 +46,7 @@ class Monitoring:
         if self.checkLo:
             loLine = ''
             out, err = executeCommand('ps -ef | grep "soffice"', shell=True)
-            for line in out.split('\n'):
+            for line in out.split(bn):
                 if "accept=socket" in line:
                     loLine = line
                     break
@@ -66,7 +67,7 @@ class Monitoring:
             if not loLine:
                 r.append(('LibreOffice status', 'Not found'))
             else:
-                r.append(('LibreOffice status', 'Running: %s' % loLine))
+                r.append(('LibreOffice status', f'Running: {loLine}'))
         # Add app-specific info when available
         if self.app: r += self.app
         # Return pure text of HTML when requested
