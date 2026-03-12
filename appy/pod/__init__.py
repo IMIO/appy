@@ -29,32 +29,6 @@ uiFormats = {'pdf':'PDF', 'doc':'DOC', 'docx':'DOX', 'odt':'ODT',
              'xls':'XLS', 'xlsx':'XLX', 'ods':'ODS', 'csv':'CSV'}
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Evaluator:
-    '''Wrapper around the built-in Python function "eval"'''
-
-    @classmethod
-    def run(class_, expression, context):
-        '''Evaluates p_expression in this p_context'''
-        # p_context can be a standard dict or an instance of class
-        # appy.model.utils.Object. In this latter case, although it implements
-        # dict-like methods, we prefer to unwrap its dict instead of using it
-        # directly as context, because it does not raise a KeyError when a key
-        # lookup produces no result, but returns None instead.
-        context = context if isinstance(context, dict) else context.__dict__
-        # Evaluate p_expression
-        return eval(expression, None, context)
-        # p_context is passed as locals, in order to avoid the "locals" dict to
-        # be cloned by the eval function (see https://peps.python.org/pep-0667).
-        # Before, v_context was passed as globals and, in that case, the "eval"
-        # function added, within it, if not already present, Python built-ins
-        # at key '__builtins__'. So, v_context['__builtins__'] was similar to
-        # the homonym entry in dict globals().
-
-    @classmethod
-    def updateContext(class_, context):
-        '''This standard evaluator does not need to update the p_context'''
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PodError(Exception):
     '''Base pod exception'''
 

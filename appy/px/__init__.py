@@ -9,8 +9,8 @@
 import xml.sax
 
 from appy.utils import css, bn
-from appy.pod import Evaluator
 from appy.model.utils import Object as O
+from appy.pod.evaluator import Evaluator
 from appy.pod.buffers import MemoryBuffer
 from appy.xml import xmlPrologue, xhtmlPrologue
 from appy.px.parser import PxParser, PxEnvironment

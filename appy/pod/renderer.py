@@ -7,21 +7,22 @@ from collections import UserDict
 import zipfile, shutil, xml.sax, os, os.path, re, mimetypes, time
 
 import appy.pod
-from appy import utils
-from appy.xml import Tag
-from appy.utils import bn
-from appy.xml.escape import Escape
-from appy.pod.lo_pool import LoPool
-from appy.pod.graphic import Graphic
-from appy.utils.zip import unzip, zip
-from appy.pod.buffers import FileBuffer
-from appy.pod import PodError, Evaluator
-from appy.utils.path import FolderDeleter
-from appy.pod.converter import FILE_TYPES
-from appy.pod import styles_manager as sm
-from appy.pod import doc_importers as importers
-from appy.pod.xhtml2odt import Xhtml2OdtConverter
-from appy.pod.pod_parser import PodParser, PodEnvironment, OdInsert
+from .. import utils
+from ..xml import Tag
+from ..utils import bn
+from . import PodError
+from .lo_pool import LoPool
+from .graphic import Graphic
+from .buffers import FileBuffer
+from ..xml.escape import Escape
+from .evaluator import Evaluator
+from .converter import FILE_TYPES
+from ..utils.zip import unzip, zip
+from . import styles_manager as sm
+from ..utils.path import FolderDeleter
+from . import doc_importers as importers
+from .xhtml2odt import Xhtml2OdtConverter
+from .pod_parser import PodParser, PodEnvironment, OdInsert
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 BAD_CTX     = 'Context must be either a dict, a UserDict or an instance.'
