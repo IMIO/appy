@@ -4,7 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Some of the imports below are just there to belong to the interpreter context
 
-import io, statistics
+import re, io, statistics
 from DateTime import DateTime
 from contextlib import redirect_stdout
 from persistent.list import PersistentList
