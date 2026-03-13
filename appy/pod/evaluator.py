@@ -57,23 +57,24 @@ class Compromiser:
     '''Evaluator being less permissive than the standard Evaluator class, but
        not as strict as the RestrictedPython-based evaluator.'''
 
-    # Names of standard functions one may not use within pod expressions or
-    # statement parts.
+    # Names of standard functions and statements one may not use within pod
+    # expressions or statement parts.
 
     banned = ['exec', 'eval', 'input', 'compile', 'getattr', 'setattr',
-              'hasattr', 'open', 'print']
+             'hasattr', 'open', 'print', 'import', 'del', 'global']
 
-    def __init__(self, banned=None):
+    def __init__(self, bannedF=None, bannedS=None):
         '''Compromiser's constructor'''
-        # p_banned may contain names of functions one may not use. If None,
-        # defaults to Compromiser.banned.
+        # p_banned may contain names of functions or statements one may not use.
+        # If None, defaults to Compromiser.banned.
         banned = banned or Compromiser.banned
-        # Build a regular expression allowing to detect banned function names.
+        # Build a regular expression allowing to detect banned names
         names = '|'.join(banned)
-        # The regex contains a negative lookbehind assertion, that will not
-        # match the function name if it is part of a larger name (ie,
-        # "mycompile" will be allowed, while "compile" will not) or if the
-        # function is a method or package-prefixed call (ie, "re.compile" is
-        # allowed, while "compile" is not).
-        self.banned = re.compile(fr'(?<![a-zA-Z0-9_.]){names}\(')
+        # The regex starts with a negative lookbehind assertion and ends with a
+        # negative lookahead one: the objective is to avoid matching a banned
+        # name if it is part of a larger name (ie, "mycompile" will be allowed,
+        # while "compile" will not). Regarding the lookbehind assertion, a
+        # second objective is to allow a method or package-prefixed call. For
+        # example, "re.compile" is allowed, while "compile" is not.
+        self.banned = re.compile(fr'(?<![a-zA-Z0-9_.])({names})(?!\w)')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
