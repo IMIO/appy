@@ -57,13 +57,21 @@ class Compromiser:
     '''Evaluator being less permissive than the standard Evaluator class, but
        not as strict as the RestrictedPython-based evaluator.'''
 
+    # Instanes of this class will be raised if the compromiser finds a
+    # disallowed element in a pod expression or statement part.
+
+    class Disallowed(Exception): pass
+
+    # The standard text explaining that a disallowed element was found.
+    DIS_MSG = 'Disallowed element found statement or expression: "%s".'
+
     # Names of standard functions and statements one may not use within pod
     # expressions or statement parts.
 
     banned = ['exec', 'eval', 'input', 'compile', 'getattr', 'setattr',
              'hasattr', 'open', 'print', 'import', 'del', 'global']
 
-    def __init__(self, bannedF=None, bannedS=None):
+    def __init__(self, banned=None):
         '''Compromiser's constructor'''
         # p_banned may contain names of functions or statements one may not use.
         # If None, defaults to Compromiser.banned.
@@ -77,4 +85,11 @@ class Compromiser:
         # second objective is to allow a method or package-prefixed call. For
         # example, "re.compile" is allowed, while "compile" is not.
         self.banned = re.compile(fr'(?<![a-zA-Z0-9_.])({names})(?!\w)')
+
+    def run(self, expr, context):
+        '''Evaluates this p_expr(ession) in this p_context'''
+        if self.banned.search(expr):
+            C = Compromiser
+            raise C.Disallowed(C.DIS_MSG)
+        return Evaluator.run(expr, context)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
