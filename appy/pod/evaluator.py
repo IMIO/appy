@@ -54,8 +54,10 @@ class Compromiser:
 
     class Disallowed(Exception): pass
 
-    # The standard text explaining that a disallowed element was found.
+    # Texts explaining that a disallowed element was found
     DIS_MSG = 'Disallowed element found in: "%s".'
+    DU_MSG  = 'Attributes, methods or variables having pattern __<name>__ ' \
+              'are disallowed. One has been found in "%s".'
 
     # Names of standard functions and statements one may not use within pod
     # expressions or statement parts.
@@ -63,7 +65,11 @@ class Compromiser:
     banned = ['exec', 'eval', 'input', 'compile', 'getattr', 'setattr',
              'hasattr', 'open', 'print', 'import', 'del', 'global']
 
-    def __init__(self, banned=None):
+    # Regular expression representing a Python method name surrounded by double
+    # underscores.
+    underscored = re.compile('__\w+__')
+
+    def __init__(self, banned=None, ban__=True):
         '''Compromiser's constructor'''
         # p_banned may contain names of functions or statements one may not use.
         # If None, defaults to Compromiser.banned.
@@ -77,6 +83,9 @@ class Compromiser:
         # second objective is to allow a method or package-prefixed call. For
         # example, "re.compile" is allowed, while "compile" is not.
         self.banned = re.compile('(?<![a-zA-Z0-9_.])(%s)(?!\w)' % names)
+        # Must methods whose names are surrounded by double underscores be
+        # banned ?
+        self.ban__ = ban__
 
     def updateContext(self, context):
         '''The compromiser does not need to update the p_context'''
@@ -86,5 +95,9 @@ class Compromiser:
         if self.banned.search(expr):
             C = Compromiser
             raise C.Disallowed(C.DIS_MSG % expr)
+        if self.ban__ and self.underscored.search(expr):
+            C = Compromiser
+            raise C.Disallowed(C.DU_MSG % expr)
+        # If we are here, p_expr can safely be evaluated
         return Evaluator.run(expr, context)
 # ------------------------------------------------------------------------------
