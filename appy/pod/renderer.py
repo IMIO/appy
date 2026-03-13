@@ -249,7 +249,13 @@ class Renderer:
         #
         # In order to do so, pass, in attribute p_evaluator, an instance of
         # class appy.pod.restricted.Evaluator. For more information and options,
-        # consult appy.pod.restricted.py.
+        # consult appy/pod/restricted.py.
+
+        # If you feel that using RestrictedPython is too cumbersome, appy.pod
+        # offers you an intermediate approach: an evaluator named "Compromiser".
+        # If you want to enable this evaluator, place, in attribute p_evaluator,
+        # an instance of class appy.pod.evaluator.Compromiser. For more
+        # information and options, consult appy/pod/evaluator.py.
 
         # If this document is a sub-document to be included in a master one, it
         # has sense to set a specific value for parameter p_managePageStyles:

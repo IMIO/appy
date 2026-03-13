@@ -1282,6 +1282,8 @@ class Pod(Field):
         # Launch the renderer
         o.log(RENDERING % (o.id, template, fmt))
         try:
+            from appy.pod.evaluator import Compromiser
+            rendererParams['evaluator'] = Compromiser()
             renderer = Renderer(**rendererParams)
             renderer.run()
         except PodError as pe:
