@@ -23,24 +23,6 @@ XHTML_META_TAGS = {'p': 'para', 'div': 'para', 'blockquote': 'para',
 # Cell-like tags (including "li")
 XHTML_CELL_TAGS = ('th', 'td', 'li')
 
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Evaluator:
-    '''Wrapper around the built-in Python function "eval"'''
-
-    @classmethod
-    def run(class_, expression, context):
-        '''Evaluates p_expression in this p_context'''
-        # Evaluate p_expression
-        return eval(expression, context)
-        # Note that the "eval" function adds, within p_context, if not already
-        # present, the Python built-ins at key '__builtins__'.
-        # context['__builtins__'] is similar to the homonym entry in dict
-        # globals().
-
-    @classmethod
-    def updateContext(class_, context):
-        '''This standard evaluator does not need to update the p_context'''
-
 # ------------------------------------------------------------------------------
 class PodError(Exception):
     @staticmethod

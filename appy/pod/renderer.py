@@ -5,11 +5,12 @@ from UserDict import UserDict
 import zipfile, shutil, xml.sax, os, os.path, re, mimetypes, time
 
 import appy.pod
+from appy.pod import PodError
 from appy.pod.lo_pool import LoPool
 from appy.pod.graphic import Graphic
 from appy.shared.zip import unzip, zip
 from appy.pod.buffers import FileBuffer
-from appy.pod import PodError, Evaluator
+from appy.pod.evaluator import Evaluator
 from appy.shared.xml_parser import Escape
 from appy.pod import styles_manager as sm
 from appy.pod.converter import FILE_TYPES
@@ -227,7 +228,13 @@ class Renderer:
         #
         # In order to do so, pass, in attribute p_evaluator, an instance of
         # class appy.pod.restricted.Evaluator. For more information and options,
-        # consult appy.pod.restricted.py.
+        # consult appy/pod/restricted.py.
+
+        # If you feel that using RestrictedPython is too cumbersome, appy.pod
+        # offers you an intermediate approach: an evaluator named "Compromiser".
+        # If you want to enable this evaluator, place, in attribute p_evaluator,
+        # an instance of class appy.pod.evaluator.Compromiser. For more
+        # information and options, consult appy/pod/evaluator.py.
 
         # If this document is a sub-document to be included in a master one, it
         # has sense to set a specific value for parameter p_managePageStyles:

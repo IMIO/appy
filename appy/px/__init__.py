@@ -6,7 +6,7 @@
 # ------------------------------------------------------------------------------
 import xml.sax
 
-from appy.pod import Evaluator
+from appy.pod.evaluator import Evaluator
 from appy.pod.buffers import MemoryBuffer
 from appy.px.px_parser import PxParser, PxEnvironment
 from appy.shared.xml_parser import xmlPrologue, xhtmlPrologue
