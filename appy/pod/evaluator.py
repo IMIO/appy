@@ -11,10 +11,10 @@ import re
 # As explained in the pod Renderer's constructor, various evaluators can be
 # used, depending on your attitude towards security and programming comfort.
 
-# Class Evaluator below is the default appy.pod Evaluator. Unlike other
-# evaluators, no instance of it needs to be created: the class itself will be
-# used as-is. But you don't even need to know that, because setting Renderer's
-# "evaluator" attribute to None will automatically configure this one correctly.
+# Class Evaluator below is the default appy.pod Evaluator, and also the base
+# class to any other Appy built-in or to-build evaluator. When the pod renderer
+# is called with evaluator=None (which is the default), an instance of this
+# Evaluator class is created and used.
 
 # Class Compromiser tries to establish a well-balanced compromise between
 # coders' power and security. Its objective is to let coders express themselves
@@ -30,8 +30,7 @@ import re
 class Evaluator:
     '''Wrapper around the built-in Python function "eval"'''
 
-    @classmethod
-    def run(class_, expression, context):
+    def run(self, expression, context):
         '''Evaluates p_expression in this p_context'''
         # p_context can be a standard dict or an instance of class
         # appy.model.utils.Object. In this latter case, although it implements
@@ -48,12 +47,11 @@ class Evaluator:
         # at key '__builtins__'. So, v_context['__builtins__'] was similar to
         # the homonym entry in dict globals().
 
-    @classmethod
-    def updateContext(class_, context):
+    def updateContext(self, context):
         '''This standard evaluator does not need to update the p_context'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Compromiser:
+class Compromiser(Evaluator):
     '''Evaluator being less permissive than the standard Evaluator class, but
        not as strict as the RestrictedPython-based evaluator.'''
 
@@ -77,26 +75,28 @@ class Compromiser:
     # underscores.
     underscored = re.compile(r'__\w+__')
 
-    def __init__(self, banned=None, ban__=True):
-        '''Compromiser's constructor'''
-        # p_banned may contain names of functions or statements one may not use.
-        # If None, defaults to Compromiser.banned.
-        banned = banned or Compromiser.banned
-        # Build a regular expression allowing to detect banned names
-        names = '|'.join(banned)
+    @classmethod
+    def getBannedRex(class_, banned=None):
+        '''Builds and return the regular expression allowing to detect the use
+           of these p_banned terms, or p_class_.banned if p_banned is None.'''
+        # Get the list of terms to ban
+        names = '|'.join(banned or class_.banned)
         # The regex starts with a negative lookbehind assertion and ends with a
         # negative lookahead one: the objective is to avoid matching a banned
         # name if it is part of a larger name (ie, "mycompile" will be allowed,
         # while "compile" will not). Regarding the lookbehind assertion, a
         # second objective is to allow a method or package-prefixed call. For
         # example, "re.compile" is allowed, while "compile" is not.
-        self.banned = re.compile(fr'(?<![a-zA-Z0-9_.])({names})(?!\w)')
+        return re.compile(fr'(?<![a-zA-Z0-9_.])({names})(?!\w)')
+
+    def __init__(self, banned=None, ban__=True):
+        '''Compromiser's constructor'''
+        # p_banned may contain names of functions or statements one may not use.
+        # If None, defaults to Compromiser.banned.
+        self.banned = self.getBannedRex(banned)
         # Must methods whose names are surrounded by double underscores be
         # banned ?
         self.ban__ = ban__
-
-    def updateContext(self, context):
-        '''The compromiser does not need to update the p_context'''
 
     def run(self, expr, context):
         '''Evaluates this p_expr(ession) in this p_context'''
@@ -107,5 +107,5 @@ class Compromiser:
             C = Compromiser
             raise C.Disallowed(C.DU_MSG % expr)
         # If we are here, p_expr can safely be evaluated
-        return Evaluator.run(expr, context)
+        return super().run(expr, context)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

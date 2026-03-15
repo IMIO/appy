@@ -485,7 +485,7 @@ class Renderer:
           'GraphicProperties': Graphic.Properties,
           'pageBreak': self.insertPageBreak,
           'columnBreak': self.insertColumnBreak,
-          '_eval_': self.evaluator or Evaluator,
+          '_eval_': self.evaluator or Evaluator(),
           # Variables to use for representing pod-reserved chars
           'PIPE': '|', 'SEMICOLON': ';'})
         # Add Evaluator-specific entries

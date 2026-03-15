@@ -11,20 +11,23 @@
 from pathlib import Path
 import re, os.path, difflib
 
+from appy.utils import bn
 from appy.bin import Program
-from appy.utils.zip import zip, unzip
 from appy.utils import path as putils
+from appy.utils.zip import zip, unzip
 from appy.model.utils import Object as O
 from appy.xml.cleaner import StringCleaner
+from appy.pod.evaluator import Compromiser
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 OPT_C_V  = "Options -c and -v can't be used altogether."
 FF_KO    = '%s does not exist.'
 S_CLEAN  = '%d styled text part(s) %scleaned.'
 F_CORR   = 'XML corruption in %s::%s - The file was left untouched.'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n'
+BC       = 'When searching for banned keywords, option %s cannot be used.'
+BAN_REPL = BC % '-r (--repl)'
+BAN_IC   = BC % '-c (--in-content)'
+BAN_STR  = BC % '-s (--as-string)'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Note:
@@ -346,8 +349,8 @@ class Matches(list):
 class Grep(Program):
     '''Perform UNIX grep-like searches within ODF files'''
 
-    toGrep = ('content.xml', 'styles.xml')
-    toUnzip = ('ods', 'odt')
+    toGrep = 'content.xml', 'styles.xml'
+    toUnzip = 'ods', 'odt'
 
     # Messages ~{ b_replace: { b_match: s_message }}~
     messageTexts = { True:  { True:  '%s: %d replacement(s) done.',
@@ -366,18 +369,25 @@ class Grep(Program):
 
     # Regex allowing to detect mentions, in the replacement string, to groups
     # defined in the keywords regex.
-    groupsRex = re.compile('\\\(\d)+')
+    groupsRex = re.compile(r'\\\\(\d)+')
 
     # Regex for parsing a POD expression within an ODS formula
     formulaRex = re.compile('table:formula="of:=&quot;(.*?)&quot;"')
 
     # Help messages
     HELP_K    = r'is the regular expression (or string if -s) to search ' \
-                'within the file(s). From the command-line, special chars ' \
-                'possibly included in the keyword (and also the replacement ' \
-                'string, if passed) must be escaped. For example, ' \
-                'cus(tom)_(agenda) must be written as cus\(tom\)_\(agenda\).' \
-                ' \\2_\\1 must be written as \\\\2_\\\\1.'
+                r'within the file(s). From the command-line, special chars ' \
+                r'possibly included in the keyword (and also the replacement ' \
+                r'string, if passed) must be escaped. For example, ' \
+                r'cus(tom)_(agenda) must be written as cus\(tom\)_\(agenda\).' \
+                r' \\2_\\1 must be written as \\\\2_\\\\1. 2 keywords are ' \
+                r'reserved. "_banned_" will match any banned term as defined ' \
+                r'by the Compromiser, in its attribute Compromiser.banned: %s '\
+                r'(more info in appy/pod/evaluator.py). "_underscored_" ' \
+                r'will match any variable, function or method name being ' \
+                r'surrounded by double underscores, as detected by regular ' \
+                r'expression Compromiser.underscored: %s' % \
+                (', '.join(Compromiser.banned), Compromiser.underscored.pattern)
     HELP_P    = 'is the path to a file or folder. If a file is passed, you ' \
                 'must pass the path to an ODF file (odt or ods). ogrep will ' \
                 'be run on this file only. If a folder is passed, ogrep will ' \
@@ -429,6 +439,9 @@ class Grep(Program):
     # ODF representation for possible input chars
     odfEntities = {"'": '&apos;', '"': '&quot;'}
 
+    # Reserved keywords (see HELP_K)
+    reserved = {'_banned_': None, '_underscored_': None}
+
     def odfCompliantKeyword(self, keyword):
         '''Transform the p_keyword the way it can be found within an ODF
            document.'''
@@ -436,6 +449,38 @@ class Grep(Program):
         for char, entity in self.odfEntities.items():
             r = r.replace(char, entity)
         return r
+
+    def manageKeyword(self):
+        '''Manage keyword and replacement'''
+        word = self.keyword
+        # Does the entered keyword correspond to banned terms ?
+        if word in self.reserved:
+            # Yes: get, from the Compromiser, the regular expression allowing to
+            # detect it.
+            self.skeyword = word
+            C = Compromiser
+            rex = C.getBannedRex() if word == '_banned_' else C.underscored
+            self.keyword = rex
+            # Replacing banned terms is not possible
+            if self.repl: self.exit(BAN_REPL)
+            # It has no sense to interpret the keyword as a string
+            if self.asString: self.exit(BAN_STR)
+            # Searching for banned terms outside pod expressions and statements
+            # has no sense.
+            if self.inContent: self.exit(BAN_IC)
+        else:
+            # This is the common case. Transform p_self.keyword (and p_self.repl
+            # if it exists) into its ODF-compliant form.
+            word = self.odfCompliantKeyword(word)
+            if self.repl:
+                self.repl = self.odfCompliantKeyword(self.repl)
+            # Remember the keyword as a string
+            self.skeyword = word
+            # If p_self.asString is True, v_word is interpreted as a plain
+            # string. Else, it is interpreted as a regular expression.
+            if self.asString:
+                word = re.escape(word)
+            self.keyword = re.compile(word, re.S)
 
     def analyseArguments(self):
         '''Check and store arguments'''
@@ -446,18 +491,8 @@ class Grep(Program):
         # Identify incompatible args
         if (self.verbose or self.vverbose) and self.inContent:
             self.exit(OPT_C_V)
-        # Transform p_self.keyword (and p_self.repl if it exists) into its ODF-
-        # compliant form.
-        self.keyword = word = self.odfCompliantKeyword(self.keyword)
-        if self.repl:
-            self.repl = self.odfCompliantKeyword(self.repl)
-        # Remember the keyword as a string
-        self.skeyword = word
-        # If p_self.asString is True, p_self.keyword is interpreted as a plain
-        # string. Else, it is interpreted as a regular expression.
-        if self.asString:
-            word = re.escape(word)
-        self.keyword = re.compile(word, re.S)
+        # Manage keyword (and replacement)
+        self.manageKeyword()
         # If find/replace must occur in POD-controlled zones, define these zones
         # via regular expressions: one for ODT templates, one for ODS templates.
         inContent = self.inContent
@@ -525,7 +560,7 @@ class Grep(Program):
         '''Returns self.messages, concatenated in a single string'''
         messages = getattr(self, 'messages', None)
         if not messages: return ''
-        return '\n'.join(messages)
+        return bn.join(messages)
 
     def getReplacement(self, match, counts=None):
         '''In the context of a replacement, this method returns p_self.repl,

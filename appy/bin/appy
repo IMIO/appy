@@ -56,7 +56,7 @@ class MetaScript:
         else:
             args += sys.argv[2:]
         out, err = executeCommand(args)
-        return self.exit(out or err)
+        return self.exit(f'{err or ""}{out or ""}')
 
     def run(self):
         '''Retrieve the script from sys.argv and execute it'''
