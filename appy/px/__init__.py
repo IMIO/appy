@@ -138,7 +138,9 @@ class Px:
         '''
         # Ensure PX-specific keys are in the context
         context['_ctx_'] = context
-        context['_eval_'] = Evaluator
+        evaluator = context.get('_eval_')
+        if not evaluator:
+            context['_eval_'] = Evaluator()
         # Include, in the context, variable names for "reserved" PX chars
         context['PIPE'] = '|'
         context['SEMICOLON'] = ';'

@@ -8,6 +8,9 @@
 # RestrictedPython filter.
 
 # ------------------------------------------------------------------------------
+from appy.pod.evaluator import Evaluator as BaseEvaluator
+
+# ------------------------------------------------------------------------------
 RP_N_INS  = 'Please install RestrictedPython before using this.'
 
 # ------------------------------------------------------------------------------
@@ -18,7 +21,7 @@ except ImportError:
     installed = False
 
 # ------------------------------------------------------------------------------
-class Evaluator:
+class Evaluator(BaseEvaluator):
     '''RestrictedPython-specific evaluator'''
 
     # Mapping between keys to add in the context that will be used as globals

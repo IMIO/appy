@@ -9,6 +9,7 @@ import re, sys, os.path, StringIO, difflib
 from appy import Object as O
 from appy.shared.zip import zip, unzip
 from appy.shared import utils as sutils
+from appy.pod.evaluator import Compromiser
 from appy.shared.xml_parser import StringCleaner
 
 # ------------------------------------------------------------------------------
@@ -16,12 +17,21 @@ OPT_C_V  = "Options -c and -v can't be use altogether."
 FF_KO    = '%s does not exist.'
 S_CLEAN  = '%d styled text part(s) %scleaned.'
 F_CORR   = 'XML corruption in %s::%s - The file was left untouched.'
+BC       = 'When searching for banned keywords, option %s cannot be used.'
+BAN_REPL = BC % '-r (--repl)'
+BAN_IC   = BC % '-c (--in-content)'
+BAN_STR  = BC % '-s (--as-string)'
 
 # ------------------------------------------------------------------------------
 usage = '''Usage: python odfgrep.py [options] keyword file|folder [repl].
 
  *keyword* is the regular expression (or string if -s) to search within the
-           file(s).
+           file(s). 2 keywords are reserved. "_banned_" will match any banned
+           term as defined by the Compromiser, in its attribute
+           Compromiser.banned: %s (more info in appy/pod/evaluator.py).
+           "_underscored_" will match any variable, function or method name
+           being surrounded by double underscores, as detected by regular
+           expression Compromiser.underscored: %s'
 
  If *file* is given, it is the path to an ODF file (odt or ods). grep will be
  run on this file only.
@@ -67,7 +77,7 @@ usage = '''Usage: python odfgrep.py [options] keyword file|folder [repl].
  (2) From the command-line, *keyword* and *repl* special chars must be escaped.
      For example, cus(tom)_(agenda) must be written as  cus\(tom\)_\(agenda\)
                   \\2_\\1             must be written as  \\\\2_\\\\1
-'''
+''' % (', '.join(Compromiser.banned), Compromiser.underscored.pattern)
 
 # ------------------------------------------------------------------------------
 class Note:
@@ -418,26 +428,46 @@ class Grep:
     # ODF representation for possible input chars
     odfEntities = {"'": '&apos;', '"': '&quot;'}
 
+    # Reserved keywords (see v_usage)
+    reserved = {'_banned_': None, '_underscored_': None}
+
+    def setKeyword(self, keyword, repl):
+        '''Set keyword and replacement'''
+        self.repl = None
+        # Does the entered keyword correspond to banned terms ?
+        if keyword in self.reserved:
+            # Yes: get, from the Compromiser, the regular expression allowing to
+            # detect it.
+            self.skeyword = keyword
+            if word == '_banned_':
+                rex = Compromiser.getBannedRex()
+            else:
+                rex = Compromiser.underscored
+            self.keyword = rex
+        else:
+            # This is the common case. Transform p_keyword (and p_repl if it
+            # exists) into its ODF-compliant form.
+            keyword = self.odfCompliantKeyword(self.getPureString(keyword))
+            # Remember the keyword as a string
+            self.skeyword = keyword
+            if repl is not None:
+                self.repl = self.odfCompliantKeyword(self.getPureString(repl))
+            # If p_self.asString is True, v_word is interpreted as a plain
+            # string. Else, it is interpreted as a regular expression.
+            if self.asString:
+                keyword = re.escape(keyword)
+            self.keyword = re.compile(keyword, re.S)
+
     def __init__(self, keyword, fileOrFolder, repl=None, inContent=False,
                  silent=None, verbose=1, dryRun=False, asString=False,
                  outputType='raw'):
-        # Create a regex from the passed p_keyword
-        skeyword = self.odfCompliantKeyword(self.getPureString(keyword))
-        self.skeyword = skeyword
-        # If p_asString is True, p_keyword is interpreted as a plain string.
-        # Else, it is interpreted as a regular expression.
+        # Set keyword (and replacement)
         self.asString = asString
-        if asString:
-            skeyword = re.escape(skeyword)
-        self.keyword = re.compile(skeyword, re.S)
+        self.setKeyword(keyword, repl)
         # The file or folder where to find POD templates
         self.fileOrFolder = fileOrFolder
         # A temp folder where to unzip the POD templates
         self.tempFolder = sutils.getOsTempFolder()
-        # (optional) The replacement text
-        if repl is not None:
-            repl = self.odfCompliantKeyword(self.getPureString(repl))
-        self.repl = repl
         # (optional) Find/replace p_keyword in raw ODF content, or in POD-
         #            controlled zones (fields, statements) ?
         self.inContent = inContent
@@ -765,11 +795,27 @@ if __name__ == '__main__':
         args.remove('-n')
         options['outputType'] = 'term'
     # Check args validity
-    if len(sys.argv) not in (3, 4, 5):
+    count = len(sys.argv)
+    if count not in (3, 4, 5):
         print usage
         sys.exit()
     if 'verbose' in options and 'inContent' in options:
         print OPT_C_V
         sys.exit()
+    # When searching for a banned term, additional rules apply
+    if sys.argv[2] in Grep.reserved:
+        # Performing a replacement is not allowed in that case
+        if count == 5: # A replacement is asked
+            print BAN_REPL
+            sys.exit()
+        if options.get('asString'):
+            # It has no sense to interpret the keyword as a string
+            print BAN_STR
+            sys.exit()
+        if options.get('inContent'):
+            # Searching for banned terms outside pod expressions and statements
+            # has no sense.
+            print BAN_IC
+            sys.exit()
     Grep(*sys.argv[1:], **options).run()
 # ------------------------------------------------------------------------------
