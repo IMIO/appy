@@ -369,7 +369,7 @@ class Grep(Program):
 
     # Regex allowing to detect mentions, in the replacement string, to groups
     # defined in the keywords regex.
-    groupsRex = re.compile(r'\\\\(\d)+')
+    groupsRex = re.compile(r'\\(\d)+')
 
     # Regex for parsing a POD expression within an ODS formula
     formulaRex = re.compile('table:formula="of:=&quot;(.*?)&quot;"')
@@ -380,13 +380,13 @@ class Grep(Program):
                 r'possibly included in the keyword (and also the replacement ' \
                 r'string, if passed) must be escaped. For example, ' \
                 r'cus(tom)_(agenda) must be written as cus\(tom\)_\(agenda\).' \
-                r' \\2_\\1 must be written as \\\\2_\\\\1. 2 keywords are ' \
-                r'reserved. "_banned_" will match any banned term as defined ' \
-                r'by the Compromiser, in its attribute Compromiser.banned: %s '\
-                r'(more info in appy/pod/evaluator.py). "_underscored_" ' \
-                r'will match any variable, function or method name being ' \
-                r'surrounded by double underscores, as detected by regular ' \
-                r'expression Compromiser.underscored: %s' % \
+                r' \2_\1 must be written as \\2_\\1. 2 keywords are reserved.' \
+                r'"_banned_" will match any banned term as defined by the ' \
+                r'Compromiser, in its attribute Compromiser.banned: %s (more ' \
+                r'info in appy/pod/evaluator.py). "_underscored_" will match ' \
+                r'any variable, function or method name being surrounded by ' \
+                r'double underscores, as detected by regular expression '\
+                r'Compromiser.underscored: %s' % \
                 (', '.join(Compromiser.banned), Compromiser.underscored.pattern)
     HELP_P    = 'is the path to a file or folder. If a file is passed, you ' \
                 'must pass the path to an ODF file (odt or ods). ogrep will ' \
