@@ -13,14 +13,14 @@ from appy.pod.evaluator import Compromiser
 from appy.shared.xml_parser import StringCleaner
 
 # ------------------------------------------------------------------------------
-OPT_C_V  = "Options -c and -v can't be use altogether."
+OPT_C_V  = "Options -c and -v can't be used altogether."
 FF_KO    = '%s does not exist.'
 S_CLEAN  = '%d styled text part(s) %scleaned.'
 F_CORR   = 'XML corruption in %s::%s - The file was left untouched.'
-BC       = 'When searching for banned keywords, option %s cannot be used.'
-BAN_REPL = BC % '-r (--repl)'
-BAN_IC   = BC % '-c (--in-content)'
-BAN_STR  = BC % '-s (--as-string)'
+BC       = 'When searching for banned keywords, %s is disallowed.'
+BAN_REPL = BC % 'specifying a replacement string'
+BAN_IC   = BC % 'option -c'
+BAN_STR  = BC % 'option -s'
 
 # ------------------------------------------------------------------------------
 usage = '''Usage: python odfgrep.py [options] keyword file|folder [repl].
@@ -439,7 +439,7 @@ class Grep:
             # Yes: get, from the Compromiser, the regular expression allowing to
             # detect it.
             self.skeyword = keyword
-            if word == '_banned_':
+            if keyword == '_banned_':
                 rex = Compromiser.getBannedRex()
             else:
                 rex = Compromiser.underscored
@@ -764,7 +764,7 @@ class Grep:
             # Dump the match instances
             matches = getattr(self, 'matches', None)
             if matches:
-                for match in matches:
+                for match in matches.values():
                     self.dump(repr(match))
         if self.cleaned and verbose > 0:
             verb = self.dryRun and 'would have been ' or ''
@@ -803,9 +803,9 @@ if __name__ == '__main__':
         print OPT_C_V
         sys.exit()
     # When searching for a banned term, additional rules apply
-    if sys.argv[2] in Grep.reserved:
+    if sys.argv[1] in Grep.reserved:
         # Performing a replacement is not allowed in that case
-        if count == 5: # A replacement is asked
+        if count == 4: # A replacement is asked
             print BAN_REPL
             sys.exit()
         if options.get('asString'):
