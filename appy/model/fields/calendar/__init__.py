@@ -408,12 +408,12 @@ class Calendar(Field):
         # By default, any timeslot may be selected, whatever event type is
         # selected. If you want to restrict subsets of timeslots that can be
         # selected for one or several event types, define a method in the
-        # following attribute. This method must accept, as args, an event type.
-        # If the method returns None, all timeslots from p_self.timeslots will
-        # be selectable when the passed event type is selected. If the method
-        # returns a list or tuple of timeslot ids, as soon as the passed event
-        # type will be selected, the timeslot selector will only allow to select
-        # the corresponding timeslots.
+        # following attribute. This method must accept, as unique arg, an event
+        # type. If the method returns None, all timeslots from p_self.timeslots
+        # will be selectable when the passed event type is selected. If the
+        # method returns a list or tuple of timeslot ids, as soon as the passed
+        # event type will be selected, the timeslot selector will only allow to
+        # select the corresponding timeslots.
         self.slotMap = slotMap
 
         # [Month, multiple only] p_cellInfo determines what info to dump within
@@ -669,10 +669,10 @@ class Calendar(Field):
         # Call the base constructor
 
         # p_validator, allowing field-specific validation, behaves differently
-        # for the Calendar field. If specified, it must hold a method that will
-        # be executed every time a user wants to create an event (or a series of
-        # events) or update an event in the calendar. This method must accept
-        # those args:
+        # for the Calendar field, compared to other fields. If specified, it
+        # must hold a method that will be executed every time a user wants to
+        # create an event (or a series of events) or update an event in the
+        # calendar. This method must accept those args:
         #  - date       is the date of the event (as a DateTime object);
         #  - eventType  is its type (one among p_eventTypes);
         #  - timeslot   is its timeslot (see param p_timeslots);
@@ -917,6 +917,7 @@ class Calendar(Field):
         validator.intraFieldValidation(fields)
         if validator.errors:
             # At least one validation error has been encountered
+            o.resp.fleetingMessage = False
             return None, validator.getXhtmlErrors()
         # Values exist for this p_eventType. Get them from the request and store
         # them in an instance of class p_self.dataClass.
@@ -1067,6 +1068,7 @@ class Calendar(Field):
         r = self.validator(o, date, eventType, timeslot, span, data, event)
         if isinstance(r, str):
             # Validation failed, and we have the error message in v_r
+            o.resp.fleetingMessage = False
             return r
         # Return a standard message if the validation fails without producing a
         # specific message.

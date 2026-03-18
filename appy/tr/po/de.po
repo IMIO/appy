@@ -307,6 +307,14 @@ msgstr "Wählen Sie einen Wert zwischen ${min} und ${max}."
 msgid "length_ko"
 msgstr ""
 
+#. Default: "The term must have a single character."
+msgid "length_ko_one"
+msgstr ""
+
+#. Default: "The term must have exactly ${min} characters."
+msgid "length_ko_fixed"
+msgstr ""
+
 #. Default: "Wrong or missing file extension. Valid extension(s) is (are): ${exts}."
 msgid "ext_ko"
 msgstr ""

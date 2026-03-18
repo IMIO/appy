@@ -307,6 +307,14 @@ msgstr "Kies een waarde tussen ${min} en ${max}."
 msgid "length_ko"
 msgstr "Wat u hier codeert, moet tussen ${min} en ${max} tekens lang zijn."
 
+#. Default: "The term must have a single character."
+msgid "length_ko_one"
+msgstr "De term moet uit één enkel teken bestaan."
+
+#. Default: "The term must have exactly ${min} characters."
+msgid "length_ko_fixed"
+msgstr "De term moet precies ${min} tekens lang zijn."
+
 #. Default: "Wrong or missing file extension. Valid extension(s) is (are): ${exts}."
 msgid "ext_ko"
 msgstr "Onjuiste of ontbrekende bestandsextensie. De geldige extensie(s) is (zijn): ${exts}."

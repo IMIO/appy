@@ -193,7 +193,13 @@ class String(Multilingual, Field):
             maX = rangE.max
         length = len(value)
         if length < miN or length > maX:
-            r = o.translate('length_ko', mapping={'min': miN, 'max': maX})
+            if miN == maX:
+                # If the v_miN and v_maX values are the same, produce specific
+                # i18n messages.
+                suffix = '_one' if miN == 1 else '_fixed'
+            else:
+                suffix = ''
+            r = o.translate(f'length_ko{suffix}', mapping={'min':miN,'max':maX})
         else:
             r = True
         return r
