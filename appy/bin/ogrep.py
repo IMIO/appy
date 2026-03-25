@@ -25,7 +25,6 @@ FF_KO    = '%s does not exist.'
 S_CLEAN  = '%d styled text part(s) %scleaned.'
 F_CORR   = 'XML corruption in %s::%s - The file was left untouched.'
 BC       = 'When searching for banned keywords, option %s cannot be used.'
-BAN_REPL = BC % '-r (--repl)'
 BAN_IC   = BC % '-c (--in-content)'
 BAN_STR  = BC % '-s (--as-string)'
 
@@ -461,19 +460,15 @@ class Grep(Program):
             C = Compromiser
             rex = C.getBannedRex() if word == '_banned_' else C.underscored
             self.keyword = rex
-            # Replacing banned terms is not possible
-            if self.repl: self.exit(BAN_REPL)
             # It has no sense to interpret the keyword as a string
             if self.asString: self.exit(BAN_STR)
             # Searching for banned terms outside pod expressions and statements
             # has no sense.
             if self.inContent: self.exit(BAN_IC)
         else:
-            # This is the common case. Transform p_self.keyword (and p_self.repl
-            # if it exists) into its ODF-compliant form.
+            # This is the common case. Transform p_self.keyword into its ODF-
+            # compliant form.
             word = self.odfCompliantKeyword(word)
-            if self.repl:
-                self.repl = self.odfCompliantKeyword(self.repl)
             # Remember the keyword as a string
             self.skeyword = word
             # If p_self.asString is True, v_word is interpreted as a plain
@@ -481,6 +476,9 @@ class Grep(Program):
             if self.asString:
                 word = re.escape(word)
             self.keyword = re.compile(word, re.S)
+        # Transform p_self.repl, if it exists, into its ODF-compliant form
+        if self.repl:
+            self.repl = self.odfCompliantKeyword(self.repl)
 
     def analyseArguments(self):
         '''Check and store arguments'''
