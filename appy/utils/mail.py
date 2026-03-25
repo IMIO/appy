@@ -133,7 +133,7 @@ class Mailer:
         if replyTo:
             # Get the reply-to address, if any
             self.replyTo = replyTo
-        elif self.replyTo is None:
+        elif self.replyTo is None and config:
             self.replyTo = config.replyTo
         # Get the mail subject and body
         if subject:
