@@ -18,7 +18,6 @@ FF_KO    = '%s does not exist.'
 S_CLEAN  = '%d styled text part(s) %scleaned.'
 F_CORR   = 'XML corruption in %s::%s - The file was left untouched.'
 BC       = 'When searching for banned keywords, %s is disallowed.'
-BAN_REPL = BC % 'specifying a replacement string'
 BAN_IC   = BC % 'option -c'
 BAN_STR  = BC % 'option -s'
 
@@ -433,7 +432,6 @@ class Grep:
 
     def setKeyword(self, keyword, repl):
         '''Set keyword and replacement'''
-        self.repl = None
         # Does the entered keyword correspond to banned terms ?
         if keyword in self.reserved:
             # Yes: get, from the Compromiser, the regular expression allowing to
@@ -450,13 +448,16 @@ class Grep:
             keyword = self.odfCompliantKeyword(self.getPureString(keyword))
             # Remember the keyword as a string
             self.skeyword = keyword
-            if repl is not None:
-                self.repl = self.odfCompliantKeyword(self.getPureString(repl))
             # If p_self.asString is True, v_word is interpreted as a plain
             # string. Else, it is interpreted as a regular expression.
             if self.asString:
                 keyword = re.escape(keyword)
             self.keyword = re.compile(keyword, re.S)
+        # Transform p_repl (if it exists) into its ODF-compliant form
+        if repl is not None:
+            self.repl = self.odfCompliantKeyword(self.getPureString(repl))
+        else:
+            self.repl = None
 
     def __init__(self, keyword, fileOrFolder, repl=None, inContent=False,
                  silent=None, verbose=1, dryRun=False, asString=False,
@@ -804,10 +805,6 @@ if __name__ == '__main__':
         sys.exit()
     # When searching for a banned term, additional rules apply
     if sys.argv[1] in Grep.reserved:
-        # Performing a replacement is not allowed in that case
-        if count == 4: # A replacement is asked
-            print BAN_REPL
-            sys.exit()
         if options.get('asString'):
             # It has no sense to interpret the keyword as a string
             print BAN_STR
