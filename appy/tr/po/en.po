@@ -2012,6 +2012,38 @@ msgstr "Searched elements"
 msgid "Query_states"
 msgstr "Matching states"
 
+#. Default: "Search parameters"
+msgid "Query_parameters"
+msgstr "Search parameters"
+
+#. Default: "Field"
+msgid "Query_parameters_name"
+msgstr "Field"
+
+#. Default: "Operator"
+msgid "Query_parameters_operator"
+msgstr "Operator"
+
+#. Default: "Value"
+msgid "Query_parameters_value"
+msgstr "Value"
+
+#. Default: "This operator cannot be used for that field."
+msgid "query_value_operator_ko"
+msgstr "This operator cannot be used for that field."
+
+#. Default: "This value is invalid for that field."
+msgid "query_value_ko"
+msgstr "This value is invalid for that field."
+
+#. Default: "There is not enough comma-separated values here."
+msgid "query_value_count_ko"
+msgstr "There is not enough comma-separated values here."
+
+#. Default: "For this operator, exactly 2 comma-separated values must be defined here."
+msgid "query_value_in_count_ko"
+msgstr "For this operator, exactly 2 comma-separated values must be defined here."
+
 #. Default: "Sort by"
 msgid "Query_sortBy"
 msgstr "Sort by"

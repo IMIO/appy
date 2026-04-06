@@ -24,6 +24,9 @@ class Boolean(Field):
       False: (n,)        # False does not represent emptiness
     }
 
+    # Valid values, as strings
+    stringValues = {'True': True, 'False': False}
+
     class Layouts(Layouts):
         '''Boolean-specific layouts'''
 
@@ -233,6 +236,22 @@ class Boolean(Field):
     def getFormattedValue(self, o, value, layout='view', showChanges=False,
                           language=n):
         return o.translate(self.getValueLabel(value), language=language)
+
+    def validQueryValue(self, o, value, operator):
+        '''Ensures this query p_value is valid'''
+        # Perform base checks
+        r = super().validQueryValue(o, value, operator)
+        if r: return r
+        # For a boolean field, the only valid possibilities are:
+        # "equals True" and "equals False".
+        if operator != 'equals':
+            return o.translate('query_value_operator_ko'), 'operator'
+        if value not in Boolean.stringValues:
+            return o.translate('query_value_ko'), 'value'
+
+    def getQueryValue(self, o, value):
+        '''Returns a bool object corresponding to this string p_value'''
+        return self.stringValues[value]
 
     def getMasterTag(self, layout):
         '''The tag driving slaves is the hidden field'''

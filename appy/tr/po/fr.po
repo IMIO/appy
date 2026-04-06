@@ -2012,6 +2012,38 @@ msgstr "Éléments cherchés"
 msgid "Query_states"
 msgstr "États pris en compte"
 
+#. Default: "Search parameters"
+msgid "Query_parameters"
+msgstr "Paramètres"
+
+#. Default: "Field"
+msgid "Query_parameters_name"
+msgstr "Champ"
+
+#. Default: "Operator"
+msgid "Query_parameters_operator"
+msgstr "Opérateur"
+
+#. Default: "Value"
+msgid "Query_parameters_value"
+msgstr "Valeur"
+
+#. Default: "This operator cannot be used for that field."
+msgid "query_value_operator_ko"
+msgstr "Cet opérateur ne peut pas être utilisé pour ce champ."
+
+#. Default: "This value is invalid for that field."
+msgid "query_value_ko"
+msgstr "Cette valeur est invalide pour ce champ."
+
+#. Default: "There is not enough comma-separated values here."
+msgid "query_value_count_ko"
+msgstr "Il n'y a pas assez de sous-valeurs séparées par des virgules ici."
+
+#. Default: "For this operator, exactly 2 comma-separated values must be defined here."
+msgid "query_value_in_count_ko"
+msgstr "Pour cet opérateur, il faut définir exactement 2 sous-valeurs, séparées par une virgule."
+
 #. Default: "Sort by"
 msgid "Query_sortBy"
 msgstr "Trié par"

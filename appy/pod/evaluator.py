@@ -98,14 +98,34 @@ class Compromiser(Evaluator):
         # banned ?
         self.ban__ = ban__
 
-    def run(self, expr, context):
-        '''Evaluates this p_expr(ession) in this p_context'''
+    def detect(self, expr, raiseError=True):
+        '''Tries to detect banned terms in this p_expr'''
+        # If a banned term is detected and...
+        # - p_raiseError is True, an error is raised ;
+        # - p_raiseError is False, an error message is returned.
+        # If no banned term is detected, the method returns None.
+        #
+        # Check p_expr against p_self.banned
         if self.banned.search(expr):
             C = Compromiser
-            raise C.Disallowed(C.DIS_MSG % expr)
+            text = C.DIS_MSG % expr
+            if raiseError:
+                raise C.Disallowed(text)
+            else:
+                return text
+        # Check p_expr against p_self.underscored (if appropriate)
         if self.ban__ and self.underscored.search(expr):
             C = Compromiser
-            raise C.Disallowed(C.DU_MSG % expr)
+            text = C.DU_MSG % expr
+            if raiseError:
+                raise C.Disallowed(text)
+            else:
+                return text
+
+    def run(self, expr, context):
+        '''Evaluates this p_expr(ession) in this p_context'''
+        # But first, detect the presence of any banned term
+        self.detect(expr)
         # If we are here, p_expr can safely be evaluated
         return super().run(expr, context)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

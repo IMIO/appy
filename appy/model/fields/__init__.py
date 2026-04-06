@@ -16,6 +16,7 @@ from appy.utils import string as sutils
 from appy.model.utils import Object as O
 from appy.model.fields.phase import Page
 from appy.ui.layout import Layout, Layouts
+from appy.pod.evaluator import Compromiser
 from appy.model.fields.group import Group, UiGroup
 
 # In this file, names "list" and "dict" refer to sub-modules. To use Python
@@ -1344,6 +1345,43 @@ class Field:
         value = req[widgetName]
         if value and isinstance(value, str): value = value.strip()
         return not value
+
+    def validQueryValue(self, o, value, operator):
+        '''Ensures this p_value, coming from a row from field Query.parameters,
+           is valid.'''
+        # If yes, it returns None. Else, it returns a 2-tuple containing:
+        # - a (translated or not) error message ;
+        # - the name of the erroneous part of the query (the "value" or the
+        #   "operator").
+        # Use a Compromiser object (see appy/pod/evaluator.py) to detect
+        # suspicious input. This object can be cached.
+        comp = o.cache.compromiser
+        if not comp:
+            comp = o.cache.compromiser = Compromiser()
+        r = comp.detect(value, raiseError=False)
+        if r:
+            return r, 'value'
+        # Check that the number of operands as defined in p_value match the
+        # p_operator.
+        if operator != 'equals':
+            # p_value must contain at least 2 comma-separated values (or exactly
+            # 2 if the operator is "in_").
+            count = value.count(',') + 1
+            if operator != 'not' and count < 2:
+                label = 'query_value_count_ko'
+            elif operator == 'in' and count > 2:
+                label = 'query_value_in_count_ko'
+            else:
+                label = None
+            if label:
+                return o.translate(label), 'value'
+
+    def getQueryValue(self, o, value):
+        '''Returns the individual query value, from this string-based value that
+           was extracted from a Query::parameters::value sub-field.'''
+        # A type conversion or similar operation will be possibly applied to
+        # p_value by some Field sub-classes.
+        return value
 
     def getInlineEditableValue(self, o, value, layout, name=None,
                                language=None):

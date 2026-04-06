@@ -2,19 +2,20 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy.px import Px
-from appy.model.base import Base
-from appy.ui.iframe import Iframe
-from appy.ui.layout import Layouts
-from appy.model.searches import Search
-from appy.database.operators import or_
-from appy.model.fields.group import Group
-from appy.model.searches.modes import Mode
-from appy.model.fields.string import String
-from appy.model.fields.integer import Integer
-from appy.model.fields.boolean import Boolean
-from appy.model.workflow.standard import Owner
-from appy.model.fields.select import Select, Selection
+from ..px import Px
+from .base import Base
+from .searches import Search
+from .fields.list import List
+from ..ui.iframe import Iframe
+from ..ui.layout import Layouts
+from .fields.group import Group
+from .searches.modes import Mode
+from .fields.string import String
+from .fields.integer import Integer
+from .fields.boolean import Boolean
+from .workflow.standard import Owner
+from .fields.select import Select, Selection
+from ..database.operators import Operator, or_
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Query(Base):
@@ -22,8 +23,8 @@ class Query(Base):
 
     workflow = Owner
     indexable = False # Queries are not indexed by default
-    listColumns = ('title', 'className', 'states', 'sortBy', 'sortOrder','mode')
-    pageListColumns = ('title', 'state')
+    listColumns = 'title', 'className', 'states', 'sortBy', 'sortOrder','mode'
+    pageListColumns = 'title', 'state'
 
     # Managers and Publishers may create queries
     creators = ['Manager', 'Publisher']
@@ -47,7 +48,7 @@ class Query(Base):
     # The name of the root class for which instances are searched
     def listRootClasses(self):
         '''Lists the app's root classes'''
-        return [(name, self.translate('%s_plural' % name)) \
+        return [(name, self.translate(f'{name}_plural')) \
                 for name in self.config.model.rootClasses]
 
     className = Select(validator=Selection(listRootClasses),
@@ -55,6 +56,7 @@ class Query(Base):
 
     # Only objects being in one of the states defined in the hereabove field
     # will be part of the result.
+
     def listStates(self, className=None):
         '''Lists the states from the workflow tied to the class whose name is
            p_className.'''
@@ -66,36 +68,68 @@ class Query(Base):
         return r
 
     states = Select(validator=Selection(listStates), multiplicity=(1,None),
-                    master=className, masterValue=listStates, **qp)
+                    master=className, masterValue=listStates, render='checkbox',
+                    **qp)
 
     # Technical indexed fields that the user cannot choose
-    unselectableIndexes = ('allowed', 'cid')
+    unselectableIndexes = 'allowed', 'cid'
 
-    # Field used as sort key
+    # Search parameters, as a List field. Every row represents an indexe field,
+    # an operator and a value.
+
     def listIndexedFields(self, className=None):
         '''Lists, for the class whose name is p_className, the fields being
            indexed.'''
         className = className or self.className
-        r = []
         if not className: return r
+        # This may be cached
+        key = f'{className}_ifs'
+        if key in self.cache: return self.cache[key]
+        r = []
         for field in self.model.classes[className].fields.values():
-            # Ignore the field if it cannot be chose
+            # Ignore the field if it cannot be chosen
             if field.name in Query.unselectableIndexes: continue
             if field.indexed:
                 r.append((field.name, self.translate(field.labelId)))
+        # Cache and return the value
+        self.cache[key] = r
         return r
+
+    pfp = {'multiplicity': (1,1)}
+
+    # Operators that can be selected for specifying parameter values
+    operators = 'equals', 'or', 'in', 'and', 'not'
+
+    pfields = (
+      ('name', Select(validator=Selection(listIndexedFields), master=className,
+                      masterValue=listIndexedFields, **pfp)),
+      ('operator', Select(validator=operators, default='equals', **pfp)),
+      ('value', String(**pfp)),
+    )
+
+    parameters = List(pfields, **qp)
+
+    # Field used as sort key
 
     sortBy = Select(validator=Selection(listIndexedFields), multiplicity=(1,1),
                     master=className, masterValue=listIndexedFields, **qp)
+
     sortOrder = Select(validator=('asc', 'desc'), multiplicity=(1,1), **qp)
+
     mode = Select(validator=Mode.concrete, multiplicity=(1,1), **qp)
+
     maxPerPage = Integer(default=30, multiplicity=(1,1), width=2, **qp)
+
     showPods = Boolean(default=False, **qp)
+
     showTitle = Boolean(default=False, **qp)
+
     showNav = Select(validator=('top', 'bottom', 'both', 'none'),
                      default='both', multiplicity=(1,1), render='radio', **qp)
+
     navAlign = Select(validator=('left', 'center', 'right'),
                      default='center', multiplicity=(1,1), render='radio', **qp)
+
     showFilters = Boolean(default=True, **qp)
 
     def validViaPopup(self, value):
@@ -112,17 +146,33 @@ class Query(Base):
         return True
 
     viaPopup = String(layouts=Layouts.gd, validator=validViaPopup, **qp)
+
     popupResizable = Boolean(layouts=Boolean.Layouts.gdl, **qp)
+
     pageLayoutOnView = String(layouts=Layouts.gd, **qp)
+
+    def addParameters(self, search):
+        '''Adds p_self.parameters to that p_search object'''
+        # Invariant: p_self.parameters is not empty
+        class_ = self.model.classes[self.className]
+        for info in self.parameters:
+            field = class_.fields[info.name]
+            if info.operator == 'equals':
+                # p_info.value contains a single value
+                val = field.getQueryValue(self, info.value)
+            else:
+                # p_info contains several values
+                operClass = Operator.byName[info.operator]
+                values = [field.getQueryValue(self, v) \
+                          for v in info.value.split(',')]
+                val = operClass(*values)
+            search.fields[info.name] = val
 
     def getSearch(self):
         '''Creates the Search object corresponding to this query'''
         # Get the expression related to p_self.states
         states = self.states
-        if len(states) == 1:
-            state = states[0]
-        else:
-            state = or_(states)
+        state = states[0] if len(states) == 1 else or_(states)
         # Get the "viaPopup" parameter
         viaPopup = self.viaPopup or ''
         if viaPopup == 'False':
@@ -137,14 +187,43 @@ class Query(Base):
         # Create the Search object corresponding to p_self's attributes
         className = self.className
         class_ = self.model.classes.get(className)
-        return Search(name=str(self.iid), maxPerPage=self.maxPerPage,
-                      translated=self.translate('%s_plural' % className),
-                      sortBy=self.sortBy, sortOrder=self.sortOrder,
-                      showPods=self.showPods, showTitle=self.showTitle,
-                      showNav=self.showNav, navAlign=self.navAlign,
-                      showFilters=self.showFilters, container=class_,
-                      viaPopup=viaPopup, pageLayoutOnView=self.pageLayoutOnView,
-                      resultModes=(self.mode,), state=state)
+        r = Search(name=str(self.iid), maxPerPage=self.maxPerPage,
+                   translated=self.translate(f'{className}_plural'),
+                   sortBy=self.sortBy, sortOrder=self.sortOrder,
+                   showPods=self.showPods, showTitle=self.showTitle,
+                   showNav=self.showNav, navAlign=self.navAlign,
+                   showFilters=self.showFilters, container=class_,
+                   viaPopup=viaPopup, pageLayoutOnView=self.pageLayoutOnView,
+                   resultModes=(self.mode,), state=state)
+        # Add parameters, if any
+        if self.parameters:
+            self.addParameters(r)
+        return r
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                            Main methods
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    def validate(self, new, errors):
+        '''Ensure parameter values are correct'''
+        params = new.parameters
+        if not params: return
+        class_ = self.model.classes[new.className]
+        pField = self.getField('parameters')
+        i = -1
+        for info in params:
+            i += 1
+            # Get the field whose value is specified in p_info
+            field = class_.fields[info.name]
+            error = field.validQueryValue(self, info.value, info.operator)
+            if error:
+                # The value and/or operator is invalid: v_error contains a
+                # translated explanation about the error and the name of the
+                # erroneous sub-field (the value or the operator).
+                text, name = error
+                entry = pField.getEntryName(name, i)
+                errors[entry] = text
+                return
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                            PX rendering

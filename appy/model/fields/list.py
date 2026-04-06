@@ -508,6 +508,7 @@ class List(Field):
         # p_sub can be a (sub)Field object or a string. If it is a string, it
         # must correspond to the unprefixed sub-field name.
         prefix = f'{name}*{sub}' if isinstance(sub, str) else sub.name
+        # p_row is the row index, as an integer starting at 0
         return f'{prefix}*{suffix}{row}'
 
     def getRequestValue(self, o, requestName=n):

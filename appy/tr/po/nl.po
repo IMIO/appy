@@ -2011,6 +2011,38 @@ msgstr "Gezochten elementen"
 msgid "Query_states"
 msgstr "Staten in aanmerking genomen"
 
+#. Default: "Search parameters"
+msgid "Query_parameters"
+msgstr "Instellingen"
+
+#. Default: "Field"
+msgid "Query_parameters_name"
+msgstr "Veld"
+
+#. Default: "Operator"
+msgid "Query_parameters_operator"
+msgstr "Operator"
+
+#. Default: "Value"
+msgid "Query_parameters_value"
+msgstr "Waarde"
+
+#. Default: "This operator cannot be used for that field."
+msgid "query_value_operator_ko"
+msgstr "Deze operator kan niet voor dit veld worden gebruikt."
+
+#. Default: "This value is invalid for that field."
+msgid "query_value_ko"
+msgstr "Deze waarde is ongeldig voor dit veld."
+
+#. Default: "There is not enough comma-separated values here."
+msgid "query_value_count_ko"
+msgstr "Er zijn hier onvoldoende door komma's gescheiden subwaarden."
+
+#. Default: "For this operator, exactly 2 comma-separated values must be defined here."
+msgid "query_value_in_count_ko"
+msgstr "Voor deze operator moet u precies 2 subwaarden definiëren, gescheiden door een komma."
+
 #. Default: "Sort by"
 msgid "Query_sortBy"
 msgstr "Gesorteerd op"

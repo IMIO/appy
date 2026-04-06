@@ -2012,6 +2012,38 @@ msgstr ""
 msgid "Query_states"
 msgstr ""
 
+#. Default: "Search parameters"
+msgid "Query_parameters"
+msgstr ""
+
+#. Default: "Field"
+msgid "Query_parameters_name"
+msgstr ""
+
+#. Default: "Operator"
+msgid "Query_parameters_operator"
+msgstr ""
+
+#. Default: "Value"
+msgid "Query_parameters_value"
+msgstr ""
+
+#. Default: "This operator cannot be used for that field."
+msgid "query_value_operator_ko"
+msgstr ""
+
+#. Default: "This value is invalid for that field."
+msgid "query_value_ko"
+msgstr ""
+
+#. Default: "There is not enough comma-separated values here."
+msgid "query_value_count_ko"
+msgstr ""
+
+#. Default: "For this operator, exactly 2 comma-separated values must be defined here."
+msgid "query_value_in_count_ko"
+msgstr ""
+
 #. Default: "Sort by"
 msgid "Query_sortBy"
 msgstr ""

@@ -74,6 +74,9 @@ class Operator:
     # excluded from the result.
     negative = False
 
+    # Dict of Operator sub-classes, keyed by operator's short logical names
+    byName = {} # Will be initialised at the end of this file
+
     def __init__(self, *values):
         # The list of p_values onto which to operator is applied
         self.values = values
@@ -197,4 +200,9 @@ class not_(Operator):
             if ids:
                 r.append(ids)
         return multiunion(r), False
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Initialise Operator.byName
+for class_ in (or_, and_, in_, not_):
+    Operator.byName[class_.__name__[:-1]] = class_
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

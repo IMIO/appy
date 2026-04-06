@@ -94,7 +94,7 @@ class Search:
         # results. If p_listCss is None, the CSS class declared on the class
         # itself, in its "styles" static attribute, will be used.
         self.listCss = listCss
-        # In dict "fields", keys are names of indexed fields and values are
+        # Within dict p_fields, keys are names of indexed fields and values are
         # simple search values or terms built with database operators.
         self.fields = fields
         # Must checkboxes be shown for every object of the search result ?
