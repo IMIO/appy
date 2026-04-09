@@ -1432,6 +1432,10 @@ msgstr "Un login correspond souvent, mais pas nécessairement, à une adresse ma
 msgid "User_email"
 msgstr "Email"
 
+#. Default: "If the login is an email, this additional email address will only be stored for informational purposes."
+msgid "User_email_descr"
+msgstr "Si le login est une adresse mail, cette adresse additionnelle ne sera stockée qu'à titre informatif."
+
 #. Default: "Roles"
 msgid "User_roles"
 msgstr "Rôles"

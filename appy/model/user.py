@@ -224,6 +224,18 @@ class User(Base):
     login = String(show=showLogin, validator=validateLogin, indexed=True, **pm)
     del pm['label']
 
+    # On /edit, this field allows to show the user login when it is uneditable
+
+    def showLoginOnEdit(self):
+        '''Show, on /edit, a read-only version of the user login if it can't be
+           modified.'''
+        showLogin = self.showLogin()
+        if showLogin is True: return
+        if 'edit' not in showLogin: return 'edit'
+
+    loginOnEdit = String(default=lambda o:o.login, readonly=True, persist=False,
+                         label=(None, 'login'), show=showLoginOnEdit, **pm)
+
     def getLogins(self, groupsOnly=False, compute=False, guard=None):
         '''Gets all the logins that can "match" this user: it own login
            (excepted if p_groupsOnly is True) and the logins of all the groups
@@ -307,7 +319,6 @@ class User(Base):
         return True
 
     pm['label'] = 'User'
-    pm['layouts'] = Layouts.g
     email = String(validator=String.EMAIL, show=showEmail, **pm)
 
     def getMailRecipient(self, normalized=True, mailOnly=False):
@@ -331,7 +342,7 @@ class User(Base):
     #                          Roles and permissions
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
-    pm['multiplicity'] = (0, None)
+    pm['multiplicity'] = 0, None
     del pm['width']; del pm['layouts']
 
     def showRoles(self):

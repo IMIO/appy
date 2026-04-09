@@ -229,7 +229,7 @@ class Config:
         # Among the fonts listed above, specify here, as a tuple, those being
         # Google fonts. That way, the corresponding "CSS include" will be
         # injected into all the pages from your app.
-        self.googleFonts = (Config.defaultGoogleFont,)
+        self.googleFonts = Config.defaultGoogleFont,
 
         # You may need to use custom fonts, loaded via font-face CSS at-rules.
         # Appy itself contains at least one custom font (see
@@ -285,6 +285,8 @@ class Config:
         # Some input fields will get this background color once they will
         # contain erroneous content.
         self.wrongTextColor = '#ebf0f0'
+        # Background color for read-only fields
+        self.readOnlyColor = 'lightgrey'
         # Text color representing a problem or warning (some flavour of red)
         self.warnColor = '#e15151'
         # Text color in the header
