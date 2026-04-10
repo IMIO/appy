@@ -10,6 +10,7 @@ from xml.sax._exceptions import SAXParseException
 
 from appy import n
 from appy.px import Px
+from appy.utils import bn
 from appy.ui.layout import Layouts
 from appy.xml.escape import Escape
 from appy.model.fields import Field
@@ -22,7 +23,6 @@ from appy.xml.cleaner import Cleaner, StringCleaner
 from appy.model.fields.multilingual import Multilingual
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n'
 XML_ERROR   = 'Error while reading content of field %s on %s. %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -76,7 +76,7 @@ class Rich(Multilingual, Field):
     lgTop = {'view': 1, 'edit': 1}
 
     # Default styles to use
-    defaultStyles = ('p', 'h1', 'h2', 'h3', 'h4')
+    defaultStyles = 'p', 'h1', 'h2', 'h3', 'h4'
 
     # Default custom styles
     customStyles = [
