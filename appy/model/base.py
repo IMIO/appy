@@ -9,6 +9,7 @@ from appy.px import Px
 from appy.ui import Iframe
 from appy.ui.layout import Layout
 from appy.model.fields import Show
+from appy.model.fields import Field
 from appy.database.lock import Lock
 from appy.ui.template import Template
 from appy.ui.criteria import Criteria
@@ -51,6 +52,7 @@ class Base:
 
     # Make some elements available here
     Lock = Lock
+    Field = Field
     Search = Search
 
     # Some elements will be traversed

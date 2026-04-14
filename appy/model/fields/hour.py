@@ -6,6 +6,7 @@ import time
 
 from appy import n
 from appy.px import Px
+from appy.utils import roundNumber
 from appy.model.fields import Field
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -151,9 +152,12 @@ class Hour(Field):
         return hours, mins
 
     @classmethod
-    def addMinutes(class_, value, minutes):
+    def addMinutes(class_, value, minutes, roundBase=5):
         '''Adds this number of p_minutes to p_value ~(i_hours, i_minutes)~ and
            returns the result as a tuple of the same format as p_value.'''
+        # If m_minutes is a float number, round it if p_roundBase is provided
+        if roundBase and isinstance(minutes, float):
+            minutes = roundNumber(minutes, base=roundBase)
         hour, mins = value
         h, m = class_.fromMinutes(minutes)
         hour += h
@@ -213,9 +217,13 @@ class Hour(Field):
         return ((class_.hourDifference(start[0], endHour))*60) + minutes
 
     @classmethod
-    def formatDuration(class_, minutes, sep='h', no='-'):
+    def formatDuration(class_, minutes, sep='h', no='-', roundBase=5):
         '''Returns a formatted version of this number of p_minutes'''
         if minutes is None: return no
+        # If p_roundBase is not None, the number of minutes, if expressed as a
+        # float, is rounded (see function appy.utils.roundNumber).
+        if roundBase and isinstance(minutes, float):
+            minutes = roundNumber(minutes, base=roundBase)
         if minutes < 0:
             prefix = '-'
             minutes = abs(minutes)

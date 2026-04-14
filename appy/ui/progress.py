@@ -8,7 +8,6 @@ from ..px import Px
 from .iframe import Iframe
 from ..utils import bn, br
 from .template import Template
-from ..model.fields import Field
 from ..model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -235,7 +234,7 @@ class Progress:
            p_tool.req.iid.'''
         o, elem = class_.getFromRequest(tool)
         # Security check
-        if isinstance(elem, Field):
+        if isinstance(elem, tool.Field):
             # A field
             o.allows(elem.readPermission, raiseError=True)
         else:
