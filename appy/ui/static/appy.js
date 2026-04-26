@@ -636,17 +636,19 @@ function askBunchSorted(hook, sortKey, sortOrder) {
   askAjax(hook, null, data);
 }
 
-function askBunchFiltered(hook, filterKey, filterValue) {
+function askBunchFiltered(hook, filterKey, filterValue, minChars=3) {
   let value = filterValue;
-  if (value === undefined) {
+  if ((value === undefined) || (value === null)) {
     // The value must be retrieved from a text field
     let filter = document.getElementById(`${hook}_${filterKey}`);
     // Get the filter value
     value = filter.value;
     if (value) {
-      // Remove reserved chars and ensure it contains at least 3 chars
-      value = encodeURIComponent(value.trim().replace(',','.').replace(':',''));
-      if (value.length < 3) {
+      // Remove reserved chars and ensure it contains at least p_minChars chars
+      value = value.trim().replace(',','.').replace(':','');
+      const svalue = encodeURIComponent(value.replace('*', '')); // Without *
+      value = encodeURIComponent(value);
+      if (svalue.length < minChars) {
         filter.style.background = wrongTextInput;
         return;
       }

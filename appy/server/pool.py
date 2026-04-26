@@ -7,6 +7,7 @@
 from itertools import count
 import os, queue, atexit, time, ctypes, threading
 
+from appy.utils import br, bn
 from appy.model.utils import Object as O
 
 # Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -40,10 +41,6 @@ SHUTD_HUNG    = "%s worker(s) didn't stop properly, and %s zombie(s)"
 SHUTD_OK      = 'All workers stopped'
 SHUTD_FORCED  = 'Forcefully exiting process'
 SHUTD_F_OK    = 'All workers eventually killed'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n'
-br = '<br/>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ThreadPool:

@@ -1327,7 +1327,7 @@ class Ref(Field):
 
         # If the field is p_queryable, you may specify, in attribute "searches":
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # 1 | a dict of Search instances, or a method producing it. Keys must be
+        # 1 | a dict of Search objects, or a method producing it. Keys must be
         #   | names (following Python variable naming conventions) and values
         #   | must be Search objects;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

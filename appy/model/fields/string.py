@@ -348,10 +348,10 @@ class String(Multilingual, Field):
       writePermission='write', width=n, height=n, maxChars=n, colspan=1,
       master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
       mapping=n, generateLabel=n, label=n, sdefault='', scolspan=1, swidth=n,
-      fwidth=10, sheight=n, persist=True, transform='none', placeholder=n,
-      languages=('en',), languagesLayouts=n, viewSingle=False, inlineEdit=False,
-      view=n, cell=n, buttons=n, edit=n, custom=n, xml=n, translations=n,
-      readonly=False, stripped=True, alignOnEdit='left'):
+      fwidth=10, fmin=3, sheight=n, persist=True, transform='none',
+      placeholder=n, languages=('en',), languagesLayouts=n, viewSingle=False,
+      inlineEdit=False, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
+      translations=n, readonly=False, stripped=True, alignOnEdit='left'):
         # Does this field store an URL ?
         self.isUrl = validator == String.URL
         # "placeholder", similar to the HTML attribute of the same name, allows
@@ -398,6 +398,9 @@ class String(Multilingual, Field):
         self.sheight = self.sheight or self.height
         # The *f*ilter width
         self.fwidth = fwidth
+        # The *min*imum number of chars one may enter in a *f*ilter field for
+        # filtering p_self's values.
+        self.fmin = fmin
 
     def isRenderableOn(self, layout):
         '''A value being an URL can be rendered everywhere'''

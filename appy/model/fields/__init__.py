@@ -453,7 +453,8 @@ class Field:
     pxFilterText = Px('''
      <div var="name=field.name;
           filterId=f'{mode.hook}_{name}';
-          filterIdIcon=f'{filterId}_icon'" class="fhead">
+          filterIdIcon=f'{filterId}_icon';
+          fmin=getattr(field, 'fmin', 3) or 3" class="fhead">
       <!-- Pressing the "enter" key in the field clicks the icon (onkeydown) -->
         <input type="text" size=":field.fwidth" id=":filterId"
           value=":mode.filters.get(name, '')"
@@ -461,7 +462,7 @@ class Field:
           onkeydown=":'if (event.keyCode==13) document.getElementById(%s).
                        click()' % q(filterIdIcon)"/>
       <img id=":filterIdIcon" class="clickable iconS" src=":svg('funnel')"
-           onclick=":'askBunchFiltered(%s,%s)' % (q(mode.hook), q(name))"/>
+           onclick=":f'askBunchFiltered(`{mode.hook}`,`{name}`,null,{fmin})'"/>
      </div>''')
 
     # Representation of this field within a class-diagram' class box
