@@ -189,7 +189,7 @@ div.rbutton { float:right }
 
 .current { font-weight:bold }
 .inputSearch { height:15px; width:120px; margin:0 0 5px 5px !important }
-.content { padding:30px; width:100% }
+.content { padding:30px; width:100%; height:100vh }
 .contentP { width:100% }
 .public { width:100% }
 .subbed { width:100% }
