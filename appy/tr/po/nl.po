@@ -775,6 +775,10 @@ msgstr "Kies een authenticatiecontext uit de lijst naast uw naam. Als er geen li
 msgid "object_save"
 msgstr "Bewaren"
 
+#. Default: "Proceed"
+msgid "proceed"
+msgstr "Doorgaan"
+
 #. Default: "Changes saved."
 msgid "object_saved"
 msgstr "Wijzigingen zijn opgeslagen."
@@ -789,7 +793,7 @@ msgstr "Beweeg de muis over het uitroeptekenpictogram (zonder te klikken). De fo
 
 #. Default: "🚫 Operation canceled.\n\nAt least one error has prevented the action from being performed, we are sorry."
 msgid "validation_event_error"
-msgstr ""
+msgstr "🚫 Bewerking geannuleerd.\n\nEr is ten minste één fout opgetreden waardoor de actie niet kon worden voltooid. Onze excuses."
 
 #. Default: "Error"
 msgid "error_name"
@@ -798,6 +802,10 @@ msgstr "Fout"
 #. Default: "Cancel"
 msgid "object_cancel"
 msgstr "Annuleren"
+
+#. Default: "Give up"
+msgid "abandon"
+msgstr "Geef het op"
 
 #. Default: "Changes canceled."
 msgid "object_canceled"

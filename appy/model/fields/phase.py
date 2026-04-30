@@ -280,7 +280,7 @@ class UiPhase:
          <a if="editable and not locked" onclick="clickOn(this)"
             href=":o.getUrl(sub='edit', page=pag.name, popup=popup, nav=nav)">
           <img src=":svg('editPage')" class="pictoT shake"
-               title=":_('object_edit')"/></a>
+               title=":o.class_.getTextFor(o, 'edit')"/></a>
          <x var="page=pag.name; lockStyle='iconM pictoT'">::o.Lock.px</x>
         </x>
        </div>

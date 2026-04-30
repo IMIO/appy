@@ -5,6 +5,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from http import HTTPStatus
+from DateTime import DateTime
 import http.client, email.parser
 import re, time, socket, threading, urllib.parse, transaction
 
@@ -222,6 +223,13 @@ class Handler:
         except AttributeError:
             # The DB connection may not have been defined yet
             r = None
+        return r
+
+    def getNow(self):
+        '''Gets a DateTime object representing "now", that is then cached'''
+        cache = self.cache
+        if 'now' in cache: return cache.now
+        r = cache.now = DateTime()
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

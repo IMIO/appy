@@ -776,6 +776,10 @@ msgstr "Choisissez un contexte d'authentification dans la liste à côté de vot
 msgid "object_save"
 msgstr "Enregistrer"
 
+#. Default: "Proceed"
+msgid "proceed"
+msgstr "Procéder"
+
 #. Default: "Changes saved."
 msgid "object_saved"
 msgstr "Modifications enregistrées."
@@ -799,6 +803,10 @@ msgstr "Erreur"
 #. Default: "Cancel"
 msgid "object_cancel"
 msgstr "Annuler"
+
+#. Default: "Give up"
+msgid "abandon"
+msgstr "Abandonner"
 
 #. Default: "Changes canceled."
 msgid "object_canceled"

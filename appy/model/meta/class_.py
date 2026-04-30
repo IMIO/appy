@@ -547,8 +547,12 @@ class Class(Meta):
     defaultLabels = {
       'deleteConfirm': 'delete_confirm', # Confirmation message when the user
                                          # clicks a "delete" button.
-      'save'         : 'object_save'     # Label for the button allowing to
+      'save'         : 'object_save',    # Label for the button allowing to
                                          # create or update objects.
+      'edit'         : 'object_edit',    # Label for the button allowing to edit
+                                         # an object (go to /edit).
+      'cancel'       : 'object_cancel',  # Label for the button allowing to
+                                         # cancel changes on /edit.
     }
 
     def getTextFor(self, o, zone):

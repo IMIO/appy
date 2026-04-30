@@ -775,6 +775,10 @@ msgstr ""
 msgid "object_save"
 msgstr "حفظ"
 
+#. Default: "Proceed"
+msgid "proceed"
+msgstr ""
+
 #. Default: "Changes saved."
 msgid "object_saved"
 msgstr "التغييرات قد سجلت."
@@ -798,6 +802,10 @@ msgstr ""
 #. Default: "Cancel"
 msgid "object_cancel"
 msgstr "إلغاء"
+
+#. Default: "Give up"
+msgid "abandon"
+msgstr ""
 
 #. Default: "Changes canceled."
 msgid "object_canceled"

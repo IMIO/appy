@@ -353,7 +353,7 @@ class Ref(Field):
 
       <!-- Edit -->
       <div if="editable and not popup and not inCell" class="ibutton"
-           var2="text=_('object_edit')">
+           var2="text=o.class_.getTextFor(o, 'edit')">
        <a if="not locked"
           var2="navInfo=ifield.getNavInfo(io, batch.start + currentNumber,
                                           batch.total) if not inMenu else 'no'"

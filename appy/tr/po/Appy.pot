@@ -775,6 +775,10 @@ msgstr ""
 msgid "object_save"
 msgstr ""
 
+#. Default: "Proceed"
+msgid "proceed"
+msgstr ""
+
 #. Default: "Changes saved."
 msgid "object_saved"
 msgstr ""
@@ -797,6 +801,10 @@ msgstr ""
 
 #. Default: "Cancel"
 msgid "object_cancel"
+msgstr ""
+
+#. Default: "Give up"
+msgid "abandon"
 msgstr ""
 
 #. Default: "Changes canceled."

@@ -1089,7 +1089,8 @@ class Base:
       </div>
 
       <!-- Cancel -->
-      <div if="isEdit and current.showCancel" var2="label=_('object_cancel')">
+      <div if="isEdit and current.showCancel"
+           var2="label=o.class_.getTextFor(o, 'cancel')">
        <div>
         <a class="clickable" name="cancel" tabindex="0"
            onclick=":f'new Form().appySubmit(`cancel`,`{current.name}`,`view`)'"

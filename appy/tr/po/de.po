@@ -775,6 +775,10 @@ msgstr "Wählen Sie aus der Liste neben Ihrem Namen einen Authentifizierungskont
 msgid "object_save"
 msgstr "Speichern"
 
+#. Default: "Proceed"
+msgid "proceed"
+msgstr ""
+
 #. Default: "Changes saved."
 msgid "object_saved"
 msgstr "Änderungen wurden gespeichert."
@@ -798,6 +802,10 @@ msgstr "Fehler"
 #. Default: "Cancel"
 msgid "object_cancel"
 msgstr "Abbrechen"
+
+#. Default: "Give up"
+msgid "abandon"
+msgstr ""
 
 #. Default: "Changes canceled."
 msgid "object_canceled"

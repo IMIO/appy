@@ -776,6 +776,10 @@ msgstr "Choose an authentication context in the list besides your name. If no li
 msgid "object_save"
 msgstr "Save"
 
+#. Default: "Proceed"
+msgid "proceed"
+msgstr "Proceed"
+
 #. Default: "Changes saved."
 msgid "object_saved"
 msgstr "Changes saved."
@@ -799,6 +803,10 @@ msgstr "Error"
 #. Default: "Cancel"
 msgid "object_cancel"
 msgstr "Cancel"
+
+#. Default: "Give up"
+msgid "abandon"
+msgstr "Give up"
 
 #. Default: "Changes canceled."
 msgid "object_canceled"
