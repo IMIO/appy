@@ -363,7 +363,7 @@ class Ref(Field):
         <img src=":svg('edit')" class="iconS" title=":text"/>
        </a>
        <x if="locked" var2="lockStyle='iconS'; page='main'">::o.Lock.px</x>
-       <div if="not iconsOnly" class="ibutton"
+       <div if="not iconsOnly and not locked" class="ibutton"
             onclick="clickPrev(event)">:text</div>
       </div>
 

@@ -207,14 +207,13 @@ class Lock:
 
     # Shows icons instead of the "edit" icon/button when a lock is defined
     px = Px('''
-     <a if="editable and locked">
-      <img class=":f'help {lockStyle}'"
-       var="unlock=o.Lock.unlockableBy(o, user);
+     <img if="editable and locked" class=":f'help {lockStyle}'"
+      var2="unlock=o.Lock.unlockableBy(o, user);
             lockDate=tool.Date.format(tool, locked[1]);
             lockMap={'user':user.getTitleFromLogin(locked[0]),'date':lockDate};
             lockMsg=_('page_locked', mapping=lockMap);
             lockTxt='%s %s' % (lockMsg,_('page_unlock')) if unlock else lockMsg"
-       src=":svg('locked')" title=":lockTxt"
-       onclick=":'onUnlockPage(%s,%s)' % (q(o.url),q(page)) if unlock else ''"/>
-     </a>''')
+      src=":svg('locked')" title=":lockTxt"
+      onclick=":'onUnlockPage(%s,%s)' % (q(o.url),q(page)) if unlock else ''"/>
+     ''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
