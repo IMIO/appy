@@ -25,7 +25,9 @@ from ..utils.path import getShownSize, getOsTempFolder
 # appy/server/scheduler.py.
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-PATH_KO   = 'Backup config: folder "%s" does not exist.'
+B_CFG     = 'Backup config :: '
+PATH_KO   = f'{B_CFG}Folder "%s" does not exist.'
+PATH_ERR  = f'{B_CFG}Folder "%s" is unavailable (%s).'
 BKP_DIS   = 'Backup cannot take place unless you configure it in config.backup.'
 BKP_TYPE  = 'Backup type: %s (full is @%s).'
 CMD       = 'Running: %s...'
@@ -135,8 +137,12 @@ class Config:
         if not path: return
         # Check if the backup folder exists
         path = Path(path)
-        if not path.is_dir():
-            messages.append(PATH_KO % self.path)
+        try:
+            if not path.is_dir():
+                messages.append(PATH_KO % self.path)
+        except OSError as err:
+            # Could happen if the p_path is an unmounted mountpoint
+            messages.append(PATH_ERR % (self.path, str(err)))
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Backup:
