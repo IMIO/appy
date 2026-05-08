@@ -557,7 +557,7 @@ class Search:
                 break
             i += 1
         tool.resp.setContentType('json')
-        return sutils.getStringFrom(r, c='"')
+        return r
 
     # Display results of a live search
     liveResults = Px('''

@@ -17,7 +17,7 @@ class Decoder:
 
     @classmethod
     def convertDict(class_, d):
-        '''Returns a appy.Object instance representing dict p_d'''
+        '''Returns a appy.model.utils.Object instance representing dict p_d'''
         r = O()
         for name, value in d.items():
             # Ensure "name" will be a valid attribute name for a Python object

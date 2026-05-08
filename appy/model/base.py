@@ -357,6 +357,21 @@ class Base:
         if not traversal: return
         return traversal.o
 
+    def replaceLogin(self, old, new):
+        '''Replace, within p_self's local roles and history, any mention to this
+           p_old user login by this p_new one.'''
+        # The method returns the number of changes performed
+        r = 0
+        # Update local roles
+        changed = self.localRoles.replace(old, new)
+        if changed: r += 1
+        # Update history entries
+        r += self.history.replaceLogin(old, new)
+        # Reindex the object if at least one change has been done
+        if r and self.class_.isIndexable():
+            self.reindex()
+        return r
+
     # I tried, once, to define methods __hash__ and __eq__ being based on Appy
     # object iids instead of RAM address, being the default behaviour. It has
     # led to disastrous performance problems. Most notably, checking if an

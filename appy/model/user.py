@@ -26,10 +26,11 @@ from appy.model.workflow import standard as workflow
 from appy.model.fields.select import Select, Selection
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-SCAN_DB    = 'Scanning all database objects...'
+SCAN_DB    = 'User %d :: Changing its login from %s to %s :: Scanning all ' \
+             'database objects...'
 LOGIN_RN   = 'User "%s" has new login "%s".'
-LOGIN_OP   = "Login change: local roles and/or history updated in %d/%d " \
-             "object(s). Done in %.2f''."
+LOGIN_OP   = "Login change :: %d local role(s) and/or history entry(ies) " \
+             "updated in %d/%d object(s). Done in %.2f''."
 O_WALKED   = '%d objects walked so far...'
 USR_CONV   = 'User "%s" converted from "%s" to "%s".'
 SSO_USR_KO = 'SSO user "%s" could not be authenticated.'
@@ -255,9 +256,54 @@ class User(Base):
         if not groupsOnly: r.append(self.login)
         return r
 
-    def setLogin(self, old, new, reindex=True):
-        '''Modifies p_self's login, from p_old to p_new'''
+    def propagateLoginChange(self, old, new):
+        '''p_self, having login p_old, has now login p_new. Walk the entire
+           database, searching for any use of the p_old login and replacing it
+           with the p_new login.'''
         start = time.time()
+        self.log(SCAN_DB % (self.iid, old, new))
+        counts = O(
+          updated = 0, # Number of objects for which at least one change has
+                       # been done.
+          entries = 0, # Total number of entries updated within modified objects
+          total   = 0, # Total number of objects walked in the database.
+        )
+        for tree in self.H().dbConnection.root.iobjects.values():
+            for o in tree.values():
+                counts.total += 1
+                # Possible update this object
+                updates = o.replaceLogin(old, new)
+                if updates:
+                    counts.updated += 1
+                    counts.entries += updates
+                # Log progression
+                if (counts.total % 10000) == 0:
+                    self.log(O_WALKED % counts.total)
+        self.log(LOGIN_RN % (old, new))
+        c = counts
+        self.log(LOGIN_OP % (c.entries, c.updated, c.total, time.time()-start))
+
+    def setLogin(self, old, new, reindex=True, updateObjects=True):
+        '''Modifies p_self's login, from p_old to p_new'''
+        # Be conscious that a user login is used as key in local role's
+        # dictionaries and in object histories. Consequently, in order to
+        # maintain data integrity within a Appy dabatase, any mention to p_old
+        # in any object of the database must be replaced with a new entry that
+        # refers p_new. If p_updateObjects is True, this method does it, but in
+        # a very inefficient way: it walks every database object, searching for
+        # any use of the p_old login and replacing it with the p_new login. Even
+        # on a medium-sized, not-heavy-loaded site, this process, if triggered
+        # from the UI while the site is running in standard mode, may represent
+        # a kind of internal DoS (Denial of Service). In most cases, if you
+        # decide to allow a user login to be modified from the UI, it is best to
+        # code yourself a custom method that will only walk a sub-set of all
+        # database objects that you may identify as being impacted by the
+        # change. Then, on each identified object, use methods
+        #                      o.localRoles.replace
+        # and                 o.history.replaceLogin
+        # to update the object. Don't forget to reindex every object being
+        # modified by one of these methods. This method p_setLogin should be
+        # used outside the standard mode, ie, during an app's nightlife.
         self.login = new
         # Update the email if it corresponds to the login
         email = self.email
@@ -265,27 +311,12 @@ class User(Base):
             self.email = new
         # Update the title
         self.updateTitle()
-        # Browse all objects of the database and update potential local roles
-        # that referred to the old login.
-        self.log(SCAN_DB)
-        updated = total = 0
-        for tree in self.H().dbConnection.root.iobjects.values():
-            for o in tree.values():
-                total += 1
-                # Update local roles on this object
-                rchanged = o.localRoles.replace(old, new)
-                hchanged = o.history.replaceLogin(old, new)
-                if rchanged or hchanged:
-                    updated += 1
-                    if o.class_.isIndexable():
-                        o.reindex()
-                # Log progression
-                if (total % 10000) == 0:
-                    self.log(O_WALKED % total)
-        self.log(LOGIN_RN % (old, new))
-        self.log(LOGIN_OP % (updated, total, time.time()-start))
+        if updateObjects:
+            # Update mentions to the p_old login on all impacted objects
+            self.propagateLoginChange(old, new)
         # Reindex p_self, excepted if p_reindex is False
-        if reindex: self.reindex()
+        if reindex:
+            self.reindex()
 
     def getAllowedFrom(self, roles, logins):
         '''Gets for this user, the value allowing to perform searches regarding
