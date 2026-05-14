@@ -5,14 +5,14 @@
 import time
 from DateTime import DateTime
 
+from . import View
 from appy.px import Px
-from appy.ui.criteria import Criteria
+from .editable import Editable
 from appy.utils import dates as dutils
 from appy.model.utils import Object as O
-from appy.model.fields.calendar.views import View
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Month(View):
+class Month(Editable, View):
     '''Represents a calendar, monthly view for an individual calendar'''
 
     # Default month format
@@ -137,88 +137,12 @@ class Month(View):
             i += 1
         return r
 
-    def getCellClass(self, date):
-        '''What CSS class(es) must apply to the table cell representing p_date
-           in the calendar?'''
-        r = []
-        # We must distinguish between past and future dates
-        r.append('odd' if date < self.today else 'even')
-        # Week-end days must have a specific style
-        if date.aDay() in ('Sat', 'Sun'): r.append('cellWE')
-        return ' '.join(r)
-
-    def getEventTypeOnChange(self):
-        '''If p_self.field defines a slot map, configure a JS function that will
-           update selectable timeslots in the timeslot selector, everytime an
-           event type is selected in the event type selector.'''
-        if self.field.slotMap:
-            r = 'EventPopup.geT(this).setEventType(-2)'
-        else:
-            r = ''
-        return r
-
-    def getSlotsFor(self, eventType):
-        '''Returns a comma-separated list of timeslots one may select when
-           creating an event of this p_eventType.'''
-        slotMap = self.field.slotMap
-        if slotMap:
-            r = slotMap(self.o, eventType)
-            if r:
-                return ','.join(r)
-        return ''
-
-    def mayAppyCreate(self, c):
-        '''Must the "create" button be rendered in the cell corresponding to
-           this p_day, for triggering the creation of a Appy object ?'''
-        # Do not confuse the creation of an Appy object via a calendar (being
-        # enabled by attribute p_field.createObjects) and the creation of
-        # calendar events (being determined by field.eventTypes).
-        #
-        # A calendar event is created within the calendar data structure as
-        # stored on the concerned object, while an Appy object is never created
-        # in this data structure. It is created in the Appy database as any
-        # other Appy object. Creating Appy objects via a calendar view is just
-        # proposed as a convenient way to create such objects.
-        method = c.field.createObjects
-        if not method: return
-        # A method is there. Call it.
-        o = c.o
-        r = method(o, c.date, c.preComputed)
-        if not r: return
-        # Get the class for which the "create" button must be rendered
-        className, attributes = r
-        if not className: return
-        # Is the user allowed to create instances of this class ?
-        class_ = o.model.classes[className]
-        cache = o.cache
-        key = f'_may_{className}'
-        if key in cache:
-            may = cache[key]
-        else:
-            may = cache[key] = o.guard.mayInstantiate(class_)
-        if not may: return
-        # Complete, when relevant, attributes with the current day
-        dateField = class_.fields.get('date')
-        if dateField:
-            # Set the hour to the current hour, if the field uses the "hour"
-            # part.
-            if dateField.format == dateField.WITH_HOUR:
-                now = time.localtime()
-                hour = f'{str(now.tm_hour).zfill(2)}:{str(now.tm_min).zfill(2)}'
-                date = DateTime(f"{c.date.strftime('%Y/%m/%d')} {hour}")
-            else:
-                date = c.date
-            attributes.date = date
-        # If we are here, an Appy object may be created. Instead of returning
-        # True, return a tuple containing the class name and attributes,
-        # marshalled in a string (by reusing class Criteria).
-        return className, Criteria.dictAsString(attributes.d())
-
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                  PXs
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     # Month selector
+
     pxPeriodSelector = Px('''
      <div var="around=view.around;
                iid=str(o.iid);
@@ -256,216 +180,8 @@ class Month(View):
            onclick=":f'askMonth({q(iid)},{q(name)},{q(next.id)})'"/>
      </div>''')
 
-    # Popup for adding or updating an event in the month view
-    pxEditPopup = Px('''
-     <div var="popupId=f'{hook}_edit'"
-          id=":popupId" class="popup" align="center">
-      <form id=":f'{popupId}Form'" method="post" data-sub="process">
-       <input type="hidden" name="actionType" value="createEvent"/>
-       <input type="hidden" name="day"/>
-
-       <!-- Choose an event type -->
-       <div align="center" id="newEventLabel">:_(field.createEventLabel)</div>
-       <div id="optionChoose" class="hide">:_('choose_a_value')</div>
-       <div id="optionNil" class="hide">:_('query_no_result')</div>
-       <input id="searchET" name="searchET" type="text" size="3" placeholder="…"
-              oninput="EventPopup.geT(this).filterEventTypes()"
-              onkeyup="EventPopup.geT(this).selectEventType(event)"/>
-       <select name="eventType" class="calSelect" required="required"
-               onchange=":view.getEventTypeOnChange()">
-        <option value="">:_('choose_a_value')</option>
-        <option for="eventType in allowedEventTypes"
-                data-slots=":view.getSlotsFor(eventType)"
-                value=":eventType">:typeInfo[eventType].name</option>
-       </select>
-       <span class="required">*</span>
-
-       <!-- Choose a timeslot -->
-       <div if="showTimeslots" id="slotZone">
-        <label class="calSpan">:_('timeslot')</label> 
-        <select if="showTimeslots" name="timeslot" class="calSelect">
-         <option for="sname, slot in field.Timeslot.getAllNamed(o, timeslots)"
-                 value=":slot.id">:sname</option>
-        </select>
-       </div>
-
-       <!-- Span the event on several days -->
-       <div align="center" class="calSpan" id="spanZone">
-        <x>::_('event_span')</x>
-        <input type="number" size="1" min="1" name="eventSpan"
-               onkeypress="return (event.keyCode != 13)"/>
-       </div>
-
-       <!-- An optional comment (use a Poor widget) -->
-       <div class="calSpan" if="field.useEventComments"
-            var2="field=view.Poor(viewCss=None, label='None', width='96%',
-                               height='5em', placeholder=_('workflow_comment'));
-                  x=field.init(None, 'comment'); name=field.name; value=None;
-                  lg=None; inRequest=False; requestValue=None;
-                  hostLayout=None">:field.editUni</div>
-
-       <!-- Event fields -->
-       <div if="field.eventFields" id=":f'{popupId}Fields'" class="calspan">
-       </div>
-
-       <!-- Save and cancel buttons -->
-       <input type="button" value=":_('object_save')" name="saveButton"
-              onclick="EventPopup.geT(this).run()"/>
-       <input type="button" value=":_('object_cancel')"
-              onclick=":f'closePopup(`{popupId}`)'"/>
-      </form>
-     </div>''',
-
-     css='#searchET { border:none }')
-
-    # Popup for removing events in the month view
-    pxDelPopup = Px('''
-     <div var="popupId=f'{hook}_del'"
-          id=":popupId" class="popup" align="center">
-      <form id=":f'{popupId}Form'" method="post" data-sub="process">
-       <input type="hidden" name="actionType" value="deleteEvent"/>
-       <input type="hidden" name="timeslot" value="*"/>
-       <input type="hidden" name="day"/>
-       <div align="center"
-            style="margin-bottom: 5px">:_('action_confirm')</div>
-
-       <!-- Delete successive events ? -->
-       <div class="discreet" style="margin-bottom:10px"
-            id=":f'{hook}_DelNextEvent'"
-            var="cbId=f'{popupId}_cb'; hdId=f'{popupId}_hd'">
-         <input type="checkbox" name="deleteNext_cb" id=":cbId"
-                onClick="toggleCheckbox(this)"/><input
-          type="hidden" id=":hdId" name="deleteNext"/>
-         <label lfor=":cbId" class="simpleLabel">:_('del_next_events')</label>
-       </div>
-       <input type="button" value=":_('yes')"
-              onClick=":f'EventPopup.geT(this).run()'"/>
-       <input type="button" value=":_('no')"
-              onclick=":f'closePopup({q(popupId)})'"/>
-      </form>
-     </div>''')
-
-    # Render events in a particular calendar cell
-    pxEvents = Px('''
-     <x if="events">
-      <div for="event in events" style="color:grey" if="view.unfiltered(event)">
-
-       <!-- Checkbox for validating the event -->
-       <input type="checkbox" checked="checked" class="smallbox"
-              if="mayValidate and field.validation.isWish(o, event.eventType)"
-              id=":'%s_%s_%s' % (date.strftime('%Y%m%d'), event.eventType,
-                                 event.getTimeMark())"
-              onclick=":f'onCheckCbCell(this,{q(hook)})'"/>
-
-       <!-- The event name -->
-       <x>::event.getName(o, field, timeslots, typeInfo)</x>
-
-        <!-- Edit this particular event -->
-        <img if="mayEdit and field.editableEvents and event.eventType in 
-                  allowedEventTypes"
-             class="calicon iconS" src=":svg('edit')" style="opacity:0"
-             onclick=":f'new EventPopup(this,`{o.iid}`,`{name}`,`edit`,
-                        `{dayString}`,`{event.timeslot}`,{hasEventFields}
-                        ).openEdit(`{okTypes.eventTypes}`,`{okTypes.message}`,
-                        null,`{event.eventType}`,{field.maxEventLength})'"/>
-
-        <!-- Delete this particular event -->
-        <img if="mayDelete and not single" class="calicon iconS"
-             src=":svg('deleteS')" style="opacity:0"
-             onclick=":f'new EventPopup(this,`{o.iid}`,`{name}`,`del`,
-                        `{dayString}`,`{event.timeslot}`).openDelete()'"/>
-      </div>
-     </x>
-
-     <!-- Events from other calendars -->
-     <x if="others"
-        var2="otherEvents=field.Other.getEventsAt(field, date, others,
-                                                 typeInfo, view, preComputed)">
-      <div for="event in otherEvents"
-           style=":f'color:{event.color};font-style:italic'">:event.name</div>
-     </x>''')
-
-    # PX rendering a calendar cell
-    pxCell = Px('''
-     <td var="events=field.getEventsAt(o, date, typeInfo=typeInfo);
-              single=events and len(events) == 1;
-              spansDays=field.hasEventsAt(o, date+1, events);
-              spansDaysJs='true' if spansDays else 'false';
-              mayCreate=mayEdit and allowedEventTypes and not field.dayIsFull(o,
-                          date, events, timeslots);
-              mayDelete=mayEdit and events and field.mayDelete(o, events);
-              mayAppyCreate=view.mayAppyCreate(_ctx_);
-              okTypes=field.getApplicableEventTypesAt(o, date, eventTypes,
-                         preComputed, True) if (mayCreate or mayEdit) else None;
-              js='itoggle(this)' if mayEdit or mayAppyCreate else ''"
-         class=":cssClasses" style=":cellStyle"
-         onmouseover=":js" onmouseout=":js">
-      <span>:day</span> 
-      <span if="day == 1">:_(f'month_{date.aMonth()}_short')</span>
-
-      <!-- Icon for adding an event -->
-      <x if="mayCreate">
-       <img class="calicon" style="opacity:0"
-            if="okTypes and okTypes.eventTypes" src=":url('plus')"
-            var2="freeSlots=field.Timeslot.getFreeAt(o, date, events, timeslots,
-                                                     slotIdsStr, True)"
-            onclick=":f'new EventPopup(this,`{o.iid}`,`{name}`,`new`,
-                       `{dayString}`,null,{hasEventFields}).openEdit(
-                       `{okTypes.eventTypes}`,`{okTypes.message}`,`{freeSlots}`,
-                       null,{field.maxEventLength})'"/>
-      </x>
-
-      <!-- Icon for adding an Appy object -->
-      <x if="mayAppyCreate" var2="cname,attrs=mayAppyCreate">
-       <img class="calicon" style="opacity:0" src=":url('plus')"
-            onclick=":f'postAndClick(`{cname}_add`,`{attrs}`)'"/>
-      </x>
-
-      <!-- Icon for deleting event(s) -->
-      <img if="mayDelete" class="calicon iconS" style="opacity:0"
-           src=":svg('deleteS' if single else 'deleteMany')"
-           onclick=":f'new EventPopup(this,`{o.iid}`,`{name}`,`del`,
-                      `{dayString}`,`*`).openDelete({spansDaysJs})'"/>
-
-      <!-- Events -->
-      <x>:view.pxEvents</x>
-
-      <!-- Additional info -->
-      <x var="info=field.getAdditionalInfoAt(o,date,None,'month',preComputed)"
-         if="info">::info</x>
-     </td>''')
-
-    # PX rendering a calendar cell in a Picker field
-    pxCellPick = Px('''
-     <td class=":cssClasses" style=":cellStyle"
-         var="exclude=field.mustExclude(o, date, preComputed);
-              onEdit=layout == 'edit'">
-      <!-- This day cannot be picked and a message must be rendered -->
-      <abbr if="isinstance(exclude, str)" title=":exclude"
-            class="pickSB">🚫</abbr>
-
-      <!-- This day can be picked -->
-      <x if="not exclude"
-         var2="hasEvent=field.hasEventAt(o, date, preComputed._ci_)">
-
-       <!-- On edit, render a checkbox -->
-       <x if="onEdit" var2="suffix='on' if hasEvent else 'off'">
-        <input type="hidden" name=":name" value=":f'{dayString}_{suffix}'"/>
-        <input type="checkbox" class="pickCB" name=":f'cb_{name}'"
-               id=":dayString" value=":dayString" checked=":hasEvent"
-               onchange="updatePicked(this)"/>
-       </x>
-
-       <!-- On view, render a symbol -->
-       <span if="not onEdit and hasEvent" class="pickSB">✅</span>
-      </x>
-
-      <!-- Show the day number, and month name when relevant -->
-      <span>:day</span> 
-      <span if="day == 1">:_(f'month_{date.aMonth()}_short')</span>
-     </td>''')
-
     # Main PX
+
     px = Px('''
      <table cellpadding="0" cellspacing="0" width=":field.width"
             class=":field.style" id=":f'{hook}_cal'"
@@ -489,9 +205,7 @@ class Month(View):
 
         <!-- Dump a normal cell if we are in range -->
         <x if="inRange"
-           var2="cellWeight='bold' if date.isCurrentDay() else 'normal';
-                 cellStyle=f'font-weight:{cellWeight}';
-                 dayString=date.strftime(field.dayKey);
+           var2="dayString=date.strftime(field.dayKey);
                  day=date.day();">:getattr(view, field.monthCell)</x>
        </x>
       </tr>

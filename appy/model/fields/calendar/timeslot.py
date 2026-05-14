@@ -128,13 +128,12 @@ class Timeslot:
         return r
 
     @classmethod
-    def getFreeAt(class_, o, date, events, slots, slotIdsStr, forBrowser=False):
+    def getFreeAt(class_, o, date, events, slots):
         '''Gets the free timeslots in the current calendar for some p_date'''
         # As a precondition, we know that the day is not full (so timeslot
         # "main" cannot be taken). p_events are those already defined at p_date.
         # p_slots is the dict of Timeslot objects keyed by their id.
-        if not events:
-            return slotIdsStr if forBrowser else slots
+        if not events: return slots
         # Remove any taken slot
         r = list(slots)
         try:
@@ -149,7 +148,7 @@ class Timeslot:
                                   str(event)), type='error')
                 pass # This should not occur
         # Return the result
-        return ','.join(r) if forBrowser else r
+        return r
 
     # A static empty dict is required by the following method
     emptyD = {}

@@ -96,16 +96,23 @@ class EventPopup {
   /* Represents the popup allowing to create, update or delete, at a given day
      and timeslot, a calendar event. */
 
-  constructor(node, iid, name, action, day, timeslot, hasFields) {
+  constructor(node, hook, iid, name, action, day, timeslot, hasFields) {
     /* The node, within a calendar cell, that requested a popup action
        (typically, an img tag). */
     this.node = node;
-    // The IID of the Appy object hosting the calendar field
+    /* The ajax-refreshable node representing the calendar field. In the context
+       of a multiple field, this hook corresponds to the main, outer
+       calendar. */
+    this.hook = hook;
+    /* The IID of the Appy object hosting the calendar field, and the name of
+       the calendar field on this object. In the context of a non-multiple
+       field, p_hook is made of these attributes (ie, hook=`{iid}{name}`). In
+       the context of a multiple field, it is not the case: p_iid and p_name
+       refer to a sub-, other calendar, lying within the outer, multiple one. */
     this.iid = iid;
-    // The name of the calendar field
     this.name = name;
-    // The ajax-refreshable node representing the calendar field
-    this.hook = `${iid}${name}`;
+    // this.subHook equals this.hook for a non-multiple calendar field
+    this.subHook = `${iid}${name}`;
     /* The requested action: create ("new"), update ("edit") or delete ("del")
        an event. */
     this.action = action;
@@ -126,7 +133,7 @@ class EventPopup {
     // Store p_this on the form
     this.form.appyEventPopup = this;
     // Initialise the p_day if passed
-    if (day) this.form.day.value = day;
+    if (day) this.form.popupDay.value = day;
   }
 
   static geT(widget) {
@@ -156,109 +163,41 @@ class EventPopup {
     openPopup(this.popupId);
   }
 
-  enableOptionsOn(select, enabled, selectFirst, message){
-    /* Disables, in this p_select widget, all options that are not in p_enabled.
-       p_enabled is a string containing a comma-separated list of option names.
-       If p_selectFirst is True, the first option from p_enabled will be
-       selected by default. p_message will be shown (as "title") for disabled
-       options. */
-    // Get p_enabled as a dict
-    const l = enabled.split(',');
-    let d = {};
-    for (let i=0; i < l.length; i++) d[l[i]] = true;
-    // Remember if we have already selected the first enabled option
-    let isSelected = false;
-    // Disable options not being p_enabled
-    for (const option of select.options) {
-      // Make sure the option is visible
-      option.style.display = 'block';
-      option.selected = false;
-      if (!option.value) continue;
-      if (option.value in d) {
-        option.disabled = false;
-        option.title = '';
-        // Select it ?
-        if (selectFirst && !isSelected) {
-          option.selected = true;
-          isSelected = true;
-        }
-      }
-      else {
-        option.disabled = true;
-        option.title = message;
-      }
+  fetchContent(eventType) {
+    // Fetch the field-specific content of the edit popup
+    const hook = `${this.popupId}Content`,
+          url = `${siteUrl}/${this.iid}/${this.name}/Editable/pxContent`,
+          params = {'hook':hook, 'day': this.day };
+    if (eventType) {
+      params['eventType'] = eventType;
+      params['timeslot'] = this.timeslot;
     }
+    askAjaxChunk(url, 'POST', params, hook, null, evalInnerScripts);
   }
 
-  getEventFields(eventType) {
-    // Make an Ajax request to get the zone allowing to edit the event fields
-    const hook = `${this.popupId}Fields`,
+  fetchFields(eventType) {
+    // Fetch the zone allowing to edit the event fields
+    const hook = `${this.popupId}ContentFields`,
           url = `${siteUrl}/${this.iid}/${this.name}/EventData/pxEventFields`,
           params = {'hook':hook, 'eventType':eventType, 'day': this.day,
                     'timeslot': this.timeslot};
-    askAjaxChunk(url, 'POST', params, hook);
+    askAjaxChunk(url, 'POST', params, hook, null, evalInnerScripts);
   }
 
-  openEdit(applicableEventTypes, message, freeSlots, eventType, maxEvents) {
-    /* Opens a popup for creating or updating an event. A possibly restricted
-       list of applicable event types for this day is given in
-       p_applicableEventTypes; p_message contains an optional message explaining
-       why not applicable types are not applicable. In creation mode,
-       p_freeSlots may list the available timeslots at p_day. In edit mode,
-       p_eventType is the even type of the event to update. */
+  openEdit(eventType) {
+    /* Opens a popup for creating or updating an event. In edit mode,
+       p_eventType is the type of the event to update. Start by fetching the
+       popup content. */
+    this.fetchContent(eventType);
     const f = this.form,
-          spanZone = document.getElementById('spanZone'),
-          slotZone = document.getElementById('slotZone'),
-          newLabel = document.getElementById('newEventLabel'),
-          comment = document.getElementById('commentP');
+          newLabel = document.getElementById('newEventLabel');
     // Determine the action to perform: create or update an event
     f.actionType.value = (this.create)? 'createEvent': 'editEvent';
-    // Reinitialise field backgrounds
-    f.eventType.style.background = '';
-    if (f.eventSpan) f.eventSpan.style.background = '';
-    // Reinitialise the event type search field
-    f.searchET.value = '';
-    // Show or hide the span zone
-    spanZone.style.display = (this.create)? 'block': 'none';
-    // Define the max number of events to create
-    if (maxEvents) f.eventSpan.setAttribute('max', maxEvents);
     // Clean animation on the Save button
     f.saveButton.className = '';
-    // Disable unapplicable events
-    this.enableOptionsOn(f.eventType, applicableEventTypes, false, message);
-    if (this.create) {
-      /* Disable non-free timeslots and ensure the timeslot zone, if applicable,
-         is shown. */
-      if (slotZone) {
-        this.enableOptionsOn(f.timeslot, freeSlots, true, '🛇');
-        // Ensure the timeslot zone is shown
-        slotZone.style.display = 'block';
-      }
-      newLabel.style.display = 'block';
-      // Reset fields
-      f.eventType.value = '';
-      if (comment) comment.innerHTML = '';
-      if (this.hasFields) {
-        document.getElementById(`${this.popupId}Fields`).style.display = 'none';
-      }
-    }
-    else { // Force the timeslot and ensure the slot zone is hidden
-      slotZone.style.display = 'none';
-      newLabel.style.display = 'none';
-      f.timeslot.value = this.timeslot;
-      // Fill data
-      f.eventType.value = eventType;
-      if (this.hasFields) this.getEventFields(eventType);
-      if (comment) {
-        const cid = `${this.timeslot}_evtCom`,
-              comments = this.getCaller().getElementsByClassName(cid);
-        if (comments.length) comment.innerHTML = comments[0].innerHTML;
-        else comment.innerHTML = '';
-      }
-    }
+    newLabel.style.display = (this.create)? 'block': 'none';
+    // Open the popup: it is ready
     openPopup(this.popupId);
-    // Set focus on the event type search input field
-    f.searchET.focus();
   }
 
   /* Refresh the list of possible timeslots given the currently selected event
@@ -295,11 +234,11 @@ class EventPopup {
     // Update the selected value, excepted if it has already been done
     if (i !== -2) select.selectedIndex = i;
     // Possibly update the related timeslots
-    this.updateTimeslots();
-    // Possibly ajax-refresh event fields
+    if (this.create) this.updateTimeslots();
+    // Possibly fetch event fields
     if (this.hasFields && select.selectedIndex > 0) {
       const eventType = select.options[select.selectedIndex].value;
-      this.getEventFields(eventType);
+      this.fetchFields(eventType);
     }
   }
 
@@ -398,7 +337,7 @@ class EventPopup {
 
   run() {
     /* Sends an Ajax request for triggering a calendar event (create, update or
-       delete an event) and refreshing the view month. */
+       delete an event) and refreshing the current view. */
     const f = this.form;
     if (this.action != 'del') {
       // Are all required fields filled ?
@@ -413,7 +352,7 @@ class EventPopup {
       F.retrieveContentEditable();
     }
     closePopup(this.popupId);
-    askAjax(this.hook, this.formId);
+    askAjax(this.subHook, this.formId);
   }
 }
 

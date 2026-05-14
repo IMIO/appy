@@ -333,7 +333,7 @@ class Event(Persistent):
         if xhtml:
             comment = getattr(self, 'comment', None)
             if comment:
-                r.append(f'<div class="{self.timeslot}_evtCom">{comment}</div>')
+                r.append(f'<div>{comment}</div>')
             # Add event fields
             if fields: r.append(fields)
         return ''.join(r)
@@ -567,9 +567,9 @@ class Event(Persistent):
         # Possibly update data
         if not data:
             # Remove existing data on the v_event
-            if event.data:
+            if event.hasData():
                 event.data = None
-        elif not event.data:
+        elif not event.hasData():
             # Set data for the first time on v_event
             data.complete(o, event)
             event.data = data

@@ -28,8 +28,10 @@ class Carousel(Base):
     # By default, carousels are public, and not indexed
     workflow = Anonymous
     indexable = False
-    listColumns = ('title', 'maxWidth', 'autoSwitch', 'switchInterval')
-    pageListColumns = ('title', 'state')
+
+    listColumns = 'title', 'maxWidth', 'autoSwitch', 'switchInterval'
+
+    pageListColumns = 'title', 'state'
 
     # Managers and Publishers may create carrousels
     creators = ['Manager', 'Publisher']
@@ -63,6 +65,7 @@ class Carousel(Base):
 
     # Must automatic switch be enabled ?
     autoSwitch = Boolean(default=True, **pc)
+
     # Duration between 2 switches (in seconds)
     switchInterval = Integer(default=5, multiplicity=(1,1), width=2,
                              alignOnEdit='center', **pc)

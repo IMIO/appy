@@ -154,19 +154,27 @@ class Week(Day):
            onclick=":js % (q('day'), q(next.id))"/>
      </div>''')
 
+    # Header columns, containing day names and numbers
+
+    pxHeaders = Px('''
+     <thead>
+      <tr>
+       <th></th>
+       <th for="day in view.grid" style=":view.getHouredColumnWidth(field)">
+         <b>::view.getDayName(day)</b>
+       </th>
+       <th></th>
+      </tr>
+     </thead>''')
+
     # Main PX
+
     px = Px('''
      <table width="100%" class="houred">
-      <!-- First row: names of days -->
-      <thead>
-       <tr>
-        <th></th>
-        <th for="day in view.grid" style=":view.getHouredColumnWidth(field)">
-          <b>::view.getDayName(day)</b>
-        </th>
-        <th></th>
-       </tr>
-      </thead>
+
+      <!-- Day names and numbers, as column headers -->
+      <x>:view.pxHeaders</x>
+
       <!-- Next rows: one row per hour of the day -->
       <tbody>
        <tr for="h, hf, hid in view.getHourInfo()" id=":hid">
@@ -184,6 +192,5 @@ class Week(Day):
         <td>:hf</td>
        </tr>
       </tbody>
-     </table>
-     <script>::view.scrollToHour()</script>''')
+     </table>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

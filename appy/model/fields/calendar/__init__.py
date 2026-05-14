@@ -25,6 +25,7 @@ from .timeslot import Timeslot
 from .typeInfo import TypeInfo
 from .totals import Total, Totals
 from .validation import Validation
+from .views.editable import Editable
 from appy.utils import dates as dutils
 from appy.ui.validate import Validator
 from appy.utils import string as sutils
@@ -151,19 +152,23 @@ class Calendar(Field):
     Action = Action
     Filter = Filter
     Legend = Legend
+    Totals = Totals
     TypeInfo = TypeInfo
     DateTime = DateTime
     Timeslot = Timeslot
-    traverse['EventData'] = 'perm:read'
+    Editable = Editable
     EventData = EventData
     IterSub = utils.IterSub
     Validation = Validation
 
+    # Some of these classes need to be traversable
+    traverse['Other'] = 'perm:read'
+    traverse['Totals'] = 'perm:read'
+    traverse['Editable'] = 'perm:write'
+    traverse['EventData'] = 'perm:read'
+
     # Allow switching from one calendar view to the other ?
     switchViews = True
-
-    traverse['Totals'] = 'perm:read'
-    Totals = Totals
 
     class Layouts(Layouts):
         '''Calendar-specific layouts'''
@@ -180,21 +185,18 @@ class Calendar(Field):
                hook=f'{o.iid}{field.name}';
                timeslots=field.Timeslot.getAll(o, field);
                eventTypes=field.getEventTypes(o);
-               allowedEventTypes=field.getAllowedEventTypes(o, eventTypes);
+               allowedTypes=field.getAllowedTypes(o, eventTypes);
                preComputed=field.getPreComputedInfo(o, view);
                mayEdit=field.mayEdit(o);
                objUrl=o.url;
                others=field.Other.getAll(o, field, preComputed);
-               typeInfo=field.TypeInfo.create(field,o,eventTypes,others);
+               typeInfo=field.TypeInfo.create(field, o, eventTypes, others);
                namesOfDays=field.getNamesOfDays(_);
-               showTimeslots=len(timeslots) &gt; 1;
-               slotIdsStr=','.join(timeslots);
                mayValidate=field.mayValidate(o);
                activeLayers=field.getActiveLayers(req);
                actions=field.Action.getVisibleOn(o, field, view.monthDayOne)"
           id=":hook">
-      <script>:field.getAjaxData(hook, o, view, popup=popup,
-                                 activeLayers=','.join(activeLayers))</script>
+      <script>:field.getAjaxData(_ctx_)</script>
 
       <!-- Period selector -->
       <div class="controlsP">
@@ -239,7 +241,7 @@ class Calendar(Field):
     edit = search = ''
 
     # Currently supported render modes (see p_render below)
-    renderModes = 'month', 'monthMulti', 'week', 'dayMulti'
+    renderModes = 'month', 'monthMulti', 'week', 'weekMulti', 'dayMulti'
 
     # PX to use when rendering a calendar cell, in render mode "month"
     monthCell = 'pxCell'
@@ -290,9 +292,9 @@ class Calendar(Field):
         # maxEventLength.
         self.maxEventLength = maxEventLength
 
-        # Various render modes exist. Default is the classical "month" view. The
-        # currently proposed renderings are the following. Each value for
-        # p_render is a string.
+        # Various render modes exist. Default is the "month" view. The currently
+        # proposed renderings are the following. Each value for p_render is a
+        # string.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # p_render   | Description
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -310,6 +312,11 @@ class Calendar(Field):
         #            | the y axis, we have one row per individual calendar.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # week       | Week view for an individual calendar
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # weekMulti  | Similar to the "monthMulti" view, but with a timeline
+        #            | spanning a single week. In that mode, each individual
+        #            | day-wide cell is similar to the one from the individual
+        #            | month view.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # dayMulti   | Daily view for a multiple calendar
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -476,17 +483,20 @@ class Calendar(Field):
         # no event at all).
         self.applicableEvents = applicableEvents
 
-        # [Month, multiple only] If you want to specify additional rows
+        # [Month/week, multiple only] If you want to specify additional rows
         # representing totals, give, in p_totalRows, a list of Totals objects
         # (see appy.model.fields.calendar.totals.Totals) or a method producing
         # such a list.
-        monthMulti = self.multiple and self.render == 'month'
-        if totalRows and not monthMulti:
+        multiMW = self.multiple and self.render in ('month', 'week')
+        if totalRows and not multiMW:
             raise Exception(Totals.TOT_KO)
         self.totalRows = totalRows or []
 
         # Similarly, you can specify additional columns in p_totalCols
-        if totalCols and not monthMulti:
+        if totalCols and not multiMW:
+            # Total columns only apply to month, multi views, but can be
+            # specified if p_render is "weekMulti", because, from that view, the
+            # "monthMulti" view is accessible.
             raise Exception(Totals.TOT_KO)
         self.totalCols = totalCols or []
 
@@ -586,7 +596,7 @@ class Calendar(Field):
         # [Month, multiple only] If p_strictMonths is True, only days of the
         # current month will be shown. Else, complete weeks will be shown,
         # potentially including some days from the previous and next months.
-        if strictMonths and not monthMulti:
+        if strictMonths and not multiMW:
             raise Exception(S_MONTHS_KO)
         self.strictMonths = strictMonths
 
@@ -777,10 +787,10 @@ class Calendar(Field):
         types = self.eventTypes
         return types(o) if callable(types) else types
 
-    def getAllowedEventTypes(self, o, eventTypes):
-        '''Gets the allowed events types for the currently logged user'''
+    def getAllowedTypes(self, o, eventTypes):
+        '''Gets the allowed event types for the currently logged user'''
         allowed = self.allowedEventTypes
-        return eventTypes if not allowed else allowed(o, eventTypes)
+        return allowed(o, eventTypes) if allowed else eventTypes
 
     def getGradients(self, o):
         '''Gets the gradients possibly defined in addition to p_self.colors'''
@@ -811,11 +821,11 @@ class Calendar(Field):
 
     def getApplicableEventTypesAt(self, o, date, eventTypes, preComputed,
                                   forBrowser=False):
-        '''Returns the event types that are applicable at a given p_date'''
+        '''Returns the event types being applicable at this p_date'''
         # More precisely, it returns an object with 2 attributes:
         # * "events" is the list of applicable event types;
         # * "message", not empty if some event types are not applicable,
-        #              contains a message explaining those event types are
+        #              contains a message explaining why those event types are
         #              not applicable.
         if not eventTypes: return # There may be no event type at all
         if not self.applicableEvents:
@@ -1083,7 +1093,8 @@ class Calendar(Field):
         req = o.req
         action = req.actionType
         # Get the date and timeslot for this action
-        day = DateTime(req.day)
+        print('Popup day is', req.popupDay)
+        day = DateTime(req.popupDay)
         eventType = req.eventType
         span = req.eventSpan or 0
         span = min(int(span), self.maxEventLength)
@@ -1127,15 +1138,17 @@ class Calendar(Field):
         valid = self.validation
         return valid.mayValidate(o) if valid else None
 
-    def completeAjaxParams(self, hook, o, view, params):
+    def completeAjaxParams(self, c, params):
         '''Complete these p_params, to be used for performing an Ajax request
            for refreshing the widget view.'''
         # If the calendar is used as mode for a search, carry request keys
         # allowing to identify this search.
+        o = c.o
         req = o.req
         if req.search:
             params['resultMode'] = 'calendar'
         # Add the key corresponding to the current period type (month, day,...)
+        view = c.view
         period = view.periodType
         params[period] = getattr(view, period)
         params['name'] = self.name
@@ -1144,16 +1157,22 @@ class Calendar(Field):
         params['filters'] = view.filterValues
         params['render'] = req.render or view.field.render
 
-    def getAjaxData(self, hook, o, view, **params):
+    def getAjaxData(self, c):
         '''Initializes an AjaxData object on the DOM node corresponding to
            this calendar field.'''
-        # If the calendar is used in the context of a search, take the
-        # search-based AjaxData parent object into account.
+        o = c.o
+        params = {'popup': c.popup, 'activeLayers': ','.join(c.activeLayers)}
+        if c.view.multiple:
+            # Allow a sub-calendar to get info about the outer calendar
+            params['outerS'] = f'{o.iid}_{self.name}'
+        # If the calendar is used in the context of a search, take the search-
+        # based AjaxData parent object into account.
         parent = ",'searchResults',null,null,null,true" if o.req.search else ''
-        # Update p_params
-        self.completeAjaxParams(hook, o, view, params)
+        # Update v_params
+        self.completeAjaxParams(c, params)
         params = sutils.getStringFrom(params)
         # Define a JS objet that manages filters, if appropriate
+        view = c.view
         if view.filters:
             info = {f.name: f.getWidgetType() for f in view.filters.values()}
             info = sutils.getStringFrom(info)
@@ -1161,7 +1180,7 @@ class Calendar(Field):
         else:
             jsf = ''
         return f"new AjaxData('{o.url}/{self.name}/view','POST',{params}," \
-               f"'{hook}'{parent}){jsf}"
+               f"'{c.hook}'{parent}){jsf}"
 
     traverse['validateEvents'] = 'perm:write'
     def validateEvents(self, o):

@@ -7,9 +7,6 @@ from appy.px import Px
 from appy.xml.escape import Escape
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TOT_KO = 'Totals can only be specified when "render" is "monthMulti".'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Total:
     '''Represents a computation that will be executed on a series of cells
        within a timeline calendar.'''
@@ -78,6 +75,9 @@ class Totals:
        totals computed from other rows/columns (representing agendas), specify
        it via Totals objects (see Agenda attributes named "totalRows" and
        "totalCols".'''
+
+    TOT_KO = 'Totals, only applicable to render mode "monthMulti", cannot be ' \
+             'set unless render is "monthMulti" or "weekMulti".'
 
     def __init__(self, name, label, onCell, initValue=0, translated=False):
         # "name" must hold a short name or acronym and will directly appear

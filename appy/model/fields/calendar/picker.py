@@ -131,12 +131,12 @@ class Picker(Calendar):
         r._ci_ = self.getAttribute(o, 'calendarInfo')
         return r
 
-    def completeAjaxParams(self, hook, o, view, params):
-        '''In edit mode, when performing an Ajax request for going to another
-           month, picked days on the currently shown month must be saved.'''
+    def completeAjaxParams(self, c, params):
+        '''On /edit, when performing an Ajax request for going to another month,
+           picked days on the currently shown month must be saved.'''
         # Call the base method
-        super().completeAjaxParams(hook, o, view, params)
-        if o.H().getLayout() == 'edit':
+        super().completeAjaxParams(c, params)
+        if c.o.H().getLayout() == 'edit':
             # Add an action to trigger a "store" action on p_self
             params['action'] = 'storeFromAjax'
 

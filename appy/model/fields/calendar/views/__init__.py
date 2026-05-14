@@ -136,15 +136,39 @@ class View:
             r = not self.endDate or around.next
         return r
 
+    def switchPeriod(self, period):
+        '''Re-express period, being a day or month, into its opposite
+           expression: a month or a day.'''
+        if '-' in period:
+            # Re-express this day (%Y-%m-%d) as a month (%Y/%m)
+            parts = period.split('-')
+            r = f'{parts[0]}/{parts[1]}'
+        else:
+            # Re-express this month (%Y/%m) as a day (%Y-%m-%d)
+            parts = period.split('/')
+            r = f'{parts[0]}-{parts[1]}-01'
+        return r
+
     def getNameOnMulti(self, other):
-        '''Returns the name of some p_other calendar as must be shown in a
+        '''Returns the name of this p_other calendar as must be shown in a
            multiple view.'''
         method = self.field.timelineName
-        period = self.req[self.periodType] or self.defaultDateS
+        # What is the current render mode for the shown multiple calendar ?
+        req = self.req
+        render = req.render or self.field.render
+        if render == 'week':
+            render = 'day' # See m_getPeriodType methods
+        # What is the currently shown period ?
+        period = req[render] or self.defaultDateS
+        # What is the render mode for the sub-calendar ?
+        subRender = other.field.render
+        if subRender != render:
+            # Re-express the period according to v_subRender
+            period = self.switchPeriod(period)
         if method:
             r = method(self.o, other, period, self.grid)
         else:
-            r = f'<a href="{other.o.url}?{self.periodType}={period}">' \
+            r = f'<a href="{other.o.url}?{subRender}={period}">' \
                 f'{other.o.getShownValue()}</a>'
         return r
 

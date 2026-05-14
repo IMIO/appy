@@ -2,10 +2,11 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from appy.px import Px
 from appy import utils
+from .cell import Cell
+from .timeslot import Timeslot
 from appy.model.utils import Object as O
-from appy.model.fields.calendar import Cell
-from appy.model.fields.calendar.timeslot import Timeslot
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Other:
@@ -103,6 +104,65 @@ class Other:
         '''Is validation enabled for this other calendar?'''
         return self.field.mayValidate(self.o)
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #              Render this other calendar on a multiple view
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    def getHook(self):
+        '''Returns the ID of the DOM node representing this other calendar on a
+           multiple view.'''
+        return f'{self.o.iid}{self.field.name}'
+
+    def getAjaxData(self, c):
+        '''Initializes an AjaxData object on the DOM node representing this
+           other calendar field, as rendered within a multiple, outer calendar
+           field.'''
+        return f"new AjaxData('{c.o.url}/{self.field.name}/Other/px','POST'," \
+               f"{{}},'{self.getHook()}','{c.hook}')"
+
+    # This PX is not yet used by view.monthMulti
+
+    px = Px('''
+     <tr var="F=field;
+              other=other|F.Other(o, field.name);
+              outer=outer|F.Other.getOuter(o, outerS);
+              hook=hook|outer.getHook();
+              view=view|F.View.get(outer.o, outer.field);
+              tlName=view.getNameOnMulti(other);
+              outerValidate=mayValidate|outer.mayValidate();
+              mayValidate=outerValidate and other.mayValidate();
+              outerEdit=mayEdit|outer.field.mayEdit(outer.o);
+              mayEdit=outerEdit and field.mayEdit(o);
+              css=other.getCss();
+              timeslots=other.timeslots;
+              eventTypes=field.getEventTypes(o);
+             typeInfo=typeInfo|F.TypeInfo.create(field, o, eventTypes);
+            hasEventFields='true' if field.eventFields else 'false';
+           allowedTypes=field.getAllowedTypes(o, eventTypes);
+          preComputed=preComputed|outer.field.getPreComputedInfo(outer.o, view)"
+         id=":other.getHook()">
+      <script>:other.getAjaxData(_ctx_)</script>
+
+      <!-- The first cell identifies the individual calendar -->
+      <td class=":f'tlLeft {css}'.strip()">::tlName</td>
+
+      <!-- One cell for every day in the view grid -->
+      <x for="date in view.grid"
+         var2="inRange=field.dateInRange(date, view);
+               cssClasses=view.getCellClass(date)">
+       <td if="not inRange" class=":cssClasses"></td>
+       <x if="inRange"
+          var2="dayString=date.strftime(field.dayKey)">:view.pxCell</x>
+      </x>
+
+      <!-- The last cell repeats the first one -->
+      <td class=":f'tlRight {css}'.strip()">::tlName</td>
+     </tr>''')
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                             Class methods
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     @classmethod
     def getAll(class_, o, field, preComputed):
         '''Returns the list of other calendars whose events must also be shown
@@ -121,7 +181,7 @@ class Other:
     def getSep(class_, colspan):
         '''Produces the separator between groups of other calendars'''
         return f'<tr style="height:8px"><th colspan="{colspan}" ' \
-               f'style="background-color:grey"></th></tr>'
+               f'style="background-colo r:grey"></th></tr>'
 
     @classmethod
     def getEventsAt(class_, field, date, others, typeInfo, view, preComputed,
@@ -137,4 +197,16 @@ class Other:
                 other.getEventsInfoAt(r, field, date, typeInfo, isTimeline,
                                       preComputed, gradients)
         return r
+
+    @classmethod
+    def getOuter(class_, o, outer):
+        '''Returns an Other object representing an outer calendar field'''
+        # The returned object misuses the concept of Other calendar: an outer
+        # field containing other calendars is itself represented here by an
+        # Other object.
+        #
+        # p_outer is a string of the form <object_iid>_<field_name>
+        iid, name = outer.split('_', 1)
+        outerObject = o.getObject(iid)
+        return Other(outerObject, name)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

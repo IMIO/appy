@@ -15,9 +15,6 @@ class MonthMulti(Month):
     # Background colors for columns representing special days
     timelineBgColors = {'Fri': '#dedede', 'Sat': '#c0c0c0', 'Sun': '#c0c0c0'}
 
-    def getOthers(self):
-        '''No switch to any other view from this one for the moment'''
-
     def getMonths(self, preComputed):
         '''Given the p_self.grid of dates, returns the list of corresponding
            months.'''
@@ -203,8 +200,8 @@ class MonthMulti(Month):
 
     # Main PX
     px = Px('''
-     <table cellpadding="0" cellspacing="0" class="list timeline"
-            id=":f'{hook}_cal'" style="display: inline-block"
+     <table class="list timeline" id=":f'{hook}_cal'"
+            style="display: inline-block"
             var="monthsInfos=view.getMonths(preComputed);
                  gradients=field.getGradients(o)">
 

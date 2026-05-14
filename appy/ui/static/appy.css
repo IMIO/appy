@@ -275,6 +275,7 @@ div.rbutton { float:right }
 .calMany { background-color:#c1c5c7 }
 .calSlot { border:1px dashed grey; margin:2px 0; padding:2px; color:grey;
            font-size:90%; text-align:center }
+#searchET { border:none }
 
 #summary { margin:8px }
 #commentArea { margin:5px 0 }
@@ -284,6 +285,9 @@ div.rbutton { float:right }
 .timeline>tbody>tr>th { background-color:|brightColor|; text-align:center;
                         border:none; height:auto; padding:0 1px !important }
 .timeline>tbody>tr>td { text-align:center; padding:0 1px; border:|calTTB| }
+.weekline>tbody>tr>td { text-align:left }
+.weekline>thead>tr>th { height:1em; border-bottom:2px solid lightgrey;
+                        padding-bottom:4px }
 .timeline a { font-size:100% !important }
 .tlLeft { text-align:left !important; padding-left:1px !important }
 .tlRight { text-align:right !important; padding-right:1px !important }

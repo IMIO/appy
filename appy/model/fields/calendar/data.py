@@ -164,9 +164,9 @@ class EventData(Persistent):
     # PX that renders fields possibly defined in attribute Calendar.eventFields
 
     pxEventFields = Px('''
-     <div id=":req.hook" class="calSpan"
+     <div id=":hook" class="calSpan"
           var="layout='edit';
-               fields=field.getEventFieldsFor(o, req.eventType)">
+               fields=field.getEventFieldsFor(o, eventType)">
       <!-- Render these v_fields, if any -->
       <x if="fields"
          var2="fieldName=None;
@@ -175,8 +175,8 @@ class EventData(Persistent):
        <!-- If we are editing existing event data, get it and set it as the
             current (mimicked) Appy v_o(bject). -->
        <x var="px=o.pxFields;
-               day=field.DateTime(req.day);
-               event=field.getEventAt(o, day, req.timeslot);
+               day=field.DateTime(day);
+               event=field.getEventAt(o, day, timeslot);
                o=event.data if event and event.data else o">:px</x>
       </x>
      </div>''')

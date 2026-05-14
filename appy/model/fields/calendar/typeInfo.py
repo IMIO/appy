@@ -15,7 +15,7 @@ class TypeInfo(dict):
     # ~{s_eventType: O(s_name, i_used)}~
 
     @classmethod
-    def create(class_, cal, o, eventTypes, others):
+    def create(class_, cal, o, eventTypes, others=None):
         '''Compute and return a TypeInfo object, collecting info about all event
            types, from this p_cal(endar) and p_others as defined on this
            p_o(bject).'''
@@ -43,7 +43,7 @@ class TypeInfo(dict):
 
     def update(self, events):
         '''Updates p_self, taking into account these calendar p_events'''
-        # Update p_typeInfo with every event from v_r
+        # Update p_self with every event from v_events
         for event in events:
             eventType = event.eventType
             # Ignore the event if its type is not found in p_self (should not

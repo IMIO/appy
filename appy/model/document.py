@@ -29,6 +29,9 @@ class Document(Base):
     popup = Iframe('500px', '500px')
     listColumns = 'thumb*60px|', 'title'
 
+    # Managers and Publishers may create documents
+    creators = ['Manager', 'Publisher']
+
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                               The file
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -8,12 +8,13 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import xml.sax
 
+from appy.utils import json
 from appy.utils import css, bn
 from appy.model.utils import Object as O
 from appy.pod.evaluator import Evaluator
 from appy.pod.buffers import MemoryBuffer
+from .parser import PxParser, PxEnvironment
 from appy.xml import xmlPrologue, xhtmlPrologue
-from appy.px.parser import PxParser, PxEnvironment
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SPEC_KO      = 'wrong specifier. A specifier must be of the form ' \
@@ -420,6 +421,12 @@ class Px:
         if len(text) > width:
             text = f'<{tag} title="{text}"{css}>{text[:width]}{suffix}</{tag}>'
         return text
+
+    @classmethod
+    def jsonEncode(class_, o):
+        '''Returns the stringified, JSON-encoded version of p_o, being a Python
+           data structure.'''
+        return json.Encoder(o).encode()
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Call a PX from a "specifier"
