@@ -100,9 +100,9 @@ class Other:
            row into which it is rendered.'''
         return 'highlightRow' if self.highlight else ''
 
-    def mayValidate(self):
+    def mayValidate(self, view):
         '''Is validation enabled for this other calendar?'''
-        return self.field.mayValidate(self.o)
+        return self.field.mayValidate(self.o, view)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #              Render this other calendar on a multiple view
@@ -129,8 +129,8 @@ class Other:
               hook=hook|outer.getHook();
               view=view|F.View.get(outer.o, outer.field);
               tlName=view.getNameOnMulti(other);
-              outerValidate=mayValidate|outer.mayValidate();
-              mayValidate=outerValidate and other.mayValidate();
+              outerValidate=mayValidate|outer.mayValidate(view);
+              mayValidate=outerValidate and other.mayValidate(view);
               outerEdit=mayEdit|outer.field.mayEdit(outer.o);
               mayEdit=outerEdit and field.mayEdit(o);
               css=other.getCss();
@@ -188,7 +188,7 @@ class Other:
                     gradients=None):
         '''Gets events that are defined in p_others at some p_date'''
         r = []
-        isTimeline = field.multiple and view.periodType == 'month'
+        isTimeline = field.multiple and view.render == 'month'
         if isinstance(others, Other):
             others.getEventsInfoAt(r, field, date, typeInfo, isTimeline,
                                    preComputed, gradients)

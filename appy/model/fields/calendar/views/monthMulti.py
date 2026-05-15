@@ -3,8 +3,8 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
+from .month import Month
 from appy.model.utils import Object as O
-from appy.model.fields.calendar.views.month import Month
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class MonthMulti(Month):
@@ -221,7 +221,7 @@ class MonthMulti(Month):
        <x for="groupO in others">
         <tr for="other in groupO" id=":other.o.iid"
             var2="tlName=view.getNameOnMulti(other);
-                  mayValidate=mayValidate and other.mayValidate();
+                  mayValidate=mayValidate and other.mayValidate(view);
                   css=other.getCss()">
          <td class=":f'tlLeft {css}'.strip()">::tlName</td>
          <!-- A cell in this other calendar -->

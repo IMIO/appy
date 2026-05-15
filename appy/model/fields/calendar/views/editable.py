@@ -2,6 +2,9 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import time
+from DateTime import DateTime
+
 from appy.px import Px
 from appy.ui.criteria import Criteria
 from appy.utils import dates as dutils
@@ -271,15 +274,15 @@ class Editable:
         <img if="mayEdit and field.editableEvents and event.eventType in \
                   allowedTypes"
              class="calicon iconS" src=":svg('edit')" style="opacity:0"
-             onclick=":f'new EventPopup(this,`{hook}`,`{o.iid}`,`{name}`,`edit`,
-                        `{dayString}`,`{event.timeslot}`,{hasEventFields}
+             onclick=":f'new EventPopup(this,`{hook}`,`{o.iid}`,`{field.name}`,
+                        `edit`,`{dayString}`,`{event.timeslot}`,{hasEventFields}
                         ).openEdit(`{event.eventType}`)'"/>
 
         <!-- Delete this particular event -->
         <img if="mayDelete and not single" class="calicon iconS"
              src=":svg('deleteS')" style="opacity:0"
-             onclick=":f'new EventPopup(this,`{hook}`,`{o.iid}`,`{name}`,`del`,
-                        `{dayString}`,`{event.timeslot}`).openDelete()'"/>
+             onclick=":f'new EventPopup(this,`{hook}`,`{o.iid}`,`{field.name}`,
+                        `del`,`{dayString}`,`{event.timeslot}`).openDelete()'"/>
       </div>
      </x>
 
@@ -321,8 +324,8 @@ class Editable:
       <x if="mayCreate">
        <img class="calicon" style="opacity:0"
             if="okTypes and okTypes.eventTypes" src=":url('plus')"
-            onclick=":f'new EventPopup(this,`{hook}`,`{o.iid}`,`{name}`,`new`,
-                       `{dayString}`,null,{hasEventFields}).openEdit()'"/>
+            onclick=":f'new EventPopup(this,`{hook}`,`{o.iid}`,`{field.name}`,
+                       `new`,`{dayString}`,null,{hasEventFields}).openEdit()'"/>
       </x>
 
       <!-- Icon for adding an Appy object -->
@@ -334,8 +337,8 @@ class Editable:
       <!-- Icon for deleting event(s) -->
       <img if="mayDelete" class="calicon iconS" style="opacity:0"
            src=":svg('deleteS' if single else 'deleteMany')"
-           onclick=":f'new EventPopup(this,`{hook}`,`{o.iid}`,`{name}`,`del`,
-                      `{dayString}`,`*`).openDelete({spansDaysJs})'"/>
+           onclick=":f'new EventPopup(this,`{hook}`,`{o.iid}`,`{field.name}`,
+                      `del`,`{dayString}`,`*`).openDelete({spansDaysJs})'"/>
 
       <!-- Events -->
       <x>:view.pxEvents</x>

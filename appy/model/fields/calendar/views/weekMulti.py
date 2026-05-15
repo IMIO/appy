@@ -24,6 +24,9 @@ class WeekMulti(Editable, Week):
 
     # Main PX
 
+    # Currently, validation is disabled on this week view (v_mayValidate is
+    # redefined to False), because currently implemented on a monthly basis.
+
     px = Px('''
      <x var="rowHeight=int(field.height/float(view.countOthers(others)));
              outer=field.Other(o, field.name)">
@@ -52,8 +55,7 @@ class WeekMulti(Editable, Week):
       <x if="mayEdit">
        <x>:view.pxEditPopup</x><x>:view.pxDelPopup</x></x>
 
-      <!-- Popup for validating events, currently disabled on this week view,
-           because currently implemented on a monthly basis.  -->
-      <!--x if="mayEdit and field.validation">:field.validation.pxPopup</x-->
+      <!-- Popup for validating events  -->
+      <x if="mayValidate">:field.validation.pxPopup</x>
      </x>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -192,8 +192,9 @@ class Calendar(Field):
                others=field.Other.getAll(o, field, preComputed);
                typeInfo=field.TypeInfo.create(field, o, eventTypes, others);
                namesOfDays=field.getNamesOfDays(_);
-               mayValidate=field.mayValidate(o);
+               mayValidate=field.mayValidate(o, view);
                activeLayers=field.getActiveLayers(req);
+               onWeek=view.renderRaw == 'week';
                actions=field.Action.getVisibleOn(o, field, view.monthDayOne)"
           id=":hook">
       <script>:field.getAjaxData(_ctx_)</script>
@@ -326,18 +327,24 @@ class Calendar(Field):
         if self.multiple and eventTypes:
             raise Exception(TL_W_EVTS)
 
-        # When displaying a given month for this agenda, one may want to
-        # pre-compute, once for the whole month, some information that will then
+        # When displaying a given time slice for this agenda, one may want to
+        # pre-compute, once for the whole slice, some information that will then
         # be given as arg for other methods specified in subsequent parameters.
         # This mechanism exists for performance reasons, to avoid recomputing
         # this global information several times. If you specify a method in
-        # p_preCompute, it will be called every time a given month is shown, and
-        # will receive 2 args: the first day of the currently shown month (as a
-        # DateTime object) and the grid of all shown dates (as a result of
-        # calling m_getGrid below). This grid may hold a little more than dates
-        # of the current month. Subsequently, the return of your method will be
-        # given as arg to other methods that you may specify as args of other
-        # parameters of this Calendar class (see comments below).
+        # p_preCompute, it will be called every time a given time slice is
+        # shown, and will receive 2 args: the first day of the currently shown
+        # period (as a DateTime object) and the grid of all shown dates (as a
+        # result of calling m_getGrid below). This grid hold all visible days.
+        # For example, on an individual monthly view, the grid shows complete
+        # weeks: ending days of the previous month and starting days of the next
+        # one may, consequently, be part of the grid. Subsequently, the return
+        # of your method will be given as arg to other methods that you may
+        # specify as args of other parameters of this Calendar class (see
+        # comments below).
+        # ⚠️ If this calendar is rendered within a multiple calendar, the pre-
+        #    computed info will not be this one, but the one defined at the
+        #    multiple calendar level.
         self.preCompute = preCompute
 
         # [Multiple only] A method must be specified in parameter p_others. It
@@ -1093,7 +1100,6 @@ class Calendar(Field):
         req = o.req
         action = req.actionType
         # Get the date and timeslot for this action
-        print('Popup day is', req.popupDay)
         day = DateTime(req.popupDay)
         eventType = req.eventType
         span = req.eventSpan or 0
@@ -1133,10 +1139,12 @@ class Calendar(Field):
 
     def splitList(self, l, sub): return utils.splitList(l, sub)
 
-    def mayValidate(self, o):
+    def mayValidate(self, o, view):
         '''May the currently logged user validate wish events ?'''
+        # Currently, validation is disabled on non-monthly views
         valid = self.validation
-        return valid.mayValidate(o) if valid else None
+        if not valid or view.renderRaw != 'month': return
+        return valid.mayValidate(o)
 
     def completeAjaxParams(self, c, params):
         '''Complete these p_params, to be used for performing an Ajax request
@@ -1147,15 +1155,15 @@ class Calendar(Field):
         req = o.req
         if req.search:
             params['resultMode'] = 'calendar'
-        # Add the key corresponding to the current period type (month, day,...)
+        # Add the key corresponding to the current render mode (month, day,...)
         view = c.view
-        period = view.periodType
-        params[period] = getattr(view, period)
+        render = view.render
+        params[render] = getattr(view, render)
         params['name'] = self.name
         params['layout'] = o.H().getLayout()
         params['multiple'] = '1' if self.multiple else '0'
         params['filters'] = view.filterValues
-        params['render'] = req.render or view.field.render
+        params['render'] = view.renderRaw
 
     def getAjaxData(self, c):
         '''Initializes an AjaxData object on the DOM node corresponding to

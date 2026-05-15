@@ -2,7 +2,6 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import time
 from DateTime import DateTime
 
 from . import View
@@ -216,7 +215,7 @@ class Month(Editable, View):
       <x>:view.pxEditPopup</x><x>:view.pxDelPopup</x></x>
 
      <!-- Popup for validating events -->
-     <x if="mayEdit and field.validation">:field.validation.pxPopup</x>''',
+     <x if="mayValidate">:field.validation.pxPopup</x>''',
 
      css='''.pickCB { margin:0 4px 0 0 }
             .pickSB { padding-right: 0.3em}''')

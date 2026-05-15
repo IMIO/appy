@@ -70,8 +70,9 @@ class Action:
        </a>
       </div>
 
-      <!-- Validate button, with checkbox for automatic checkbox selection -->
-      <x if="mayValidate" var2="cbId=f'{hook}_auto'">
+      <!-- Validate button, with checkbox for automatic checkbox selection.
+           Currently disabled for week views. -->
+      <x if="mayValidate and not onWeek" var2="cbId=f'{hook}_auto'">
        <input if="mayValidate" type="button" value=":_('validate_events')"
               class="buttonSmall button" style=":url('validate', bg=True)"
               onclick=":'CalValidator.setPopup(%s,%s)' % (q(hook),q('block'))"/>
@@ -80,7 +81,7 @@ class Action:
       </x>
 
       <!-- Checkboxes for (de-)activating layers -->
-      <x if="field.layers and field.layersSelector">
+      <x if="not onWeek and field.layers and field.layersSelector">
        <x for="layer in field.layers"
           var2="cbId=f'{hook}_layer_{layer.name}'">
         <input type="checkbox" id=":cbId" checked=":layer.name in activeLayers"
@@ -90,7 +91,7 @@ class Action:
       </x>
 
       <!-- Custom actions -->
-      <x if="actions">
+      <x if="actions and not onWeek">
        <input for="action in actions" type="button" value=":_(action.label)"
               var2="js='calendarAction(%s,%s,comment)' %
                         (q(hook), q(action.name))"

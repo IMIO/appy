@@ -82,7 +82,7 @@ class Validation:
 
         # p_mayValidate must hold a method as defined on the Appy class
         # containing the concerned Calendar field. This method accepts no arg
-        # and must return True if the  currently logged user can validate whish
+        # and must return True if the currently logged user can validate whish
         # events.
         self.mayValidate = mayValidate
 

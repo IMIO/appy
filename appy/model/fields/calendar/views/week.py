@@ -2,10 +2,10 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from .day import Day
 from appy.px import Px
 from appy.utils import dates as dutils
 from appy.model.utils import Object as O
-from appy.model.fields.calendar.views.day import Day
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Week(Day):
@@ -103,11 +103,6 @@ class Week(Day):
                 r.previous = info
             i += 1
         return r
-
-    def getPeriodType(self):
-        '''To stay in the same logic, the period type must be "day" and not
-           "week".'''
-        return 'day'
 
     def getDayName(self, day):
         '''Returns the name of this p_day as it must appear in a column

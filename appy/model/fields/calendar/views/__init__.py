@@ -35,8 +35,9 @@ class View:
         self.req = o.req
         self.tool = o.tool
         self.field = field
-        # Compute the period type
-        self.periodType = self.getPeriodType()
+        # Compute the render mode, and variant (see m_getRender)
+        self.render = self.getRender()
+        self.renderRaw = self.getRender(cheat=False)
         # The default date to show (+ its string representation)
         self.defaultDate = field.getDefaultDate(o)
         self.defaultDateS = self.defaultDate.strftime(self.periodFormat)
@@ -97,12 +98,26 @@ class View:
         # If we are here, no filter has hidden the value
         return True
 
-    def getPeriodType(self):
-        '''Gets the period type as manipulated by this view (month, day...)'''
-        r = self.__class__.__name__.lower()
-        if r.endswith('multi'):
-            r = r[:-5]
+    def getRender(self, cheat=True, value=None):
+        '''Gets the render mode as currently set in this view (month, day...)'''
+        # Try to get it first from the request (indeed, several modes can be
+        # available for the same calendar field); if not found, get the default
+        # mode.
+        if value is not None:
+            # A render p_value may be forced
+            r = value
+        else:
+            req = self.req
+            r = req.render or self.field.render
+        # A week view is implemented as a day view with its surrounding days.
+        # Consequently, in most cases (p_cheat is True), a "week" mode must be
+        # re-expressed as a "day" mode.
+        if cheat and r == 'week':
+            r = 'day'
         return r
+
+    # "Period type" is a synonym for "render mode"
+    getPeriodType = getRender
 
     def getGrid(self, period=None):
         '''Returns the list of DateTime objects (one per day) corresponding to
@@ -155,13 +170,11 @@ class View:
         method = self.field.timelineName
         # What is the current render mode for the shown multiple calendar ?
         req = self.req
-        render = req.render or self.field.render
-        if render == 'week':
-            render = 'day' # See m_getPeriodType methods
+        render = self.render
         # What is the currently shown period ?
         period = req[render] or self.defaultDateS
         # What is the render mode for the sub-calendar ?
-        subRender = other.field.render
+        subRender = self.getRender(value=other.field.render)
         if subRender != render:
             # Re-express the period according to v_subRender
             period = self.switchPeriod(period)
