@@ -35,8 +35,11 @@ class Month(Editable, View):
         # All calendars do not allow switching between views (ie, the Picker
         # doesn't allow it).
         if not self.field.switchViews: return
-        # Currently, the only view to switch to is "week"
-        return [('week', {'day': self.monthDayOne.strftime('%Y-%m-%d')})]
+        # Currently, the only view to switch to is "week". If today is part of
+        # the current monthly view, ensure it is part of the view to switch to.
+        # Else, use the first day of the shown month as basis for switching.
+        switchDay = self.today if self.today in self.grid else self.monthDayOne
+        return [('week', {'day': switchDay.strftime('%Y-%m-%d')})]
 
     def getInfo(self, first):
         '''Returns an Object instance representing information about the month

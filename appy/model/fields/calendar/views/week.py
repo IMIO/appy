@@ -27,8 +27,11 @@ class Week(Day):
     def getOthers(self):
         '''Returns the names of the other views the user may switch to from this
            one.'''
-        # Currently, the only view to switch to is "month"
-        return [('month', {'month': self.grid[-1].strftime('%Y/%m')})]
+        # Currently, the only view to switch to is "month". If today is part of
+        # the current weekly view, ensure it is part of the view to switch to.
+        # Else, use the last day of the shown week as basis for switching.
+        switchDay = self.today if self.today in self.grid else self.grid[-1]
+        return [('month', {'month': switchDay.strftime('%Y/%m')})]
 
     def getInfo(self, first):
         '''Returns an Object instance representing information about the week
