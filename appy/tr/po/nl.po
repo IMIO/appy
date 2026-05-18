@@ -1359,6 +1359,10 @@ msgstr "🚫 De database is momenteel alleen-lezen.\n\nEr kunnen geen langlopend
 msgid "progress_fg"
 msgstr "⚠️ De server is in de <i>voorgrond</i>-modus.\n\nEr kunnen geen statusverzoeken parallel met de hoofdactie worden uitgevoerd."
 
+#. Default: "⚠️ Creating, updating or deleting calendar events is disabled unless you clean all filters."
+msgid "cal_filtered_readonly"
+msgstr "⚠️ Het aanmaken, wijzigen of verwijderen van gebeurtenissen is uitgeschakeld zolang er ten minste één filter actief is."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Door"

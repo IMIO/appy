@@ -1359,6 +1359,10 @@ msgstr ""
 msgid "progress_fg"
 msgstr ""
 
+#. Default: "⚠️ Creating, updating or deleting calendar events is disabled unless you clean all filters."
+msgid "cal_filtered_readonly"
+msgstr ""
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr ""

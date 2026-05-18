@@ -17,6 +17,9 @@ class Month(Editable, View):
     # Default month format
     periodFormat = '%Y/%m'
 
+    # This view is editable
+    editable = True
+
     def __init__(self, o, field):
         # Call the base constructor
         super().__init__(o, field)

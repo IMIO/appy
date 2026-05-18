@@ -49,7 +49,7 @@ class Other:
             if condition:
                 return True
 
-    def getEventsInfoAt(self, r, calendar, date, typeInfo, inTimeline,
+    def getEventsInfoAt(self, r, calendar, date, typeInfo, view, inTimeline,
                         preComputed, gradients):
         '''Gets the events defined at p_date in this calendar and append them in
            p_r.'''
@@ -57,6 +57,8 @@ class Other:
         if not events: return
         for event in events:
             eventType = event.eventType
+            # Ignore it if not among current filters
+            if not view.unfiltered(event): continue
             # Ignore it if among self.excludedEvents
             if self.exclude(eventType): continue
             # Info will be collected in a Calendar.Cell object
@@ -190,12 +192,12 @@ class Other:
         r = []
         isTimeline = field.multiple and view.render == 'month'
         if isinstance(others, Other):
-            others.getEventsInfoAt(r, field, date, typeInfo, isTimeline,
+            others.getEventsInfoAt(r, field, date, typeInfo, view, isTimeline,
                                    preComputed, gradients)
         else:
             for other in utils.IterSub(others):
-                other.getEventsInfoAt(r, field, date, typeInfo, isTimeline,
-                                      preComputed, gradients)
+                other.getEventsInfoAt(r, field, date, typeInfo, view,
+                                      isTimeline, preComputed, gradients)
         return r
 
     @classmethod

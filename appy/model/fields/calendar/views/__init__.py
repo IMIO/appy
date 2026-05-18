@@ -22,6 +22,12 @@ class View:
     # about several individual views.
     multiple = False
 
+    # May events be created, updated or deleted via this view ? Detecting if the
+    # current view inherits from class Editable does not work: for example, a
+    # MonthMulti is not editable, but inherits from Month, that inherits from
+    # Editable.
+    editable = False
+
     # Background cell gradient used when rendering several events in a place
     # (typically, a cell) with very little space.
     cellGradient = 'background-image:radial-gradient(#c2c2c2,#fff)'

@@ -1360,6 +1360,10 @@ msgstr "🚫 The database is currently in read-only mode.\n\nNo long operation m
 msgid "progress_fg"
 msgstr "⚠️ The server runs in the foreground.\n\nNo parallel status request can be launched while the main action is executed."
 
+#. Default: "⚠️ Creating, updating or deleting calendar events is disabled unless you clean all filters."
+msgid "cal_filtered_readonly"
+msgstr "⚠️ Creating, updating or deleting calendar events is disabled unless you clean all filters."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "By"

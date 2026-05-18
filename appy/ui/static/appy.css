@@ -27,7 +27,7 @@ textarea  { width:97.5%; font:100% |fonts|; border:1px solid #d0d0d0;
 label,
 .asLabel  { color:|linkColor|; padding:0.2em 0.6em 0 0;
             text-transform:uppercase; font-size:95% }
-.subLabel { text-transform:none; padding-left:5px }
+.subLabel { text-transform:none; padding-left:5px; cursor:pointer }
 legend    { padding-bottom:2px; padding-right:3px; color:black }
 ul        { line-height:1.2em; margin:0 0 0.2em 0.6em; padding:0;
             list-style-type:"‣" }

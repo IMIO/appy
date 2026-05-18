@@ -1360,6 +1360,10 @@ msgstr "🚫 La base de données est actuellement en lecture seule.\n\nAucune op
 msgid "progress_fg"
 msgstr "⚠️ Le serveur est en <i>foreground</i>.\n\nAucune requête de statut ne peut être lancée en parallèle de l'action principale."
 
+#. Default: "⚠️ Creating, updating or deleting calendar events is disabled unless you clean all filters."
+msgid "cal_filtered_readonly"
+msgstr "⚠️ Toute création, modification ou suppression d'événement est désactivée tant qu'au moins un filtre est actif."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Créé par"

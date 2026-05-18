@@ -117,7 +117,8 @@ class Calendar(Field):
                eventTypes=field.getEventTypes(o);
                allowedTypes=field.getAllowedTypes(o, eventTypes);
                preComputed=field.getPreComputedInfo(o, view);
-               mayEdit=field.mayEdit(o);
+               mayEditRaw=field.mayEdit(o);
+               mayEdit=mayEditRaw and not view.filterValues;
                objUrl=o.url;
                others=field.Other.getAll(o, field, preComputed);
                typeInfo=field.TypeInfo.create(field, o, eventTypes, others);
@@ -136,6 +137,10 @@ class Calendar(Field):
        <!-- Global actions -->
        <x>:field.Action.px</x>
       </div>
+
+      <!-- A warning if event edition is allowed but disabled -->
+      <div if="view.editable and mayEditRaw and not mayEdit"
+           class="focus">:_('cal_filtered_readonly')</div>
 
       <!-- The top PX, if defined -->
       <x if="field.topPx">::field.topPx</x>

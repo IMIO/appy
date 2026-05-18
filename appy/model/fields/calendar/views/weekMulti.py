@@ -12,6 +12,7 @@ class WeekMulti(Editable, Week):
     '''Represents a calendar, weekly view for several individual calendars'''
 
     multiple = True
+    editable = True
 
     def countOthers(self, others):
         '''Counts the number of other calendars being shown in this multiple

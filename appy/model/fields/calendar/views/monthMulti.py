@@ -11,6 +11,7 @@ class MonthMulti(Month):
     '''Represents a calendar, monthly view for several individual calendars'''
 
     multiple = True
+    editable = False
 
     # Background colors for columns representing special days
     timelineBgColors = {'Fri': '#dedede', 'Sat': '#c0c0c0', 'Sun': '#c0c0c0'}
