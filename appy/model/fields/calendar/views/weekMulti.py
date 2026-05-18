@@ -14,6 +14,9 @@ class WeekMulti(Editable, Week):
     multiple = True
     editable = True
 
+    # CSS styles to set to column headers
+    headerStyles = 'top:0px'
+
     def countOthers(self, others):
         '''Counts the number of other calendars being shown in this multiple
            view.'''

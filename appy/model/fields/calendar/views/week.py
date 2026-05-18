@@ -156,9 +156,9 @@ class Week(Day):
 
     pxHeaders = Px('''
      <thead>
-      <tr>
-       <th></th>
-       <th for="day in view.grid" style=":view.getHouredColumnWidth(field)">
+      <tr var="thStyles=view.getHouredColumnWidth(field)">
+       <th style=":thStyles"></th>
+       <th for="day in view.grid" style=":thStyles">
          <b>::view.getDayName(day)</b>
        </th>
        <th></th>

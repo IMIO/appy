@@ -14,6 +14,9 @@ class Day(View):
     # Default day format (the one in use in the HTML input[type=date] widget)
     periodFormat = '%Y-%m-%d'
 
+    # CSS styles to set to column headers
+    headerStyles = None
+
     def __init__(self, o, field):
         # Call the base constructor
         super().__init__(o, field)
@@ -107,7 +110,9 @@ class Day(View):
     def getHouredColumnWidth(self, cal):
         '''Returns the width and min-width properties for every column in an
            houred view.'''
-        return f'width:{cal.houredWidth};min-width:{cal.houredWidth}'
+        styles = self.headerStyles
+        styles = f';{styles}' if styles else ''
+        return f'width:{cal.houredWidth};min-width:{cal.houredWidth}{styles}'
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                  PXs
