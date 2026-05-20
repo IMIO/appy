@@ -196,6 +196,7 @@ def copyData(data, target, targetMethod, type='string', encoding=None,
             dump(encodeData(chunk, encoding))
 
 # List/dict manipulations  - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 def splitList(l, sub):
     '''Returns a list that was build from list p_l whose elements were
        re-grouped into sub-lists of p_sub elements.
@@ -212,6 +213,30 @@ def splitList(l, sub):
         else:
             r[-1].append(elem)
     return r
+
+def expandList(l, sep='.'):
+    '''Returns a modified version of this p_l(ist) of strings, where all
+       elements containing p_sep have been expanded into sep-splitted
+       elements. Returns p_l unchanged if no change was done.'''
+    # Example: if sep is '.' and l is
+    #                          ['a','b.c','d']
+    # the method will return
+    #                         ['a','b','c','d']
+    #
+    r = None
+    i = 0
+    while i < len(l):
+        elem = l[i]
+        if sep in elem:
+            # p_elem must exist as splitted sub-elements in v_r
+            if r is None:
+                # Initialise v_r
+                r = l[:i]
+            r += elem.split(sep)
+        elif r is not None:
+            r.append(elem)
+        i += 1
+    return r or l
 
 class IterSub:
     '''Iterator over a list of lists'''

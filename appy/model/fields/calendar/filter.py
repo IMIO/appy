@@ -3,6 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
+from appy.utils import expandList
 from appy.ui.layout import Layouts
 from appy.model.fields.select import Select
 
@@ -145,7 +146,7 @@ class SelectFilter(Filter):
     '''Filter allowing to select values from a list of values'''
 
     def __init__(self, name, label, validator, acceptEvent, show=True,
-                 multiple=True):
+                 multiple=True, sep=None):
         '''SelectFilter constructor'''
         # Call the base constructor. p_validator must be a Selection object.
         super().__init__(name, label, validator, acceptEvent, show)
@@ -156,6 +157,9 @@ class SelectFilter(Filter):
         self.field = Select(multiplicity=(0, maxMult), validator=validator,
                             render=self.getWidgetType(), layouts=Layouts.f,
                             height='15em')
+        # When an individual select value contains at least one p_sep, it is
+        # consider a multiple value: p_sep-separated values are then split.
+        self.sep = sep
 
     def getWidgetType(self):
         '''Which HTML widget is used to render this filter ?'''
@@ -167,6 +171,12 @@ class SelectFilter(Filter):
         vals = values.get(self.name)
         if not vals: return
         req[self.field.name] = vals
+        if self.sep:
+            # Each individual value in v_vals may represent several sub-values.
+            # Return a variant of v_vals containing these expanded values.
+            expanded = expandList(vals, self.sep)
+            if id(expanded) != id(vals):
+                return expanded
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Add sub-classes as attributes of the abstract class

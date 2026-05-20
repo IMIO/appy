@@ -77,12 +77,18 @@ class View:
         # the page and could be used again once some filters are visible again.
         req = self.req
         values = o.class_.getFilters(self.tool, fields=field.filterFields)
+        # Each filter may propose a variant of its selected values. The actual
+        # values passed to the filter methods will be the adapted values, if
+        # defined, p_values else.
+        self.adaptedValues = {}
         if filters:
             # Express values as required by the internal filter fields, in order
             # to correctly render every filter and its currently selected
             # value(s).
             for filteR in filters.values():
-                filteR.patchRequest(req, values)
+                adapted = filteR.patchRequest(req, values)
+                if adapted:
+                    self.adaptedValues[filteR.name] = adapted
         self.filterValues = values
 
     def unfiltered(self, event):
@@ -98,8 +104,10 @@ class View:
             filteR = self.filters.get(name)
             # The filter may currently not be shown on p_self
             if not filteR: continue
-            # Does this v_filteR hide this p_event ?
-            if filteR.hides(o, event, values):
+            # Does this v_filteR hide this p_event ? Use possibly adapted filter
+            # values from p_self.adaptedValues.
+            usedValues = self.adaptedValues.get(filteR.name) or values
+            if filteR.hides(o, event, usedValues):
                 return
         # If we are here, no filter has hidden the value
         return True
