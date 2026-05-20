@@ -353,7 +353,7 @@ class Editable:
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     pxCellPick = Px('''
-     <td class=":cssClasses" style=":cellStyle"
+     <td class=":cssClasses"
          var="exclude=field.mustExclude(o, date, preComputed);
               onEdit=layout == 'edit'">
       <!-- This day cannot be picked and a message must be rendered -->
