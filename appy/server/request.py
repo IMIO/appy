@@ -18,12 +18,19 @@ emptyMultiparts = (b'', b'--\r\n')
 # Regular expression for parsing a Content-Disposition (cd) directive  - - - - -
 cdRex = re.compile(b'name="([^"]+)"(?:.+filename="([^"]*)")?')
 
+# Exception that will be raised if the Request object cannot be built  - - - - -
+class Broken(Exception): pass
+
 # Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 EMPTY_POST = 'No Content-Length header for request with Content-Type "%s".'
+MULTI_KO   = 'Unreadable multi-part entry:%s'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Request(Object):
     '''Represents data coming from a HTTP request'''
+
+    # Make the exception class available here
+    Broken = Broken
 
     def addValue(self, name, value):
         '''Adds, on this request, an new attribute named p_name with this
@@ -82,7 +89,11 @@ class Request(Object):
             # Ignore empty entries
             if entry in emptyMultiparts: continue
             # Separate attribute metadata from its value
-            metadata, value = entry.split(b'\r\n\r\n', 1)
+            parts = entry.split(b'\r\n\r\n', 1)
+            if len(parts) != 2:
+                # This entry cannot be parsed
+                raise Broken(MULTI_KO % entry.decode())
+            metadata, value = parts
             # Search the various elements within metadata. For a standard
             # attribute, simply retrieve its name. For a file, also retrieve
             # its MIME type and file name.

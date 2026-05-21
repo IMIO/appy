@@ -598,6 +598,9 @@ class HttpHandler(Handler):
                 r = self.attemptDatabaseRequest()
                 # Build the HTTP response (if not done yet)
                 resp.build(r)
+            except Request.Broken as err:
+                text = f'{self.path} - {str(err)}'
+                self.resp.buildError(HTTPStatus.BAD_REQUEST, message=text)
             finally:
                 # Remove myself from the registry (for now)
                 Handler.remove()
