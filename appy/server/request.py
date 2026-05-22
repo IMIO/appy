@@ -23,7 +23,7 @@ class Broken(Exception): pass
 
 # Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 EMPTY_POST = 'No Content-Length header for request with Content-Type "%s".'
-MULTI_KO   = 'Unreadable multi-part entry:%s'
+MULTI_KO   = 'Unreadable multi-part entry: %s (possibly truncated)'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Request(Object):
@@ -92,7 +92,7 @@ class Request(Object):
             parts = entry.split(b'\r\n\r\n', 1)
             if len(parts) != 2:
                 # This entry cannot be parsed
-                raise Broken(MULTI_KO % entry.decode())
+                raise Broken(MULTI_KO % entry.decode()[:20])
             metadata, value = parts
             # Search the various elements within metadata. For a standard
             # attribute, simply retrieve its name. For a file, also retrieve
