@@ -49,7 +49,8 @@ class Boolean(Field):
         dv = Layouts(edit=d['edit'], view='lf-d')
 
         # *d*escription, with *t*op space
-        dt  = Layouts(edit=Layout(ds, width=n, css='topSpace'), view='lf')
+        dt  = Layouts(edit=Layout(ds, width=n, css='topSpace'),
+                      view=Layout('lf', css='topSpace'))
         h   = Layouts(edit=Layout('flhv',    width=n),   view='lf')
         dh  = Layouts(edit=Layout('flhv-d',  width=n),   view='lf')
         gd  = Layouts(edit=Layout('f;dv-',   width=n),   view='fl')
