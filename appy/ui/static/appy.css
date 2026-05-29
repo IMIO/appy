@@ -122,6 +122,9 @@ input.buttonIcon { vertical-align:bottom; margin:0; border:0;
                    background-position:0 50%; padding-left:10px;
                    background-color:transparent }
 input.buttonFixed { width:150px; padding:0 0 0 10px; margin-bottom:6px }
+div.buttonFixed { width:fit-content; cursor:pointer; border:1px solid grey;
+                  text-align:center; padding: 0.2em 0.5em;
+                  background-color:|lightColor| }
 .lbutton { float:left }
 div.rbutton { float:right }
 .fake, input.fake { color:|warnColor|; cursor:not-allowed; font-style:italic }
