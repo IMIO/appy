@@ -1155,7 +1155,7 @@ msgstr "Diese Seite existiert nicht oder Sie sind nicht berechtigt, sie anzuzeig
 msgid "warn_leave_form"
 msgstr "In bestimmten Situationen kann das Verlassen dieser Seite dazu führen, dass die verschlüsselten Daten verloren gehen oder andere Benutzer sie nicht mehr bearbeiten können. Bitte nutzen Sie die entsprechenden Schaltflächen."
 
-#. Default: "You are not (or no longer) allowed to come here."
+#. Default: "It seems that you're not allowed to come here."
 msgid "unauthorized"
 msgstr "Sie sind nicht berechtigt, diesen Bereich einzusehen."
 

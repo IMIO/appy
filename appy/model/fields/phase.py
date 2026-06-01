@@ -11,7 +11,7 @@ from appy.model.utils import Object
 class Page:
     '''Used for describing a page, its related phase, show condition, etc.'''
 
-    subElements = ('save', 'cancel', 'edit')
+    subElements = 'save', 'cancel', 'edit'
 
     def __init__(self, name, phase='main', show=True, showSave=True,
                  showCancel=True, showEdit=True, label=None, icon=None,
@@ -166,7 +166,7 @@ class UiPage:
         # The corresponding Page instance
         self.page = page
         self.name = page.name
-        # Must the page be shown on view/edit layouts ?
+        # Must the page be shown on /view and/or /edit ?
         self.showOnView = showOnView
         self.showOnEdit = showOnEdit
         # Must sub-elements (buttons "save", "cancel", etc) be shown ?
@@ -552,6 +552,11 @@ class UiPhases:
             # m_getDefaultViewPage and / or m_getDefaultEditPage.
             o = self.o
             o.raiseMessage(o.translate('page_not_found'))
+        if len(self.all) == 1:
+            # Ensure the sole phase is the default one
+            for phase in self.all.values():
+                self.default = phase
+                break
 
     def getStickyIndex(self, table):
         '''Returns the index of the element, within the page layout represented

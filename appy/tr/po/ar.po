@@ -1156,7 +1156,7 @@ msgstr ""
 msgid "warn_leave_form"
 msgstr ""
 
-#. Default: "You are not (or no longer) allowed to come here."
+#. Default: "It seems that you're not allowed to come here."
 msgid "unauthorized"
 msgstr ""
 

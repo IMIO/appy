@@ -1156,9 +1156,9 @@ msgstr "This page does not exist or you are not allowed to consult it."
 msgid "warn_leave_form"
 msgstr "In some situations, by leaving this page this way, you may lose encoded data or prevent other users from editing it afterwards. Please use buttons instead."
 
-#. Default: "You are not (or no longer) allowed to come here."
+#. Default: "It seems that you're not allowed to come here."
 msgid "unauthorized"
-msgstr "You are not (or no longer) allowed to come here."
+msgstr "It seems that you're not allowed to come here."
 
 #. Default: "You are not allowed to consult this."
 msgid "unconsultable"

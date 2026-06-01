@@ -1155,13 +1155,13 @@ msgstr "Deze pagina bestaat niet of u bent niet bevoegd om deze te bekijken."
 msgid "warn_leave_form"
 msgstr "In bepaalde situaties, wanneer u deze pagina op deze wijze verlaat, is het mogelijk dat ingevoerde gegevens verloren gaan of dat u andere gebruikers verhindert om ze aan te passen. Gelieve de juiste knoppen te gebruiken."
 
-#. Default: "You are not (or no longer) allowed to come here."
+#. Default: "It seems that you're not allowed to come here."
 msgid "unauthorized"
 msgstr "U hebt geen toelating om dit te consulteren."
 
 #. Default: "You are not allowed to consult this."
 msgid "unconsultable"
-msgstr ""
+msgstr "U hebt geen toelating om dit te consulteren."
 
 #. Default: "Microsoft Internet Explorer is not supported.\nUsing it with site is risky and could lead to problems as severe as data loss.\n\nPlease use a modern web browser to consult this site."
 msgid "wrong_browser"

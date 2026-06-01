@@ -1156,13 +1156,13 @@ msgstr "Cette page n'existe pas ou vous n'êtes pas autorisé à la consulter."
 msgid "warn_leave_form"
 msgstr "Dans certaines situations, en quittant cette page de cette manière, vous pouvez perdre les données encodées ou empêcher d'autres utilisateurs de les éditer par la suite. Veuillez utilisez les boutons ad hoc."
 
-#. Default: "You are not (or no longer) allowed to come here."
+#. Default: "It seems that you're not allowed to come here."
 msgid "unauthorized"
-msgstr "Il semble que vous ne soyez pas ou plus autorisé·e à venir ici."
+msgstr "Il semble que vous ne soyez pas autorisé·e à venir ici."
 
 #. Default: "You are not allowed to consult this."
 msgid "unconsultable"
-msgstr "Il semble que vous ne soyez pas ou plus autorisé·e à consulter ceci."
+msgstr "Il semble que vous ne soyez pas autorisé·e à consulter ceci."
 
 #. Default: "Microsoft Internet Explorer is not supported.\nUsing it with site is risky and could lead to problems as severe as data loss.\n\nPlease use a modern web browser to consult this site."
 msgid "wrong_browser"
