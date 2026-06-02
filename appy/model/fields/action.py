@@ -107,7 +107,8 @@ class Action(Field):
     view = cell = buttons = query = Px('''
      <form var="isFake=field.isFake(o, _);  
                 formId=f'{o.iid}_{name}_form';
-                label=_('label', field=field);
+                ichar=field.icon if len(field.icon) == 1 else None;
+                label=field.getLabel(_ctx_);
                 multi=multi|None;
                 className=className|o.class_.name;
                 onCell=layout in field.cellLayouts;
@@ -151,8 +152,8 @@ class Action(Field):
       <a if="asPicto" class=":'help fake' if isFake else 'clickable'"
          title=":isFake if isFake else ''"
          onclick=":field.getOnClick(_ctx_) if not isFake else ''">
-       <img src=":url(field.icon, base=field.iconBase, ram=field.iconRam)"
-            class=":picto"/>
+       <img if="not ichar" class=":picto"
+            src=":url(field.icon, base=field.iconBase, ram=field.iconRam)"/>
        <div style=":f'display:{config.ui.pageDisplay}'">::inputTitle</div>
       </a>
 
@@ -161,8 +162,9 @@ class Action(Field):
 
        <!-- Variant with the icon outside the button -->
        <div if="field.iconOut" class="iflex1">
-        <img src=":field.getIconUrl(url)" onclick="this.nextSibling.click()"
-             class=":f'clickable {field.iconCss}'" title=":label"/>
+        <img if="not ichar" src=":field.getIconUrl(url)"
+             title=":label" class=":f'clickable {field.iconCss}'"
+             onclick="this.nextSibling.click()"/>
         <x>:field.pxButton</x>
        </div>
 
@@ -255,6 +257,7 @@ class Action(Field):
         # "MyApp" and your icon is MyApp/static/myimage.png, attribute "icon"
         # must hold "MyApp/myimage.png". If you do not specify any image,
         # default icon action.svg will be used (it is stored in appy/ui/static).
+        # p_icon can also store a simple utf8 character.
         icon = icon or 'action.svg'
         self.icon, self.iconBase, self.iconRam = utils.iconParts(icon)
 
@@ -414,6 +417,14 @@ class Action(Field):
             popup = getattr(options, 'popup', None)
             if not popup:
                 raise Exception(OPT_P_ERR % options.__name__)
+
+    def getLabel(self, c):
+        '''Get a translated label as must be rendered within the button'''
+        r = c._('label', field=self)
+        if c.ichar:
+            # An utf8 char: incorporate it into the button label
+            r = f'{self.icon} {r}'
+        return r
 
     def renderLabel(self, layoutType):
         return # Label is rendered directly within the button

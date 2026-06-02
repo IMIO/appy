@@ -106,7 +106,8 @@ class Transition:
         # or one of your SVG icons being in folder <yourApp>/static, specify the
         # name of the image, ie, "help.svg". If you want to specify one of your
         # non-SVG icons, specify "<yourApp>/<yourImage>". Else, default Appy
-        # icon "action.svg" (from appy/ui/static) will be used.
+        # icon "action.svg" (from appy/ui/static) will be used. p_icon can also
+        # be a simple utf8 character.
         self.icon, self.iconBase, self.iconRam = iconParts(icon or 'action.svg')
 
         # You may specify, in attribute "sicon", an alternate icon suitable when
@@ -595,7 +596,7 @@ class UiTransition:
             onclick=":'triggerTransition(%s,this.name,%s,%s,%s,%s)' % \
                        (q(formId), q(transition.confirm), back, yes, no)"/>
      <!-- Fake button -->
-     <input if="not mayTrigger" type="button" class=":'%s fake' % css"
+     <input if="not mayTrigger" type="button" class=":f'{css} fake'"
             style=":transition.getIconUrl(asBG=True)"
             value=":label" title=":transition.reason"/>''')
 
@@ -604,6 +605,7 @@ class UiTransition:
              mayTrigger=transition.mayTrigger;
              inSub=layout=='sub';
              tr=transition.transition;
+             ichar=transition.ichar;
              asIcon=forceIcons or not inSub or tr.iconOnly;
              yes=q(_(tr.yesLabel));
              no=q(_(tr.noLabel))">
@@ -618,10 +620,10 @@ class UiTransition:
          onclick=":'triggerTransition(%s,this.name,%s,%s,%s,%s)' %
                     (q(formId), q(transition.confirm), back, yes, no) 
                     if mayTrigger else ''">
-       <img src=":url(getattr(tr, iconAttr), base=getattr(tr, iconBase),
-                      ram=getattr(tr,iconRam))"
-            class=":picto|tr.iconCss"/>
-       <div style=":'display:%s' % config.ui.pageDisplay"
+       <img if="not ichar" class=":picto|tr.iconCss"
+            src=":url(getattr(tr, iconAttr), base=getattr(tr, iconBase),
+                      ram=getattr(tr,iconRam))"/>
+       <div style=":f'display:{config.ui.pageDisplay}'"
             if="not inSub">::label</div>
       </a>
 
@@ -631,7 +633,7 @@ class UiTransition:
 
        <!-- Variant with the icon outside the button -->
        <div if="tr.iconOut" class="iflex1">
-        <img src=":transition.getIconUrl()"
+        <img if="not ichar" src=":transition.getIconUrl()"
              class=":'%s %s'%('clickable' if mayTrigger else 'fake',tr.iconCss)"
              onclick="this.nextSibling.click()"/>
         <x>:transition.pxButton</x>
@@ -659,8 +661,14 @@ class UiTransition:
         # The tied p_transition
         self.transition = transition
         self.type = 'transition'
+        # If the transition icon is represented by a single char (an utf8 icon),
+        # it will be store in the following parameter.
+        self.ichar = transition.icon if len(transition.icon) == 1 else None
         labelId = transition.labelId
         self.title = _(labelId)
+        if self.ichar:
+            # Incorporate the utf8 icon directly into the transition title
+            self.title = f'{self.ichar} {self.title}'
         if transition.confirm:
             msg = _(f'{labelId}_confirm', blankOnError=True) or \
                   _('action_confirm')
@@ -695,6 +703,11 @@ class UiTransition:
     def getIconUrl(self, pre='s', asBG=False):
         '''Returns the URL to p_self's (s)icon (depending on p_pre(fix)), to be
            used as a background image or not (depending on p_asBG).'''
+        if self.ichar:
+            # The icon is a simple utf8 char being incorporated into the
+            # translation title: cancel the padding allowing to let space for
+            # the background icon.
+            return 'padding:0 0.5em' if asBG else ''
         tr = self.transition
         # In "icon out" mode, no background image must be present
         if asBG and tr.iconOut: return ''
