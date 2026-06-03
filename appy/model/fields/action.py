@@ -257,7 +257,7 @@ class Action(Field):
         # "MyApp" and your icon is MyApp/static/myimage.png, attribute "icon"
         # must hold "MyApp/myimage.png". If you do not specify any image,
         # default icon action.svg will be used (it is stored in appy/ui/static).
-        # p_icon can also store a simple utf8 character.
+        # p_icon can also store a single utf-8 character.
         icon = icon or 'action.svg'
         self.icon, self.iconBase, self.iconRam = utils.iconParts(icon)
 

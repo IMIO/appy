@@ -107,7 +107,7 @@ class Transition:
         # name of the image, ie, "help.svg". If you want to specify one of your
         # non-SVG icons, specify "<yourApp>/<yourImage>". Else, default Appy
         # icon "action.svg" (from appy/ui/static) will be used. p_icon can also
-        # be a simple utf8 character.
+        # be a single utf-8 character.
         self.icon, self.iconBase, self.iconRam = iconParts(icon or 'action.svg')
 
         # You may specify, in attribute "sicon", an alternate icon suitable when

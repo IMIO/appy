@@ -111,6 +111,16 @@ class Base:
         '''Return the User object (or its p_title) behind p_self.creator'''
         return self.history[-1].getUser(self, title=title)
 
+    def setOwner(self, login, reindex=True):
+        '''Sets p_login as sole p_self's Owner'''
+        localRoles = self.localRoles
+        localRoles.delete(role='Owner')
+        localRoles.add(login, 'Owner')
+        # Reindex the impacted index on p_self, unless explicitly stated
+        if reindex:
+            # Reindex the impacted index if required
+            self.reindex(fields=('allowed',))
+
     # Object's creation and last modification dates
     p['show'] = Show.VE_
     created = Date(default=lambda o: o.history[-1].date, persist=False, **p)
