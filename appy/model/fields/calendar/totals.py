@@ -71,15 +71,21 @@ class Total:
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Totals:
-    '''For a timeline calendar, if you want to add rows or columns representing
-       totals computed from other rows/columns (representing agendas), specify
-       it via Totals objects (see Agenda attributes named "totalRows" and
-       "totalCols".'''
+    '''Represents, on a multi-calendar, additional rows or columns containing
+       totals computed from data associated to inner, individual calendars.'''
 
-    TOT_KO = 'Totals, only applicable to render mode "monthMulti", cannot be ' \
-             'set unless render is "monthMulti" or "weekMulti".'
+    # Totals objects are to be defined in attributes Calendar.totalRows and
+    # Calendar.totalCols.
 
-    def __init__(self, name, label, onCell, initValue=0, translated=False):
+    # A Totals object may apply to all views or be restricted to a single view
+    SCOPE_ALL   = 0
+    SCOPE_MONTH = 1
+    SCOPE_WEEK  = 2
+
+    TOT_KO = 'Totals cannot be set on non-multiple calendars.'
+
+    def __init__(self, name, label, onCell, initValue=0, translated=False,
+                 scope=SCOPE_ALL):
         # "name" must hold a short name or acronym and will directly appear
         # at the beginning of the row. It must be unique within all Totals
         # instances defined for a given Calendar field.
@@ -94,12 +100,12 @@ class Totals:
         # agenda. It will get these args:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #    date     | The date representing the current day (a DateTime
-        #             | instance) ;
+        #             | object) ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    other    | The Other instance representing the currently walked
+        #    other    | The Other object representing the currently walked
         #             | calendar ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    events   | The list of events (as Event instances) defined at that
+        #    events   | The list of events (as Event objects) defined at that
         #             | day in this calendar. Be careful: this can be None ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #    total    | The Total object (see above) corresponding to the
@@ -118,6 +124,24 @@ class Totals:
         self.onCell = onCell
         # "initValue" is the initial value given to created Total objects
         self.initValue = initValue
+        # The scope, for a Totals object, determines on what calandar view(s) it
+        # must be shown and computed (see constants defined hereabove).
+        self.scope = scope
+
+    def inScope(self, render):
+        '''Must this Totals object (p_self) be rendered on this p_calendar
+           field ?'''
+        # It depends on p_self.scope
+        scope = self.scope
+        if scope == Totals.SCOPE_ALL:
+            r = True
+        elif scope == Totals.SCOPE_MONTH:
+            r = render == 'month'
+        elif scope == Totals.SCOPE_WEEK:
+            r = render == 'week'
+        else:
+            r = False
+        return r
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                             Class methods
@@ -133,11 +157,13 @@ class Totals:
                f"{{'multiple':'1'}},'{hook}_{suffix}','{hook}')"
 
     @classmethod
-    def get(class_, o, field, type):
+    def get(class_, o, field, typE, render):
         '''Returns the Totals objects by getting or computing them from
            p_field.totalRows or p_field.totalCols (depending on p_type).'''
-        r = getattr(field, f'total{type.capitalize()}')
-        return r(o) if callable(r) else r
+        r = getattr(field, f'total{typE.capitalize()}')
+        r = r(o) if callable(r) else r
+        # Keep only those that must be rendered, depending on their scope
+        return [totals for totals in r if totals.inScope(render)]
 
     # Status for checkboxes used to (in)validate calendar events
     checkboxStatuses = {'validated': True, 'discarded': False}
@@ -206,7 +232,7 @@ class Totals:
     pxRows = Px('''
      <tbody id=":f'{hook}_trs'"
             var="grid=view.grid;
-                 rows=field.Totals.get(o, field, 'rows');
+                 rows=field.Totals.get(o, field, 'rows', view.renderRaw);
                  totals=field.Totals.compute(field, rows, 'row', o, grid,
                                              others, preComputed)">
       <script>:field.Totals.getAjaxData(field, o, 'rows', hook)</script>
@@ -225,8 +251,9 @@ class Totals:
      <table cellpadding="0" cellspacing="0" class="list timeline"
             style="float:right" id=":f'{hook}_tcs'"
             var="grid=view.grid;
-                 cols=field.Totals.get(o, field, 'cols');
-                 rows=field.Totals.get(o, field, 'rows');
+                 render=view.renderRaw;
+                 cols=field.Totals.get(o, field, 'cols', render);
+                 rows=field.Totals.get(o, field, 'rows', render);
                  totals=field.Totals.compute(field, cols, 'col', o , grid,
                                              others, preComputed)">
       <script>:field.Totals.getAjaxData(field, o, 'cols', hook)</script>

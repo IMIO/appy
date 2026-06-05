@@ -40,7 +40,7 @@ TL_W_EVTS   = 'A multiple calendar has the objective to display a series of ' \
 RENDER_KO   = 'Wrong render mode "%s". Possible render modes are: %s.'
 MISS_EN_M   = "When param 'eventTypes' is a method, you must give another " \
               "method in param 'eventNameMethod'."
-S_MONTHS_KO = 'Strict months can only be used with timeline calendars.'
+S_MONTHS_KO = 'Strict months can only be used with multiple calendars.'
 ACT_MISS    = 'Action "%s" does not exist or is not visible.'
 DCLASS_KO   = 'Class specified in attribute "dataClass" is not a sub-class of '\
               'class appy.model.fields.calendar.data.EventData.'
@@ -425,20 +425,17 @@ class Calendar(Field):
         # no event at all).
         self.applicableEvents = applicableEvents
 
-        # [Month/week, multiple only] If you want to specify additional rows
-        # representing totals, give, in p_totalRows, a list of Totals objects
-        # (see appy.model.fields.calendar.totals.Totals) or a method producing
-        # such a list.
-        multiMW = self.multiple and self.render in ('month', 'week')
-        if totalRows and not multiMW:
+        # [Multiple only] If you want to specify additional rows representing
+        # totals, give, in p_totalRows, a list of Totals objects (see appy.
+        # model.fields.calendar.totals.Totals) or a method producing such a
+        # list.
+        multiple = self.multiple
+        if totalRows and not multiple:
             raise Exception(Totals.TOT_KO)
         self.totalRows = totalRows or []
 
         # Similarly, you can specify additional columns in p_totalCols
-        if totalCols and not multiMW:
-            # Total columns only apply to month, multi views, but can be
-            # specified if p_render is "weekMulti", because, from that view, the
-            # "monthMulti" view is accessible.
+        if totalCols and not multiple:
             raise Exception(Totals.TOT_KO)
         self.totalCols = totalCols or []
 
@@ -538,7 +535,7 @@ class Calendar(Field):
         # [Month, multiple only] If p_strictMonths is True, only days of the
         # current month will be shown. Else, complete weeks will be shown,
         # potentially including some days from the previous and next months.
-        if strictMonths and not multiMW:
+        if strictMonths and not multiple:
             raise Exception(S_MONTHS_KO)
         self.strictMonths = strictMonths
 

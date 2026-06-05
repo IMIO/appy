@@ -55,11 +55,15 @@ class WeekMulti(Editable, Week):
        </tbody>
       </table>
 
+      <!-- Total columns, as a separate table, and legend -->
+      <x if="field.totalCols">:field.Totals.pxCols</x>
+
       <!-- Popups for creating, updating or deleting a calendar event -->
       <x if="mayEdit">
        <x>:view.pxEditPopup</x><x>:view.pxDelPopup</x></x>
 
       <!-- Popup for validating events  -->
       <x if="mayValidate">:field.validation.pxPopup</x>
+
      </x>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
