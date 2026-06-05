@@ -24,10 +24,10 @@ class Mode:
        every time search results must be computed.'''
 
     # The default mode(s) for displaying instances of any Appy class
-    default = ('list',)
+    default = 'list',
 
     # All available predefined concrete modes
-    concrete = ('list', 'grid', 'calendar')
+    concrete = 'list', 'grid', 'calendar'
 
     # Objects actions
     pxObjectActions = Px('''
@@ -77,12 +77,10 @@ class Mode:
 
     # The list of custom actions that can be triggered on search results
     pxActions = Px('''
-     <table>
-      <tr><td for="action in actions"
-            var2="multi=action.getMulti(mode.backHook, mode.outerHook);
-                  field=action; fieldName=field.name;
-                  layout='query'">:action.pxRender</td></tr>
-     </table>''')
+     <x for="action in actions"
+        var2="multi=action.getMulti(mode.backHook, mode.outerHook);
+              field=action; fieldName=field.name;
+              layout='query'">:action.pxRender</x>''')
 
     @classmethod
     def get(class_, uiSearch):
@@ -303,6 +301,33 @@ class List(Mode):
     # Name for this mode
     name = 'list'
 
+    pxGlobalActions = Px('''
+     <div class="globalActions" if="not popup">
+
+      <!-- Delete several objects -->
+      <div>
+       <input if="uiSearch.search.showDeleteMany(tool)"
+              var2="label=_('object_delete_many'); css=ui.Button.getCss(label)"
+              type="button" class=":css" value=":label"
+              onclick=":'onDeleteObjects(%s)' % (q(uiSearch.name))"
+              style=":svg('deleteMany', bg='18px 18px')"/>
+      </div>
+
+      <!-- Custom actions -->
+      <x var="actions=uiSearch.search.getActions(tool)"
+         if="actions and not popup">:mode.pxActions</x>
+     </div>
+
+     <!-- Select objects and close the popup -->
+     <div if="popup" align=":dleft">
+      <input type="button"
+             var="label=_('object_link_many'); css=ui.Button.getCss(label)"
+             value=":label" class=":css"
+             style=":svg('linkMany', bg='18px 18px')"
+             onclick=":uiSearch.initiator.jsSelectMany(q, mode.sortKey,
+                        mode.sortOrder, mode.getFiltersString(), req.onav)"/>
+     </div>''')
+
     px = Px('''
      <x var="genCss=mode.columns.getCss(showHeaders, uiSearch.search.rowAlign);
              genName=mode.columns.name if genCss else None">
@@ -325,25 +350,14 @@ class List(Mode):
       </table>
      </x>
 
-     <!-- The button for selecting objects and closing the popup -->
-     <div if="popup and mode.cbShown" align=":dleft">
-      <input type="button"
-             var="label=_('object_link_many'); css=ui.Button.getCss(label)"
-             value=":label" class=":css"
-             style=":svg('linkMany', bg='18px 18px')"
-             onclick=":uiSearch.initiator.jsSelectMany(q, mode.sortKey,
-                        mode.sortOrder, mode.getFiltersString(), req.onav)"/>
-     </div>
-
-     <!-- Custom actions -->
-     <x var="actions=uiSearch.search.getActions(tool)"
-        if="actions and not popup">:mode.pxActions</x>
+     <!-- Global actions -->
+     <x if="mode.cbShown">:mode.pxGlobalActions</x>
 
      <!-- Init checkboxes if present -->
-     <script if="mode.checkboxes">:'initCbs(%s)' % q(mode.checkboxesId)</script>
+     <script if="mode.checkboxes">:f'initCbs({q(mode.checkboxesId)})'</script>
 
      <!-- Init field focus and store object IDs in the session storage -->
-     <script>:'initFocus(%s); %s;' % (q(mode.hook), mode.store)</script>''')
+     <script>:f'initFocus({q(mode.hook)});{mode.store};'</script>''')
 
     def init(self):
         '''List-specific initialization'''

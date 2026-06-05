@@ -37,11 +37,11 @@ class Search:
     initiator = initiators.SearchInitiator    
 
     # Parameters needed to replay a search (see m_replay)
-    replayParams = ('className', 'search', 'sortKey', 'sortOrder', 'filters')
+    replayParams = 'className', 'search', 'sortKey', 'sortOrder', 'filters'
 
     def __init__(self, name=None, group=None, sortBy='title', sortOrder='asc',
                  maxPerPage=30, maxPerLive=10, default=False, colspan=1,
-                 viaPopup=None, show=True, showActions='all',
+                 viaPopup=None, show=True, showActions='all', delete=False,
                  actionsDisplay='block', showPods=True, showTitle=True,
                  showFilters=True, showNav='both', navAlign='right',
                  listCss=None, translated=None, translatedDescr=None,
@@ -80,6 +80,9 @@ class Search:
         # the Ref class.
         self.showActions = showActions
         self.actionsDisplay = actionsDisplay
+        # May the user delete objects via this search ? p_delete can also hold a
+        # method accepting the tool as unique arg.
+        self.delete = delete
         # Various parts of search results may be shown or not
         self.showPods = showPods
         self.showTitle = showTitle # Determines when to show the zone including
@@ -209,6 +212,11 @@ class Search:
         elif align == 'center':
             r = 'margin-left:auto;margin-right:auto'
         return r
+
+    def showDeleteMany(self, tool):
+        '''Must the "delete many" button be shown on search results ?'''
+        r = self.delete
+        return r(tool) if callable(r) else r
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                             The "run" method
@@ -404,12 +412,12 @@ class Search:
         return o, r
 
     @classmethod
-    def encodeForReplay(class_, req, layout):
+    def encodeForReplay(class_, req, layout='view'):
         '''Encodes in a string all the params in the p_req(uest) being required
            for re-playing a search.'''
         # If key "search" is present in the request, but empty, it represents
         # the special search named "allSearch".
-        if ('search' in req) and not req.search:
+        if 'search' in req and not req.search:
             req.search = 'allSearch'
         if not req.search or layout == 'cell': return ''
         return ':'.join([(req[key] or '') for key in class_.replayParams])
@@ -426,15 +434,15 @@ class Search:
         # field (in its context).
         #
         # Search parameters (p_searchParams) are in the format produced by
-        # m_encodeForReplay. This method return resulting objects. The operation
-        # is logged.
+        # m_encodeForReplay. This method returns resulting objects. The
+        # operation is logged.
         #
         # If p_returnSearch is True, instead of returning the list of matched
         # objects, the method returns a tuple (uiSearch, objects). Indeed, some
         # callers (like POD fields) may need to get info about the search as
-        # stored on the UiSearch instance, like its translated name and
+        # stored on the UiSearch object, like its translated name and
         # description.
-        # ~
+        #
         # Get search parameters as an object
         params = O()
         i = 0
@@ -479,8 +487,8 @@ class Search:
         #             | they are checked.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-        ids = {int(v) for v in req.checkedIds.split(',')} if req.checkedIds \
-                                                          else {}
+        checked = req.checkedIds
+        ids = {int(v) for v in checked.split(',')} if checked else {}
         return ids, req.checkedSem == 'unchecked'
 
     @classmethod
@@ -502,6 +510,40 @@ class Search:
             if remove:
                 del objects[i]
             i -= 1
+
+    traverse['removeMany'] = True # Security will be enforced object by object
+    @classmethod
+    def removeMany(class_, tool):
+        '''Deletes the objects as selected on search results'''
+        # Get, from the request, info about selected objects
+        req = tool.req
+        ids, unchecked = class_.getCheckedInfo(req)
+        if unchecked:
+            # Replay the search and remove p_ids from search results
+            params = class_.encodeForReplay(req)
+            objects = class_.replay(tool, params)
+            class_.keepCheckedResults(req, objects, ids)
+        else:
+            # The objects to delete are those whose iid is in p_ids
+            objects = [tool.getObject(iid) for iid in ids]
+        # (Try to) delete the selected v_objects
+        failed = deleted = 0
+        guard = tool.guard
+        for o in objects:
+            if guard.mayDelete(o):
+                o.delete(historize=True)
+                deleted += 1
+            else: failed += 1
+        # Return a translated message to the UI
+        _ = tool.translate
+        if failed:
+            text = _('action_partial', mapping={'nb': failed})
+        else:
+            text = _('action_done')
+        # Perform a database commit if at least one object has been deleted
+        if deleted:
+            tool.H().commit = True
+        tool.say(text)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                                    PXs

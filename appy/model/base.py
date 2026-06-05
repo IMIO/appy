@@ -1305,7 +1305,8 @@ class Base:
                 self.values[name] = value
 
     def delete(self, historize=False, executeMethods=True):
-        '''Deletes p_self (see homonym method on the database object'''
+        '''Deletes p_self'''
+        # Ssee homonym method on the database object
         return self.database.delete(self, historize, executeMethods)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

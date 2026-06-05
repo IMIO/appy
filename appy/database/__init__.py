@@ -948,9 +948,11 @@ class Database:
 
     def delete(self, o, historize=False, executeMethods=True, root=None,
                ignore=None):
-        '''Delete object p_o from the database. When unlinking it from other
-           objects, if the concerned Ref fields are historized and p_historize
-           is True, this deletion is noted in tied object's histories.'''
+        '''Delete object p_o from the database'''
+        #
+        # When unlinking it from other objects, if the concerned Ref fields are
+        # historized and p_historize is True, this deletion is noted in tied
+        # object's histories.
         #
         # If p_executeMethods is False, the custom "onDelete" method, even if
         # present on p_o, will not be executed.

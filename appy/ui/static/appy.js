@@ -1053,7 +1053,7 @@ function getCbDataFromCbName(name) {
      - for a ref:                    <objId>_<refName>_<cbType>
      - for a search outside a popup: <searchName>_objs
   */
-  let parts = name.split('_'), cbType=parts.pop(), id=parts.join('_');
+  const parts = name.split('_'), cbType=parts.pop(), id=parts.join('_');
   return [id, cbType];
 }
 
@@ -1447,13 +1447,32 @@ function onDeleteObject(iid, back, text) {
   let actionType, action;
   if (back) {
     actionType = 'script';
-    action = "askAjax('" +back+ "',null,{'action':'" +iid+ '*' + "remove'});";
+    action = `askAjax('${back}',null,{'action':'${iid}*remove'});`
   }
   else {
     actionType = 'url';
-    action = siteUrl + '/' + iid + '/remove';
+    action = `${siteUrl}/${iid}/remove`;
   }
   askConfirm(actionType, action, text);
+}
+
+// Delete objects from search results
+function onDeleteObjects(search) {
+  // Get checkbox statuses
+  const node = document.getElementById(search),
+        // Get the ids of (un-)checked objects
+        statuses = node[`_appy_objs_cbs`],
+        ids = stringFromDict(statuses, true),
+        // Get the array semantics
+        semantics = node[`_appy_objs_sem`];
+  // Show an error message if no element is selected
+  if ((semantics == 'checked') && (len(statuses) == 0)) {
+    openPopup('alertPopup', no_elem_selected);
+    return;
+  }
+  const expr = `askAjax('searchResults',null,{'action':'1*Search*removeMany',` +
+               `'checkedIds':'${ids}','checkedSem':'${semantics}'})`;
+  askConfirm('script', expr, action_confirm);
 }
 
 function onLink(action, url, fieldName, targetId, hook, start, semantics,

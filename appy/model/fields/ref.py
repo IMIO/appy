@@ -986,7 +986,7 @@ class Ref(Field):
         # When the user adds a new object, must a confirmation popup be shown ?
         self.addConfirm = addConfirm
 
-        # May the user delete objects via this Ref?
+        # May the user delete objects via this Ref ?
         self.delete = delete
         if delete is None:
             # By default, one may delete objects via a Ref for which one can
@@ -3043,7 +3043,7 @@ class Ref(Field):
                             method = eval(f'self.{singleAction}Object')
                             method(o, target, reindex=True)
                 if failed:
-                    msg = o.translate('action_partial', mapping={'nb':failed})
+                    msg = o.translate('action_partial', mapping={'nb': failed})
         # Redirect the user and display a message
         text = msg or o.translate('action_done')
         if o.H().isAjax():
