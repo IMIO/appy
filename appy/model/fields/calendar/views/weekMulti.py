@@ -53,6 +53,9 @@ class WeekMulti(Editable, Week):
          <x if="not loop.groupO.last">::field.Other.getSep(len(view.grid)+2)</x>
         </x>
        </tbody>
+
+       <!-- Total rows -->
+       <x if="field.totalRows">:field.Totals.pxRows</x>
       </table>
 
       <!-- Total columns, as a separate table, and legend -->

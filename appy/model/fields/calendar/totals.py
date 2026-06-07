@@ -189,7 +189,7 @@ class Totals:
         for group in others: othersCount += len(group)
         datesCount = len(grid)
         isRow = totalType == 'row'
-        # Initialise, for every (row or col) totals, Total instances
+        # Initialise, for every (row or col) totals, Total objects
         totalCount = datesCount if isRow else othersCount
         lastCount = othersCount if isRow else datesCount
         r = {}

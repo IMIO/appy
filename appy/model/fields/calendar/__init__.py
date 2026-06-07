@@ -147,7 +147,7 @@ class Calendar(Field):
 
       <!-- The calendar in itself, with or without filters -->
       <div if="view.filters" class="viewF">
-       <div>:view.px</div>
+       <div class="viewM">:view.px</div>
        <div>:field.Filter.px</div>
       </div>
       <x if="not view.filters">:view.px</x>
@@ -167,6 +167,7 @@ class Calendar(Field):
       .viewF > :nth-child(2) { display:flex; flex-direction:column; width:10em;
                                gap:0.5em; position:sticky; top:1.5em;
                                align-self:flex-start }
+      .viewM { display:flex; align-items:start }
       .calSelect { margin:0.2em 0; color:|selectColor|; font-size:95% }
       .eFields { margin-bottom:0.2em }
       .eFields label { padding:0 0.6em 0 0 }
