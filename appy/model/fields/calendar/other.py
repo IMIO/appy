@@ -141,7 +141,9 @@ class Other:
              typeInfo=typeInfo|F.TypeInfo.create(field, o, eventTypes);
             hasEventFields='true' if field.eventFields else 'false';
            allowedTypes=field.getAllowedTypes(o, eventTypes);
-          preComputed=preComputed|outer.field.getPreComputedInfo(outer.o, view)"
+          preComputed=preComputed|outer.field.getPreComputedInfo(outer.o, view);
+          others=others|F.Other.getAll(o, field, preComputed);
+          totals=totals|F.Totals.Running(_ctx_)"
          id=":other.getHook()">
       <script>:other.getAjaxData(_ctx_)</script>
 
@@ -159,6 +161,9 @@ class Other:
 
       <!-- The last cell repeats the first one -->
       <td class=":f'tlRight {css}'.strip()">::tlName</td>
+
+      <!-- Column totals -->
+      <x if="outer.field.totalCols">:field.Totals.Running.pxCols</x>
      </tr>''')
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -166,13 +171,13 @@ class Other:
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     @classmethod
-    def getAll(class_, o, field, preComputed):
+    def getAll(class_, o, field, cache):
         '''Returns the list of other calendars whose events must also be shown
            on this calendar p_field.'''
         r = None
         others = field.others
         if others:
-            r = others(o, preComputed)
+            r = others(o, cache)
             if r:
                 # Ensure we have a list of lists
                 if isinstance(r, Other): r = [r]

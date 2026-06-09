@@ -162,6 +162,11 @@ class Week(Day):
          <b>::view.getDayName(day)</b>
        </th>
        <th></th>
+
+       <!-- Headers for column totals, if present -->
+       <th for="col in totals.cols|()">
+        <abbr title=":_(col.label)">:col.name</abbr>
+       </th>
       </tr>
      </thead>''')
 

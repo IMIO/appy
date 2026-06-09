@@ -33,7 +33,10 @@ class WeekMulti(Editable, Week):
 
     px = Px('''
      <x var="rowHeight=int(field.height/float(view.countOthers(others)));
-             outer=field.Other(o, field.name)">
+             outer=field.Other(o, field.name);
+             render=view.renderRaw;
+             totals=field.Totals.Running(_ctx_)">
+
       <table class="list timeline weekline">
 
        <!-- Day names and numbers, as column headers -->
@@ -55,18 +58,13 @@ class WeekMulti(Editable, Week):
        </tbody>
 
        <!-- Total rows -->
-       <x if="field.totalRows">:field.Totals.pxRows</x>
+       <x if="field.totalRows">:field.Totals.Running.pxRows</x>
       </table>
 
-      <!-- Total columns, as a separate table, and legend -->
-      <x if="field.totalCols">:field.Totals.pxCols</x>
-
       <!-- Popups for creating, updating or deleting a calendar event -->
-      <x if="mayEdit">
-       <x>:view.pxEditPopup</x><x>:view.pxDelPopup</x></x>
+      <x if="mayEdit"><x>:view.pxEditPopup</x><x>:view.pxDelPopup</x></x>
 
       <!-- Popup for validating events  -->
       <x if="mayValidate">:field.validation.pxPopup</x>
-
      </x>''')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

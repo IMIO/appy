@@ -258,7 +258,7 @@ class Editable:
 
     pxEvents = Px('''
      <x if="events">
-      <div for="event in events" style="color:grey" if="view.unfiltered(event)">
+      <div for="event in shownEvents" style="color:grey">
 
        <!-- Checkbox for validating the event -->
        <input type="checkbox" checked="checked" class="smallbox"
@@ -300,6 +300,7 @@ class Editable:
 
     pxCell = Px('''
      <td var="events=field.getEventsAt(o, date, typeInfo=typeInfo);
+              shownEvents=view.getShownEvents(events);
               single=events and len(events) == 1;
               spansDays=field.hasEventsAt(o, date+1, events);
               spansDaysJs='true' if spansDays else 'false';
@@ -346,6 +347,9 @@ class Editable:
       <!-- Additional info -->
       <x var="info=field.getAdditionalInfoAt(o,date,None,'month',preComputed)"
          if="info">::info</x>
+
+      <!-- Update totals when relevant -->
+      <x if="view.multiple" var2="x=totals.update(_ctx_)|None"></x>
      </td>''')
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -5,28 +5,32 @@
 from appy import utils
 from appy.px import Px
 from appy.xml.escape import Escape
+from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Total:
     '''Represents a computation that will be executed on a series of cells
-       within a timeline calendar.'''
+       (in a row or a column) within a multiple calendar.'''
 
-    def __init__(self, name, initValue, color=None, title=None, bgColor=None,
-                 style=None):
+    def __init__(self, totals, color=None, title=None, bgColor=None,style=None):
         '''Total constructor'''
+        # The corresponding Totals object
+        self.totals = totals
         # The name associated to this total (see class Totals)
-        self.name = name
-        # If p_initValue is mutable, get a copy of it
-        if isinstance(initValue, dict):
-            initValue = initValue.copy()
-        elif isinstance(initValue, list):
-            initValue = initValue[:]
-        self.value = initValue
+        self.name = totals.name
+        # Get the initial value for the total to compute
+        initV = totals.initValue
+        # If it is mutable, get a copy of it
+        if isinstance(initV, dict):
+            initV = initV.copy()
+        elif isinstance(initV, list):
+            initV = initV[:]
+        self.value = initV
         # The following attributes allow to style the cell into which the total
         # will be dumped.
-        self.color = color # The font coloe
+        self.color = color # The font color
         self.title = title # The cell's tooltip
-        self.bgColor = bgColor # The cell's backgroud color
+        self.bgColor = bgColor # The cell's background color
         self.style = style # Any additional CSS property can be expressed here,
                            # as a classic semi-colon-separated list of CSS
                            # properties.
@@ -57,7 +61,7 @@ class Total:
         r = ';'.join(r)
         return f' style="{r}"'
 
-    def asCell(self):
+    def asCell(self, tag='td'):
         '''Renders the "td" tag containing p_self's value'''
         val = self.value
         if val is None:
@@ -67,7 +71,7 @@ class Total:
                 val = str(val)
         # Integrate CSS and other elements
         title = f' title={Escape.xhtml(self.title)}' if self.title else ''
-        return f'<td{title}{self.getStyles()}>{val}</td>'
+        return f'<{tag}{title}{self.getStyles()}>{val}</{tag}>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Totals:
@@ -86,46 +90,51 @@ class Totals:
 
     def __init__(self, name, label, onCell, initValue=0, translated=False,
                  scope=SCOPE_ALL):
-        # "name" must hold a short name or acronym and will directly appear
+        # p_name must hold a short name or acronym and will directly appear
         # at the beginning of the row. It must be unique within all Totals
-        # instances defined for a given Calendar field.
+        # objects defined for a given Calendar field.
         self.name = name
-        # "label" is a i18n label that will be used to produce a longer name
+        # p_label is a i18n label that will be used to produce a longer name
         # that will be shown as an "abbr" tag around the name.
         self.label = label
         # If p_translated is True, p_label is not a i18n label, but an already
         # translated term.
         self.translated = translated
-        # A method that will be called every time a cell is walked in the
-        # agenda. It will get these args:
+        # p_onCell must hold a method that will be called every time a cell is
+        # walked in the agenda. It will get a single arg being the current PX
+        # context, onto which the following attributes have an interest here:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #    date     | The date representing the current day (a DateTime
         #             | object) ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    other    | The Other object representing the currently walked
+        #    other    | the Other object representing the currently walked
         #             | calendar ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    events   | The list of events (as Event objects) defined at that
+        #    events   | the list of events (as Event objects) defined at that
         #             | day in this calendar. Be careful: this can be None ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    total    | The Total object (see above) corresponding to the
+        # shownEvents | the sub-list of shown events, when filters are applied.
+        #             | If no filter applies, it is the same as the list in
+        #             | attribute "events". It can also be None ;
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #    total    | the Total object (see above) corresponding to the
         #             | current column ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    last     | A boolean that is True if we are walking the last shown
+        #    last     | a boolean that is True if we are walking the last shown
         #             | calendar ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #   checked   | A value "checked" indicating the status of the possible
+        #   checked   | a value "checked" indicating the status of the possible
         #             | validation checkbox corresponding to this cell. If there
         #             | is a checkbox in this cell, the value will be True or
-        #             | False; else, the value will be None.
+        #             | False; else, the value will be None ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # preComputed | The result of Calendar.preCompute (see below).
+        #    cache    | the result of Calendar.preCompute (see below).
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.onCell = onCell
-        # "initValue" is the initial value given to created Total objects
+        # p_initValue is the initial value given to created Total objects
         self.initValue = initValue
-        # The scope, for a Totals object, determines on what calandar view(s) it
-        # must be shown and computed (see constants defined hereabove).
+        # The p_scope, for a Totals object, determines on what calandar view(s)
+        # it must be shown and computed (see constants defined hereabove).
         self.scope = scope
 
     def inScope(self, render):
@@ -158,8 +167,8 @@ class Totals:
 
     @classmethod
     def get(class_, o, field, typE, render):
-        '''Returns the Totals objects by getting or computing them from
-           p_field.totalRows or p_field.totalCols (depending on p_type).'''
+        '''Returns the Totals objects by getting them from p_field.totalRows
+           or p_field.totalCols (depending on p_typE).'''
         r = getattr(field, f'total{typE.capitalize()}')
         r = r(o) if callable(r) else r
         # Keep only those that must be rendered, depending on their scope
@@ -179,12 +188,14 @@ class Totals:
         return r
 
     @classmethod
-    def compute(class_, field, allTotals, totalType, o, grid, others,
-                preComputed):
+    def compute(class_, field, allTotals, totalType, c):
         '''Compute the totals for every column (p_totalType == 'row') or row
            (p_totalType == "col").'''
         if not allTotals: return
         # Count other calendars and dates in the grid
+        grid = c.grid
+        date = c.date
+        others = c.others
         othersCount = 0
         for group in others: othersCount += len(group)
         datesCount = len(grid)
@@ -195,46 +206,51 @@ class Totals:
         r = {}
         for totals in allTotals:
             name = totals.name
-            r[name] = [Total(name, totals.initValue) for i in range(totalCount)]
+            r[name] = [Total(totals) for i in range(totalCount)]
         # Get the status of validation checkboxes
-        status = class_.getValidationCBStatus(o.req)
+        status = class_.getValidationCBStatus(c.o.req)
         # Walk every date within every calendar
         indexes = {'i': -1, 'j': -1}
         ii = 'i' if isRow else 'j'
         jj = 'j' if isRow else 'i'
+        o = c.o
         for other in utils.IterSub(others):
             indexes['i'] += 1
             indexes['j'] = -1
+            c.other = other
             for date in grid:
                 indexes['j'] += 1
+                c.date = c.day = date
                 # Get the events in this other calendar at this date
-                events = other.field.getEventsAt(other.o, date)
+                c.events = other.field.getEventsAt(other.o, date)
                 # From info @this date, update the total for every totals
-                last = indexes[ii] == lastCount - 1
+                c.last = indexes[ii] == lastCount - 1
                 # Get the status of the validation checkbox that is possibly
                 # present at this date for this calendar
-                checked = None
+                c.checked = None
                 dateS = date.strftime('%Y%m%d')
                 cbId = f'{other.o.iid}_{other.field.name}_{dateS}'
-                if cbId in status: checked = status[cbId]
-                # Update the Total instance for every totals at this date
+                if cbId in status:
+                    c.checked = status[cbId]
+                # Update the Total object for every Totals object, at v_date
                 for totals in allTotals:
-                    total = r[totals.name][indexes[jj]]
-                    totals.onCell(o, date, other, events, total, last,
-                                  checked, preComputed)
+                    c.total = r[totals.name][indexes[jj]]
+                    totals.onCell(o, c)
         return r
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                  PX
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    # Total rows shown at the bottom of a timeline calendar
+    # Total rows shown at the bottom of a timeline calendar.
+    # Obsolete :: Currently used by the monthMulti view only.
+    # Will be replaced by PX Running.pxRows.
+
     pxRows = Px('''
      <tbody id=":f'{hook}_trs'"
             var="grid=view.grid;
                  rows=field.Totals.get(o, field, 'rows', view.renderRaw);
-                 totals=field.Totals.compute(field, rows, 'row', o, grid,
-                                             others, preComputed)">
+                 totals=field.Totals.compute(field, rows, 'row', _ctx_)">
       <script>:field.Totals.getAjaxData(field, o, 'rows', hook)</script>
       <tr for="row in rows"
           var2="rowTitle=row.label if row.translated else _(row.label)">
@@ -254,8 +270,7 @@ class Totals:
                  render=view.renderRaw;
                  cols=field.Totals.get(o, field, 'cols', render);
                  rows=field.Totals.get(o, field, 'rows', render);
-                 totals=field.Totals.compute(field, cols, 'col', o , grid,
-                                             others, preComputed)">
+                 totals=field.Totals.compute(field, cols, 'col', _ctx_)">
       <script>:field.Totals.getAjaxData(field, o, 'cols', hook)</script>
 
       <!-- 2 empty rows -->
@@ -298,4 +313,127 @@ class Totals:
              preComputed=field.getPreComputedInfo(o, view);
              others=field.Other.getAll(o, field,
                preComputed)">:getattr(field.Totals, f'px{totalType}')</x>''')
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Running:
+    '''Running totals, being built while rendering a calendar view'''
+
+    # 2 types of running totals are computed: column and row totals
+    types = 'cols', 'rows'
+
+    def __init__(self, c):
+        '''Create and initialise Total objects onto which to compute totals for
+           every row and every column total, on the current view as defined in
+           the p_c(ontext).'''
+        # The calendar view being rendered
+        self.view = c.view
+        # Store Total objects for columns
+        self.cols = {}
+        # Store Total objects for rows
+        self.rows = {}
+        # The row (i) and column (j) indexes of the currently walked cell in the
+        # current view.
+        self.i = self.j = 0
+        # The total number of rows and colums
+        self.iCount = self.jCount = 0
+        # Initialise p_self.cols and p_self.rows
+        self.init(c)
+
+    def count(self, c, typE):
+        '''Counts the number of columns or rows (p_typE) for the current view'''
+        if typE == 'cols':
+            # For a column, there will be one Total objet per row. There is one
+            # row per Other calendar. Other calendars a grouped.
+            r = 0
+            for group in c.others:
+                r += len(group)
+        else: # typE == 'rows'
+            # For a row, there will be one Total object per column. There is one
+            # column per day.
+            r = len(c.view.grid)
+        return r
+
+    def init(self, c):
+        '''Initialise p_self.cols and p_self.rows'''
+        # Each one is a dict that contains, for every Totals to render, a list
+        # of Total objects: one for every row or column.
+        #
+        #                         ~{Totals: [Total]}~
+        #
+        T = 0
+        for typE in self.types:
+            T += 1
+            cols = T == 1 # Are we handling v_col(umns) or rows ?
+            d = getattr(self, typE)
+            # Get the applicable Totals objects
+            totals = Totals.get(c.o, c.field, typE, c.view.renderRaw)
+            # Count the number of Total objects to create
+            count = self.count(c, typE)
+            attr = 'iCount' if cols else 'jCount'
+            setattr(self, attr, count)
+            # Create the list of Total objects for each Totals object
+            for tot in totals:
+                d[tot] = [Total(tot) for i in range(count)]
+
+    def update(self, c):
+        '''A new cell is being rendered: update our totals'''
+        # Update impacted Total objects, for all Totals
+        T = 0
+        for typE in self.types:
+            T += 1
+            cols = T == 1 # Are we handling v_col(umns) or rows ?
+            for tot, totals in getattr(self, typE).items():
+                # Get the possibly impacted Total object
+                if cols:
+                    k = self.i
+                    # Is it the last value to add to the total ?
+                    c.last = self.j == self.jCount - 1
+                else:
+                    k = self.j
+                    c.last = self.i == self.iCount - 1
+                c.total = totals[k]
+                # Call the method that will update the total
+                tot.onCell(c.outer.o, c)
+        # Go to the next cell in the current row. If we reached the end of the
+        # row, don't go now to the next row: total column cells must be dumped
+        # first.
+        self.j += 1
+
+    def gotoNextRow(self):
+        '''Once an entire row has been dumped, go to the next one'''
+        self.i += 1
+        self.j = 0
+
+    # Render columns as last cells in a view row
+    pxCols = Px('''
+     <x for="tots in totals.cols.values()">::tots[totals.i].asCell('th')</x>
+     <x var="x=totals.gotoNextRow()"></x>''')
+
+    # Render rows at the bottom of a view
+    pxRows = Px('''
+     <tbody id=":f'{hook}_trs'">
+      <script>:field.Totals.getAjaxData(field, o, 'rows', hook)</script>
+      <tr for="row, tots in totals.rows.items()"
+          var2="rowTitle=row.label if row.translated else _(row.label)">
+
+       <!-- The row name -->
+       <th class="tlLeft">
+        <abbr title=":rowTitle"><b>:row.name</b></abbr>
+       </th>
+
+       <!-- Columns -->
+       <x for="date in view.grid">::tots[loop.date.nb].asCell('th')</x>
+
+       <!-- Repeat the row name -->
+       <th class="tlRight">
+        <abbr title=":rowTitle"><b>:row.name</b></abbr>
+       </th>
+
+       <!-- One empty cell for every total column -->
+       <th for="col in totals.cols|()"></th>
+      </tr>
+     </tbody>''')
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Totals.Running = Running
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

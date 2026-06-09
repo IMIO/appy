@@ -112,6 +112,13 @@ class View:
         # If we are here, no filter has hidden the value
         return True
 
+    def getShownEvents(self, events):
+        '''Returns the events, among p_events, being shown despite the currently
+           applied filter(s) on p_self.'''
+        if not events or not self.filterValues:
+            return events
+        return [event for event in events if self.unfiltered(event)]
+
     def getRender(self, cheat=True, value=None):
         '''Gets the render mode as currently set in this view (month, day...)'''
         # Try to get it first from the request (indeed, several modes can be

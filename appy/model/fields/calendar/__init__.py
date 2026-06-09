@@ -117,6 +117,7 @@ class Calendar(Field):
                eventTypes=field.getEventTypes(o);
                allowedTypes=field.getAllowedTypes(o, eventTypes);
                preComputed=field.getPreComputedInfo(o, view);
+               cache=preComputed;
                mayEditRaw=field.mayEdit(o);
                mayEdit=mayEditRaw and not view.filterValues;
                objUrl=o.url;
@@ -167,7 +168,7 @@ class Calendar(Field):
       .viewF > :nth-child(2) { display:flex; flex-direction:column; width:10em;
                                gap:0.5em; position:sticky; top:1.5em;
                                align-self:flex-start }
-      .viewM { display:flex; align-items:start }
+      .viewM { display:flex; align-items:start; flex-wrap:wrap; gap:1em }
       .calSelect { margin:0.2em 0; color:|selectColor|; font-size:95% }
       .eFields { margin-bottom:0.2em }
       .eFields label { padding:0 0.6em 0 0 }
@@ -291,7 +292,7 @@ class Calendar(Field):
         # - a single Other object;
         # - a list of Other objects;
         # - a list of lists of Other objects, when it has sense to group other
-        #   calendars (the month, multiple rendering exploits this).
+        #   calendars (multiple view may use this).
         self.others = others
 
         # [Multiple only] A name is shown for every other calendar. If

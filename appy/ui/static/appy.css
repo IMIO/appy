@@ -291,6 +291,7 @@ div.rbutton { float:right }
 .weekline>tbody>tr>td { text-align:left }
 .weekline>thead>tr>th { height:1em; border-bottom:2px solid lightgrey;
                         padding-bottom:4px }
+.weekline>tbody>tr:nth-of-type(1)>th { border-top:2px solid lightgrey }
 .timeline a { font-size:100% !important }
 .tlLeft { text-align:left !important; padding-left:1px !important }
 .tlRight { text-align:right !important; padding-right:1px !important }
