@@ -35,7 +35,7 @@ class WeekMulti(Editable, Week):
      <x var="rowHeight=int(field.height/float(view.countOthers(others)));
              outer=field.Other(o, field.name);
              render=view.renderRaw;
-             totals=field.Totals.Running(_ctx_)">
+             totals=field.Totals.Running(outer, _ctx_)">
 
       <table class="list timeline weekline">
 

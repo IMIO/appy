@@ -79,6 +79,7 @@ class Calendar(Field):
     Layer = Layer
     Event = Event
     Total = Total
+    dutils = dutils
     Action = Action
     Filter = Filter
     Legend = Legend
@@ -116,12 +117,11 @@ class Calendar(Field):
                timeslots=field.Timeslot.getAll(o, field);
                eventTypes=field.getEventTypes(o);
                allowedTypes=field.getAllowedTypes(o, eventTypes);
-               preComputed=field.getPreComputedInfo(o, view);
-               cache=preComputed;
+               cache=field.getCache(o, view);
                mayEditRaw=field.mayEdit(o);
                mayEdit=mayEditRaw and not view.filterValues;
                objUrl=o.url;
-               others=field.Other.getAll(o, field, preComputed);
+               others=field.Other.getAll(o, field, cache);
                typeInfo=field.TypeInfo.create(field, o, eventTypes, others);
                namesOfDays=field.getNamesOfDays(_);
                mayValidate=field.mayValidate(o, view);
@@ -195,7 +195,7 @@ class Calendar(Field):
       generateLabel=n, label=n, maxEventLength=50, render='month', others=n,
       timelineName=n, timelineMonthName=n, additionalInfo=n, startDate=n,
       endDate=n, defaultDate=n, timeslots=n, slotMap=n, cellInfo=n, gradients=n,
-      showNoCellInfo=False, columnColors=n, preCompute=n, applicableEvents=n,
+      showNoCellInfo=False, columnColors=n, cache=n, applicableEvents=n,
       totalRows=n, totalCols=n, validation=n, layers=n, layersSelector=True,
       topPx=n, bottomPx=n, actions=n, filters=n, selectableEmptyCells=False,
       legend=n, view=n, cell=n, buttons=n, edit=n, editable=True,
@@ -269,26 +269,29 @@ class Calendar(Field):
         # be given as arg for other methods specified in subsequent parameters.
         # This mechanism exists for performance reasons, to avoid recomputing
         # this global information several times. If you specify a method in
-        # p_preCompute, it will be called every time a given time slice is
-        # shown, and will receive 2 args: the first day of the currently shown
-        # period (as a DateTime object) and the grid of all shown dates (as a
-        # result of calling m_getGrid below). This grid hold all visible days.
+        # p_cache, it will be called every time a given time slice is shown, and
+        # will receive 2 args: the first day of the currently shown period (as a
+        # DateTime object) and the grid of all shown dates (as a result of
+        # calling m_getGrid below). This grid hold all visible days.
+        #
         # For example, on an individual monthly view, the grid shows complete
         # weeks: ending days of the previous month and starting days of the next
         # one may, consequently, be part of the grid. Subsequently, the return
         # of your method will be given as arg to other methods that you may
         # specify as args of other parameters of this Calendar class (see
         # comments below).
+        #
         # ⚠️ If this calendar is rendered within a multiple calendar, the pre-
         #    computed info will not be this one, but the one defined at the
         #    multiple calendar level.
-        self.preCompute = preCompute
+        #
+        # Not to be confused with the cache from the Appy request handler.
+        self.cache = cache
 
         # [Multiple only] A method must be specified in parameter p_others. It
-        # must accept a single arg (the result of p_self.preCompute) and must
-        # return a list of Other objects representing calendars whose events
-        # must be shown within this agenda. More precisely, the method can
-        # return:
+        # must accept a single arg (the result of p_self.cache) and must return
+        # a list of Other objects representing calendars whose events must be
+        # shown within this agenda. More precisely, the method can return:
         # - a single Other object;
         # - a list of Other objects;
         # - a list of lists of Other objects, when it has sense to group other
@@ -326,7 +329,7 @@ class Calendar(Field):
         #    view like a day or week view, or None for an unhoured view like a
         #    month view ;
         # 3. the current render mode ('month' or 'week') ;
-        # 4. the result of p_self.preCompute.
+        # 4. the result of p_self.cache.
         # The method must return the content to insert, as a string that can
         # hold text or a chunk of XHTML.
         self.additionalInfo = additionalInfo
@@ -419,7 +422,7 @@ class Calendar(Field):
         #  1. the day in question (as a DateTime object);
         #  2. the list of all event types, which is a copy of the (possibly
         #     computed) p_self.eventTypes;
-        #  3. the result of calling p_self.preCompute.
+        #  3. the result of calling p_self.cache.
         # The method must modify the 2nd arg and remove, from it, potentially
         # not applicable events. This method can also return a message, that
         # will be shown to the user for explaining him why he can, for this day,
@@ -565,7 +568,7 @@ class Calendar(Field):
         #
         # If passed, p_createObjects must be a method accepting 2 args:
         # - the current day (as a DateTime object);
-        # - cached info as computed by p_self.preCompute.
+        # - cached info as computed by p_self.cache.
         #
         # If you decide an Appy object could be created at this day, return a
         # 2-tuple, with these elements:
@@ -576,8 +579,8 @@ class Calendar(Field):
         # In this latter object, if the class defines a field name "date", Appy
         # will automatically set it to the passed day. For performance, please
         # avoid creating an Object instance everytime the method is called: put
-        # such an object in p_self.preCompute or on the request cache, and
-        # update it at each method call.
+        # such an object in p_self.cache or on the request cache, and update it
+        # at each method call.
         #
         # It is useless to check whether the current user is allowed to create
         # instances of the returned class: Appy will check it and will render
@@ -678,23 +681,21 @@ class Calendar(Field):
             prefix = f'{prefix}@{dateS}'
         o.log(f'{prefix}: {msg}')
 
-    def getPreComputedInfo(self, o, view):
-        '''Returns the result of calling p_self.preComputed, or None if no such
-           method exists.'''
-        pre = self.preCompute
-        if pre: return pre(o, view.monthDayOne, view.grid)
-
-    weekDays = 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
+    def getCache(self, o, view):
+        '''Returns the result of calling p_self.cache, or None if no such method
+           exists.'''
+        fun = self.cache
+        if fun: return fun(o, view.monthDayOne, view.grid)
 
     def getNamesOfDays(self, _):
         '''Returns the translated names of all week days, short and long
            versions.'''
         r = {}
-        for day in self.weekDays:
+        for day in dutils.weekDays:
             r[day] = O(name=_(f'day_{day}'), short=_(f'day_{day}_short'))
         return r
 
-    def getCellInfo(self, o, eventType, preCompute):
+    def getCellInfo(self, o, eventType, cache):
         '''Gets the Cell object determining how to render a cell containing an
            event of this p_eventType.'''
         info = self.cellInfo
@@ -703,15 +704,15 @@ class Calendar(Field):
         elif isinstance(info, dict):
             r = info.get(eventType)
         else: # A method
-            r = info(o, eventType, preCompute)
+            r = info(o, eventType, cache)
         return r
 
-    def getAdditionalInfoAt(self, o, date, hour, render, preComputed):
+    def getAdditionalInfoAt(self, o, date, hour, render, cache):
         '''If the user has specified a method in self.additionalInfo, we call
            it for displaying this additional info in the calendar, at some
            p_date and p_hour.'''
         info = self.additionalInfo
-        return info(o, date, hour, render, preComputed) if info else n
+        return info(o, date, hour, render, cache) if info else n
 
     def getEventTypes(self, o):
         '''Returns the (dynamic or static) event types as defined in
@@ -751,7 +752,7 @@ class Calendar(Field):
         tooLate = view.endDate and not tooEarly and date > view.endDate
         return not tooEarly and not tooLate
 
-    def getApplicableEventTypesAt(self, o, date, eventTypes, preComputed,
+    def getApplicableEventTypesAt(self, o, date, eventTypes, cache,
                                   forBrowser=False):
         '''Returns the event types being applicable at this p_date'''
         # More precisely, it returns an object with 2 attributes:
@@ -765,7 +766,7 @@ class Calendar(Field):
             message = None
         else:
             eventTypes = eventTypes[:]
-            message = self.applicableEvents(o, date, eventTypes, preComputed)
+            message = self.applicableEvents(o, date, eventTypes, cache)
         r = O(eventTypes=eventTypes, message=message)
         if forBrowser:
             r.eventTypes = ','.join(r.eventTypes)

@@ -195,7 +195,7 @@ class Month(Editable, View):
 
       <!-- 1st row: names of days -->
       <tr height="22px">
-       <th for="dayId in field.weekDays"
+       <th for="dayId in field.dutils.weekDays"
            width="14%">:namesOfDays[dayId].short</th>
       </tr>
 

@@ -189,7 +189,7 @@ class Week(Day):
          <x for="ev in events"
             if="view.unfiltered(ev)">::view.renderEvent(ev, o, field, _ctx_)</x>
          <!-- Additional info -->
-         <x var="info=field.getAdditionalInfoAt(o,day,h,'week',preComputed)"
+         <x var="info=field.getAdditionalInfoAt(o, day, h, 'week', cache)"
             if="info">::info</x>
         </td>
         <td>:hf</td>

@@ -12,7 +12,7 @@ class Legend:
     px = Px('''
      <table class=":field.legend.getCss()"
             var="entries=field.legend.getEntries(field, o, typeInfo, url, _,
-                                                 activeLayers, preComputed)">
+                                                 activeLayers, cache)">
       <tr for="row in field.splitList(entries, field.legend.cols)" valign="top">
        <x for="entry in row">
         <td align="center">

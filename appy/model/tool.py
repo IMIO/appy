@@ -201,7 +201,8 @@ class Tool(Base):
     appyVersion = String(show='view', **ta)
 
     # This hidden calendar is used for searches in "calendar" mode
-    def calendarPreCompute(self, first, grid):
+
+    def getCalendarCache(self, first, grid):
         '''Computes pre-computed information for the tool calendar'''
         # If this calendar is used as mode for a search, get this search
         ctx = self.traversal.context
@@ -239,7 +240,7 @@ class Tool(Base):
         if not mode or not cache.isRoot: return
         return mode.class_.name, cache.attributes
 
-    calendar = Calendar(preCompute=calendarPreCompute, show=False,
+    calendar = Calendar(cache=getCalendarCache, show=False,
                         additionalInfo=calendarAdditionalInfo,
                         createObjects=createViaCalendar, **ta)
 

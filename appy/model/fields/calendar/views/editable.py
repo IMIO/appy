@@ -31,7 +31,7 @@ class Editable:
         if not method: return
         # A method is there. Call it.
         o = c.o
-        r = method(o, c.date, c.preComputed)
+        r = method(o, c.date, c.cache)
         if not r: return
         # Get the class for which the "create" button must be rendered
         className, attributes = r
@@ -154,9 +154,9 @@ class Editable:
                eventTypes=field.getEventTypes(o);
                timeslots=field.Timeslot.getAll(o, field);
                allowedTypes=field.getAllowedTypes(o, eventTypes);
-               preComputed=field.getPreComputedInfo(o, view);
+               cache=field.getCache(o, view);
                okTypes=field.getApplicableEventTypesAt(o, date, allowedTypes,
-                                                       preComputed, True);
+                                                       cache, True);
                events=field.getEventsAt(o, date);
                freeSlots=field.Timeslot.getFreeAt(o, date, events, timeslots)">
 
@@ -289,7 +289,7 @@ class Editable:
      <!-- Events from other calendars -->
      <x if="not view.multiple and others"
         var2="otherEvents=field.Other.getEventsAt(field, date, others,
-                                                 typeInfo, view, preComputed)">
+                                                 typeInfo, view, cache)">
       <div for="event in otherEvents"
            style=":f'color:{event.color};font-style:italic'">:event.name</div>
      </x>''')
@@ -309,10 +309,11 @@ class Editable:
               mayDelete=mayEdit and events and field.mayDelete(o, events);
               mayAppyCreate=view.mayAppyCreate(_ctx_);
               okTypes=field.getApplicableEventTypesAt(o, date, allowedTypes,
-                         preComputed, True) if (mayCreate or mayEdit) else None;
+                        cache, True) if (mayCreate or mayEdit) else None;
               js='itoggle(this)' if mayEdit or mayAppyCreate else '';
               cellWeight='bold' if date.isCurrentDay() else 'normal';
-              cellStyle=f'font-weight:{cellWeight}'"
+              cellStyle=f'font-weight:{cellWeight}';
+              totals=totals|None"
          class=":cssClasses" style=":cellStyle"
          onmouseover=":js" onmouseout=":js">
 
@@ -345,11 +346,11 @@ class Editable:
       <x>:view.pxEvents</x>
 
       <!-- Additional info -->
-      <x var="info=field.getAdditionalInfoAt(o,date,None,'month',preComputed)"
+      <x var="info=field.getAdditionalInfoAt(o, date, None, 'month', cache)"
          if="info">::info</x>
 
       <!-- Update totals when relevant -->
-      <x if="view.multiple" var2="x=totals.update(_ctx_)|None"></x>
+      <x if="view.multiple and totals" var2="x=totals.update(_ctx_)"></x>
      </td>''')
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -358,7 +359,7 @@ class Editable:
 
     pxCellPick = Px('''
      <td class=":cssClasses"
-         var="exclude=field.mustExclude(o, date, preComputed);
+         var="exclude=field.mustExclude(o, date, cache);
               onEdit=layout == 'edit'">
       <!-- This day cannot be picked and a message must be rendered -->
       <abbr if="isinstance(exclude, str)" title=":exclude"
@@ -366,7 +367,7 @@ class Editable:
 
       <!-- This day can be picked -->
       <x if="not exclude"
-         var2="hasEvent=field.hasEventAt(o, date, preComputed._ci_)">
+         var2="hasEvent=field.hasEventAt(o, date, cache._ci_)">
 
        <!-- On /edit, render a checkbox -->
        <x if="onEdit" var2="suffix='on' if hasEvent else 'off'">

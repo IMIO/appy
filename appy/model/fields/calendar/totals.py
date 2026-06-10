@@ -128,14 +128,20 @@ class Totals:
         #             | is a checkbox in this cell, the value will be True or
         #             | False; else, the value will be None ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    cache    | the result of Calendar.preCompute (see below).
+        #    cache    | the result of Calendar.cache (see below). This is a
+        #             | cache at the Calendar field level, not to be confused
+        #             | with the cache from the Appy request handler.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.onCell = onCell
         # p_initValue is the initial value given to created Total objects
         self.initValue = initValue
-        # The p_scope, for a Totals object, determines on what calandar view(s)
+        # The p_scope, for a Totals object, determines on what calendar view(s)
         # it must be shown and computed (see constants defined hereabove).
         self.scope = scope
+
+    def __repr__(self):
+        '''p_self as a short string'''
+        return f'‹Totals {self.name}, scope={self.scope}›'
 
     def inScope(self, render):
         '''Must this Totals object (p_self) be rendered on this p_calendar
@@ -310,9 +316,9 @@ class Totals:
      <x var="view=field.View.get(o, field);
              totalType=req.totalType.capitalize();
              hook=f'{o.iid}{field.name}';
-             preComputed=field.getPreComputedInfo(o, view);
+             cache=field.getCache(o, view);
              others=field.Other.getAll(o, field,
-               preComputed)">:getattr(field.Totals, f'px{totalType}')</x>''')
+                      cache)">:getattr(field.Totals, f'px{totalType}')</x>''')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Running:
@@ -321,10 +327,13 @@ class Running:
     # 2 types of running totals are computed: column and row totals
     types = 'cols', 'rows'
 
-    def __init__(self, c):
+    def __init__(self, outer, c):
         '''Create and initialise Total objects onto which to compute totals for
            every row and every column total, on the current view as defined in
            the p_c(ontext).'''
+        # The multiple planning, represented as an Other object, onto which
+        # totals are ran.
+        self.outer = outer
         # The calendar view being rendered
         self.view = c.view
         # Store Total objects for columns
@@ -361,12 +370,13 @@ class Running:
         #                         ~{Totals: [Total]}~
         #
         T = 0
+        o, field = self.outer.o, self.outer.field
         for typE in self.types:
             T += 1
             cols = T == 1 # Are we handling v_col(umns) or rows ?
             d = getattr(self, typE)
             # Get the applicable Totals objects
-            totals = Totals.get(c.o, c.field, typE, c.view.renderRaw)
+            totals = Totals.get(o, field, typE, c.view.renderRaw)
             # Count the number of Total objects to create
             count = self.count(c, typE)
             attr = 'iCount' if cols else 'jCount'
@@ -393,7 +403,7 @@ class Running:
                     c.last = self.i == self.iCount - 1
                 c.total = totals[k]
                 # Call the method that will update the total
-                tot.onCell(c.outer.o, c)
+                tot.onCell(self.outer.o, c)
         # Go to the next cell in the current row. If we reached the end of the
         # row, don't go now to the next row: total column cells must be dumped
         # first.

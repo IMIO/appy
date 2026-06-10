@@ -32,6 +32,11 @@ class Other:
         # Must this calendar be highlighted ?
         self.highlight = highlight
 
+    def __repr__(self):
+        '''p_self as a short string'''
+        return f'‹Other calendar {self.o.strinG(path=False)}, ' \
+               f'field={self.field.name}›'
+
     def exclude(self, eventType):
         '''Must this p_eventType be excluded according to
            p_self.excludedEvents ?'''
@@ -50,7 +55,7 @@ class Other:
                 return True
 
     def getEventsInfoAt(self, r, calendar, date, typeInfo, view, inTimeline,
-                        preComputed, gradients):
+                        cache, gradients):
         '''Gets the events defined at p_date in this calendar and append them in
            p_r.'''
         events = self.field.getEventsAt(self.o, date, typeInfo=typeInfo)
@@ -66,7 +71,7 @@ class Other:
                 # Get info about this cell if it has been defined, or
                 # (a) nothing if p_self.field.showNoCellInfo is False,
                 # (b) a tooltipped dot else.
-                info = calendar.getCellInfo(self.o, eventType, preComputed)
+                info = calendar.getCellInfo(self.o, eventType, cache)
                 if info:
                     # If the event does not span the whole day, a gradient can
                     # be used to color the cell instead of just a plain
@@ -126,29 +131,29 @@ class Other:
 
     px = Px('''
      <tr var="F=field;
-              other=other|F.Other(o, field.name);
               outer=outer|F.Other.getOuter(o, outerS);
               hook=hook|outer.getHook();
               view=view|F.View.get(outer.o, outer.field);
+              cache=cache|outer.field.getCache(outer.o, view);
+              others=others|F.Other.getAll(outer.o, outer.field, cache);
+              other=other|F.Other.get(others, o, field.name);
               tlName=view.getNameOnMulti(other);
               outerValidate=mayValidate|outer.mayValidate(view);
               mayValidate=outerValidate and other.mayValidate(view);
               outerEdit=mayEdit|outer.field.mayEdit(outer.o);
               mayEdit=outerEdit and field.mayEdit(o);
-              css=other.getCss();
+              csS=other.getCss();
               timeslots=other.timeslots;
               eventTypes=field.getEventTypes(o);
-             typeInfo=typeInfo|F.TypeInfo.create(field, o, eventTypes);
-            hasEventFields='true' if field.eventFields else 'false';
-           allowedTypes=field.getAllowedTypes(o, eventTypes);
-          preComputed=preComputed|outer.field.getPreComputedInfo(outer.o, view);
-          others=others|F.Other.getAll(o, field, preComputed);
-          totals=totals|F.Totals.Running(_ctx_)"
+              typeInfo=typeInfo|F.TypeInfo.create(field, o, eventTypes);
+              hasEventFields='true' if field.eventFields else 'false';
+              allowedTypes=field.getAllowedTypes(o, eventTypes);
+              totals=totals|F.Totals.Running(outer, _ctx_)"
          id=":other.getHook()">
       <script>:other.getAjaxData(_ctx_)</script>
 
       <!-- The first cell identifies the individual calendar -->
-      <td class=":f'tlLeft {css}'.strip()">::tlName</td>
+      <td class=":f'tlLeft {csS}'.strip()">::tlName</td>
 
       <!-- One cell for every day in the view grid -->
       <x for="date in view.grid"
@@ -160,7 +165,7 @@ class Other:
       </x>
 
       <!-- The last cell repeats the first one -->
-      <td class=":f'tlRight {css}'.strip()">::tlName</td>
+      <td class=":f'tlRight {csS}'.strip()">::tlName</td>
 
       <!-- Column totals -->
       <x if="outer.field.totalCols">:field.Totals.Running.pxCols</x>
@@ -185,24 +190,33 @@ class Other:
         return r if r is not None else [[]]
 
     @classmethod
+    def get(class_, alL, o, name):
+        '''Return, among p_alL Other objects as computed by m_getAll, the one
+           corresponding to this p_o(bject) and field p_name.'''
+        for group in alL:
+            for other in group:
+                if other.o == o and other.field.name == name:
+                    return other
+
+    @classmethod
     def getSep(class_, colspan):
         '''Produces the separator between groups of other calendars'''
         return f'<tr style="height:8px"><th colspan="{colspan}" ' \
                f'style="background-colo r:grey"></th></tr>'
 
     @classmethod
-    def getEventsAt(class_, field, date, others, typeInfo, view, preComputed,
+    def getEventsAt(class_, field, date, others, typeInfo, view, cache,
                     gradients=None):
         '''Gets events that are defined in p_others at some p_date'''
         r = []
         isTimeline = field.multiple and view.render == 'month'
         if isinstance(others, Other):
             others.getEventsInfoAt(r, field, date, typeInfo, view, isTimeline,
-                                   preComputed, gradients)
+                                   cache, gradients)
         else:
             for other in utils.IterSub(others):
                 other.getEventsInfoAt(r, field, date, typeInfo, view,
-                                      isTimeline, preComputed, gradients)
+                                      isTimeline, cache, gradients)
         return r
 
     @classmethod

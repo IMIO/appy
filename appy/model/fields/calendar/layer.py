@@ -33,7 +33,8 @@ class Layer:
         #             | appy.model.fields.calendar.event::Event) defined at that
         #             | day in this calendar ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # preComputed | the result of Calendar.preCompute (see below).
+        #   cache     | the result of Calendar.cache (see below). Not to be
+        #             | confused with the cache from the Appy request handler.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.onCell = onCell
         # Is this layer activated by default ?
@@ -59,17 +60,17 @@ class Layer:
         # be filled by the Calendar.
         self.previous = n
 
-    def getCellInfo(self, o, activeLayers, date, other, events, preComputed):
+    def getCellInfo(self, o, activeLayers, date, other, events, cache):
         '''Get the cell info from this layer or one previous layer when
            relevant.'''
         # Take this layer into account only if active
         if self.name in activeLayers:
-            info = self.onCell(o, date, other, events, preComputed)
+            info = self.onCell(o, date, other, events, cache)
             if info: return info
         # Get info from the previous layer
         if self.previous:
             return self.previous.getCellInfo(o, activeLayers, date, other,
-                                             events, preComputed)
+                                             events, cache)
 
     def getLegendEntries(self, o):
         '''Returns the legend entries by calling method in self.legend'''

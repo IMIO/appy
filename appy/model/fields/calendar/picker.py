@@ -35,7 +35,7 @@ class Picker(Calendar):
       masterValue=None, focus=False, mapping=None, generateLabel=None,
       label=None, view=None, cell=None, buttons=None, edit=None, custom=None,
       xml=None, translations=None, startDate=None, endDate=None,
-      defaultDate=None, preCompute=None, exclude=None):
+      defaultDate=None, cache=None, exclude=None):
 
         '''Picker constructor'''
 
@@ -50,7 +50,7 @@ class Picker(Calendar):
 
         # If some days cannot be picked, place a method in p_exclude. It will be
         # called with, as args, the current day (as a DateTime object) and the
-        # result of p_preCompute. If the method returns:
+        # result of p_cache. If the method returns:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # False    | (or None) the day will be selectable ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -70,8 +70,8 @@ class Picker(Calendar):
           readPermission, writePermission, width, height, colspan, master,
           masterValue, focus, mapping, generateLabel, label,
           startDate=startDate, endDate=endDate, defaultDate=defaultDate,
-          preCompute=preCompute, view=view, cell=cell, buttons=buttons,
-          edit=edit, custom=custom, xml=xml, translations=translations)
+          cache=cache, view=view, cell=cell, buttons=buttons, edit=edit,
+          custom=custom, xml=xml, translations=translations)
 
         # A picker is never persistent in itself: it is an intermediary widget
         # allowing to inject/view data from a Calendar, persistent object, as
@@ -122,10 +122,10 @@ class Picker(Calendar):
            calendar field ?'''
         return info[0].getEventAt(o, date, timeslot=info[2])
 
-    def getPreComputedInfo(self, o, view):
-        '''Returns the result of calling p_self.preComputed, or None if no such
-           method exists.'''
-        r = super().getPreComputedInfo(o, view) or O()
+    def getCache(self, o, view):
+        '''Returns the result of calling p_self.cache, or None if no such method
+           exists.'''
+        r = super().getCache(o, view) or O()
         # Add a special entry named _ci_ containing the result of calling
         # p_self.calendarInfo.
         r._ci_ = self.getAttribute(o, 'calendarInfo')

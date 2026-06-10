@@ -16,7 +16,7 @@ class MonthMulti(Month):
     # Background colors for columns representing special days
     timelineBgColors = {'Fri': '#dedede', 'Sat': '#c0c0c0', 'Sun': '#c0c0c0'}
 
-    def getMonths(self, preComputed):
+    def getMonths(self, cache):
         '''Given the p_self.grid of dates, returns the list of corresponding
            months.'''
         r = []
@@ -49,7 +49,7 @@ class MonthMulti(Month):
                 m.month = text
             # Allow to customize the name of the month when required
             method = self.field.timelineMonthName
-            if method: method(o, m, preComputed)
+            if method: method(o, m, cache)
         return r
 
     def getColumnStyle(self, date):
@@ -120,8 +120,8 @@ class MonthMulti(Month):
         o = self.o
         date = c.date
         other = c.other
+        cache = c.cache
         field = self.field
-        cache = c.preComputed
         # Get the events defined at that day, in the current calendar
         events = field.Other.getEventsAt(field, date, other, c.typeInfo, self,
                                          cache, c.gradients)
@@ -203,7 +203,7 @@ class MonthMulti(Month):
     px = Px('''
      <table class="list timeline" id=":f'{hook}_cal'"
             style="display: inline-block"
-            var="monthsInfos=view.getMonths(preComputed);
+            var="monthsInfos=view.getMonths(cache);
                  gradients=field.getGradients(o)">
 
       <!-- Column specifiers -->
