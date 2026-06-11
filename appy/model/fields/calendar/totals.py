@@ -229,6 +229,7 @@ class Totals:
                 c.date = c.day = date
                 # Get the events in this other calendar at this date
                 c.events = other.field.getEventsAt(other.o, date)
+                c.shownEvents = c.view.getShownEvents(c.events)
                 # From info @this date, update the total for every totals
                 c.last = indexes[ii] == lastCount - 1
                 # Get the status of the validation checkbox that is possibly
