@@ -26,6 +26,13 @@ class Total:
         elif isinstance(initV, list):
             initV = initV[:]
         self.value = initV
+        # Beyond p_value, if one wants to produce a grand total for a sequence
+        # of Total objects, also update p_self.grand with the raw content of
+        # p_self.value, without applying any formatting to it. If p_self.grand
+        # is left to None, no grand total will be computed. Grand totals can
+        # only be computed if the same Totals object is used both as a column
+        # and row total.
+        self.grand = None
         # The following attributes allow to style the cell into which the total
         # will be dumped.
         self.color = color # The font color
@@ -61,14 +68,14 @@ class Total:
         r = ';'.join(r)
         return f' style="{r}"'
 
-    def asCell(self, tag='td'):
+    def asCell(self, c, tag='td'):
         '''Renders the "td" tag containing p_self's value'''
         val = self.value
         if val is None:
             val = ''
-        else:
-            if not isinstance(val, str):
-                val = str(val)
+        elif not isinstance(val, str):
+            formaT = self.totals.formaT
+            val = formaT(val, c) if formaT else str(val)
         # Integrate CSS and other elements
         title = f' title={Escape.xhtml(self.title)}' if self.title else ''
         return f'<{tag}{title}{self.getStyles()}>{val}</{tag}>'
@@ -77,6 +84,9 @@ class Total:
 class Totals:
     '''Represents, on a multi-calendar, additional rows or columns containing
        totals computed from data associated to inner, individual calendars.'''
+
+    # Class Running (see below) will be traversable from this class
+    traverse = {'Running': True}
 
     # Totals objects are to be defined in attributes Calendar.totalRows and
     # Calendar.totalCols.
@@ -89,7 +99,7 @@ class Totals:
     TOT_KO = 'Totals cannot be set on non-multiple calendars.'
 
     def __init__(self, name, label, onCell, initValue=0, translated=False,
-                 scope=SCOPE_ALL):
+                 scope=SCOPE_ALL, formaT=None):
         # p_name must hold a short name or acronym and will directly appear
         # at the beginning of the row. It must be unique within all Totals
         # objects defined for a given Calendar field.
@@ -132,12 +142,35 @@ class Totals:
         #             | cache at the Calendar field level, not to be confused
         #             | with the cache from the Appy request handler.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # This method must, when appropriate, update attribute total.value with
+        # the value from the current cell. If last is True, total.value is
+        # completed, and p_onCell can convert it to a string. Before performing
+        # such transform, if you want to have the possibility to compute a grand
+        # total, copy the unformatted total.value to total.grand. Here is an
+        # example:
+        #
+        # if c.last:
+        #     total.grand = total.value
+        #     total.value = youFormatStuff(total.value)
+        #
+        # If, when Appy must render the total, total.value is unformatted (ie,
+        # it is not a string):
+        # 1. if you have specified a format method in p_formaT, it will be
+        #    called ;
+        # 2. else, the value will be converted that way: value = str(value).
         self.onCell = onCell
         # p_initValue is the initial value given to created Total objects
         self.initValue = initValue
         # The p_scope, for a Totals object, determines on what calendar view(s)
         # it must be shown and computed (see constants defined hereabove).
         self.scope = scope
+        # When a total, once all p_onCell calls have been performed, is
+        # complete, the following method will be called to produce a showable,
+        # formatted value. This method will be called with 2 args: the value to
+        # format and the current PX context (the same as passed to p_onCell).
+        # This method will also be used (and is the unique way) to format grand
+        # totals.
+        self.formaT = formaT
 
     def __repr__(self):
         '''p_self as a short string'''
@@ -157,6 +190,19 @@ class Totals:
         else:
             r = False
         return r
+
+    def getGrand(self, totals, c):
+        '''Compute, format and return the grand total corresponding to the sum
+           of p_totals, being a list of Total objects corresponding to
+           p_self.'''
+        # Compute the grand total
+        r = 0
+        for total in totals:
+            tgrand = total.grand
+            if tgrand:
+                r += tgrand
+        # Format it
+        return self.formaT(c.outer.o, r, c) if self.formaT else str(r)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                             Class methods
@@ -263,7 +309,7 @@ class Totals:
           var2="rowTitle=row.label if row.translated else _(row.label)">
        <td class="tlLeft">
         <abbr title=":rowTitle"><b>:row.name</b></abbr></td>
-       <x for="date in grid">::totals[row.name][loop.date.nb].asCell()</x>
+       <x for="date in grid">::totals[row.name][loop.date.nb].asCell(_ctx_)</x>
        <td class="tlRight">
         <abbr title=":rowTitle"><b>:row.name</b></abbr></td>
       </tr>
@@ -292,7 +338,7 @@ class Totals:
       <!-- Re-create one row for every other calendar -->
       <x var="i=-1" for="groupO in others">
        <tr for="other in groupO" var2="@i=i+1">
-        <x for="col in cols">::totals[col.name][i].asCell()</x>
+        <x for="col in cols">::totals[col.name][i].asCell(_ctx_)</x>
        </tr>
 
        <!-- The separator between groups of other calendars -->
@@ -328,7 +374,7 @@ class Running:
     # 2 types of running totals are computed: column and row totals
     types = 'cols', 'rows'
 
-    def __init__(self, outer, c):
+    def __init__(self, outer, c, compute=False):
         '''Create and initialise Total objects onto which to compute totals for
            every row and every column total, on the current view as defined in
            the p_c(ontext).'''
@@ -348,6 +394,9 @@ class Running:
         self.iCount = self.jCount = 0
         # Initialise p_self.cols and p_self.rows
         self.init(c)
+        # Compute totals, if we are in a specific context (see m_compute)
+        if compute:
+            self.compute(c)
 
     def count(self, c, typE):
         '''Counts the number of columns or rows (p_typE) for the current view'''
@@ -410,20 +459,51 @@ class Running:
         # first.
         self.j += 1
 
+    def compute(self, c):
+        '''Simulates a walk through all the cells of the current view, in order
+           to compute all running totals.'''
+        # This method is used when we are in a specific context, where the
+        # complete calendar view is not rendered (ie, while ajax-refreshing
+        # total rows).
+        #
+        # Walk all Other calendars
+        view = c.view
+        for other in utils.IterSub(c.others):
+            c.other = other
+            c.o = o = other.o
+            c.field = field = other.field
+            # For the current calendar, walk all days of the grid
+            for day in view.grid:
+                c.date = day
+                c.events = field.getEventsAt(o, day)
+                c.shownEvents = view.getShownEvents(c.events)
+                # Update all totals
+                self.update(c)
+            self.gotoNextRow()
+
     def gotoNextRow(self):
         '''Once an entire row has been dumped, go to the next one'''
         self.i += 1
         self.j = 0
 
+    @classmethod
+    def getAjaxData(class_, outer, hook):
+        '''Initializes an AjaxData object on the DOM node corresponding to
+           the zone containing the total rows as defined by class_pxRows.'''
+        url = outer.o.url
+        return f"new AjaxData('{url}/{outer.field.name}/Totals/Running/" \
+               f"pxRowsFromAjax','GET',{{}},'{hook}_rows','{hook}')"
+
     # Render columns as last cells in a view row
     pxCols = Px('''
-     <x for="tots in totals.cols.values()">::tots[totals.i].asCell('th')</x>
+     <x for="tots in totals.cols.values()">::tots[totals.i].asCell(_ctx_, 'th')
+     </x>
      <x var="x=totals.gotoNextRow()"></x>''')
 
     # Render rows at the bottom of a view
     pxRows = Px('''
-     <tbody id=":f'{hook}_trs'">
-      <script>:field.Totals.getAjaxData(field, o, 'rows', hook)</script>
+     <tbody id=":f'{hook}_rows'">
+      <script>:field.Totals.Running.getAjaxData(outer, hook)</script>
       <tr for="row, tots in totals.rows.items()"
           var2="rowTitle=row.label if row.translated else _(row.label)">
 
@@ -433,17 +513,30 @@ class Running:
        </th>
 
        <!-- Columns -->
-       <x for="date in view.grid">::tots[loop.date.nb].asCell('th')</x>
+       <x for="date in view.grid">::tots[loop.date.nb].asCell(_ctx_, 'th')</x>
 
        <!-- Repeat the row name -->
        <th class="tlRight">
         <abbr title=":rowTitle"><b>:row.name</b></abbr>
        </th>
 
-       <!-- One empty cell for every total column -->
-       <th for="col in totals.cols|()"></th>
+       <!-- One more cell for every total column -->
+       <th for="col in totals.cols|()">
+        <!-- If the row and column totals are the same, render a grand total -->
+        <x if="col.name == row.name">:row.getGrand(tots, _ctx_)</x>
+       </th>
       </tr>
      </tbody>''')
+
+    # Prepare a call to pxRows from an Ajax request
+    pxRowsFromAjax = Px('''
+     <x var="hook=f'{o.iid}{field.name}';
+             outer=field.Other(o, field.name);
+             view=field.View.get(o, field);
+             cache=outer.field.getCache(outer.o, view);
+             others=field.Other.getAll(outer.o, outer.field, cache);
+             Running=field.Totals.Running;
+             totals=Running(outer, _ctx_, compute=True)">:Running.pxRows</x>''')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Totals.Running = Running

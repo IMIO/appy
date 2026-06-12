@@ -124,8 +124,11 @@ class Other:
         '''Initializes an AjaxData object on the DOM node representing this
            other calendar field, as rendered within a multiple, outer calendar
            field.'''
+        # If total rows are there, define them as a peer Ajax node
+        peerHook = f'{c.hook}_rows'
         return f"new AjaxData('{c.o.url}/{self.field.name}/Other/px','POST'," \
-               f"{{}},'{self.getHook()}','{c.hook}')"
+               f"{{}},'{self.getHook()}','{c.hook}',null,null,null,null," \
+               f"['{peerHook}'])"
 
     # This PX is not yet used by view.monthMulti
 

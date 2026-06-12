@@ -355,7 +355,7 @@ class AjaxData {
   // Represents all the data required to perform an Ajax request
 
   constructor(url, mode, params, hook, parentHook, beforeSend, onGet, append,
-              childToSync) {
+              childToSync, peerHooks) {
     this.url = url;
     this.mode = (!mode)? 'GET': mode;
     this.params = params;
@@ -374,6 +374,10 @@ class AjaxData {
     this.beforeSend = beforeSend;
     this.onGet = onGet;
     this.append = append;
+    /* If p_peerHooks is passed, it is a list of IDs corresponding to other
+       ajax-refreshable nodes: everytime the current node will be ajax-
+       refreshed, these peer nodes will be refreshed, too. */
+    this.peerHooks = peerHooks;
     // Inject this AjaxData object into p_hook
     getNode(hook, true)['ajax'] = this;
     // If v_this corresponds to a search, copy its parameters in the session
@@ -466,7 +470,7 @@ class Hook {
     this.interval = null;
     // Will be true once the unique or first fetch will have occurred
     this.fetched = false;
-    // Call a custom m_init method that may be overridden by a class
+    // Call a custom m_init method that may be overridden by a child class
     this.init();
   }
 
@@ -566,9 +570,11 @@ function ajaxActionFrom(url) {
 }
 
 function askAjax(hook, form, params, waiting) {
-  /* Call askAjaxChunk by getting an AjaxData instance from p_hook, a
-      potential action from p_form and additional parameters from p_param. */
-  let d = getNode(hook)['ajax'];
+  /* Call askAjaxChunk by getting an AjaxData object from p_hook, a potential
+     action from p_form and possibly additional p_param(eter)s. */
+  const node = getNode(hook);
+  if (!node) return;
+  let d = node['ajax'];
   // Complete data with a parent data if present
   if (d.parentHook) {
     let parentHook = d.parentHook;
@@ -618,6 +624,10 @@ function askAjax(hook, form, params, waiting) {
   let onGet = d.onGet || evalInnerScripts;
   askAjaxChunk(d.url, mode, d.params, hook, d.beforeSend, onGet, waiting,
                d.append);
+  // Perform additional Ajax requests when required
+  if (d.peerHooks) {
+    for (const peer of d.peerHooks) askAjax(peer);
+  }
 }
 
 function askBunch(hook, start, maxPerPage, scrollTop) {
