@@ -230,9 +230,15 @@ class Totals:
     checkboxStatuses = {'validated': True, 'discarded': False}
 
     @classmethod
-    def getValidationCBStatus(class_, req):
+    def getValidationCBStatus(class_, o):
         '''Gets the status of the validation checkboxes from the request'''
+        # When not called from an Ajax request, statuses of checkboxes are
+        # computed and stored on the handler cache.
+        hCache = o.cache
+        if '_checked_' in hCache:
+            return hCache._checked_
         r = {}
+        req = o.req
         for status, value in class_.checkboxStatuses.items():
             ids = req[status]
             if ids:
@@ -260,7 +266,8 @@ class Totals:
             name = totals.name
             r[name] = [Total(totals) for i in range(totalCount)]
         # Get the status of validation checkboxes
-        status = class_.getValidationCBStatus(c.o.req)
+        o = c.o
+        status = class_.getValidationCBStatus(o)
         # Walk every date within every calendar
         indexes = {'i': -1, 'j': -1}
         ii = 'i' if isRow else 'j'

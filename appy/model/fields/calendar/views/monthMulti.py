@@ -114,9 +114,37 @@ class MonthMulti(Month):
             onClick, css = self.getCellSelectParams(date, content)
         return f'<td{onClick}{css}{style}{title}>{content}</td>'
 
+    def buildCheckbox(self, events, c):
+        '''Build and return, when relevant, a checkbox, to be rendered in the
+           current cell.'''
+        # Invariant :: p_events is not empty; the current user may validate it.
+        #
+        # If at least one event from p_events is in the validation schema,
+        # propose a unique checkbox, that will allow to validate or not all
+        # validable events at p_date.
+        other = c.other
+        otherV = other.field.validation
+        for info in events:
+            if otherV.isWish(other.o, info.event.eventType):
+                dateS = c.date.strftime('%Y%m%d')
+                cbId = f'{other.o.iid}_{other.field.name}_{dateS}'
+                field = self.field
+                totR = 'true' if field.totalRows else 'false'
+                totC = 'true' if field.totalCols else 'false'
+                name = c.typeInfo.getName(info.event.eventType, '?')
+                r = f'<input type="checkbox" checked="checked" class=' \
+                    f'"smallbox" id="{cbId}" title="{name}" onclick=' \
+                    f'"onCheckCbCell(this,\'{c.hook}\',{totR},{totC})"/>'
+                # Add this checkbox among cached validated checkboxes
+                hCache = c.o.cache
+                if '_checked_' not in hCache:
+                    hCache._checked_ = {cbId: True}
+                else:
+                    hCache._checked_[cbId] = True
+                return r
+
     def getCell(self, c, date, actions):
         '''Gets the content of a cell in a timeline calendar'''
-        # Unwrap some variables from the PX context
         o = self.o
         date = c.date
         other = c.other
@@ -144,25 +172,11 @@ class MonthMulti(Month):
         # Define its content
         disableSelect = False
         if not content:
+            # Render a validation checkbox ?
             if events and c.mayValidate:
-                # If at least one event from p_events is in the validation
-                # schema, propose a unique checkbox, that will allow to validate
-                # or not all validable events at p_date.
-                otherV = other.field.validation
-                for info in events:
-                    if otherV.isWish(other.o, info.event.eventType):
-                        dateS = date.strftime('%Y%m%d')
-                        cbId = f'{other.o.iid}_{other.field.name}_{dateS}'
-                        totalRows = 'true' if field.totalRows else 'false'
-                        totalCols = 'true' if field.totalCols else 'false'
-                        name = c.typeInfo.getName(info.event.eventType, '?')
-                        content = f'<input type="checkbox" checked="checked"' \
-                          f' class="smallbox" id="{cbId}" title="{name}" ' \
-                          f'onclick="onCheckCbCell(this,\'{c.hook}\',' \
-                          f'{totalRows},{totalCols})"/>'
-                        # Disable selection if a validation checkbox is there
-                        disableSelect = True
-                        break
+                content = self.buildCheckbox(events, c)
+                # Disable selection if a validation checkbox is there
+                disableSelect = bool(content)
             if not content and len(events) == 1:
                 # A single event: if not colored, show a symbol. When there are
                 # multiple events, a background image is already shown (see the
