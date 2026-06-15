@@ -47,11 +47,15 @@ class Decoder:
         return r
 
     @classmethod
-    def decode(class_, jsonData):
+    def decode(class_, jsonData, unescapeSlashes=True):
         '''Converts JSON data received in a string (p_jsonData) to a Python data
            structure. JSON dicts are converted to Python objects.'''
         # Return None if there is p_jsonData is empty
         jsonData = jsonData.strip()
+        if unescapeSlashes:
+            # In some (valid or not ?) JSON data, problematic escaped forward
+            # slashes were encountered.
+            jsonData = jsonData.replace(r'\/', '/')
         if not jsonData: return
         try:
             return class_.convertValue(eval(jsonData, class_.context))

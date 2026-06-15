@@ -415,7 +415,7 @@ class Resource:
         # A p_username and p_password must be passed when using Basic auth.
         self.username = username
         self.password = password
-        # A p_token must be passed when using Bearer auth.
+        # A p_token must be passed when using Bearer auth
         self.token = token
         # Authentication method can be: "Basic", "Digest" or "Bearer"
         self.authMethod = authMethod
