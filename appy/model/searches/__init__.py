@@ -216,7 +216,14 @@ class Search:
     def showDeleteMany(self, tool):
         '''Must the "delete many" button be shown on search results ?'''
         r = self.delete
-        return r(tool) if callable(r) else r
+        if r:
+            if callable(r):
+                # A staticmethod
+                r = r(tool)
+            elif hasattr(r, '__func__'):
+                # A classmethod
+                r = r.__func__(self.container.python, tool)
+        return r
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                             The "run" method
