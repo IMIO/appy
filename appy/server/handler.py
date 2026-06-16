@@ -754,6 +754,9 @@ class VirtualHandler(Handler):
         self.dbConnection = None
         self.tool = None
 
+    def inPopup(self): return # A virtual handler is never in a popup
+    def isAjax(self): return # A virtual handler never serves ajax requests
+
     def getUserLogin(self):
         '''Gets the login of the currently logged user'''
         # A virtual handler is always ran by "system"
