@@ -170,8 +170,11 @@ class Calendar(Field):
                                align-self:flex-start }
       .viewM { display:flex; align-items:start; flex-wrap:wrap; gap:1em }
       .calSelect { margin:0.2em 0; color:|selectColor|; font-size:95% }
-      .eFields { margin-bottom:0.2em }
-      .eFields label { padding:0 0.6em 0 0 }
+      .eFields { margin-bottom:0.5em }
+      .eFields label { padding:0 0.6em 0 0; width:4em }
+      .eFields select { margin:0 }
+      .rFields { margin:0; font-size:94% }
+      .rFields label { padding:0 0.2em 0 0; width:4em }
       .calSpan { margin-bottom:0.7em; font-size:98%; color:|selectColor| }
       .calSpan input { color:|selectColor|; text-align:center }
       #searchET { color:|selectColor| }''')
