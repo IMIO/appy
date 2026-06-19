@@ -168,7 +168,7 @@ class Calendar(Field):
       .viewF > :nth-child(2) { display:flex; flex-direction:column; width:10em;
                                gap:0.5em; position:sticky; top:1.5em;
                                align-self:flex-start }
-      .viewM { display:flex; align-items:start; flex-wrap:wrap; gap:1em }
+      .viewM { display:flex; align-items:start; flex-wrap:wrap; gap:0.4em }
       .calSelect { margin:0.2em 0; color:|selectColor|; font-size:95% }
       .eFields { margin-bottom:0.5em }
       .eFields label { padding:0 0.6em 0 0; width:4em }

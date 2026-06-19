@@ -114,7 +114,7 @@ class Filter:
       <div class="titleF">
        <div>::_(filteR.label)</div>
        <div onClick=":f'Filters.askOne(this,`{fname}`,`{ftype}`)'"
-            class="clickable actFL" title=":_('filter_apply')">⮂</div>
+            class="clickable actFL" title=":_('filter_apply')">↺</div>
        <div onClick=":f'Filters.cleanOne(this,`{fname}`,`{ftype}`)'"
             class="clickable" title=":_('filter_clean')">☓</div>
       </div>
@@ -124,7 +124,7 @@ class Filter:
      <!-- Global actions; apply or clean all filters -->
      <div if="len(view.filters) &gt; 1" class="allF" var="text=_('everything')">
       <div onclick=":f'Filters.askAll(this)'" class="clickable"
-           title=":_('filter_apply')"><x>:text</x> ⮂</div>
+           title=":_('filter_apply')"><x>:text</x> ↺</div>
       <div onclick=":f'Filters.cleanAll(this)'" class="clickable cleanF"
            title=":_('filter_clean')"><x>:text</x> ☓</div>
      </div>''',

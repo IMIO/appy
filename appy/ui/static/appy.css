@@ -492,8 +492,9 @@ th input { margin:0 !important}
 
 /* Make "title" attributes appear on mobile devices */
 @media (pointer:coarse), (hover:none) {
-  [title] { position:relative; display:inline-flex; justify-content:center }
-  [title]:hover::after {
+  span[title], div[title] { position:relative; display:inline-flex;
+                            justify-content:center }
+  span[title]:hover::after, div[title]:hover::after {
     content:attr(title); position:absolute; top:90%; color:|brightColor|;
     background-color:|darkColor|; border:1px solid; width:fit-content;
     padding:3px; font-size:12px; text-align:left }
