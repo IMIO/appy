@@ -7,9 +7,9 @@ import hashlib, datetime
 from ..px import Px
 from .base import Base
 from .user import User
-from ..utils import No
 from .fields import Show
 from .query import Query
+from ..utils import No, br
 from .fields.pod import Pod
 from .fields.rich import Rich
 from .fields.file import File
@@ -40,9 +40,6 @@ TOK_SET  = '%s :: Token %s set%s.'
 TOK_BASE = '%s (token-protected) :: Access tentative'
 TOK_NO   = f'{TOK_BASE} without token.'''
 TOK_KO   = f'{TOK_BASE} with wrong token.'''
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-br = '<br/>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
