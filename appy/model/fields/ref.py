@@ -2888,6 +2888,7 @@ class Ref(Field):
         elif self.link == 'popupRef':
             # Go to the page that displays a single field
             po, fieldName = self.select(o) # "po" = the *p*opup *o*bject
+            if not po: return '-'
             max = self.getAttribute(o, 'maxPerPage')
             r = f'{po.url}/pxField?name={fieldName}&pageLayout=w-b&popup=True&'\
                 f'maxPerPage={max}&selector={o.iid},{name},{popupMode}{suffix}'
