@@ -80,12 +80,12 @@ class Query(Base):
     def listIndexedFields(self, className=None):
         '''Lists, for the class whose name is p_className, the fields being
            indexed.'''
+        r = []
         className = className or self.className
         if not className: return r
         # This may be cached
         key = f'{className}_ifs'
         if key in self.cache: return self.cache[key]
-        r = []
         for field in self.model.classes[className].fields.values():
             # Ignore the field if it cannot be chosen
             if field.name in Query.unselectableIndexes: continue

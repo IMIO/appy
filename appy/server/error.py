@@ -82,6 +82,18 @@ class Error:
         return r
 
     @classmethod
+    def getBasic(class_, handler, content):
+        '''Returns a basic HTML page when PX-based nice pages from Error.byCode
+           cannot be rendered.'''
+        # Add a disconnect link if the user is not anon
+        if not handler.guard.user.isAnon():
+            part = f'<a href="{handler.tool.url}/guard/leave">⏏ Eject me</a>'
+        else:
+            part = ''
+        return f'<!DOCTYPE html><html><body><div>{content}</div>{part}</body>' \
+               f'</html>'
+
+    @classmethod
     def get(class_, resp, traversal, error=None):
         '''A server error just occurred. Try to return a nice error page. If it
            fails (ie, the error is produced in the main PX template), dump a
@@ -144,5 +156,5 @@ class Error:
         try:
             return Error.byCode[code]['px'](context)
         except Exception as err:
-            return f'<p>{content}</p>'
+            return Error.getBasic(handler, content)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
