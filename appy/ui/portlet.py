@@ -200,16 +200,18 @@ class Portlet:
 
         <!-- Section title (link triggers the default search) -->
         <div class="portletContent"
-             var="searches=class_.getGroupedSearches(tool, _ctx_)">
+             var="searches=class_.getGroupedSearches(tool, _ctx_);
+                  default=searches.default;
+                 clickable=indexable and (not default or not default.disabled)">
          <div class="portletTitle" if="enabled">
-          <a if="indexable"
+          <a if="clickable"
              var="queryParam=searches.default.name if searches.default else ''"
              href=":f'{queryUrl}?className={className}&amp;search={queryParam}'"
              onclick="clickOn(this)"
              class=":'current' if not currentSearch and
                      (currentClass == className) and
                      currentPage == 'pxResults' else ''">::labelPlural</a>
-          <x if="not indexable">::labelPlural</x>
+          <x if="not clickable">::labelPlural</x>
          </div>
 
          <!-- Create instances of this class -->
@@ -228,7 +230,7 @@ class Portlet:
                                 (req.search == 'customSearch')"
                class=":'portletAdv current' if highlighted else 'portletAdv'">
            <a var="text=_('search_title')"
-              href=":'%s/Search/advanced?className=%s' % (toolUrl, className)"
+              href=":f'{toolUrl}/Search/advanced?className={className}'"
               title=":text"><x>:text</x>...</a>
           </div>
          </x>
@@ -275,6 +277,7 @@ class Portlet:
                     font-style:|gcFStyle| }
        .portletAdv { margin:|asMargin|; font-size:|asFSize| }
        .portletSearch { text-align:left }
+       .disabledSearch { font-style:italic; cursor:not-allowed }
        .portletSearch:hover { background-color:|portletHob|; cursor:pointer }
        .portletSearch:hover>a { color:|portletHoc| }
        .portletCurrent { font-weight:bold }

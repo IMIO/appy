@@ -42,11 +42,11 @@ class Search:
     def __init__(self, name=None, group=None, sortBy='title', sortOrder='asc',
                  maxPerPage=30, maxPerLive=10, default=False, colspan=1,
                  viaPopup=None, show=True, showActions='all', delete=False,
-                 actionsDisplay='block', showPods=True, showTitle=True,
-                 showFilters=True, showNav='both', navAlign='right',
-                 listCss=None, translated=None, translatedDescr=None,
-                 checkboxes=False, checkboxesDefault=True, container=None,
-                 add=False, addLabel='object_add',
+                 disabled=False, actionsDisplay='block', showPods=True,
+                 showTitle=True, showFilters=True, showNav='both',
+                 navAlign='right', listCss=None, translated=None,
+                 translatedDescr=None, checkboxes=False, checkboxesDefault=True,
+                 container=None, add=False, addLabel='object_add',
                  addFromLabel='object_add_from', resultModes=None,
                  shownInfo=None, actions=None, rowAlign='top',
                  pageLayoutOnView=None, thumbnailCss='thumbnail',
@@ -83,6 +83,9 @@ class Search:
         # May the user delete objects via this search ? p_delete can also hold a
         # method accepting the tool as unique arg.
         self.delete = delete
+        # For a disabled search, its name appears, but is not clickable.
+        # p_disabled can also host a method accepting the tool as unique arg.
+        self.disabled = disabled
         # Various parts of search results may be shown or not
         self.showPods = showPods
         self.showTitle = showTitle # Determines when to show the zone including
@@ -151,7 +154,7 @@ class Search:
         self.container = class_
 
     def ui(self, o, ctx):
-        '''Gets a UiSearch instance corresponding to this search'''
+        '''Gets a UiSearch object corresponding to this search'''
         return UiSearch(self, o, ctx)
 
     def isShowable(self, tool):
@@ -213,9 +216,10 @@ class Search:
             r = 'margin-left:auto;margin-right:auto'
         return r
 
-    def showDeleteMany(self, tool):
-        '''Must the "delete many" button be shown on search results ?'''
-        r = self.delete
+    def getAttribute(self, tool, name):
+        '''Returns getattr(p_self, p_name). If the value is a static or class
+           method, call it.'''
+        r = getattr(self, name)
         if r:
             if callable(r):
                 # A staticmethod
@@ -224,6 +228,10 @@ class Search:
                 # A classmethod
                 r = r.__func__(self.container.python, tool)
         return r
+
+    def isDisabled(self, tool):
+        '''Is this search disabled ?'''
+        return self.getAttribute(tool, 'disabled')
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                             The "run" method

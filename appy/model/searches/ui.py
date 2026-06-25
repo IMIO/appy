@@ -79,7 +79,7 @@ class MayAdd:
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class UiSearch:
     '''Instances of this class are generated on-the-fly for manipulating a
-       Search instance from the User Interface.'''
+       Search object from the User Interface.'''
 
     # Make some classes available here
     Mode = Mode
@@ -87,10 +87,14 @@ class UiSearch:
 
     # Rendering a search
     view = Px('''
-     <div class="portletSearch" onClick="this.firstChild.click()">
-      <a href=":f'{queryUrl}?className={className}&amp;search={search.name}'"
+     <div var="disabled=search.disabled"
+          onClick=":'' if disabled else 'this.firstChild.click()'"
+          class=":'disabledSearch' if disabled else 'portletSearch'">
+      <span if="disabled" title=":search.translatedDescr">:search.translated
+      </span>
+      <a if="not disabled" onclick="clickOn(this)"
+         href=":f'{queryUrl}?className={className}&amp;search={search.name}'"
          class=":'current' if search.name == currentSearch else ''"
-         onclick="clickOn(this)"
          title=":search.translatedDescr">:search.translated</a>
      </div>''')
 
@@ -206,6 +210,7 @@ class UiSearch:
         self.actionsDisplay = search.actionsDisplay
         self.showTopNav = search.showNav in ('top', 'both')
         self.showBottomNav = search.showNav in ('bottom', 'both')
+        self.disabled = search.getAttribute(tool, 'disabled')
         className = self.container.name
         if search.translated:
             self.translated = search.translated

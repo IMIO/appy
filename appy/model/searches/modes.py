@@ -306,7 +306,7 @@ class List(Mode):
 
       <!-- Delete several objects -->
       <div>
-       <input if="uiSearch.search.showDeleteMany(tool)"
+       <input if="uiSearch.search.getAttribute(tool, 'delete')"
               var2="label=_('object_delete_many'); css=ui.Button.getCss(label)"
               type="button" class=":css" value=":label"
               onclick=":'onDeleteObjects(%s)' % (q(uiSearch.name))"

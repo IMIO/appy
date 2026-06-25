@@ -723,9 +723,9 @@ class History(PersistentList):
                 r += 1
         return r
 
-    # The list of event types being, by default, excluded from the XHTML
-    # version of the history, as produced by m_asXhtml below.
-    xhtmlDefaultExclude = ('change', '_init_')
+    # The list of event types being, by default, excluded from the XHTML version
+    # of the history, as produced by m_asXhtml below.
+    xhtmlDefaultExclude = 'change', '_init_'
 
     def asXhtml(self, exclude=xhtmlDefaultExclude, userExpression=None,
                 noLabelFor=('comment',), escapeComments=True,
