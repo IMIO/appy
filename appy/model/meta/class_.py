@@ -637,6 +637,15 @@ class Class(Meta):
         r = getattr(self.python, 'searchAdvanced', None)
         return r if not callable(r) else r(tool)
 
+    def getSearchAll(self, tool):
+        '''Gets the "all" search, allowing to retrieve all objects of class
+           p_self.'''
+        r = Search('allSearch', container=self)
+        # Take into account default params for the advanced search
+        advanced = self.getSearchAdvanced(tool)
+        if advanced: r.merge(advanced)
+        return r
+
     def maySearchAdvanced(self, tool):
         '''Is advanced search enabled for this class ?'''
         # Get the "advanced" search
@@ -789,13 +798,13 @@ class Class(Meta):
         page = FieldPage('searches') # A dummy page required by class UiGroup
         # Get the statically defined searches from class's "searches" attribute
         for search in self.searches.values():
-            # Ignore search that can't be shown
+            # Ignore v_search if it can't be shown
             if not search.isShowable(tool): continue
             searches.append(search)
         # Get the dynamically computed searches
         dyn = self.getDynamicSearches(tool)
         if dyn: searches += dyn
-        # Return the grouped list of UiSearch instances
+        # Return the grouped list of UiSearch objects
         uis = r.all
         for search in searches:
             # Create the UiSearch object
@@ -809,6 +818,10 @@ class Class(Meta):
                 uiGroup.addElement(ui)
             # Is this search the default search ?
             if search.default: r.default = ui
+        # If there is no default search, set the default "all" search as default
+        if not r.default:
+            alL = self.getSearchAll(tool)
+            r.default = alL.ui(tool, c)
         return r
 
     def getField(self, name, o=None):

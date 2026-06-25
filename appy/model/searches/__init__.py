@@ -181,7 +181,7 @@ class Search:
     mergeAttributes = 'sortBy', 'sortOrder', 'showActions', 'actionsDisplay', \
                       'actions', 'maxPerPage', 'resultModes', 'shownInfo', \
                       'checkboxes', 'checkboxesDefault', 'gridFiltersAlign', \
-                      'totalRows'
+                      'totalRows', 'disabled', 'show'
 
     def merge(self, other):
         '''Merge parameters from another search in p_other'''
@@ -228,10 +228,6 @@ class Search:
                 # A classmethod
                 r = r.__func__(self.container.python, tool)
         return r
-
-    def isDisabled(self, tool):
-        '''Is this search disabled ?'''
-        return self.getAttribute(tool, 'disabled')
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                             The "run" method
@@ -343,12 +339,9 @@ class Search:
             advanced = modelClass.getSearchAdvanced(tool)
             if advanced: r.merge(advanced)
         elif not name or name == 'allSearch':
-            # It is the search for every instance of p_modelClass
-            r = Search('allSearch', container=modelClass)
+            # It is the search for every object of p_modelClass
+            r = modelClass.getSearchAll(tool)
             name = r.name
-            # Take into account default params for the advanced search
-            advanced = modelClass.getSearchAdvanced(tool)
-            if advanced: r.merge(advanced)
         elif name == 'fromSearch':
             # It is the search for selecting a template for creating an object
             fromClass = req.fromClass
