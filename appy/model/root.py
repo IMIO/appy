@@ -34,7 +34,7 @@ class Model:
         # All Appy classes, keyed by their name
         self.classes = classes # ~{s_className: appy.model.meta.Class}~
         # All Appy worfklows, keyed by their name
-        self.workflows = workflows # ~{s_className: appy.model.meta.Workflow}~
+        self.workflows = workflows # ~{s_workflowName:appy.model.meta.Workflow}~
         # The global, grantable roles (will be computed later, at run-time only)
         self.grantableRoles = None
 
