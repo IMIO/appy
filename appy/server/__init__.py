@@ -43,6 +43,7 @@ BROKEN_PIPE   = 'Broken pipe (client port %d).'
 MIN_THR_KO    = 'At least one thread must be in use.'
 THR_LIMITS_KO = 'killThreadLimit (%d) should be > hungThreadLimit (%d)'
 SPAWN_IF_KO   = 'spawnIfUnder (%d) should be < than the number of threads (%d)'
+LO_NOT_FOUND  = '-= LibreOffice not found =-'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -736,8 +737,11 @@ class Server:
     def getLoVersion(self):
         '''Gets the version of LibreOffice being installed on the server I am
            currently running.'''
-        out, err = executeCommand(('soffice', '--version'))
-        return err or out or '?'
+        try:
+            out, err = executeCommand(('soffice', '--version'))
+            return err or out or '?'
+        except FileNotFoundError:
+            return LO_NOT_FOUND
 
     def getOsUser(self):
         '''Returns the OS user running this server'''

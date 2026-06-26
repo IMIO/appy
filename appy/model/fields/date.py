@@ -362,6 +362,15 @@ class Date(Field):
         if self.reverseYears: r.reverse()
         return r
 
+    def formaT(self, value, fmt, ifError='?'):
+        '''Returns a stringified version of the DateTime object in p_value,
+           formatted as specified by p_fmt.'''
+        try:
+            r = value.strftime(fmt)
+        except ValueError as err:
+            r = ifError
+        return r
+
     def validateValue(self, o, value):
         try:
             value = DateTime(value)
@@ -388,7 +397,7 @@ class Date(Field):
             formaT = formaT.replace('%d', '').strip('-/')
         r = dates.Date.format(o.tool, value, formaT, withHour=False)
         if self.format == Date.WITH_HOUR:
-            houR = value.strftime(self.hourFormat or ui.hourFormat)
+            houR = self.formaT(value, self.hourFormat or ui.hourFormat)
             r = f'{r} {houR}'
         return r
 
@@ -437,7 +446,7 @@ class Date(Field):
            inputs.'''
         if isinstance(value, DateTime):
             try:
-                r = value.strftime(Date.nativeFormats[self.format])
+                r = self.formaT(value, Date.nativeFormats[self.format])
             except ValueError as err:
                 # Something is wrong with that date
                 r = None
@@ -496,7 +505,7 @@ class Date(Field):
         else:
             date = value
             match = 'precise'
-        return f'{date.strftime("%Y-%m-%d")}*{match}'
+        return f'{self.format(date,"%Y-%m-%d")}*{match}'
 
     def getFilterInfo(self, mode):
         '''Returns, as a tuple (b_inFilter, s_date, s_match) info about a
@@ -517,7 +526,7 @@ class Date(Field):
             a, b = value.values
             match = 'from' if b is None else 'until'
             date = a or b
-        return inFilter, date.strftime('%Y-%m-%d'), match
+        return inFilter, self.formaT(date, '%Y-%m-%d'), match
 
     @classmethod
     def getDateFromSearchValue(class_, year, month, day, hour, setMin):
