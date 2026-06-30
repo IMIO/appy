@@ -133,7 +133,7 @@ class Index(persistent.Persistent):
     def getByObject(self, o, field):
         '''Returns the value currently stored for p_o in p_self'''
         r = self.byObject.get(o.iid)
-        if not r: return
+        if r is None: return
         # Take care of converting the value from the internal to the standard
         # data format.
         return self.fromIndexed(r, field)

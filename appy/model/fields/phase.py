@@ -163,9 +163,11 @@ class UiPage:
     def __init__(self, uiPhase, page, showOnView, showOnEdit):
         # The link to the container phase
         self.uiPhase = uiPhase
-        # The corresponding Page instance
+        # The corresponding Page object
         self.page = page
         self.name = page.name
+        # The translated page name
+        self.translated = self.getTranslated()
         # Must the page be shown on /view and/or /edit ?
         self.showOnView = showOnView
         self.showOnEdit = showOnEdit
@@ -176,31 +178,39 @@ class UiPage:
         for elem in Page.subElements:
             showable = page.isShowable(o, layout, elem)
             setattr(self, f'show{elem.capitalize()}', showable)
-        # Define the icon to display
+        # Define the icon to display (if not an utf-8 symbol)
         self.iconUrl = self.getIconUrl(o)
 
     def __repr__(self):
         '''p_self's string representation'''
         return f'‹UiPage {self.name}›'
 
-    def getLabel(self):
+    def getTranslated(self):
         '''Returns the translated label for this page, potentially based on a
-           fixed label if p_self.label is not empty.'''
+           fixed label if p_self.page.label is empty.'''
+        # Get the i18n label and translate it
         page = self.page
         o = self.uiPhase.container.o
         label = page.label or f'{o.class_.name}_page_{page.name}'
-        return o.translate(label)
+        r = o.translate(label)
+        # Incrust the icon, if expressed as a utf-8 char
+        icon = page.icon
+        if icon and isinstance(icon, str) and len(icon) == 1:
+            r = f'{icon} {r}'
+        return r
 
     def showable(self, layout):
         '''Return True if this page is showable on p_layout'''
         return self.showOnEdit if layout == 'edit' else self.showOnView
 
     def getIconUrl(self, o):
-        '''Compute the URL to the icon to display for this page'''
+        '''Compute, if appropriate, the URL to the icon to display for this
+           page.'''
         page = self.page
+        icon = page.icon
         # The icon to show
-        if callable(page.icon):
-            url = page.icon(o)
+        if callable(icon):
+            url = icon(o)
             if url: return url
             # The icon may not be available yet. For example, we may be creating
             # an object having a field that will be used to store the page icon,
@@ -208,8 +218,12 @@ class UiPage:
             base = None
             icon = 'page.svg'
             ram = True
+        elif len(icon) == 1:
+            # A single-char icon is considered being an utf-8 symbol: it will be
+            # incrusted in the page translated name.
+            return
         else:
-            base, icon, ram = page.iconBase, page.icon, page.iconRam
+            base, ram = page.iconBase, page.iconRam
         return o.buildUrl(icon, base, ram=ram)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -261,7 +275,7 @@ class UiPhase:
                  pictoUrl=pag.iconUrl">
 
         <!-- Main icon -->
-        <div class="pagePicto">
+        <div class="pagePicto" if="pictoUrl">
          <a if="viewUrl" href=":viewUrl">
           <img src=":pictoUrl" class=":picto"/>
          </a>
@@ -269,7 +283,7 @@ class UiPhase:
         </div>
 
         <!-- Page name and icons -->
-        <x var="label=Px.truncateText(pag.getLabel(), 25, css='clickable')">
+        <x var="label=Px.truncateText(pag.translated, 25, css='clickable')">
          <a if="viewUrl" href=":viewUrl">::label</a>
          <a if="not viewUrl" class="unallowed">::label</a>
         </x>
@@ -339,7 +353,7 @@ class UiPhase:
         self.name = name
         # Its translated label
         o = phases.o
-        self.label = o.translate('%s_phase_%s' % (o.class_.name, name))
+        self.label = o.translate(f'{o.class_.name}_phase_{name}')
         # A link to the global UiPhases object
         self.container = phases
         # The included pages, as a dict of UiPage instances

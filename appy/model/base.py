@@ -90,8 +90,8 @@ class Base:
 
     title = String(multiplicity=(1,1), show=Show.EX, indexed=True,
       searchable=True, filterField=searchable,
-      indexValue=lambda o, v: \
-        Normalize.sortable(o.getShownValue(language='en')) if v else '')
+      indexValue=lambda o, v: Normalize.sortable(o.getShownValue(language='en',\
+                                layout='xml')) if v else '')
 
     # The hereabove lambda allows to produce an index value suitable for
     # sorting. In the call to m_getShownValue, language 'en' is forced in order
