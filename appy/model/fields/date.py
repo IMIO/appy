@@ -505,7 +505,7 @@ class Date(Field):
         else:
             date = value
             match = 'precise'
-        return f'{self.format(date,"%Y-%m-%d")}*{match}'
+        return f'{self.formaT(date,"%Y-%m-%d")}*{match}'
 
     def getFilterInfo(self, mode):
         '''Returns, as a tuple (b_inFilter, s_date, s_match) info about a
