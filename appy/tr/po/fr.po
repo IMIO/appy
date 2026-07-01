@@ -1364,6 +1364,10 @@ msgstr "⚠️ Le serveur est en <i>foreground</i>.\n\nAucune requête de statut
 msgid "cal_filtered_readonly"
 msgstr "⚠️ Toute création, modification ou suppression d'événement est désactivée tant qu'au moins un filtre est actif."
 
+#. Default: "Automatically created by an external software."
+msgid "peer_created"
+msgstr "Création automatique par un logiciel tiers."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Créé par"

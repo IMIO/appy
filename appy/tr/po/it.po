@@ -1363,6 +1363,10 @@ msgstr ""
 msgid "cal_filtered_readonly"
 msgstr ""
 
+#. Default: "Automatically created by an external software."
+msgid "peer_created"
+msgstr ""
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr ""

@@ -1364,6 +1364,10 @@ msgstr "⚠️ The server runs in the foreground.\n\nNo parallel status request 
 msgid "cal_filtered_readonly"
 msgstr "⚠️ Creating, updating or deleting calendar events is disabled unless you clean all filters."
 
+#. Default: "Automatically created by an external software."
+msgid "peer_created"
+msgstr "Automatically created by an external software."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "By"

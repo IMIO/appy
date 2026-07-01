@@ -1363,6 +1363,10 @@ msgstr "⚠️ De server is in de <i>voorgrond</i>-modus.\n\nEr kunnen geen stat
 msgid "cal_filtered_readonly"
 msgstr "⚠️ Het aanmaken, wijzigen of verwijderen van gebeurtenissen is uitgeschakeld zolang er ten minste één filter actief is."
 
+#. Default: "Automatically created by an external software."
+msgid "peer_created"
+msgstr "Automatische aanmaak door externe software."
+
 #. Default: "By"
 msgid "Base_creator"
 msgstr "Door"
