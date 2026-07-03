@@ -8,11 +8,20 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from .response import Response
+from appy.model.fields import Field
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 WS        = 'WS create/%s :: '
 TITLE_MS  = '%s title is missing.'
 TITLE_KO  = '%s title must be a string.'
+REQ_NO    = 'Required attribute "%s" is missing or empty.'
+REQ_TMM   = 'Attribute "%s" must be a %s but is a %s.'
+REQ_DIG   = 'Attribute "%s" must hold a numeric value.'
+REQ_DM    = 'Dict attribute %s should contain %d entry(ies); %d entry(ies) ' \
+            'found.'
+REQ_DWK   = 'Key "%s" not found among dict value for attributre "%s".'
+REQ_FKO   = 'Attribute "%s" must contain a float.'
+SUB_KO    = 'Attribute "%s" :: Error :: %s'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Collector:
@@ -30,7 +39,7 @@ class Collector:
     # "collect<part>" on the concrete collector. Here are the responsibilities
     # of every such method.
 
-    # 1. If an error is detected, it must return a appy.peer.response.Response
+    # 1. If an error is detected, it must raise a appy.peer.response.Response
     #    object initialised with the corresponding error, which can be easily
     #    done by calling method Collector.error.
 
@@ -47,8 +56,8 @@ class Collector:
         self.resp = resp or Response(tool)
         # This collector may be called by a p_parent collector
         self.parent = parent
-        # The dict of parameters that will serve as basis for creating, within
-        # HubSessions, the object described by request data.
+        # The dict of parameters that will serve as basis for creating, on this
+        # site, the object described by request data.
         self.params = {}
         # The initiator object and field from which the object to create must be
         # created, when relevant. If None, the object will be created as a root
@@ -56,10 +65,20 @@ class Collector:
         self.initiator = self.initiatorField = None
         # Language for i18n labels to translate
         self.language = tool.config.ui.fallbackLanguage
+        # The corresponding Appy class
+        self.class_ = tool.model.classes[self.__class__.__name__]
 
     def getName(self):
         '''The name of a collector is its class name, lowered'''
         return self.__class__.__name__.lower()
+
+    def getAttributeName(self, name, language=None):
+        '''Returns this p_name, potentially suffixed with this p_language'''
+        r = name
+        if language:
+            # Incorporate the p_language part into the name of the attribute
+            r = f'{r} ({language})'
+        return r
 
     def getRootName(self):
         '''Gets the name of the root collector'''
@@ -67,37 +86,158 @@ class Collector:
         return parent.getRootName() if parent else self.getName()
 
     def error(self, code, text):
-        '''Returns a Response object initialized with the error having this
-           p_code and p_text.'''
+        '''Initialises the Response object being in p_self.resp with this error
+           p_code and p_text, and raise it.'''
         # Add a prefix to the p_text
         prefix = WS % self.getRootName()
         text = f'{prefix}{text}'
         tool = self.tool
-        # Log the error and return it to the caller
+        # Log the error
         tool.log(text, type='warning')
-        return self.resp.get(tool, code, text)
+        # Complete the Response object
+        resp = self.resp
+        resp.code = code
+        resp.text = text
+        # Raise it
+        raise resp
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                             Value scanners
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # "Scanners" are methods that analyse incoming data and raise an error if it
+    # detects an error in it. If no error is detected, it returns the valid
+    # value.
+
+    def scanRequired(self, name):
+        '''Retrieve the value for the required incoming data attribute having
+           this p_name.'''
+        r = self.req[name]
+        if r in Field.nullValues:
+            self.error(1, REQ_NO % name)
+        return r
+
+    def scanDigit(self, name, value, language=None):
+        '''Ensure this string p_value contains only numeric chars'''
+        if value.isdigit(): return value
+        # Possibly incrust the p_language in the attribute p_name
+        name = self.getAttributeName(name, language)
+        self.error(5, REQ_DIG % name)
+
+    def scanRich(self, name, value, language=None):
+        '''Ensure this string p_value is valid XHTML'''
+        field = self.class_.fields[name]
+        error = field.validateUniValue(self.tool, value)
+        if error:
+            name = self.getAttributeName(name, language)
+            self.error(1, SUB_KO % (name, error))
+        return value
+
+    def scanSelect(self, name, value, language=None):
+        '''Ensure this p_value is valid according to his Select field'''
+        field = self.class_.fields[name]
+        error = field.validateValue(self.tool, value)
+        if error:
+            name = self.getAttributeName(name, language)
+            self.error(1, SUB_KO % (name, error))
+        return value
+
+    def scanString(self, name, required=False, subType=None, languages=None):
+        '''Retrieve, from incoming data, the value for the attribute having this
+           p_name. It must be a string, or, if p_languages is passed, a dict of
+           strings keyed by every language from p_languages.'''
+        # Manage value mandatoriness
+        value = self.scanRequired(name) if required else self.req[name]
+        if value is None: return
+        # Ensure v_value has the right type
+        typE = dict if (languages and len(languages) > 1) else str
+        typeV = type(value)
+        if typE != typeV:
+            message = REQ_TMM % (name, typE.__name__, typeV.__name__)
+            self.error(5, message)
+        # Manage p_value differently, depending on it being a mono- and multi-
+        # language value.
+        if isinstance(value, str):
+            # p_value is a string
+            if subType:
+                # Make one more check
+                getattr(self, f'scan{subType}')(name, value)
+        else:
+            # Manage a multi-language, dict p_value. Ensure it contains one key
+            # for every language as defined in p_languages.
+            if len(languages) != len(value):
+                message = REQ_DM % (name, len(languages), len(value))
+                self.error(5, message)
+            for key in languages:
+                if key not in value:
+                    # This language is not among p_value
+                    self.error(5, REQ_DWK % (key, name))
+                if subType:
+                    # Make one more check
+                    val = value[key]
+                    getattr(self, f'scan{subType}')(name, val, language=key)
+        return value
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                             Value setters
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # "Setters" are methods that make use of scanners for, finally, storing the
+    # valid scanned incoming value in p_self.params, or raising an error.
+
+    def setString(self, name, required=False, subType=None, languages=None):
+        '''Stores the value for the incoming string attribute having this
+           p_name.'''
+        value = self.scanString(name, required, subType, languages)
+        # Store it only if not empty
+        if value:
+            self.params[name] = value
+
+    def setFloat(self, name, required=False):
+        '''Stores the value for the incoming float attribute having this
+           p_name.'''
+        # Manage value mandatoriness
+        value = self.scanRequired(name) if required else self.req[name]
+        if value is None: return
+        # Ensure it is a float
+        if not isinstance(value, float):
+            self.error(5, REQ_FKO % name)
+        self.params[name] = value
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                        Default collect methods
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # Some convenient collect methods are proposed here
 
     def collectTitle(self):
         '''Collects an object title: most collectors will need it'''
         title = self.req.title
         if not title:
-            return self.error(1, TITLE_MS % self.__class__.__name__)
+            self.error(1, TITLE_MS % self.__class__.__name__)
         if not isinstance(title, str):
-            return self.error(1, TITLE_KO % self.__class__.__name__)
+            self.error(1, TITLE_KO % self.__class__.__name__)
         # We have a valid title
         self.params['title'] = title
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                     Trigger collection of values
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def collect(self):
         '''Collects, on p_self, data from the request'''
         # Collect every data part
         for part in self.parts:
             # Collect this p_part
-            resp = getattr(self, f'collect{part}')()
-            if resp: return resp
+            getattr(self, f'collect{part}')()
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #              Create the object, with all collected values
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def create(self):
-        '''Creates, in HubSessions, an object corresponding to data as collected
-           in p_self.params.'''
+        '''Creates, in this Appy site, an object corresponding to data as
+           collected in p_self.params.'''
         tool = self.tool
         text = tool.translate('peer_created', language=self.language)
         # Must a root object be created, or an object tied to another one ?

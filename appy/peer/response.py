@@ -2,7 +2,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Response:
+class Response(Exception):
     '''An XML-marshalled instance of this class may be returned to peer sites'''
 
     # While class Response from appy/server/response.py represents an HTTP-level
@@ -10,6 +10,9 @@ class Response:
     # represents a logical standardized response that can be marshalled as data
     # in the HTTP response as transmitted to peer sites, mainly in response to a
     # service that tries to create or update data.
+
+    # Class Response inherits from class Exception, because an instance of it
+    # can be raised when an error occurs.
 
     def __init__(self, tool, rootTag='Response'):
         '''Create a Response object and configures the low-level HTTP Appy

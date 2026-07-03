@@ -198,8 +198,8 @@ class Unmarshaller(Parser):
         containers = self.env.containerStack
         return (None, None) if not containers else containers[-1]
 
-    containerTags = ('tuple', 'list', 'dict', 'object', 'file')
-    numericTypes  = ('bool', 'int', 'long', 'float')
+    containerTags = 'tuple', 'list', 'dict', 'object', 'file'
+    numericTypes  = 'bool', 'int', 'long', 'float'
     fileAttributes = {'name':None, 'mimeType':'type', 'location':None}
 
     def startElement(self, tag, attrs):
