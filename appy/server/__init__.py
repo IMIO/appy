@@ -18,7 +18,7 @@ from appy.model.utils import Object as O
 from appy.server.scheduler import Scheduler
 from appy.utils import executeCommand, bn, br
 from appy.server.static import Config as StaticConfig
-from appy.server.handler import HttpHandler, VirtualHandler
+from appy.server.handler import Handler, HttpHandler, VirtualHandler
 
 # Constants  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 START_CLASSIC = ':: Starting server ::'
@@ -347,6 +347,7 @@ class Server:
     '''Appy HTTP server'''
 
     # Make some names available gere
+    Handler = Handler
     platform = platform
 
     # Some elements will be traversable
@@ -541,7 +542,7 @@ class Server:
            mode, it is run from a thread from the pool.'''
         # After handling the request, the p_clientSocket may be closed... or not
         closeSocket = True
-        # Create a Handler to handle this request
+        # Create a Handler object to handle this request
         try:
             handler = HttpHandler(clientSocket, self)
             handler.run()

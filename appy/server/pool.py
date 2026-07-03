@@ -27,7 +27,7 @@ CULL_KILLED   = 'Killed thread %s no longer around'
 KILL_KO       = 'PyThreadState_SetAsyncExc failed'
 KILLING_THR   = 'Killing thread with ID=%s...'
 KILLED_HUNGED = 'Workers killed forcefully'
-WK_TO_KILL    = 'Killing thread "%s"... (working on task for %i seconds)'
+WK_TO_KILL    = 'Killing %s... (working on task for %i seconds)'
 HUNG_STATUS   = "killHungThreads status: %d threads (%d working, %d idle, " \
                 "%d starting), average time %s, maxTime %.2fsec, killed %d " \
                 "worker(s)."
@@ -186,6 +186,17 @@ class ThreadPool:
         except KeyError:
             pass
 
+    def getThreadInfo(self, thread):
+        '''Returns, as a one-line string, info about this thread: name,
+           identifier, and, if any, the path of the request being currently
+           handled by him.'''
+        iD = thread.ident
+        # What request does this thread handle ? Read it from the thread
+        # registry.
+        threadHandler = self.server.Handler.registry.get(iD)
+        path = f' · {threadHandler.path}' if threadHandler else ''
+        return f'{thread.getName()} · {iD}{path}'
+
     def getTracked(self, handler, formatted=True):
         '''Returns a dict summarizing info about the threads in the pool'''
         r = O(idle=[], busy=[], hung=[], dying=[], zombie=[])
@@ -212,12 +223,8 @@ class ThreadPool:
             for name, threads in r.items():
                 info = []
                 for thread in threads:
-                    # What request does this thread handle ? Ready it from the
-                    # thread registry.
-                    threadId = thread.ident
-                    threadHandler = handler.registry.get(threadId)
-                    path = f' · {threadHandler.path}' if threadHandler else ''
-                    info.append(f'{thread.getName()} · {thread.ident}{path}')
+                    # Collect a one-line info about this thread
+                    info.append(self.getThreadInfo(thread))
                 rows.append(f'<tr><th>{name}</th><td>{br.join(info)}</td></tr>')
             r = f'<table class="small"><tr><th>Type</th><th>Threads</th></tr>' \
                 f'{bn.join(rows)}</table>'
@@ -254,7 +261,7 @@ class ThreadPool:
     def addWorker(self, *args, **kwargs):
         index = next(self.workersCount)
         worker = threading.Thread(target=self.workerMethod, args=args,
-                                  kwargs=kwargs, name=("worker %d" % index))
+                                  kwargs=kwargs, name=(f'Thread {index}'))
         worker.setDaemon(ThreadPool.daemon)
         worker.start()
 
@@ -285,7 +292,8 @@ class ThreadPool:
             maxTime = max(maxTime, lifetime)
             totalTime += lifetime
             if lifetime > cfg.killThreadLimit:
-                self.logger.warn(WK_TO_KILL % (worker.getName(), lifetime))
+                info = self.getThreadInfo(worker)
+                self.logger.warn(WK_TO_KILL % (info, lifetime))
                 self.killWorker(id)
                 killed += 1
         average = '%.2fsec' % (totalTime / working) if working else 'N/A'
