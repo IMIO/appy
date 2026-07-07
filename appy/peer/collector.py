@@ -9,6 +9,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from .response import Response
 from appy.model.fields import Field
+from appy.utils import sequenceTypes
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 WS        = 'WS create/%s :: '
@@ -20,8 +21,12 @@ REQ_DIG   = 'Attribute "%s" must hold a numeric value.'
 REQ_DM    = 'Dict attribute %s should contain %d entry(ies); %d entry(ies) ' \
             'found.'
 REQ_DWK   = 'Key "%s" not found among dict value for attributre "%s".'
-REQ_FKO   = 'Attribute "%s" must contain a float.'
+REQ_TKO   = 'Attribute "%s" must contain a %s.'
 SUB_KO    = 'Attribute "%s" :: Error :: %s'
+REQ_RKO   = 'Ref "%s" :: Wrong value "%s" :: It must be an object iid.'
+REQ_RLKO  = 'Ref "%s" :: Wrong value :: A list of object iids is expected.'
+REQ_ROKO  = 'Ref "%s" :: IID "%s" does not correspond to an existing %s ' \
+            'instance.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Collector:
@@ -133,15 +138,6 @@ class Collector:
             self.error(1, SUB_KO % (name, error))
         return value
 
-    def scanSelect(self, name, value, language=None):
-        '''Ensure this p_value is valid according to his Select field'''
-        field = self.class_.fields[name]
-        error = field.validateValue(self.tool, value)
-        if error:
-            name = self.getAttributeName(name, language)
-            self.error(1, SUB_KO % (name, error))
-        return value
-
     def scanString(self, name, required=False, subType=None, languages=None):
         '''Retrieve, from incoming data, the value for the attribute having this
            p_name. It must be a string, or, if p_languages is passed, a dict of
@@ -155,7 +151,7 @@ class Collector:
         if typE != typeV:
             message = REQ_TMM % (name, typE.__name__, typeV.__name__)
             self.error(5, message)
-        # Manage p_value differently, depending on it being a mono- and multi-
+        # Manage p_value differently, depending on it being a mono- or multi-
         # language value.
         if isinstance(value, str):
             # p_value is a string
@@ -201,7 +197,62 @@ class Collector:
         if value is None: return
         # Ensure it is a float
         if not isinstance(value, float):
-            self.error(5, REQ_FKO % name)
+            self.error(5, REQ_TKO % (name, 'float'))
+        self.params[name] = value
+
+    def setSelect(self, name, required=False, multiple=False):
+        '''Stores the value for the incoming select attribute having this
+           p_name.'''
+        # Manage value mandatoriness
+        value = self.scanRequired(name) if required else self.req[name]
+        if value is None: return
+        # Manage v_value validity
+        field = self.class_.fields[name]
+        error = field.validateValue(self.tool, value)
+        if error:
+            name = self.getAttributeName(name)
+            self.error(1, SUB_KO % (name, error))
+        self.params[name] = value
+
+    def setBoolean(self, name):
+        '''Stores the value for the incoming boolean attribute having this
+           p_name.'''
+        value = self.req[name]
+        if value is None: return
+        # Ensure it is a bool
+        if not isinstance(value, bool):
+            self.error(5, REQ_TKO % (name, 'bool'))
+        self.params[name] = value
+
+    def getTied(self, field, iid):
+        '''Get the tied object behind this p_iid'''
+        # Raise an error if p_iid does not correspond to a stringified object
+        # iid.
+        if not isinstance(iid, str) or not iid.isdigit():
+            self.error(5, REQ_RKO % (field.name, str(iid)))
+        # Try to get the object having this iid
+        className = field.class_.meta.name
+        r = self.tool.getObject(iid, className=className)
+        if not r:
+            self.error(5, REQ_ROKO % (field.name, str(iid), className))
+        return r
+
+    def setRef(self, name, required=False):
+        '''Collect objects mentioned as tied objects via the Ref having this
+           p_name, and set them as tied objects for that ref.'''
+        # Manage value mandatoriness
+        value = self.scanRequired(name) if required else self.req[name]
+        if value is None: return
+        # Manage mono- or multivalues
+        field = self.class_.fields[name]
+        if field.isMultiValued():
+            # A list of values is expected
+            if type(value) not in sequenceTypes:
+                self.error(5, REQ_RLKO % name)
+            value = [self.getTied(field, iid) for iid in value]
+        else:
+            # A single value is expected, that must be a stringified iid
+            value = self.getTied(field, value)
         self.params[name] = value
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
