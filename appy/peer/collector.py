@@ -7,9 +7,12 @@
 # this Appy site.
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from persistent.list import PersistentList
+
 from .response import Response
 from appy.model.fields import Field
 from appy.utils import sequenceTypes
+from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 WS        = 'WS create/%s :: '
@@ -27,6 +30,12 @@ REQ_RKO   = 'Ref "%s" :: Wrong value "%s" :: It must be an object iid.'
 REQ_RLKO  = 'Ref "%s" :: Wrong value :: A list of object iids is expected.'
 REQ_ROKO  = 'Ref "%s" :: IID "%s" does not correspond to an existing %s ' \
             'instance.'
+REQ_LKO   = 'Field "%s" :: A list of objects is expected.'
+LFE       = 'List field "%s" :: Entry %d '
+REQ_LTKO  = f'{LFE}is not an object.'
+REQ_LSKO  = f'{LFE}:: Unknown sub-field "%s".'
+REQ_LSTKO = f'{LFE}:: Sub-field "%s" has type "%s" but type "%s" is expected.'
+REQ_LSM   = f'{LFE}:: Missing value for mandatory sub-field "%s".'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Collector:
@@ -247,13 +256,63 @@ class Collector:
         field = self.class_.fields[name]
         if field.isMultiValued():
             # A list of values is expected
-            if type(value) not in sequenceTypes:
+            if not isinstance(value, sequenceTypes):
                 self.error(5, REQ_RLKO % name)
             value = [self.getTied(field, iid) for iid in value]
         else:
             # A single value is expected, that must be a stringified iid
             value = self.getTied(field, value)
         self.params[name] = value
+
+    def setList(self, name, required=False):
+        '''Collect a list of objects and store them as value for the List field
+           having this p_name.'''
+        # Manage value mandatoriness
+        value = self.scanRequired(name) if required else self.req[name]
+        if value is None: return
+        # A list of values is expected
+        if not isinstance(value, sequenceTypes):
+            self.error(5, REQ_LKO % name)
+        # Walk objects in the list
+        field = self.class_.fields[name]
+        # Get p_field's sub-fields, as a *d*ict
+        fielDs = field.getSubFields(layout='xml', asDict=True)
+        i = -1
+        for info in value:
+            i += 1
+            # 1. Ensure p_info is an Object
+            if not isinstance(info, O):
+                self.error(5, REQ_LTKO % (name, i))
+            # 2. Ensure every object attribute corresponds to a sub-field
+            for subName, val in info.items():
+                subField = fielDs.get(subName)
+                if subField is None:
+                    self.error(5, REQ_LSKO % (name, i, subName))
+                # Finally, ensure each sub-value has the expected type
+                subType = subField.pythonType
+                if val is not None and type(val) != subType:
+                    message = REQ_LSTKO % (name, i, subName,
+                                           val.__class__.__name__,
+                                           subType.__class__.__name__)
+                    self.error(5, message)
+            # 3. Ensure every mandatory sub-field has a value in v_info
+            for subName, subField in fielDs.items():
+                val = info.get(subName)
+                if val is None and subField.required:
+                    self.error(1, REQ_LSM % (name, i, subName))
+        # Fine-tune the p_value to transform it into a perfectly appropriate
+        # data structure.
+        rowClass = field.rowClass
+        if rowClass == O:
+            # Simply convert p_value into a persistent list
+            r = PersistentList(value)
+        else:
+            # Each list element must be converted to an instance of v_rowClass
+            r = PersistentList()
+            for val in value:
+                val.__class__ = rowClass
+                r.append(val)
+        self.params[name] = r
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                        Default collect methods

@@ -18,6 +18,8 @@ RC_NO_OS  = 'Class "%s", mentioned in attribute "rowClass", must be a sub-' \
             'class of class appy.model.utils.Object.'
 INNER_KO  = 'Field "%s" cannot currently be used as inner field. This is the ' \
             'case for rich fields.'
+SUB_O_KO  = 'List field %s :: Attribute "fields" is a method :: An object ' \
+            'must be passed to m_getSubFields.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class List(Field):
@@ -481,24 +483,41 @@ class List(Field):
         for n, field in self.fields:
             if n == name: return field
 
-    def getSubFields(self, o, layout=n):
-        '''Returns the sub-fields, as a list of tuples ~[(s_name, Field)]~,
-           being showable, among p_self.fields on this p_layout. Fields that
-           cannot appear in the result are nevertheless present as a tuple
-           (s_name, None). This way, it keeps a nice layouting of the table.'''
+    def getSubFields(self, o=None, layout=n, asDict=False):
+        '''Returns the sub-fields from p_self.fields, as a list of tuples
+           ~[(s_name, Field)]~, or as a dict {s_name:Field} if p_asDict is
+           True.'''
+        # If a p_layout is passed, only sub-fields being showable on it are part
+        # of the result. Note that, when p_asDict is False, other fields are
+        # nevertheless mentioned in the result, but as a tuple (s_name, None):
+        # this way, in case the result must be rendered on a xhtml layout, the
+        # generated table renders nicely.
         fields = self.fields
         if callable(fields):
+            if o is None:
+                raise Exception(SUB_O_KO % self.name)
             # Dynamically computed fields: get and completely initialise them
             fields = self.getAttribute(o, 'fields') # Involves caching
             self.initSubFields(fields)
             self.lazyInitSubFields(fields, o.class_)
-        # Stop here if no p_layout is passed
-        if layout is None: return fields
         # Retain only sub-fields being showable on this p_layout
-        r = []
+        if not asDict and layout is None:
+            # In that specific case, avoid any subsequent processing
+            return fields
+        # Build the result
+        r = {} if asDict else []
         for n, field in fields:
-            f = field if field.isShowable(o, layout) else None
-            r.append((n, f))
+            if layout is None or o is None:
+                # Keep the field
+                f = field
+            else:
+                # Keep the field if showable on this p_layout
+                f = field if field.isShowable(o, layout) else None
+            # Add this v_f(ield) to the result
+            if asDict:
+                if f: r[n] = f
+            else:
+                r.append((n, f))
         return r
 
     def getEntryName(self, sub, row, name=n, suffix=''):

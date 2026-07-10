@@ -34,7 +34,7 @@ class Response(Exception):
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #  0  | The operation was successful.
         # -1  | The operation succeeded, but ended with some problem / warning.
-        #  1  | Incoming data is corrupted and/or incomplete.
+        #  1  | Incoming data is incomplete, invalid and/or corrupted.
         #  2  | Object not found (but should exist).
         #  3  | Object in wrong state.
         #  4  | Object exists, but should not.

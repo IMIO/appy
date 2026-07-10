@@ -4,9 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import importlib.util, sys, copy
 
-from appy.utils import formatNumber
-
-bn = '\n'
+from appy.utils import formatNumber, bn
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def importModule(name, fileName):
@@ -55,7 +53,7 @@ class Object:
         # If p_level is not None, it represents an indentation level and is
         # used to indent attributes and sub-objects. In that case, every
         # indentation level is incremented by p_step spaces.
-        r = '‹O '
+        r = f'‹{self.__class__.__name__} '
         for name, value in self.__dict__.items():
             # Avoid infinite recursion if p_self it auto-referenced
             if value == self: continue
