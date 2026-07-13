@@ -98,6 +98,7 @@ class Show:
     # This is, a.o., for custom widgets whose edit and view variants are not
     # that different, but that cannot be shown elsewhere (result, xml, etc).
     VE  = 'view'   , 'edit'
+    VEX = 'view'   , 'edit', 'xml'
     BX  = 'buttons', 'xml'
     EX  = 'edit'   , 'xml'
 
