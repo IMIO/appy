@@ -109,17 +109,21 @@ class MessageException(Exception):
         # A mapping can be passed when the message is a label
         self.mapping = mapping
         # Must a link be added to the message, allowing the user to go back to
-        # the referer page ?
+        # some URL ? If p_backLink is True, the link will lead to the referer
+        # page. p_backLink may also hold a specific URL, as a string. When used
+        # by Appy itself, p_backLink can also directly contain the final <a>
+        # tag.
         self.backLink = backLink
 
     @classmethod
-    def getBackText(class_, handler):
+    def getBackText(class_, handler, url=None):
         '''Returns, as a string, a text and link allowing the user to go back to
            the referer URL, when it is possible.'''
-        referer = handler.headers.get('referer')
-        if referer:
+        # If no p_url is passed, define the referer page as back URL
+        url = url or handler.headers.get('referer')
+        if url:
             backText = handler.tool.translate('go_back')
-            r = f'<a href="{referer}">← {backText}</a>'
+            r = f'<a href="{url}">← {backText}</a>'
         else:
             r = ''
         return r
@@ -136,8 +140,11 @@ class MessageException(Exception):
         back = self.backLink
         if back:
             if isinstance(back, str):
-                # The link has already been built
-                backText = back
+                if back[0] == '<':
+                    # The link has already been built
+                    backText = back
+                else:
+                    backText = self.getBackText(handler, back)
             else:
                 backText = self.getBackText(handler)
             r = f'{r}<div class="topSpace">{backText}</div>'
