@@ -8,9 +8,9 @@ from appy import n
 from . import Field
 from appy.px import Px
 from appy.xml import Parser
-from appy.utils import flipDict
 from appy.ui.layout import Layouts
 from appy.xml.escape import Escape
+from appy.utils import flipDict, bn
 from .multilingual import Multilingual
 from appy.utils import string as sutils
 from appy.xml.cleaner import StringCleaner
@@ -21,9 +21,6 @@ from appy.ui.layout import Layouts, Layout, LayoutF
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 IN_ED_MLG  = 'Is is currently not possible to inline-edit multilingual Text ' \
              'fields.'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Replacements:
@@ -52,16 +49,19 @@ class Replacements:
     # In v_default, one may want to add this entry, for '°':
     #                {'N': oSup, 'n': oSup, 0: '°'}
 
-    # Among "default", some keys represent opening and ending delimiters
+    # Among v_default, some keys represent opening and ending delimiters
+
     delimiters = {'[': ']', '<': '>', '{': '}'}
     endDelimiters = flipDict(delimiters)
 
     # Prefix (semi)colons, question and exclamation marks with a non-breakable
     # space, excepted if such a space is already present.
-    nbspChars = (':', ';', '!', '?', '%')
+
+    nbspChars = ':', ';', '!', '?', '%'
     for c in nbspChars:
         default[c] = {' ': c, 0: f' {c}'}
-    whitespace = (' ', ' ')
+
+    whitespace = ' ', ' '
 
     # Regular expression for replacing special markers (see "replacementFun"
     # attribute below).

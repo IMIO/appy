@@ -127,10 +127,10 @@ class Modifier(Parser):
         # Step #1: reify tag attributes
         r = ''
         for name, value in attrs.items():
-            r += ' %s="%s"' % (name, Escape.xml(value))
+            r = f'{r} {name}="{Escape.xml(value)}"'
         # Step #2: reify the whole start tag. Close it if it is a no-end tag.
         suffix = '/>' if tag in XHTML_SC else '>'
-        r = '<%s%s%s' % (self.getResultTag(tag), r, suffix)
+        r = f'<{self.getResultTag(tag)}{r}{suffix}'
         # Step #3: insert p_self.prefix when appropriate
         if tag == self.p and not e.firstParaMet:
             e.firstParaMet = True
@@ -151,7 +151,7 @@ class Modifier(Parser):
         self.dumpCurrentContent()
         # Close the tag only if it is a no-end tag
         if tag not in XHTML_SC:
-            self.r.append('</%s>' % self.getResultTag(tag))
+            self.r.append(f'</{self.getResultTag(tag)}>')
         # Apply a CSS class on the last li when appropriate
         if self.lastLiClass and tag == 'ul':
             self.applyCss(self.lastLiClass, 'li')
@@ -163,11 +163,11 @@ class Modifier(Parser):
     def modify(self, s):
         '''Returns p_s, modified'''
         # Add variables to the environment
-        # ~
+        #
         # Have I already encountered the first paragraph ?
         self.env.firstParaMet = False
         # Parse (wrapped) p_s
-        r = self.parse('<x>%s</x>' % s)
+        r = self.parse(f'<x>{s}</x>')
         # Return the modified (unwrapped) result
         return r[3:-4]
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

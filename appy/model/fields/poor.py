@@ -4,14 +4,12 @@
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy import n
 from appy.px import Px
+from appy.utils import bn
 from appy.xml.cleaner import Cleaner
 from appy.model.fields.rich import Rich
 from appy.utils import string as sutils
 from appy.ui.layout import Layouts, Layout
 from appy.pod.xhtml2odt import XhtmlPreprocessor
-
-#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n'
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class AutoCorrect:
@@ -22,7 +20,8 @@ class AutoCorrect:
     standard = {}
 
     # Chars that must be prefixed with a non-breakable space
-    nbPrefixed = (':', ';', '!', '?', '%')
+    nbPrefixed = ':', ';', '!', '?', '%'
+
     for char in nbPrefixed:
         standard[char] = [('text', f' {char}')]
 

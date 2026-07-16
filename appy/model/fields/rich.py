@@ -270,7 +270,7 @@ class Rich(Multilingual, Field):
         # performance reasons. Suppose p_self is an inner field within a List or
         # Dict field (this is not possible for a Rich field, but for a Poor
         # field, being a Rich sub-class, it is). If you define, in
-        # p_toItalicize, a method producting and caching a regex in the Appy
+        # p_toItalicize, a method producing and caching a regex in the Appy
         # request cache, available on any object (o.cache), the regex will be
         # computed once per request. Else, it will be recomputed for every row
         # of data in your List/Dict field. In order to produce your regex from a
