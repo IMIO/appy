@@ -253,6 +253,8 @@ function getAjaxChunk(pos) {
         // Display the Appy message if present
         const msg = readCookie('AppyMessage');
         if (msg) { updateAppyMessage(msg); createCookie('AppyMessage', ''); }
+        // Restore the scroll position
+        if (rq.scrollY) rq.page.scroll(0, rq.scrollY);
       }
     }
     rq.freed = 1;
@@ -313,7 +315,14 @@ function askAjaxChunk(url, mode, params, hook, beforeSend, onGet, waiting,
   rq.onGet = onGet;
   rq.append = append;
   rq.freed = 0;
-    
+  // Remember the top scroll position of the current page
+  rq.page = null;
+  rq.scrollY = 0;
+  const node = getNode(hook);
+  if (node) {
+    rq.page = node.closest('#appyContent') || node.closest('#appySidebar');
+    if (rq.page) rq.scrollY = rq.page.scrollTop;
+  }
   // Construct parameters
   let allParams = ['ajax=True'];
   if (params) {
