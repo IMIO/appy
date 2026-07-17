@@ -746,9 +746,9 @@ class Poor(Rich):
         # also be defined in the UI config, within list config.ui.customFonts.
         self.font = font
         # If you want to define additional attributes to the "div" tag rendered
-        # on the "edit" layout, place a method in the following attribute. The
-        # method will accept the current PX context as unique param and must
-        # return a dict of name:value pairs, every key and value being a string.
+        # on /edit, place a method in the following attribute. The method will
+        # accept the current PX context as unique param and must return a dict
+        # of name:value pairs, every key and value being a string.
         self.tagAttributes = tagAttributes
 
     # Do not load ckeditor

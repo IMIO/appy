@@ -24,22 +24,23 @@ class Cleaner(Parser):
            the Cleaner.'''
 
     # Tags that will never be in the result, content included, lax or strict
-    tagsToIgnoreWithContent = ('style', 'head')
+    tagsToIgnoreWithContent = 'style', 'head'
     tagsToIgnoreWithContentStrict = tagsToIgnoreWithContent + ('br',)
 
     # Tags that will be removed from the result, but whose content will be kept
-    tagsToIgnoreKeepContent = ('x', 'html', 'body', 'font', 'center',
-                               'blockquote')
+    tagsToIgnoreKeepContent = 'x', 'html', 'body', 'font', 'center', \
+                              'blockquote'
 
     # Attributes to ignore, lax or strict
-    attrsToIgnore = ('id', 'name', 'class', 'lang', 'rules')
+    attrsToIgnore = 'id', 'name', 'class', 'lang', 'rules'
     attrsToIgnoreStrict = attrsToIgnore + ('style',)
 
     # If the "styles" attribute is not ignored, what CSS properties, within
-    # such attributes, must be kept ? In strict mode, only property
+    # such attributes, must be kept ? In strict mode, property
     # "background-color" is kept, because it is used by the Poor field to define
-    # highlighted text.
-    propertiesToKeepStrict = asDict(('background-color',))
+    # highlighted text. Property "color" is also kept, for people that want to
+    # inject it by code.
+    propertiesToKeepStrict = asDict(('background-color', 'color'))
 
     # Attrs to add, if not present, to ensure good formatting, be it at the web
     # or ODT levels.
