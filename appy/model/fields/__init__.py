@@ -365,7 +365,13 @@ class Field:
           var2="target,url=ifield.getMenuUrl(o, \
            tied)">::ui.Title.get(o, target=target, baseUrl=url)</x>
        <x if="not selector and guard.mayAct(o)">:ifield.pxObjectActions</x>
+
+       <!-- Controls that may be dumped between 2 rows -->
+       <x if="addAnywhere and loop.o.first"
+              var2="below=False">:ifield.pxInBetween</x>
+       <x if="addAnywhere" var2="below=True">:ifield.pxInBetween</x>
       </x>
+
       <div if="not mayView">🚫 <x>::mayView.msg | _('unconsultable')</x></div>
      </x>
 

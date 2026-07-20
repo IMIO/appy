@@ -218,6 +218,10 @@ class Ref(Field):
     # attribute "back").
     SELF = 1
 
+    # Default position for *i*n-*b*etween controls (see attributes ibAbove and
+    # ibBelow).
+    IB_DEF = '-2.2em', '-6.7em'
+
     # This PX displays the title of a referenced object, with a link on it to
     # reach the consult view for this object. If we are on a back reference, the
     # link allows to reach the correct page where the forward reference is
@@ -401,21 +405,6 @@ class Ref(Field):
             onclick="this.previousSibling.click()">:text</div>
       </div>
 
-      <!-- Insert another object before this one -->
-      <div if="not inPickList and mayAdd == 'anywhere'" class="ibutton">
-       <img if="not createFromSearch"
-            src=":url('addAbove')" class="clickable"
-            title=":_('object_add_above')"
-            onclick=":'onAdd(%s,%s,%s)'% (q('before'), q(addFormName), q(id))"/>
-       <a if="createFromSearch" target="appyIFrame"
-          href=":tiedClass.getCreateLink(tool, createVia, addFormName,
-                  sourceField=prefixedName, insert='before.%s' % id)">
-        <img src=":svg('addAbove')" class="clickable iconS"
-             title=":_('object_add_above_from')"
-             onclick="openPopup('iframePopup')"/>
-       </a>
-      </div>
-
       <!-- Arrows for moving objects up or down -->
       <div if="batch.total &gt; 1 and changeOrder and not inPickList and
              (not inMenu) and objectIndex is not None" class="moveIcons"
@@ -520,6 +509,27 @@ class Ref(Field):
             title=":_('move_number')"
             onclick=":'askBunchMove(%s,%s,%s,this)' %
                        (q(batch.hook), q(batch.start), q(o.iid))"/>
+      </div>
+     </div>''')
+
+    # Controls dumped between 2 rows from pxSub
+
+    pxInBetween = Px('''
+     <div class="inBetween" style=":ifield.getIbStyle(below)"
+          var2="place='after' if below else 'before'"
+          onmouseover="toggleOpacity(this, 'div')"
+          onmouseout="toggleOpacity(this, 'div')">
+
+      <!-- Insert another object here -->
+      <div if="addAnywhere" class="addAW" style="opacity:0">
+       <b if="not createFromSearch" class="clickable"
+          title=":_('object_add_here')"
+          onclick=":'onAdd(%s,%s,%s)'% (q(place), q(addFormName), q(id))">+</b>
+       <a if="createFromSearch" target="appyIFrame"
+          href=":tiedClass.getCreateLink(tool, createVia, addFormName,
+                  sourceField=prefixedName, insert=f'{place}.{id}')"
+          title=":_('object_add_here_from')"
+          onclick="openPopup('iframePopup')">+</a>
       </div>
      </div>''')
 
@@ -956,7 +966,7 @@ class Ref(Field):
       addFromLabel='object_add_from', addIcon='add.svg', iconOut=False,
       iconCss='iconS', filterable=True, supTitle=n, subTitle=n,
       toggleSubTitles=n, separator=n, rowAlign='top', showControls=True,
-      actions=n, checkAll=True):
+      actions=n, checkAll=True, ibAbove=IB_DEF, ibBelow=IB_DEF):
 
         # The class whose tied objects will be instances of
         self.class_ = class_
@@ -1640,6 +1650,12 @@ class Ref(Field):
         # False.
         self.checkAll = checkAll
 
+        # The following attributes define the position of the "in-between" (in
+        # short, "ib") controls, like the "add here" button, that must be placed
+        # between 2 rows on a ref rendered as a list of tied objects.
+        self.ibAbove = ibAbove
+        self.ibBelow = ibBelow
+
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
@@ -1757,6 +1773,7 @@ class Ref(Field):
         r.checkboxes = r.checkboxesEnabled and total
         r.collapse = self.getCollapseInfo(o, r.inPickList)
         r.showSubTitles = req.showSubTitles in ('True', None)
+        r.addAnywhere = not r.inPickList and r.mayAdd == 'anywhere'
         # Add more variables if we are in the context of a single object
         # retrieved via Ajax.
         if c.ajaxSingle:
@@ -1864,6 +1881,17 @@ class Ref(Field):
         else:
             # Use the CSS class(es) as defined on the tied class
             r = c.tiedClass.getCssFor(c.tool, 'list', add=c.genName)
+        return r
+
+    def getIbStyle(self, below):
+        '''Returns the CSS position for in-between controls that must be dumped
+           above or p_below the current row, in a list of tied objects.'''
+        if below:
+            bottom, left = self.ibBelow
+            r = f'bottom:{bottom};left:{left}'
+        else:
+            top, left = self.ibAbove
+            r = f'top:{top};left:{left}'
         return r
 
     def checkParameters(self):

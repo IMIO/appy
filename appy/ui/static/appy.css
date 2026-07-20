@@ -101,6 +101,9 @@ div[contenteditable=true]:empty:before { content:attr(data-placeholder);
          text-transform:none }
 /* Actions to be added in a td cell, on the right */
 .tdr { display:flex; float:right; gap:1em; font-weight:bold }
+.inBetween { position:absolute; width:100% }
+.addAW { font-size:150%; transition:opacity 0.3s }
+.addAW a, .addAW a:visited { color:|altColor| }
 
 /* Buttons */
 input.button {

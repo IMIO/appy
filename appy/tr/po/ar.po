@@ -347,12 +347,12 @@ msgstr ""
 msgid "object_add_from"
 msgstr ""
 
-#. Default: "Add above"
-msgid "object_add_above"
+#. Default: "Add here"
+msgid "object_add_here"
 msgstr ""
 
-#. Default: "Add above from..."
-msgid "object_add_above_from"
+#. Default: "Add here from..."
+msgid "object_add_here_from"
 msgstr ""
 
 #. Default: "Add below"

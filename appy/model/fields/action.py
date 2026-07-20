@@ -527,9 +527,8 @@ class Action(Field):
                 back = 'null'
             else:
                 visible = 'false'
-            js = 'submitForm(%s,%s,%s,%s,%s,%s,null,null,%s)' % \
-                 (q(formId), q(confirmText), showComment, back, check, visible,
-                  progress)
+            js = f'submitForm({q(formId)},{q(confirmText)},{showComment},' \
+                 f'{back},{check},{visible},null,null,{progress})'
         return js
 
     def getTargetObjects(self, o, req):
