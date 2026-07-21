@@ -18,6 +18,7 @@ def asDict(seq):
 # Global variables - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 bn = '\n' # For f-strings
+rbn = '\r\n'
 br = '<br/>'
 commercial = False
 listTypes = list, PersistentList

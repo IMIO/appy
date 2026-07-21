@@ -343,15 +343,16 @@ class String(Multilingual, Field):
 
     def __init__(self, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
-      move=0, indexed=False, mustIndex=True, indexValue=n, emptyIndexValue='-',
-      searchable=False, sortField=n, filterField=n, readPermission='read',
-      writePermission='write', width=n, height=n, maxChars=n, colspan=1,
-      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
-      mapping=n, generateLabel=n, label=n, sdefault='', scolspan=1, swidth=n,
-      fwidth=10, fmin=3, sheight=n, persist=True, transform='none',
-      placeholder=n, languages=('en',), languagesLayouts=n, viewSingle=False,
-      inlineEdit=False, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
-      translations=n, readonly=False, stripped=True, alignOnEdit='left'):
+      move=0, indexed=False, mustIndex=True, indexType='Index', indexValue=n,
+      emptyIndexValue='-', searchable=False, indexOptions=None, sortField=n,
+      filterField=n, readPermission='read', writePermission='write', width=n,
+      height=n, maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n,
+      focus=False, historized=False, mapping=n, generateLabel=n, label=n,
+      sdefault='', scolspan=1, swidth=n, fwidth=10, fmin=3, sheight=n,
+      persist=True, transform='none', placeholder=n, languages=('en',),
+      languagesLayouts=n, viewSingle=False, inlineEdit=False, view=n, cell=n,
+      buttons=n, edit=n, custom=n, xml=n, translations=n, readonly=False,
+      stripped=True, alignOnEdit='left'):
         # Does this field store an URL ?
         self.isUrl = validator == String.URL
         # "placeholder", similar to the HTML attribute of the same name, allows
@@ -396,11 +397,31 @@ class String(Multilingual, Field):
             self.filterPx = 'pxFilterText'
         self.swidth = self.swidth or self.width
         self.sheight = self.sheight or self.height
+        # Index type, for a string, can have 2 values.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #   "Index"   | [The default value] A standard index: the indexed value
+        #             | is similar to the stored one (excepted if transformed by
+        #             | p_indexValue).
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "SortIndex" | An index being optimized for sorting: the indexed value
+        #             | is lowerized and normalized.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        self.indexType = indexType
+        # Index options can be passed here, as an instance of the Options class
+        # being comptatible with the chosen p_indexType.
+        self.indexOptions = indexOptions
         # The *f*ilter width
         self.fwidth = fwidth
         # The *min*imum number of chars one may enter in a *f*ilter field for
         # filtering p_self's values.
         self.fmin = fmin
+        # Check parameters' correctness
+        self.checkParameters()
+
+    def checkParameters(self):
+        '''Prevent the use of wrong parameter (combinations of) values'''
+        # Ensure index options are correct
+        self.checkIndexOptions()
 
     def isRenderableOn(self, layout):
         '''A value being an URL can be rendered everywhere'''

@@ -85,17 +85,18 @@ class Base:
     searchable = Text(show=False, persist=False, indexed=True,
                       default=getSearchableText, label='Base', page=None)
 
-    # Attribute "title" is a mandatory field used at various places by default,
-    # for displaying base information about an object.
+    # f_title is a mandatory field used at various places by default, for
+    # displaying base information about an object.
 
     title = String(multiplicity=(1,1), show=Show.EX, indexed=True,
-      searchable=True, filterField=searchable,
-      indexValue=lambda o, v: Normalize.sortable(o.getShownValue(language='en',\
-                                layout='xml')) if v else '')
+      searchable=True, filterField=searchable, indexType='SortIndex',
+      indexValue=lambda o, v: o.getShownValue(language='en', layout='xml') \
+                              if v else '')
 
     # The hereabove lambda allows to produce an index value suitable for
-    # sorting. In the call to m_getShownValue, language 'en' is forced in order
-    # to bypass the user language and always have a deterministic value.
+    # sorting, that is correct even if the field is multilingual.
+    # m_getShownValue forces the language to 'en' in order to bypass the user
+    # language and always have a deterministic value.
 
     p = {'multiplicity': (1,1), 'show': 'xml', 'indexed': True, 'label': 'Base',
          'page': None}
@@ -394,9 +395,9 @@ class Base:
 
     def __repr__(self):
         '''Returns the class name and Appy object ID'''
-        id = self.id
+        iD = self.id
         iid = self.iid
-        sid = f'id={id}' if id == iid else f'id={id},iid={iid}'
+        sid = f'id={iD}' if iD == iid else f'id={iD},iid={iid}'
         return f'‹{self.getClass().name} {sid}›'
 
     def strinG(self, translated=False, path=True, titles=True):

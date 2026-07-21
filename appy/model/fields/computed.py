@@ -52,14 +52,14 @@ class Computed(Field):
     def __init__(self, multiplicity=(0,1), default=n, defaultOnEdit=n, show=n,
       renderable=n, page='main', group=n, layouts=n, move=0, indexed=False,
       mustIndex=True, indexType=n, indexValue=n, emptyIndexValue=n,
-      searchable=False, sortField=n, filterField=n, readPermission='read',
-      writePermission='write', width=n, height=n, maxChars=n, colspan=1,
-      method=n, formatMethod=n, plainText=False, master=n, masterValue=n,
-      masterSnub=n, focus=False, historized=False, mapping=n, generateLabel=n,
-      label=n, sdefault='', scolspan=1, swidth=n, sheight=n, fwidth=4,
-      context=n, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
-      translations=n, unfreezable=False, validable=False, pythonType=n,
-      matchDefault='precise'):
+      searchable=False, indexOptions=None, sortField=n, filterField=n,
+      readPermission='read', writePermission='write', width=n, height=n,
+      maxChars=n, colspan=1, method=n, formatMethod=n, plainText=False,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, sdefault='', scolspan=1, swidth=n,
+      sheight=n, fwidth=4, context=n, view=n, cell=n, buttons=n, edit=n,
+      custom=n, xml=n, translations=n, unfreezable=False, validable=False,
+      pythonType=n, matchDefault='precise'):
         # The Python method used for computing the field value, or a PX
         self.method = method
         # A specific method for producing the formatted value of this field.
@@ -117,6 +117,9 @@ class Computed(Field):
         #                |     Index class indifferently for several fields like
         #                |     Integer, String or Select.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # Index options can be passed here, as an instance of the Options class
+        # being comptatible with the chosen p_indexType.
+        self.indexOptions = indexOptions
         # Call the base constructor
         super().__init__(n, multiplicity, default, defaultOnEdit, show,
           renderable, page, group, layouts, move, indexed, mustIndex,
@@ -161,12 +164,14 @@ class Computed(Field):
         self.checkParameters()
 
     def checkParameters(self):
-        '''Ensures a valid method is specified'''
+        '''Prevent the use of wrong parameter (combinations of) values'''
+        # Ensure a valid p_self.method is specified
         method = self.method
-        # A method must be there
         if not method: raise Exception(METHOD_NO)
         # It cannot be a string, but a true method
         if isinstance(method, str): raise Exception(METHOD_KO % method)
+        # Ensure index options are correct
+        self.checkIndexOptions()
 
     def init(self, class_, name):
         '''Lazy initialisation'''

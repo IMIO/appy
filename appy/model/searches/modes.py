@@ -496,7 +496,7 @@ class Grid(List):
      <!-- Filters -->
      <div var="search=uiSearch.search" if="search.showFilters" class="gfilters"
           style=":f'justify-content:{search.gridFiltersAlign}'">
-      <div for="field, filterPx in mode.columns.getFiltered()">
+      <div for="field, filterPx in mode.columns.getFiltered(tool)">
        <label>:_(field.labelId)</label><x>:filterPx</x>
       </div>
      </div>

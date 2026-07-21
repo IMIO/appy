@@ -8,14 +8,14 @@
 from BTrees.IIBTree import IITreeSet, difference
 from persistent.mapping import PersistentMapping
 
-from appy.database.indexes import Index
-from appy.database.indexes.ref import RefIndex
-from appy.database.indexes.date import DateIndex
-from appy.database.indexes.text import TextIndex
-from appy.database.indexes.rich import RichIndex
-from appy.database.indexes.sort import SortIndex
-from appy.database.indexes.float import FloatIndex
-from appy.database.indexes.boolean import BooleanIndex
+from .indexes import Index
+from .indexes.ref import RefIndex
+from .indexes.date import DateIndex
+from .indexes.text import TextIndex
+from .indexes.rich import RichIndex
+from .indexes.sort import SortIndex
+from .indexes.float import FloatIndex
+from .indexes.boolean import BooleanIndex
 
 from appy.px import Px
 from appy.ui.template import Template

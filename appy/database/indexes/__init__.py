@@ -1,7 +1,7 @@
-'''Module defining database indexes'''
-
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
+
+'''Module defining database indexes'''
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # The class hierarchy defined in this module is inspired by sub-package
@@ -17,8 +17,8 @@ from BTrees.IOBTree import IOBTree
 from ZODB.POSException import POSKeyError
 from BTrees.IIBTree import IITreeSet, intersection
 
+from ..operators import Operator
 from appy.model.utils import Object as O
-from appy.database.operators import Operator
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 CI_PRE     = 'Catalog "%s" :: Index "%s" ::'
@@ -53,6 +53,16 @@ class Index(persistent.Persistent):
 
     # Python type for index values (possibly overridden by Index subclasses)
     valuesType = str
+
+    # By default, an index has no options. More info about index options in
+    # appy/database/indexes/options.py.
+    options = None
+
+    @classmethod
+    def getOptions(class_, field):
+        '''Get, as an instance of an Options sub-class, index options that apply
+           to this p_field.'''
+        return field.indexOptions or class_.options
 
     #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # An index is made of 2 main dicts: "byValue" stores objects keyed by their

@@ -705,7 +705,7 @@ class Poor(Rich):
     def __init__(self, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
       move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
-      sortField=n, filterField=n, readPermission='read',
+      indexOptions=None, sortField=n, filterField=n, readPermission='read',
       writePermission='write', width='25em', height='7em', maxChars=n,
       colspan=1, master=n, masterValue=n, masterSnub=n, focus=False,
       historized=False, mapping=n, generateLabel=n, label=n, sdefault='',
@@ -718,14 +718,14 @@ class Poor(Rich):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
-          indexValue, searchable, sortField, filterField, readPermission,
-          writePermission, width, height, maxChars, colspan, master,
-          masterValue, masterSnub, focus, historized, mapping, generateLabel,
-          label, sdefault, scolspan, swidth, fwidth, sheight, persist, n, n,
-          documents, n, languages, languagesLayouts, viewSingle, inlineEdit,
-          'Standard', view, cell, buttons, edit, custom, xml, translations,
-          inject, valueIfEmpty, viewCss, n, transformText, toItalicize,
-          stripped)
+          indexValue, searchable, indexOptions, sortField, filterField,
+          readPermission, writePermission, width, height, maxChars, colspan,
+          master, masterValue, masterSnub, focus, historized, mapping,
+          generateLabel, label, sdefault, scolspan, swidth, fwidth, sheight,
+          persist, n, n, documents, n, languages, languagesLayouts, viewSingle,
+          inlineEdit, 'Standard', view, cell, buttons, edit, custom, xml,
+          translations, inject, valueIfEmpty, viewCss, n, transformText,
+          toItalicize, stripped)
         # Define a placeholder here, as a method returning some i18n text
         self.placeholder = placeholder
         # As-you-type replacements are defined by placing an Autocorrect object

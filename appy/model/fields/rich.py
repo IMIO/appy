@@ -23,7 +23,7 @@ from appy.xml.cleaner import Cleaner, StringCleaner
 from appy.model.fields.multilingual import Multilingual
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-XML_ERROR   = 'Error while reading content of field %s on %s. %s.'
+XML_ERROR  = 'Error while reading content of field %s on %s. %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Rich(Multilingual, Field):
@@ -124,7 +124,7 @@ class Rich(Multilingual, Field):
     def __init__(self, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
       move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
-      sortField=n, filterField=n, readPermission='read',
+      indexOptions=None, sortField=n, filterField=n, readPermission='read',
       writePermission='write', width=n, height=n, maxChars=n, colspan=1,
       master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
       mapping=n, generateLabel=n, label=n, sdefault='', scolspan=1, swidth=n,
@@ -134,6 +134,9 @@ class Rich(Multilingual, Field):
       buttons=n, edit=n, custom=n, xml=n, translations=n, inject=False,
       valueIfEmpty='-', viewCss='xhtml', invalidTexts=n, transformText=n,
       toItalicize=n, stripped=n):
+        # Index options can be passed here, as an instance of class TextOptions
+        # from appy/database/indexes/text.py.
+        self.indexOptions = indexOptions
         # The list of styles that the user will be able to select in the styles
         # dropdown (within CKEditor) is defined hereafter.
         self.styles = styles
@@ -302,6 +305,12 @@ class Rich(Multilingual, Field):
         # No max chars by default
         if maxChars is None:
             self.maxChars = Rich.NO_MAX
+        self.checkParameters()
+
+    def checkParameters(self):
+        '''Prevent the use of wrong parameter (combinations of) values.'''
+        # Ensure index options are correct
+        self.checkIndexOptions()
 
     def getDiffValue(self, o, i=n, language=n):
         '''If p_i is None, the method returns the content of this field on p_o,

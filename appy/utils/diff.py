@@ -3,6 +3,8 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import re, sys, difflib
+
+from appy.utils import bn
 from appy.xml.escape import Escape
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -299,23 +301,23 @@ class HtmlDiff:
            string) is a chunk that was either inserted (p_type='insert') or
            deleted (p_type='delete'). This method will surround this part with
            a div or span tag that will get some CSS class allowing to highlight
-           the update.
-
-           If p_msg is given, it will be used instead of the default
-           p_type-related message stored on p_self.'''
+           the update.'''
+        # If p_msg is given, it will be used instead of the default p_type-
+        # related message stored on p_self.
+        #
         # Will the surrounding tag be a div or a span ?
-        tag = 'div' if sep == '\n' else 'span'
+        tag = 'div' if sep == bn else 'span'
         # What message will it show in its 'title' attribute ?
-        msg = msg or eval('self.%sMsg' % type)
+        msg = msg or getattr(self, f'{type}Msg')
         # What CSS class (or, if none, tag-specific style) will be used ?
-        cssClass = eval('self.%sCss' % type)
+        cssClass = getattr(self, f'{type}Css')
         if cssClass:
-            style = 'class="%s"' % cssClass
+            style = f'class="{cssClass}"'
         else:
-            style = eval('self.%sStyle' % type)
-            style = 'style="%s"' % style
+            style = getattr(self, f'{type}Style')
+            style = f'style="{style}"'
         # The 'name' attribute of the tag indicates the type of the update.
-        tagName = eval('self.%sName' % type)
+        tagName = getattr(self, f'{type}Name')
         # The idea is: if there are several lines, every line must be surrounded
         # by a tag. This way, we know that a surrounding tag can't span several
         # lines, which is a prerequisite for managing cumulative diffs.
@@ -324,13 +326,13 @@ class HtmlDiff:
                 seq = sep.join(seq)
             sep = ''
         if isinstance(seq, str):
-            return '%s<%s name="%s" %s title="%s">%s</%s>%s' % \
-                   (sep, tag, tagName, style, msg, seq, tag, sep)
+            return f'{sep}<{tag} name="{tagName}" {style} title="{msg}">{seq}' \
+                   f'</{tag}>{sep}'
         else:
             r = ''
             for line in seq:
-                r += '%s<%s name="%s" %s title="%s">%s</%s>%s' % \
-                     (sep, tag, tagName, style, msg, line, tag, sep)
+                r = f'{r}{sep}<{tag} name="{tagName}" {style} title="{msg}">' \
+                    f'{line}</{tag}>{sep}'
             return r
 
     def applyDiff(self, line, diff):
@@ -470,7 +472,7 @@ class HtmlDiff:
         if k < len(seqB):
             for line in seqB[k:]: res.append( ('insert', line) )
         # Merge similar diffs, excepted if separator is a carriage return
-        if sep == '\n': return res
+        if sep == bn: return res
         newRes = []
         lastType = None
         for type, data in res:
@@ -485,8 +487,8 @@ class HtmlDiff:
         '''Splits string p_s with p_sep. If p_sep is a space, the split can't
            happen for a leading or trailing space, which must be considered as
            being part of the first or last word.'''
-        # Manage sep == \n
-        if sep == '\n': return s.split(sep)
+        # Manage sep == bn
+        if sep == bn: return s.split(sep)
         leadSpace = s.startswith(sep)
         trailSpace = s.endswith(sep)
         if not leadSpace and not trailSpace: return s.split(sep)
@@ -495,7 +497,8 @@ class HtmlDiff:
         if trailSpace: res[-1] = res[-1] + sep
         return res
 
-    garbage = ('', '\r')
+    garbage = '', '\r'
+
     def removeGarbage(self, l, sep):
         '''Removes from list p_l elements that have no interest, like blank
            strings or considered as is. Also: strip lines (ie, if sep is a
@@ -503,7 +506,7 @@ class HtmlDiff:
         i = len(l)-1
         while i >= 0:
             if l[i] in self.garbage: del l[i]
-            elif sep == '\n': l[i] = l[i].strip()
+            elif sep == bn: l[i] = l[i].strip()
             i -= 1
         return l
 
@@ -669,7 +672,7 @@ class HtmlDiff:
         # is already considered as inserted, we will already have overlaps in
         # the next diff. Overlaps are hard to manage, so we avoid to get them
         # as a starting point when computing cumulative diffs.
-        return self.getHtmlDiff(self.old, self.new, '\n')
+        return self.getHtmlDiff(self.old, self.new, bn)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ColoredDiff:
@@ -677,7 +680,7 @@ class ColoredDiff:
        like git diff).'''
 
     # Styles to define for representing added and removed lines
-    styles = '<style>.a_d_d {color:green}\n.d_e_l {color:red}</style>'
+    styles = f'<style>.a_d_d {{color:green}}{bn}.d_e_l {{color:red}}</style>'
 
     def __init__(self, rdiff, splitAbove=100):
         # The output of the diff command, as a string
@@ -694,7 +697,7 @@ class ColoredDiff:
         # Split the line, recursively
         if lmax is None:
             lmax = self.splitAbove - 1
-        return '%s⤶\n  %s' % (line[:max], self.splitLine(line[max:],lmax=lmax))
+        return f'{line[:max]}⤶{bn}  {self.splitLine(line[max:], lmax=lmax)}'
 
     def run(self):
         '''Compute and returns a XHTML chunk, as a string, containing the
@@ -707,11 +710,11 @@ class ColoredDiff:
         # truncated.
         sabove = self.splitAbove
         maxLine = sys.getrecursionlimit() * (sabove-3)
-        for line in self.rdiff.split('\n'):
+        for line in self.rdiff.split(bn):
             # Get the line, escaped, potentially split into several lines, if
             # too long.
             if len(line) > maxLine:
-                line = '%s...' % line[:sabove]
+                line = f'{line[:sabove]}...'
             else:
                 line = self.splitLine(line)
             line = esc(line)
@@ -724,7 +727,7 @@ class ColoredDiff:
                 css = None
             # Wrap the line around a "span" tag if it must be styled
             if css:
-                line = '<span class="%s">%s</span>' % (css, line)
+                line = f'<span class="{css}">{line}</span>'
             r.append(line)
-        return '%s<pre>%s</pre>' % (ColoredDiff.styles, '\n'.join(r))
+        return f'{ColoredDiff.styles}<pre>{bn.join(r)}</pre>'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

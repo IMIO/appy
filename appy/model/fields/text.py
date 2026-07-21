@@ -10,13 +10,14 @@ from appy.px import Px
 from appy.xml import Parser
 from appy.ui.layout import Layouts
 from appy.xml.escape import Escape
-from appy.utils import flipDict, bn
 from .multilingual import Multilingual
 from appy.utils import string as sutils
+from appy.utils import flipDict, bn, rbn
 from appy.xml.cleaner import StringCleaner
 from appy.database.operators import and_, in_
-from appy.database.indexes.text import TextIndex
+from appy.database.indexes.sort import SortOptions
 from appy.ui.layout import Layouts, Layout, LayoutF
+from appy.database.indexes.text import TextIndex, TextOptions
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 IN_ED_MLG  = 'Is is currently not possible to inline-edit multilingual Text ' \
@@ -209,7 +210,7 @@ class Text2Html:
         # with replacements (see attribute Replacements.delimiters hereabove).
         self.opened = None
 
-    def add(self, part, suffix='\n'):
+    def add(self, part, suffix=bn):
         '''Adds some p_part into the result'''
         res = self.res
         wasEmpty = not res
@@ -231,7 +232,7 @@ class Text2Html:
                 self.add(f'</{tag}>', '')
                 self.add(f'</{self.p}>')
         else:
-            suffix = '\n'
+            suffix = bn
             if start:
                 t = ''
                 if tag == self.p:
@@ -277,7 +278,7 @@ class Text2Html:
         inList = False
         inTable = False
         i = 0
-        rows = s.split('\n')
+        rows = s.split(bn)
         total = len(rows)
         for row in rows:
             if row.startswith('- '):
@@ -339,7 +340,7 @@ class Html2Text(Parser):
     startTags = {'b':'[', 'strong':'[', 'i':'<', 'em':'<', 'li':'- '}
 
     # Conversion of HTML end tags
-    endTags = {'b':']', 'strong':']', 'i':'>', 'em':'>', 'p':'\n', 'li':'\n'}
+    endTags = {'b':']', 'strong':']', 'i':'>', 'em':'>', 'p':bn, 'li':bn}
 
     def startDocument(self):
         Parser.startDocument(self)
@@ -350,7 +351,7 @@ class Html2Text(Parser):
         return Parser.endDocument(self)
 
     def characters(self, content):
-        content = content.replace('\n', '').replace('\t', '')
+        content = content.replace(bn, '').replace('\t', '')
         self.r.append(content)
 
     def startElement(self, elem, attrs):
@@ -659,7 +660,7 @@ class Text(Multilingual, Field):
     def __init__(self, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
       move=0, indexed=False, mustIndex=True, indexValue=n, searchable=False,
-      sortField=n, filterField=n, readPermission='read',
+      indexOptions=None, sortField=n, filterField=n, readPermission='read',
       writePermission='write', width=60, height=5, maxChars=n, colspan=1,
       master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
       mapping=n, generateLabel=n, label=n, sdefault='', scolspan=1, swidth=20,
@@ -688,6 +689,24 @@ class Text(Multilingual, Field):
         # on values not being normalized, use index "Index" instead of
         # "SortIndex".
         self.indexType = indexType
+        # Index options can be passed here. Choose the class being appropriate
+        # to the p_indexType, as shown in the following table.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # p_indexType | p_indexOptions must be ...
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "TextIndex" | an instance of class TextOptions in
+        #             | appy/database/indexes/text.py, or None: in this latter
+        #             | case, default options will be used, as defined in
+        #             | TextIndex.options, in the same file.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # "SortIndex" | an instance of class SortOptions in
+        #             | appy/database/indexes/sort.py, or None: in this latter
+        #             | case, default options will be used, as defined in
+        #             | SortIndex.options, in the same file.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #   "Index"   | None
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        self.indexOptions = indexOptions
         # If passed, p_invalidTexts must be a tuple or list of regular
         # expressions. If the user tries to encode content, in this field, that
         # matches at least one of these regexes, field validation will fail.
@@ -712,11 +731,13 @@ class Text(Multilingual, Field):
         self.checkParameters()
 
     def checkParameters(self):
-        '''Prevent the use of some combinations of parameters'''
-        # Currently, it is not possible to inline edit multilingual Texts
+        '''Prevent the use of wrong parameter (combinations of) values'''
+        # Currently, it is not possible to inline-edit multilingual Texts
         langs = self.languages
         if (callable(langs) or (len(langs) > 1)) and self.inlineEdit:
             raise Exception(IN_ED_MLG)
+        # Ensure index options are correct
+        self.checkIndexOptions()
 
     def getTextareaStyle(self):
         '''Get the content of textarea's "style" attribute'''
@@ -771,8 +792,8 @@ class Text(Multilingual, Field):
             r = Escape.xhtml(r, p=True)
         # If value starts with a carriage return, add a space; else, it will
         # be ignored.
-        elif isinstance(r, str) and \
-           (r.startswith('\n') or r.startswith('\r\n')): r = f' {r}'
+        elif isinstance(r, str) and (r.startswith(bn) or r.startswith(rbn)):
+            r = f' {r}'
         return r
 
     def getUniStorableValue(self, o, value):

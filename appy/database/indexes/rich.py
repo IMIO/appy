@@ -4,8 +4,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from .text import TextIndex
 from appy.xml.extractor import Extractor
-from appy.database.indexes.text import TextIndex
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class RichIndex(TextIndex):

@@ -25,7 +25,7 @@ class Col:
        <span if="col.headerLabel != False"
              class="htitle" >::col.getHeaderText(_ctx_, field)</span>
 
-       <div class="thead" var="field, filterPx=field.getFilterField()">
+       <div class="thead" var="field, filterPx=field.getFilterField(tool)">
 
         <!-- Filter -->
         <x if="filterPx">:filterPx</x>
@@ -385,13 +385,13 @@ class Columns(list):
                 self.addSubCss(r, 'td', rule, cellCss['tds'])
         return '\n'.join(r)
 
-    def getFiltered(self):
+    def getFiltered(self, tool):
         '''Returns info about every column for which a filter must be shown'''
         r = [] # ~[(filterField, px)]~
         for col in self:
             field = col.field
             if isinstance(field, str): continue
-            filterField, px = field.getFilterField()
+            filterField, px = field.getFilterField(tool)
             if px:
                 r.append((filterField, px))
         return r

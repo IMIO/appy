@@ -6,7 +6,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from DateTime import DateTime
 
-from appy.database.indexes import Index
+from . import Index
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DateIndex(Index):

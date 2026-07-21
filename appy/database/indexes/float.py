@@ -4,8 +4,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from . import Index
 from appy.utils import formatNumber
-from appy.database.indexes import Index
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class FloatIndex(Index):

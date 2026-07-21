@@ -8,6 +8,7 @@ from persistent.list import PersistentList
 
 from appy.px import Px
 from appy import utils
+from appy.utils import bn
 from appy.database import catalog
 from appy.model.utils import Fake
 from appy.model.totals import Totals
@@ -15,8 +16,8 @@ from appy.tr import FieldTranslations
 from appy.utils import string as sutils
 from appy.model.utils import Object as O
 from appy.model.fields.phase import Page
-from appy.ui.layout import Layout, Layouts
 from appy.pod.evaluator import Compromiser
+from appy.ui.layout import Layout, Layouts
 from appy.model.fields.group import Group, UiGroup
 
 # In this file, names "list" and "dict" refer to sub-modules. To use Python
@@ -32,10 +33,11 @@ XSS_WARNING  = 'Your behaviour is considered a security attack. System ' \
                'administrator has been warned.'
 UNINDEXED    = 'Field "%s": cannot retrieve catalog version of unindexed field.'
 AJAX_EDITED  = 'Ajax-edited %s%s on %s.'
-METH_ERROR   = 'Method %s:\n%s'
+METH_ERROR   = f'Method %s{bn}%s'
 DEF_ERR      = 'Field %d.%s :: Error. %s'
 MUST_IDX_MET = 'Value for parameter "mustIndex" must be a method.'
 TYPE_KO      = 'Field %s :: Wrong type: %s (expected type: %s).'
+IDX_OPT_KO   = 'indexOptions must be an instance of class %s, not %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Show:
@@ -618,7 +620,9 @@ class Field:
 
         # You may need to specify another field for rendering a filter for
         # p_self. For example, by default in Appy, field "title" uses field
-        # "searchable" as filter PX.
+        # "searchable" as filter PX. p_filterField must hold a Field object or
+        # a method returning it. This method must be a static method accepting
+        # the tool as single arg.
         self.filterField = filterField
 
         # The PX for filtering field values. If None, it means that the field is
@@ -861,12 +865,16 @@ class Field:
         # When p_inRef is True, this method will be overridden by fields for
         # which sort is allowed.
 
-    def getFilterField(self):
+    def getFilterField(self, tool):
         '''p_self may be the variant of another field: this latter must be used
            when it comes to filtering and sorting. This method returns this
            potential filter companion, or p_self if none is defined, together
            with the PX to use for filtering.'''
-        target = self.filterField or self
+        # Get the companion field possibly defined in p_self.filterField
+        filterField = self.filterField
+        if filterField and callable(filterField):
+            filterField = filterField(tool)
+        target = filterField or self
         name = target.filterPx
         if name:
             r = target, getattr(target, name)
@@ -1426,7 +1434,7 @@ class Field:
            store values of this field in a database catalog, or the class itself
            if p_class_ is True.'''
         r = self.indexType
-        return eval(f'catalog.{r}') if class_ else r
+        return getattr(catalog, r) if class_ else r
 
     def getIndex(self, o):
         '''Gets the Index object corresponding to this field, or None if the
@@ -1464,6 +1472,17 @@ class Field:
         index = self.getIndexType(True)
         return index.toString(o, r) if searchable else index.toIndexed(r, self)
 
+    def checkIndexOptions(self):
+        '''Called by the constructor of any child class defining attribute
+           indexOptions, this method ensures the value is an instance of the
+           appropriate class.'''
+        options = self.indexOptions
+        if not options: return
+        class_ = self.getIndexType(True).options.__class__
+        if options.__class__ != class_:
+            raise Exception(IDX_OPT_KO % (class_.__name__,
+                                          options.__class__.__name__))
+
     def getCatalogValue(self, o, index=None):
         '''Returns the value being currently stored in the catalog for this
            field on p_o.'''
@@ -1477,10 +1496,10 @@ class Field:
            This is the case of Ref fields for example.'''
 
     def getSortValue(self, o):
-        '''Return the value of p_self on p_o that must be used for sorting.
-           While the raw p_value may be the value to use in most cases, it is
-           not always true. For example, a string like "Gaëtan" could have
-           "gaetan" as sort value.'''
+        '''Return the value of p_self on p_o that must be used for sorting'''
+        # While the raw value, as retrieved via m_getValue, may be the value to
+        # use in most cases, it is not always true. For example, a string like
+        # "Gaëtan" could have "gaetan" as sort value.
         r = self.getValue(o)
         return self.emptyIndexValue if r is None else r
 
@@ -1994,6 +2013,6 @@ class Field:
                 row = f'<tr><th{thStyle}>{text}</th><td>{value}</td></tr>'
                 first = False
             rows.append(row)
-        rows = '\n'.join(rows)
+        rows = bn.join(rows)
         return f'<table class="{css}">{rows}</table>'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
