@@ -234,7 +234,7 @@ class Checkbox(Col):
      <th class=":mode.cbClass">
       <div if="col.header" class="ghead">
        <img src=":svg('checkAll')" class="iconSEL"
-            onclick=":'toggleAllCbs(%s)' % q(mode.checkboxesId)"
+            onclick=":f'toggleAllCbs({q(mode.checkboxesId)})'"
             title=":_('check_uncheck')"/>
       </div>
      </th>''')
@@ -242,10 +242,9 @@ class Checkbox(Col):
     # Header, in a table containing Ref objects
     pxHeaderRef = Px('''
      <th class=":selector.cbClass if selector else ''">
-      <x if="col.header">
+      <x if="checkboxes and col.header">
        <img src=":svg('checkAll')" class="iconSEL"
-            onclick=":'toggleAllCbs(%s)' % q(hook)"
-            title=":_('check_uncheck')"/>
+            onclick=":f'toggleAllCbs({q(hook)})'" title=":_('check_uncheck')"/>
       </x>
      </th>''')
 
@@ -260,7 +259,7 @@ class Checkbox(Col):
     # Cel content, in a table containing Ref objects
     pxCellRef = Px('''
      <td class=":selector.cbClass if selector else ''">
-      <input if="mayView" type="checkbox" name=":hook" id=":cbId"
+      <input if="mayView and checkboxes" type="checkbox" name=":hook" id=":cbId"
              var2="checked=cbChecked|False" checked=":checked"
              value=":id" onclick="toggleCb(this)"/>
      </td>''')
