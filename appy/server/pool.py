@@ -254,7 +254,7 @@ class ThreadPool:
         self.debug(KILLING_THR % id)
         if thread in self.workers:
             self.workers.remove(thread)
-        self.dyingThreads[id] = (time.time(), thread)
+        self.dyingThreads[id] = time.time(), thread
         if recreate:
             self.addWorker(message=WK_KILLED % id)
 

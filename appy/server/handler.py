@@ -259,7 +259,7 @@ class HttpHandler(Handler):
     HEADERS_MAX = 100
 
     # Chars that signal the end of headers
-    HEADERS_END = (b'\r\n', b'\n', b'')
+    HEADERS_END = b'\r\n', b'\n', b''
 
     def __init__(self, clientSocket, server):
         # The global config

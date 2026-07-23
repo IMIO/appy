@@ -31,6 +31,7 @@ DB_NOT_FOUND = 'Database does not exist @%s.'
 DB_LOCKED    = 'The database is currently locked (%s)'
 DB_CORRUPTED = 'The database @%s is corrupted and probably empty. Please ' \
                'remove it and restart your site.'
+DB_INFO      = '⛁ Database is %s (%s).'
 DB_PACKING   = 'Packing %s (initial size: %s). May take a while...'
 DB_PACKED    = 'Done. Went from %s to %s.'
 TMP_STORE_NF = 'Temp store does not exist in %s.'
@@ -415,8 +416,9 @@ class Database:
         # users, translation files and catalogs. Create any object that would
         # be missing.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        fileName = self.db.storage._file_name
         if not hasattr(root, 'objects'):
-            raise Database.Error(DB_CORRUPTED % self.db.storage._file_name)
+            raise Database.Error(DB_CORRUPTED % fileName)
         try:
             # Create the tool if it does not exist yet
             tool = root.objects.get('tool')
@@ -425,6 +427,9 @@ class Database:
                 tool = self.new(handler, 'Tool', id='tool', secure=False)
             # Update the initialisation handler
             handler.tool = tool
+            # Log database info
+            size = tool.config.database.getDatabaseSize(formatted=True)
+            handler.log('app', 'info', DB_INFO % (fileName, size))
             # Create or update catalogs
             Catalog.manageAll(root, handler)
             # Initialise the vault when appropriate

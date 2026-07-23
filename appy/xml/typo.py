@@ -131,8 +131,8 @@ class French(Transform):
     # Law articles whose numbers make use of a latin multiplicative adverb
     subArticle = re.compile(fr'(\d+)({"|".join(latinAdverbs)})')
 
-    # No unbreakable space must be left in "milliards|millions d'euros"
-    mEuro = re.compile('(milliards|millions) d’euros')
+    # No unbreakable space must be left in "milliard(s)|million(s) d'euros"
+    mEuro = re.compile('[Mm]illi(ard|on)(?:s)? d’euros')
 
     # "etc." must be replaced with "et cetera"
     etc = re.compile(r'etc\.(.)?')
