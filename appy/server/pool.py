@@ -191,11 +191,11 @@ class ThreadPool:
            identifier, and, if any, the path of the request being currently
            handled by him.'''
         iD = thread.ident
-        # What request does this thread handle ? Read it from the thread
+        # What request does this p_thread handle ? Read it from the thread
         # registry.
-        threadHandler = self.server.Handler.registry.get(iD)
-        path = f' · {threadHandler.path}' if threadHandler else ''
-        return f'{thread.getName()} · {iD}{path}'
+        handler = self.server.Handler.registry.get(iD)
+        inf = f' · {handler.getUserLogin()} · {handler.path}' if handler else ''
+        return f'{thread.getName()} · {iD}{inf}'
 
     def getTracked(self, handler, formatted=True):
         '''Returns a dict summarizing info about the threads in the pool'''
