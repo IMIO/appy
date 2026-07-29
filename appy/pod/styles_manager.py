@@ -1275,7 +1275,13 @@ class StylesGenerator:
         # Collect ODF attributes corresponding to CSS attributes
         odfAttrs = []
         for name, value in cssStyles.get().iteritems():
-            if name == 'classes': continue
+            if name == 'classes':
+                if value and value.startswith('ParaKWN '):
+                    # Several classes were defined on this tag. The last one
+                    # serves to define the p_baseStyle; 'ParaKWN' will serve to
+                    # add the corresponding keep-with-next property.
+                    odfAttrs.append(('fo:keep-with-next', 'always'))
+                continue
             if self.css2odf.isCombined(name, value):
                 # Combined values are currently ignored, "border" excepted
                 if name == 'border':

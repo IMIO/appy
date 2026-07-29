@@ -165,12 +165,15 @@ class Tag:
                 r += 1
         return r
 
-    def addCss(self, name):
+    def addCss(self, name, i=None):
         '''Adds CSS class named p_name among CSS classes defined on p_self'''
         css = self.css
         if css:
             if name not in css:
-                css.append(name)
+                if i is None:
+                    css.append(name)
+                else:
+                    css.insert(i, name)
         else:
             self.css = [name]
 

@@ -232,7 +232,7 @@ class KeepWithNext(Visitor):
     def visitPara(self, para):
         '''Visiting a p_para(graph) = applying the correct "keep-with-next"
            class on it.'''
-        para.addCss(self.cssClasses.get(para.name) or 'ParaKWN')
+        para.addCss(self.cssClasses.get(para.name) or 'ParaKWN', i=0)
         # Update the number of walked chars
         self.charsWalked += para.getContentLength()
 

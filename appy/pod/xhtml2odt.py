@@ -1464,21 +1464,21 @@ class Xhtml2OdtConverter:
         return r
 
     def applyKeepWithNext(self):
-        '''This method is called prior to parsing self.xhtmlString in order to
-           add specific CSS classes to some XHTML tags, implementing the
-           "keep-with-next" functionality. If the last tag is:
-           * a paragraph (tag "p"), class "ParaKWN" will be set;
-           * a bullet (tag "li"), class "podItemKeepWithNext" will be set.
-
-           Note that this latter class will then be converted by the XHTML
-           parser into "real" style "podBulletItemKeepWithNext" or
-           "podNumberItemKeepWithNext", if the "li" is, respectively, in a "ul"
-           or "ol" tag.
-        '''
-        res = self.xhtmlString
-        lastParaIndex = res.rfind('<p')
-        lastItemIndex = res.rfind('<li')
-        if (lastParaIndex != -1) or (lastItemIndex != -1):
+        '''Called prior to parsing self.xhtmlString, this method is called in
+           order to add specific CSS classes to some XHTML tags, implementing
+           the "keep-with-next" functionality.'''
+        # If the last tag is:
+        # * a paragraph (tag "p"), class "ParaKWN" will be set;
+        # * a bullet (tag "li"), class "podItemKeepWithNext" will be set.
+        #
+        # Note that this latter class will then be converted by the XHTML parser
+        # into "real" style "podBulletItemKeepWithNext" or
+        # "podNumberItemKeepWithNext", if the "li" is, respectively, in a "ul"
+        # or "ol" tag.
+        r = self.xhtmlString
+        lastParaIndex = r.rfind('<p')
+        lastItemIndex = r.rfind('<li')
+        if lastParaIndex != -1 or lastItemIndex != -1:
             # Is the last one a paragraph or an item ?
             if lastParaIndex > lastItemIndex:
                 # A paragraph
@@ -1490,9 +1490,9 @@ class Xhtml2OdtConverter:
                 elemLenght = 3
             maxIndex = max(lastParaIndex, lastItemIndex)
             # Does this element already have a "class" attribute ?
-            if res.find('class="', maxIndex) == -1:
+            if r.find('class="', maxIndex) == -1:
                 # No: I add the style
-                res = res[:maxIndex+elemLenght] + (' class="%s" ' % styleName) \
-                      + res[maxIndex+elemLenght:]
-        return res
+                r = r[:maxIndex+elemLenght] + (' class="%s" ' % styleName) + \
+                    r[maxIndex+elemLenght:]
+        return r
 # ------------------------------------------------------------------------------
