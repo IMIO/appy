@@ -280,7 +280,7 @@ class BulletedProperties(ListProperties):
        class.'''
 
     type = 'bullet'
-    defaultFormats = ('•', '◦', '▪')
+    defaultFormats = '•', '◦', '▪'
     textStyle = 'podBulletStyle'
 
     def __init__(self, levels=4, formats=defaultFormats,
@@ -300,8 +300,8 @@ class NumberedProperties(ListProperties):
        class.'''
 
     type = 'number'
-    defaultFormats = ('1',)
-    defaultSuffixes = ('.',)
+    defaultFormats = '1',
+    defaultSuffixes = '.',
     textStyle = 'podNumberStyle'
 
     def __init__(self, levels=4, formats=defaultFormats,

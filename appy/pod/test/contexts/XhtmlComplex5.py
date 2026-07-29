@@ -69,4 +69,8 @@ xhtmlInput = '''
 <ul style="list-style-type: circle">
  <li>Circle base</li>
 </ul>
+<ol style="list-style-type: upper-alpha">
+ <li>Un</li>
+ <li>Deux</li>
+</ol>
 '''

@@ -769,7 +769,7 @@ class XhtmlEnvironment(Environment):
       'upper-latin': ('A',), 'lower-roman': ('i',), 'upper-roman': ('I',),
       'decimal': ('1',),
       # Bullet formats
-      'disc': ('•'), 'circle': ('◦'), 'square': ('▪'), 'none': ''}
+      'disc': ('•',), 'circle': ('◦',), 'square': ('▪',), 'none': ''}
 
     def __init__(self, renderer):
         Environment.__init__(self)
@@ -964,7 +964,7 @@ class XhtmlEnvironment(Environment):
            applied, from XhtmlEnvironment.defaultListStyles. Else, a specific
            list style is created and added to dynamic styles.'''
         # Check if a specific style must be created
-        res = None
+        r = None
         # Check first in the styles mappings
         listProps = self.findStyle(xhtmlElem)
         elem = xhtmlElem.elem
@@ -976,20 +976,19 @@ class XhtmlEnvironment(Environment):
         # Check CSS attribute "list-style-type"
         styles = xhtmlElem.cssStyles
         if hasattr(styles, 'liststyletype'):
-            typeValue = styles.liststyletype.value
-            if typeValue not in ('initial', 'inherit'):
-                res = Normalize.text(typeValue, keepBlank=False)
+            r = Normalize.text(styles.liststyletype.value, keepBlank=False,
+                               keepDash=True)
         # Check HTML attribute "type"
-        if not res and 'type' in attrs:
-            res = self.typeToListStyleType.get(attrs['type'])
-        if res:
+        if not r and 'type' in attrs:
+            r = self.typeToListStyleType.get(attrs['type'])
+        if r:
             # A specific style has been found. Ensure it will be added among
             # dynamic styles.
-            res = self.addListPropertiesByName(elem, res)
+            r = self.addListPropertiesByName(elem, r)
         else:
             # Apply a default style, added by default among dynamic styles
-            res = self.defaultListStyles[elem]
-        return res
+            r = self.defaultListStyles[elem]
+        return r
 
     def getTags(self, elems, start=True,
                 ignoreToRemove=False, ignoreWaiting=False):
