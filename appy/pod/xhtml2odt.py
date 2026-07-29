@@ -754,14 +754,18 @@ class XhtmlEnvironment(XmlEnvironment):
       'disc': 'disc', 'circle': 'circle', 'square': 'square'}
     # Mapping between HTML list styles and ODT list styles
     listClasses = {'ol': NumberedProperties, 'ul': BulletedProperties}
+
     # "list-style-type" values supported by OpenDocument
     listFormats = {
       # Number formats
       'lower-alpha': ('a',), 'upper-alpha': ('A',), 'lower-latin': ('a',),
       'upper-latin': ('A',), 'lower-roman': ('i',), 'upper-roman': ('I',),
+      # Same values, but without dash, as retrieved from "style" attributes
+      'loweralpha': ('a',), 'upperalpha': ('A',), 'lowerlatin': ('a',),
+      'upperlatin': ('A',), 'lowerroman': ('i',), 'upperroman': ('I',),
       'decimal': ('1',),
       # Bullet formats
-      'disc': (u'•'), 'circle': (u'◦'), 'square': (u'▪'), 'none': ''}
+      'disc': (u'•',), 'circle': (u'◦',), 'square': (u'▪',), 'none': ''}
 
     def __init__(self, renderer):
         XmlEnvironment.__init__(self)
@@ -969,9 +973,7 @@ class XhtmlEnvironment(XmlEnvironment):
         # Check CSS attribute "list-style-type"
         styles = xhtmlElem.cssStyles
         if hasattr(styles, 'liststyletype'):
-            typeValue = styles.liststyletype.value
-            if typeValue not in ('initial', 'inherit'):
-                res = normalizeString(typeValue, usage='alphanum')
+            res = normalizeString(styles.liststyletype.value, usage='alphanum')
         # Check HTML attribute "type"
         if not res and attrs.has_key('type'):
             res = self.typeToListStyleType.get(attrs['type'])
