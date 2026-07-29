@@ -103,3 +103,9 @@ xhtml8 = '''
 <table style="border:undefined; font-family:&quot;Calibri&quot;; font-size:x-small">
  <tr><td>A</td><td>B</td></tr>
 </table>'''
+
+# KWN with a last paragraph that has an existing class
+xhtml9 = '''
+<p class="smallText">Para 1</p>
+<p class="smallText">Le style appliqué ici doit avoir été généré et avoir la case keepWithNext cochée.</p>
+'''

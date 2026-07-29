@@ -165,12 +165,15 @@ class TablesOptimizer(TablesVisitor):
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class KeepWithNext(Visitor):
-    # CSS classes with "keep with next" functionality, by tag type. By default,
+    '''Visitor implementing the "keep-with-next" functionality'''
+
+    # CSS classes with "keep-with-next" functionality, by tag type. By default,
     # class "ParaKWN" is applied.
     cssClasses = {'li': 'podItemKeepWithNext'}
+
     # We will only walk tags directly under the root tag, having one of these
     # types.
-    rootTagTypes = ('Para', 'List', 'Table')
+    rootTagTypes = 'Para', 'List', 'Table'
 
     def __init__(self, chars):
         # The number of chars that must be kept together
@@ -223,9 +226,9 @@ class KeepWithNext(Visitor):
         tbody2.children = tbody1.children
         # Set attributes "keeprows" on "table1" and "table2"
         i = tbody1.children.index(self.splitRow)
-        table1.addAttribute('keeprows', ':%d' % (headerRows+i))
+        table1.addAttribute('keeprows', f':{headerRows+i}')
         table1.addAttribute('style', 'margin-bottom:0px')
-        table2.addAttribute('keeprows', '%d:' % i)
+        table2.addAttribute('keeprows', f'{i}:')
         table2.addAttribute('style', 'margin-top:0px')
         # Insert table2 just after table1
         parent = table1.parent
@@ -234,7 +237,7 @@ class KeepWithNext(Visitor):
     def visitPara(self, para):
         '''Visiting a p_para(graph) = applying the correct "keep-with-next"
            class on it.'''
-        para.addCss(self.cssClasses.get(para.name) or 'ParaKWN')
+        para.addCss(self.cssClasses.get(para.name) or 'ParaKWN', i=0)
         # Update the number of walked chars
         self.charsWalked += para.getContentLength()
 
@@ -251,12 +254,11 @@ class KeepWithNext(Visitor):
         self.charsWalked += row.getContentLength()
 
     def visitTable(self, table):
-        '''Visiting a table = visiting its rows in reverse order.
-
-           If we reach p_self.charsToKeep at a given row R, we must split the
-           table in 2 tables: the first one containing all rows preceding R, and
-           the second one containing row R and subsequent rows.
-        '''
+        '''Visiting a table = visiting its rows in reverse order'''
+        # If we reach p_self.charsToKeep at a given row R, we must split the
+        # table in 2 tables: the first one containing all rows preceding R, and
+        # the second one containing row R and subsequent rows.
+        #
         # Get the "tbody" tag
         tbody = table.getChild('Body')
         if not tbody: return
@@ -279,7 +281,7 @@ class KeepWithNext(Visitor):
         # Walk tags directly under the root tag, in reverse order
         for child in env.r.iterChildren(types=self.rootTagTypes, reverse=True):
             # Visit the child
-            getattr(self, 'visit%s' % child.className)(child)
+            getattr(self, f'visit{child.className}')(child)
             # Stop if we have reached the number of chars to keep together
             if self.charsReached():
                 break
@@ -360,6 +362,6 @@ class Cleaner(Visitor):
         '''Removes the appropriate paragraphs'''
         remove = self.removeTrailingParas
         if remove is None: return
-        method = remove and 'removeEndingParas' or 'removeEmptyParas'
+        method = 'removeEndingParas' if remove else 'removeEmptyParas'
         return getattr(self, method)(env.r)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

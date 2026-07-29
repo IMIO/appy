@@ -973,7 +973,7 @@ class Css2odf:
         if not odfName: return
         val = sub or value.value
         # Must we ignore this attribute ?
-        if (name in self.ignore) and eval(self.ignore[name]): return
+        if name in self.ignore and eval(self.ignore[name]): return
         # Is the ODF attribute different according to CSS value ?
         if isinstance(odfName, dict):
             # "val" can be absent from the list of values that must be mapped to
@@ -1091,8 +1091,9 @@ class StylesGenerator:
 
     # Properties applying to table cells and that are not transferred to inner
     # paragraphs.    
-    cellProperties = ('fo:padding', 'fo:border', 'fo:background-color',
-                      'style:vertical-align')
+    cellProperties = 'fo:padding', 'fo:border', 'fo:background-color', \
+                     'style:vertical-align'
+
     # Default parent styles to apply for generated styles. Those styles are not
     # listed among DEFAULT_STYLES because, when there is no custom style to
     # generate, they must not be specified, it is implicit.
@@ -1330,7 +1331,13 @@ class StylesGenerator:
         # Collect ODF attributes corresponding to CSS attributes
         odfAttrs = []
         for name, value in cssStyles.get().items():
-            if name == 'classes': continue
+            if name == 'classes':
+                if value and value.startswith('ParaKWN '):
+                    # Several classes were defined on this tag. The last one
+                    # serves to define the p_baseStyle; 'ParaKWN' will serve to
+                    # add the corresponding keep-with-next property.
+                    odfAttrs.append(('fo:keep-with-next', 'always'))
+                continue
             if self.css2odf.isCombined(name, value):
                 # Combined values are currently ignored, "border" excepted
                 if name == 'border':
@@ -1345,11 +1352,10 @@ class StylesGenerator:
         # for generating a custom style, or "get_any" if here is no specific
         # method for this tag.
         methodName = f'get_{elem}'
-        if not hasattr(self, methodName): methodName = 'get_any'
-        method = getattr(self, methodName)
+        method = getattr(self, methodName, self.get_any)
         styleName = method(xhtmlElem, odfAttrs, baseStyle,
                            stylesStore=stylesStore)
-        # "styleName" may be empty. For example, it may not be necessary to
+        # v_styleName may be empty. For example, it may not be necessary to
         # generate a custom style for a "td", although we must generate, from
         # its attrs, a custom style for its inner-paragraph.
         if not styleName: return baseStyle

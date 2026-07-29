@@ -8,7 +8,7 @@
 import re, xml.sax, math
 
 from appy.pod import *
-from appy.utils import css
+from appy.utils import css, bn
 from appy.xml.escape import Escape
 from appy.utils.inject import Injector
 from appy.utils.string import Normalize
@@ -1308,7 +1308,8 @@ class XhtmlParser(Parser):
             dump('<text:tab/>')
         elif elem == 'cs':
             # Yet another one, for managing consecutive spaces
-            dump(f'<text:s text:c="{attrs["n"]}"/>')
+            n = attrs['n']
+            dump(f'<text:s text:c="{n}"/>')
         elif elem in IGNORABLE_TAGS:
             e.ignore = True
 
@@ -1428,7 +1429,7 @@ class XhtmlPreprocessor:
         # exist in XHTML: it has been invented in Appy for converting it to ODF
         # "text:s" tags.
         content = class_.preSpaces.sub(class_.replacePreSpaces, match.group(1))
-        content = content.replace('\n', class_.preParaN)
+        content = content.replace(bn, class_.preParaN)
         return f'<table><tr><td>{class_.prePara}{content}</p></td></tr></table>'
 
     @classmethod
@@ -1445,11 +1446,11 @@ class XhtmlPreprocessor:
         # necessarily contain valid XHTML (it may possibly contain raw text).
         if not s or s.startswith('<'): return s
         r = []
-        for line in s.split('\n'):
+        for line in s.split(bn):
             if not line.startswith('<'):
                 line = f'<{tag}>{line.strip()}</{tag}>'
             r.append(line)
-        return '\n'.join(r)
+        return bn.join(r)
 
     @classmethod
     def preprocess(class_, s, html=False, pre=True, inject=False, root='p',
@@ -1524,9 +1525,9 @@ class Xhtml2OdtConverter:
         return r
 
     def applyKeepWithNext(self):
-        '''This method is called prior to parsing self.xhtmlString in order to
-           add specific CSS classes to some XHTML tags, implementing the
-           "keep-with-next" functionality.'''
+        '''Called prior to parsing self.xhtmlString, this method is called in
+           order to add specific CSS classes to some XHTML tags, implementing
+           the "keep-with-next" functionality.'''
         # If the last tag is:
         # * a paragraph (tag "p"), class "ParaKWN" will be set;
         # * a bullet (tag "li"), class "podItemKeepWithNext" will be set.
@@ -1535,7 +1536,6 @@ class Xhtml2OdtConverter:
         # into "real" style "podBulletItemKeepWithNext" or
         # "podNumberItemKeepWithNext", if the "li" is, respectively, in a "ul"
         # or "ol" tag.
-
         r = self.xhtmlString
         lastParaIndex = r.rfind('<p')
         lastItemIndex = r.rfind('<li')
