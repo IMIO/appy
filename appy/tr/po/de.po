@@ -2209,7 +2209,7 @@ msgstr "Inhalt der config.py-Datei dieser Site"
 
 #. Default: "Logs"
 msgid "Tool_page_logsViewer"
-msgstr "Protokolle"
+msgstr "Logs"
 
 #. Default: "In progress"
 msgid "Tool_page_progress"
