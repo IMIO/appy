@@ -605,8 +605,8 @@ class User(Base):
         # most to less wanted.
         r = handler.headers['Accept-Language']
         if not r:
-            # Return the first language supported by the app
-            return config.languages[0]
+            # Return the fallback language as defined by the app
+            return config.fallbackLanguage
         # Browse preferred languages and return the first that is among app
         # language. If no language matches, return the first one as supported by
         # the app.
@@ -630,7 +630,7 @@ class User(Base):
                 handler.resp.setHeader('Content-Language', code)
                 return code
         # No supported language was found among user's preferred languages
-        return supported[0]
+        return config.fallbackLanguage
 
     #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                                  PXs
