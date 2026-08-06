@@ -193,6 +193,7 @@ div.rbutton { float:right }
 .subTitle table>thead>tr>th,
 .subTitle table>tbody>tr>td { padding:0.3em; border:1px solid darkgrey }
 .flext>tbody>tr>td { display:flex; gap:0.3em }
+.fbreak { flex-basis:100%; height:0 }
 
 .current { font-weight:bold }
 .inputSearch { height:15px; width:120px; margin:0 0 5px 5px !important }

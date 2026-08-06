@@ -6,7 +6,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import xml.sax
+import xml.sax, inspect
 
 from appy.utils import json
 from appy.utils import css, bn
@@ -24,7 +24,7 @@ PX_NAME_KO   = 'attribute "%s.%s" does not exist or is not a Px instance.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Px:
-    '''Represents a (chunk of) PX code'''
+    '''Represents (a chunk of) PX code'''
 
     class Error(Exception): pass
     xmlPrologue = xmlPrologue
@@ -39,6 +39,9 @@ class Px:
                  hook=None, prologue=None, css=None, js=None, cssVars=None,
                  name=None):
         '''Creates a PX object'''
+
+        # Where is this PX being defined ? In what file, at what line number ?
+        self.setLocation()
 
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # If p_type is... | p_content is...
@@ -103,6 +106,22 @@ class Px:
         # Parse the PX
         if not self.isMethod:
             self.parse()
+
+    def __repr__(self):
+        '''p_self as a short string'''
+        name = f' name="{self.name}"' if self.name else ''
+        return f'‹PX{name} in@{self.file}:{self.line}›'
+
+    def setLocation(self):
+        '''Retrieves p_self's "location" = the code file and number where it has
+           been defined.'''
+        # Go back 2 times: one to reach the PX constructor calling
+        # m_setLocation, one more to go to where the PX object is instantiated.
+        frame = inspect.currentframe().f_back.f_back
+        # The absolute path to the Python file where the PX is instantiated
+        self.file = frame.f_code.co_filename
+        # The line number, within that file
+        self.line = frame.f_lineno
 
     def clone(self, keepTemplate=True):
         '''Create a clone from (my)p_self'''

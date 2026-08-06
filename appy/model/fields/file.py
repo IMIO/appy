@@ -278,10 +278,12 @@ class FileInfo:
         f.close()
 
     def writeFile(self, name, value, folder, config=n, hash=n):
-        '''Writes a file to the filesystem, from p_value that can be:
-           - an Object instance (coming from a HTTP post);
-           - another ("not-in-DB") FileInfo instance;
-           - a tuple (fileName, content, mimeType): see method File.store.'''
+        '''Writes a file to the filesystem, from p_value'''
+        # p_value can be:
+        # - an Object instance (coming from a HTTP post) ;
+        # - another ("not-in-DB") FileInfo instance ;
+        # - a tuple (fileName, content, mimeType): see method File.store.
+        #
         # Determine the file's MIME type
         isO = isinstance(value, Object) or isinstance(value, UnmarshalledFile)
         if isO:

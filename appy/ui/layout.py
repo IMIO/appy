@@ -348,19 +348,18 @@ class LayoutF(Layout):
     pxRender = Px('''
      <div style=":table.getStyle()" class=":table.getCss(_ctx_)"
           id=":tagId" name=":tagName">
-      <x for="cell in table.row.cells">
-       <x for="c in cell.content">
-        <span if="cell.basis &gt; 1"
-              style=":f'flex:1 0 {cell.basis}%'">:cell.render(c, layout,
-                                                              layoutTarget)
-        </span>
-        <x if="cell.basis == 1">:cell.render(c, layout, layoutTarget)</x>
+      <x for="row in table.rows">
+       <x for="cell in row.cells">
+        <x for="c in cell.content">::table.renderCell(_ctx_)</x>
        </x>
+       <!-- Dump some kind of flex-like "row break" -->
+       <div if="not loop.row.last" class="fbreak"></div>
       </x>
      </div>''')
 
     def __init__(self, layoutString=None, style=None, css=None, other=None,
-                 derivedType=None, direction='row', wrap=False, inline=False):
+                 derivedType=None, direction='row', wrap=False, inline=False,
+                 gap='0.2em'):
         # Call the base constructor
         super().__init__(layoutString, style=style, css=css, other=other,
                          derivedType=derivedType)
@@ -370,34 +369,50 @@ class LayoutF(Layout):
         else:
             self.direction = f'flex-direction:{direction}'
         # Define flex-wrap
-        if wrap:
+        if wrap or len(self.rows) > 1:
+            # When several rows come into play, flex-wrap:wrap is required.
+            # Else, no "row break" will occur.
             self.wrap = 'flex-wrap:wrap'
         else:
             self.wrap = '' # No-wrap is the default value
-        # Unwrap the first row, that is the unique row that will be taken into
-        # account.
-        self.row = self.rows[0]
         # CSS display will bel "flex" or "inline-flex" ?
         self.inline = inline
+        # The gap between 2 elements
+        self.gap = f'gap:{gap}' if gap else None
+
+    # LayoutF attributes to dump as-is in the "styles" attribute of the main tag
+    styleAttributes = 'direction', 'style', 'wrap', 'gap'
 
     def getStyle(self):
         '''Get content of the main tag's "style" attribute'''
-        row = self.row
+        row = self.rows[0]
         pre = 'inline-' if self.inline else ''
         r = f'display:{pre}flex;align-items:{row.valign}'
         if len(row.cells) == 1:
             # Get the horizontal alignment from this unique cell
             cell = row.cells[0]
             r = f'{r};justify-content:{self.cellMap[cell.align]}'
-        if self.direction: r = f'{r};{self.direction}'
-        if self.style:     r = f'{r};{self.style}'
-        if self.wrap:      r = f'{r};{self.wrap}'
+        for name in self.styleAttributes:
+            value = getattr(self, name)
+            if value:
+                r = f'{r};{value}'
         return r
 
     def getCss(self, c):
         '''Get the CSS class(es) to apply to the main tag's "class" attribute'''
         r = f'{c.tagCss or ""} {self.css or ""}'
         return r.strip()
+
+    def renderCell(self, c):
+        '''Renders our cell as currently walked in the p_c(ontext)'''
+        # Render the cell content
+        cell = c.cell
+        r = cell.render(c.c, c.layout, c.layoutTarget)
+        # If the cell spans more than one cell, wrap it in a span in order to
+        # achieve the same result, with flex, as a colspan > 1.
+        if cell.basis > 1:
+            r = f'<span style="flex:1 0 {cell.basis}%">{r}</span>'
+        return r
 
     def __repr__(self): return f'‹LayoutF {self.layoutString}›'
 

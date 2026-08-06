@@ -167,7 +167,10 @@ class Traversal:
             r = self.tool.getObject(name[1:])
         else:
             # It is a class
-            r = self.handler.server.model.classes.get(name).python
+            class_ = self.handler.server.model.classes.get(name)
+            r = class_.python if class_ else None
+        # Raise a 404 if v_r was not found
+        if not r: raise NotFound(self.getPath())
         return r
 
     def getLayout(self, pxName):

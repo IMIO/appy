@@ -159,9 +159,9 @@ class Boolean(Field):
         # "radios"   | The field is rendered via 2 radio buttons, with custom
         #            | labels corresponding to the 2 truth values.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # "switch"   | The field is rendered as a checkbox on the edit layout,
-        #            | but as a clickable, button-like "on/off" switch on the
-        #            | view/cell layout (for those having write permission).
+        # "switch"   | The field is rendered as a checkbox on /edit, but as a
+        #            | clickable, button-like "on/off" switch on /view or /cell
+        #            | (for those having write permission).
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         self.render = render
         self.asRadios = render == 'radios'

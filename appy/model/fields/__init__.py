@@ -425,7 +425,7 @@ class Field:
     # Template for a validation error
     validationError = '<div class="dropdownMenu fdrop help" onmouseover=' \
       '"toggleDropdown(this)" onmouseout="toggleDropdown(this,\'none\')">' \
-      '⚠️<div class="dropdown vdown fadeIn">%s</div>'
+      '⚠️<div class="dropdown vdown fadeIn">%s</div></div>'
 
     # Displays validation-error-related info about a field
     def validationPx(c):
