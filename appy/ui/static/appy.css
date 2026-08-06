@@ -37,7 +37,7 @@ img       { border:0; vertical-align:middle; transition:opacity 0.3s }
 audio     { margin:2px 0 }
 select    { border:none; border-bottom:1px solid |itextBottomColor|;
             outline:unset; overflow-y:auto; background-color:transparent;
-            font-family:|fonts|; font-size:110%; padding:0.1em 0.2em 0.1em;
+            font-family:|fonts|; font-size:100%; padding:0.1em 0.2em 0.1em;
             margin: 0 0.1em |fieldBottom| 0 }
 option    { color:black; font-size:90% }
 
@@ -58,14 +58,15 @@ input[type=password] { outline:none; cursor:text;
                        border-bottom:|itextBottom| |itextBottomColor|;
                        line-height:1.4em; font-family:|fonts|;
                        background-color:transparent }
-input[type=date]     { width:9em; margin-bottom:0.2em;
-                       margin-bottom:|fieldBottom| }
-input[type=datetime-local] { width:12em; margin-bottom:0.4em;
-                       margin-bottom:|fieldBottom| }
+input[type^=date]    { border:none; margin-bottom:|fieldBottom|;
+                       border-bottom:|itextBottom| |itextBottomColor|;
+                       background-color:transparent }
+input[type=date]     { width:9em; margin-bottom:0.2em }
+input[type=datetime-local] { width:12em; margin-bottom:0.4em }
 input::placeholder   { color:#666666 }
 input:invalid,
 select:invalid       { background-color:|wrongTextColor| }
-input[type=text]:read-only
+input[type=text]:read-only, input[type^=date]:disabled
                      { background-color:|readOnlyColor|; cursor:not-allowed }
 select[multiple]     { border:1px solid |itextBottomColor|; margin:0;
                        background-image:none; padding:0.1em 0.3em }

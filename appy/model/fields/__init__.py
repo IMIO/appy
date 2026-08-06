@@ -1566,8 +1566,8 @@ class Field:
             return value or ''
 
     def isReadonly(self, o):
-        '''Returns True if, when this field is rendered on an edit layout as an
-           input field, it must have attribute "readonly" set.'''
+        '''Returns True if, when this field is rendered on /edit as an input
+           field, it must have attribute "readonly" set.'''
         return bool(self.getAttribute(o, 'readonly'))
 
     def setSlave(self, slaveField, masterValue):

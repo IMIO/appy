@@ -368,8 +368,8 @@ class String(Multilingual, Field):
         # "lowercase".
         self.transform = transform
         # If attribute "readonly" is True (or stores a method returning True),
-        # the rendered input field, on edit layouts, will have attribute
-        # "readonly" set.
+        # the rendered input field, on /edit, will have attribute "readonly"
+        # set.
         self.readonly = readonly
         # Must the field content be stripped as soon as it is encoded by the
         # user ?
