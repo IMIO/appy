@@ -47,18 +47,20 @@ class MethodsCache(dict):
        cache.'''
 
     def call(self, o, method, class_=None, cache=True):
-        '''Call p_method on some p_o(bject). m_method can be an instance method
-           on p_o; it can also be a static method. In this latter case, p_o is
-           the tool and the static method, defined in p_class_, will be called
-           with the tool as unique arg.
-
-           If the method result is already in the cache, it will simply be
-           returned. Else, the method will be executed, its result will be
-           stored in the cache and returned.
-
-           If p_cache is False, caching is disabled and the method is always
-           executed.
-        '''
+        '''Call p_method on some p_o(bject) or get the cached result from a
+           previous call.'''
+        # m_method can be an instance method on p_o; it can also be a class or
+        # static method. If the method is static, p_o is the tool and the static
+        # method, defined in p_class_, will be called with the tool as unique
+        # arg.
+        #
+        # If the method result is already in the cache, it will simply be
+        # returned. Else, the method will be executed, its result will be stored
+        # in the cache and returned.
+        #
+        # If p_cache is False, caching is disabled and the method is always
+        # executed.
+        #
         # Disable the cache for lambda functions
         name = method.__name__
         cache = False if name == '<lambda>' else cache
@@ -75,7 +77,9 @@ class MethodsCache(dict):
             cheat = True
         # Build the unique key allowing to store method results in the cache.
         # The key is of the form
+        #
         #                    <object id>:<method name>
+        #
         # In the case of a static method, "object id" is replaced with the class
         # name.
         if not cheat:
@@ -754,8 +758,9 @@ class VirtualHandler(Handler):
         self.dbConnection = None
         self.tool = None
 
-    def inPopup(self): return # A virtual handler is never in a popup
-    def isAjax(self): return # A virtual handler never serves ajax requests
+    # A virtual handler is never in a popup nor serves ajax requests
+    def inPopup(self): return
+    def isAjax(self): return
 
     def getUserLogin(self):
         '''Gets the login of the currently logged user'''

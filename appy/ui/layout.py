@@ -148,13 +148,13 @@ class Layout:
 
     # A row delimiter is to be used at the end of a row. The symbol used defines
     # alignment for the previously defined row.
-    rowDelimiters =  {'-':'middle', '=':'top', '_':'bottom'}
-    rowDelms = ''.join(rowDelimiters.keys())
+    rowDelimiters =  {'-': 'middle', '=': 'top', '_': 'bottom'}
+    rowDelms = ''.join(rowDelimiters)
 
     # A cell delimiter is to be used at the end of a cell. The symbol used
     # defines alignment for the previously defined cell.
     cellDelimiters = {'|': 'center', ';': 'left', '!': 'right'}
-    cellDelms = ''.join(cellDelimiters.keys())
+    cellDelms = ''.join(cellDelimiters)
 
     # A layout can be derived from another one. The following dict defines the
     # letters to remove to define a simpler layout (view) from a more complex
@@ -338,8 +338,8 @@ class LayoutF(Layout):
        instead of a table.'''
 
     # Flex-specific row delimiters (vertical alignment)
-    rowDelimiters =  {'-':'center', '=':'flex-start', '_':'end'}
-    rowDelms = ''.join(rowDelimiters.keys())
+    rowDelimiters =  {'-':'center', '=':'flex-start', '_':'end', '~':'baseline'}
+    rowDelms = ''.join(rowDelimiters)
 
     # Mapping between cell's horizontal alignment and values for flex property
     # "justify-contents".
@@ -707,7 +707,7 @@ Layouts.gn  = Layouts(Layout('f;rvl=', width=None))
 Layouts.gd  = Layouts(Layout('frvl-d', width='99%'))
 Layouts.dg  = Layouts(Layout('d-frvl', width='99%'))
 Layouts.gdn = Layouts(edit=Layout('d2-f;rvl=', width=None), view=f)
-Layouts.gh  = Layouts('fhrvl')
+Layouts.gh  = Layouts(edit=LayoutF('fhrvl~'))
 Layouts.gdh = Layouts('fhrvl-d')
 # Base layouts, with space on *t*op of the field
 Layouts.t   = Layouts.b.clone(css='topSpace')
