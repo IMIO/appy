@@ -148,9 +148,11 @@ class User(Base):
         user = self.search1('User', secure=False, login=login)
         return user.getTitle(*args, **kwargs) if user else login
 
-    def updateTitle(self):
+    def updateTitle(self, reindex=False):
         '''Sets a title for this user'''
         self.title = self.getTitle(nameFirst=True)
+        if reindex:
+            self.reindex(fields=('title', 'searchable'))
 
     def getSupTitle(self, nav):
         '''Display a specific icon if the user is a local copy of an external
