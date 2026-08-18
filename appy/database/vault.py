@@ -175,7 +175,12 @@ class Config:
             # randomness.
             r = random.randint(0,1)
         else:
-            r = allowed(handler.guard.user)
+            # Call m_allowed, excepted if there is no guard. Indeed, in such
+            # case, we are probably called from underground low-level code
+            # layers, like an authentication plug-in; calling user code may lead
+            # to problems.
+            guard = handler.guard
+            r = allowed(guard.user) if guard else False
         return r
 
     # Config details, as a PX. Variable v_cfg, in the context, is the main

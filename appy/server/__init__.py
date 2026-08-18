@@ -215,6 +215,22 @@ class Config:
         # transactions and you want to give more chances to these latters to end
         # up gracefully.
         self.maxWait = 10
+        # When the server doesn't run in the foreground, a job records status
+        # information, in list tool.serverStatuses, about the server, every X
+        # minute(s), X being defined in the following attribute, being an
+        # integer number. If you want to disable status recording, set the
+        # attribute to 0. Info about server status can be consulted in
+        # appy/server/status.py.
+        self.statusRate = 1
+        # If server status recording is enabled (see the previous attribute),
+        # the maximum number of status records that will be stored in
+        # tool.serverStatuses is defined by the following parameter. When this
+        # maximum has been reached, the oldest record is thrown away and the
+        # new one is added. The default value, 3000, roughly corresponds to a
+        # bit more than 48 hours, provided the status rate is 1. Note that the
+        # duration of the Appy nightlife must also be taken into account: during
+        # these festive activities, no status is recorded.
+        self.statusMax = 3000
 
     def isIPv6(self):
         '''Is IP v6 in use ?'''

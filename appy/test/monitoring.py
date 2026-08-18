@@ -8,7 +8,7 @@ from appy.model.fields.pod import Config as PodConfig
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Monitoring:
-    '''Implements stuff allowing to perform monitoring on a Appy application.'''
+    '''Implements stuff allowing to perform monitoring on a Appy application'''
 
     # - URL <yourapp>/tool/check can be called to get monitoring info;
     # - Configure monitoring parameters by updating attributes of the

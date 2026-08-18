@@ -52,19 +52,17 @@ class ThreadPool:
     # This pool manages a list of thread workers managing client requests via a
     # queue of callables.
 
-    # The pool keeps a notion of the status of its worker threads.
+    # The pool keeps a notion of the status of its worker threads
+    statuses = (
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # If...  | The worker thread ...
+    # If ...  | the worker thread ...
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # idle   | does nothing
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # busy   | is doing its job
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # hung   | has been doing a job for too long
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # dying  | is a hung thread that has been killed, but hasn't died quite yet
-    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # zombie | that we've tried to kill but isn't dead yet
+    'idle',   # does nothing ;
+    'busy',   # is doing its job ;
+    'hung',   # has been doing a job for too long ;
+    'dying',  # is a hung thread that has been killed, but hasn't died quite yet
+    'zombie', # that we've tried to kill but isn't dead yet
+    )
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     # The pool also maintains, in attribute "tracked", a dictionary with these
@@ -199,7 +197,9 @@ class ThreadPool:
 
     def getTracked(self, handler, formatted=True):
         '''Returns a dict summarizing info about the threads in the pool'''
-        r = O(idle=[], busy=[], hung=[], dying=[], zombie=[])
+        r = O()
+        for status in self.statuses:
+            setattr(r, status, [])
         now = time.time()
         cfg = self.config
         for worker in self.workers:
