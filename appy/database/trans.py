@@ -157,41 +157,15 @@ class Transaction:
                f'selection.{cr}ZODB says: %s.{cr}Conflicting transaction: %s.'
     UNDO_TKO = f'🚫️ Undo failed. ZODB says: %s.'
 
-    # Navigate within bunches of x transactions (last transactions first)
-
-    pxNav = Px('''
-     <div class="flexg">
-
-      <!-- Goto first page -->
-      <img if="first != 0" src=":svg('arrows')" class="clickable iconS"
-           style=":rotate % 90" onclick="transNav(0)"/>
-
-      <!-- Goto previous page -->
-      <img if="first != 0" src=":svg('arrow')" class="clickable iconS"
-           style=":rotate % 90" onclick=":f'transNav({first - batchSize})'"/>
-
-      <!-- Display current range -->
-      <div if="not(first == 0 and counT &lt; batchSize)">
-       <x>:first+1</x> ⇀ <x>:first + batchSize</x>
-      </div>
-
-      <!-- Goto next page -->
-      <img if="counT == batchSize" src=":svg('arrow')" class="clickable iconS"
-           style=":rotate % 270" onclick=":f'transNav({first + batchSize})'"/>
-     </div>''')
-
     # Show a bunch of transactions
 
     pxList = Px('''
      <x var="database=tool.database;
              Transaction=database.Transaction;
-             first=int(req.first) if 'first' in req else 0;
-             batchSize=int(req.batchSize) if 'batchSize' in req else 20;
-             transactions=Transaction.list(database, first, batchSize,
+             nav=tool.ui.ListNav(req, batchSize=20);
+             transactions=Transaction.list(database, nav.first, nav.batchSize,
                                            req.filter);
-             counT=len(transactions);
-             pageUrl=f'{tool.url}/view?page=transactions&amp;first=%s';
-             rotate='transform:rotate(%ddeg)'">
+             x=nav.setCount(len(transactions))">
 
       <h2>Transactions <span class="discreet"> · Most recent first</span></h2>
 
@@ -203,7 +177,7 @@ class Transaction:
       </div>
 
       <!-- Navigation -->
-      <x>:Transaction.pxNav</x>
+      <x>:nav.px</x>
 
       <!-- Transactions -->
       <form if="transactions" method="post" id="undoTrans" name="undoTrans"
@@ -213,7 +187,7 @@ class Transaction:
         <tr for="trans in transactions"
             var2="tid=trans.id;
                   tindex=loop.trans.nb;
-                  ntid=f'{first + tindex}*{tid}'">
+                  ntid=f'{nav.first + tindex}*{tid}'">
          <td><input type="checkbox" name="transId"
                     id=":f'trans{tindex}'" value=":ntid"/></td>
          <td class="transId">:tid</td>
@@ -239,13 +213,6 @@ class Transaction:
       .small td.transId { padding-top:0.3em }''',
 
     js='''
-      function transNav(first) {
-        let url = new URL(window.location),
-            params = url.searchParams;
-        params.set('first', first);
-        window.location = url.href;
-      }
-
       function transFilter(button) {
         // Retrieve the value from the filter
         let value = (button.previousElementSibling.value || '').trim(),

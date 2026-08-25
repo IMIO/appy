@@ -16,6 +16,9 @@ L_CREA  = '%s created.'
 class Config:
     '''Logging-related parameters for your app'''
 
+    # Default format for dumped dates
+    dateFmt = '%Y/%m/%d %H:%M:%S'
+
     # 2 log files exist per Appy site, one for each of the following types.
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # "app"  | The *app*lication log stores entries corresponding to app-related
@@ -24,25 +27,26 @@ class Config:
     #        | itself also uses this log file for outputting various infos (user
     #        | logins, logouts...), warnings or errors.
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # "site" | The site log contains every hit on the site = enery HTTP POST or
+    # "site" | The site log contains every hit on the site = every HTTP POST or
     #        | GET request.
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     logTypes = 'app', 'site'
 
-    # Available attributes to dump within log entries
-    logAttributes = {
+    # Correspondance between names of log attributes as defined by Appy and as
+    # defined by the logging.Formatter.
+
+    nameMap = {
       'time': 'asctime', # The current date & time
       'level': 'levelname', # The log level
-      'message': 'message' # The message to log, prefixed by the user login
+      'message': 'message' # The message to log
     }
 
-    def __init__(self, siteDateFormat='%Y/%m/%d %H:%M:%S',
-                 appDateFormat='%Y/%m/%d %H:%M:%S',
+    def __init__(self, siteDateFormat=dateFmt, appDateFormat=dateFmt,
                  siteAttributes=('time', 'message'),
                  appAttributes=('time', 'level', 'message'),
                  # Add "agent" hereafter to get the browser's User-Agent string
-                 siteMessageParts=('ip', 'port', 'method', 'thread', 'protocol',
-                                   'path', 'message'),
+                 siteMessageParts=('ip', 'port', 'user', 'method', 'thread',
+                                   'protocol', 'path', 'message'),
                  appMessageParts=('user', 'message'),
                  siteSep=' | ', appSep=' | '):
         '''Initializes the logging configuration options'''
@@ -58,12 +62,10 @@ class Config:
 
         # Create a sub-object for splitting site- and app-related configuration
         # options.
-        for type in self.logTypes:
-            sub = O(dateFormat=eval(f'{type}DateFormat'),# ~pathlib.Path~
-                    attributes=eval(f'{type}Attributes'),
-                    messageParts=eval(f'{type}MessageParts'),
-                    sep=eval(f'{type}Sep'))
-            setattr(self, type, sub)
+        self.site = O(dateFormat=siteDateFormat, attributes=siteAttributes,
+                      messageParts=siteMessageParts, sep=siteSep)
+        self.app  = O(dateFormat=appDateFormat,  attributes=appAttributes,
+                      messageParts=appMessageParts,  sep=appSep)
 
     def set(self, siteLogFolder, appLogFolder):
         '''Sets site-specific configuration elements'''
@@ -84,7 +86,7 @@ class Config:
         # Define the list of attributes to dump in every log entry
         attributes = []
         for name in sub.attributes:
-            attributes.append(f'%({Config.logAttributes[name]})s')
+            attributes.append(f'%({Config.nameMap[name]})s')
         return logging.Formatter(sub.sep.join(attributes),
                                  datefmt=sub.dateFormat)
 

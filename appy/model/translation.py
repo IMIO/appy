@@ -5,14 +5,15 @@
 import tempfile
 from pathlib import Path
 
-from appy.tr import po
-from appy.model.base import Base
-from appy.ui.layout import Layouts
-from appy.model.fields.text import Text
-from appy.model.fields.phase import Page
-from appy.model.fields.string import String
-from appy.model.fields.action import Action
-from appy.model.fields.computed import Computed
+from ..tr import po
+from .base import Base
+from .fields.text import Text
+from .fields.phase import Page
+from ..data import nativeNames
+from ..ui.layout import Layouts
+from .fields.string import String
+from .fields.action import Action
+from .fields.computed import Computed
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TR_UPDATED = 'Translation file for "%s" loaded - %d messages.'
@@ -45,7 +46,7 @@ class Translation(Base):
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     def updateFromFiles(self, appyFiles, appFiles, extFiles):
-        '''Loads labels on p_self from Appy, app and ext's po files'''
+        '''Loads translations on p_self from Appy, app and ext's po files'''
         # Count the number of loaded messages
         count = 0
         appName = self.config.model.appName
@@ -61,6 +62,35 @@ class Translation(Base):
                 setattr(self, message.id, message.get())
                 count += 1
         self.log(TR_UPDATED % (lg, count))
+
+    @classmethod
+    def loadAll(class_, tool, root, poFiles):
+        '''Loads, when relevant, Appy "po" files into Translation objects'''
+        # App's "po" files are already in p_poFiles. Also load ext's "po" files
+        # if an ext is defined.
+        config = tool.config
+        ui = config.ui
+        load = ui.loadTranslationsAtStartup
+        extFiles = None
+        if load:
+            appyFiles = po.load(pot=False, languages=ui.languages)
+            if config.ext:
+                extPath = f'{__import__(config.ext).__path__[0]}/tr'
+                extFiles = po.load(path=Path(extPath), pot=False,
+                                   languages=ui.languages)
+
+        # Ensure a Translation object exists for every supported language
+        for language in ui.languages:
+            if language not in root.objects:
+                # Create a Translation file
+                tr = tool.create('translations', secure=False, id=language,
+                                 title=f'{language} ({nativeNames[language]})',
+                                 sourceLanguage=ui.sourceLanguage)
+                tr.updateFromFiles(appyFiles, poFiles, extFiles or {})
+            else:
+                tr = root.objects[language]
+                if load:
+                    tr.updateFromFiles(appyFiles, poFiles, extFiles or {})
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                          Get a translated text

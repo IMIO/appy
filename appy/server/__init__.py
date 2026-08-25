@@ -8,17 +8,18 @@ import os, sys, time, platform, pwd
 import socket, logging, pathlib, selectors, threading
 
 from appy.px import Px
+from .status import Status
+from .pool import ThreadPool
 from appy import utils, version
+from .scheduler import Scheduler
 from appy.model.root import Model
 from appy.database import Database
 from appy.utils import url as uutils
-from appy.server.pool import ThreadPool
 from appy.utils.path import getShownSize
 from appy.model.utils import Object as O
-from appy.server.scheduler import Scheduler
+from .static import Config as StaticConfig
 from appy.utils import executeCommand, bn, br
-from appy.server.static import Config as StaticConfig
-from appy.server.handler import Handler, HttpHandler, VirtualHandler
+from .handler import Handler, HttpHandler, VirtualHandler
 
 # Constants  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 START_CLASSIC = ':: Starting server ::'
@@ -363,7 +364,9 @@ class Server:
     '''Appy HTTP server'''
 
     # Make some names available gere
+    Status = Status
     Handler = Handler
+    Pool = ThreadPool
     platform = platform
 
     # Some elements will be traversable

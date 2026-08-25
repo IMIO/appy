@@ -177,25 +177,49 @@ class Handler:
         if not hasattr(self.tool, 'initialiseHandler'): return
         self.tool.initialiseHandler(self)
 
-    def clientIP(self):
+    def getClientIP(self):
         '''Gets the IP address of the client'''
         # Check header key X-Forwarded-For first
         return self.headers.get('X-Forwarded-For') or self.clientHost
 
+    def getClientPort(self):
+        '''Returns, as a string, the TCP port at the client side'''
+        return str(self.clientPort)
+
+    def getAgent(self):
+        '''Returns the "User-Agent" string as found in HTTP headers'''
+        return self.headers.get("User-Agent")
+
+    def getThreadName(self):
+        '''Get the name of the thread running myself'''
+        return threading.current_thread().name
+
+    def getUserLogin(self):
+        '''Gets the login of the currently logged user'''
+        try:
+            r = self.guard.userLogin
+        except AttributeError:
+            r = self.noUser
+        return r
+
     # This dict allows, on a concrete handler, to find the data to log
-    logAttributes = O(
-      ip='self.clientIP()', port='str(self.clientPort)', message='message',
-      method='self.httpMethod', path='self.path', user='self.getUserLogin()',
-      protocol='self.requestVersion', thread='threading.current_thread().name',
-      agent='self.headers.get("User-Agent")'
-    )
+    logAttributes = {
+      'path': 'path',
+      'agent': getAgent,
+      'ip' : getClientIP,
+      'user': getUserLogin,
+      'port': getClientPort,
+      'method': 'httpMethod',
+      'thread': getThreadName,
+      'protocol': 'requestVersion',
+    }
 
     def log(self, type, level, message=None):
         '''Logs, in the logger determined by p_type, a p_message at some
-           p_level, that can be "debug", "info", "warning", "error" or
-           "critical". p_message can be empty: in this case, the log entry will
-           only contain the predefined attributes as defined by the
-           appy.database.log.Config.'''
+           p_level.'''
+        # p_level can be "debug", "info", "warning", "error" or "critical".
+        # p_message can be empty: in this case, the log entry will only contain
+        # the predefined attributes as defined by the appy.database.log.Config.
         server = self.server
         # Add the "log char" to the message when relevant
         if message and self.logChar:
@@ -204,14 +228,20 @@ class Handler:
         cfg = getattr(server.config.log, type)
         # Get the parts of the message to dump
         r = []
-        ctx = locals()
         for part in cfg.messageParts:
-            try:
-                value = eval(getattr(Handler.logAttributes, part), None, ctx)
-                if value is not None:
-                    r.append(value)
-            except AttributeError:
-                pass
+            value = Handler.logAttributes.get(part)
+            if value is None:
+                # This is the "message" part
+                value = message
+            elif isinstance(value, str):
+                # v_value is the name of an attribute on p_self
+                value = getattr(self, value)
+            else:
+                # v_value is a method on p_self
+                value = value(self)
+            # Add p_value to p_r if any
+            if value is not None:
+                r.append(value)
         # Call the appropriate method on the logger object corresponding to the
         # log p_level.
         getattr(logger, level)(cfg.sep.join(r))
@@ -265,6 +295,11 @@ class HttpHandler(Handler):
     # Chars that signal the end of headers
     HEADERS_END = b'\r\n', b'\n', b''
 
+    # When a static request is served, the current user is not computed. User
+    # 'uncomputed' is more than special: it means that the actual user is not
+    # known because for the current request, it is not computed.
+    noUser = 'uncomputed'
+
     def __init__(self, clientSocket, server):
         # The global config
         self.config = server.config
@@ -305,7 +340,7 @@ class HttpHandler(Handler):
         # why it is convenient to define such attributes on it.
         self.tool = self.dbConnection.root.objects.get('tool')
         # Call the base handler's method
-        Handler.init(self)
+        super().init()
 
     def finish(self):
         '''Closes p_self.rfile'''
@@ -333,13 +368,6 @@ class HttpHandler(Handler):
         else:
             r = ctx.layout
         return r
-
-    def getUserLogin(self):
-        '''Gets the login of the currently logged user'''
-        try:
-            return self.guard.userLogin
-        except AttributeError:
-            return 'system'
 
     def isAjax(self):
         '''Is this handler handling an Ajax request ?'''
@@ -739,6 +767,9 @@ class VirtualHandler(Handler):
     # Entries logged from a virtual handler will be prefixed with this char
     logChar = '>'
 
+    # Any request served by a virtual handler is done under user "system"
+    noUser = 'system'
+
     def __init__(self, server):
         '''Tries to define the same, or fake version of, a standard handler's
            attributes.'''
@@ -748,6 +779,8 @@ class VirtualHandler(Handler):
         # Create fake Request and Response objects
         self.req = Request()
         self.resp = Response(self)
+        # There is no guard yet defined for a virtual request
+        self.guard = None
         # Call the base handler's method
         Handler.init(self)
         # Add myself to the registry of handlers
@@ -761,9 +794,4 @@ class VirtualHandler(Handler):
     # A virtual handler is never in a popup nor serves ajax requests
     def inPopup(self): return
     def isAjax(self): return
-
-    def getUserLogin(self):
-        '''Gets the login of the currently logged user'''
-        # A virtual handler is always ran by "system"
-        return 'system'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

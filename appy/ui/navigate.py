@@ -439,4 +439,69 @@ class SearchSiblings(Siblings):
                f'class="clickable back{css}"/>{text}</a>'
 
     def showGotoNumber(self, c): return
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class ListNav:
+    '''Simple PX allowing to navigate between elements of a persistent list'''
+
+    def __init__(self, req, total=None, batchSize=30):
+        '''ListNav constructor'''
+        # The total number of elements of the list (may not be known)
+        self.total = total
+        # The index of the first element to show
+        self.first = int(req.first) if 'first' in req else 0
+        # The number of list elements to show at once
+        self.batchSize = int(req.batchSize) if 'batchSize' in req else batchSize
+        # The count of currently shown elements
+        self.count = 0 # Will be set by a call to m_setCount
+
+    def __repr__(self):
+        '''p_self as a short string'''
+        tot = self.total or '?'
+        return f'‹ListNav total={tot},first={self.first},' \
+               f'batchSize={self.batchSize},count={self.count}›'
+
+    def setCount(self, count):
+        self.count = count
+
+    def getEndIndex(self):
+        '''Gets the index of the last element to shown on the current list'''
+        delta = self.count or self.batchSize
+        return self.first + delta
+
+    # Rotation to apply to SVG arrows
+    rotate = 'transform:rotate(%ddeg)'
+
+    # Within the PX context, the current ListNav object is available as "nav"
+    px = Px('''
+     <div class="flexg" var="first=nav.first; batchSize=nav.batchSize">
+
+      <!-- Goto first page -->
+      <img if="first != 0" src=":svg('arrows')" class="clickable iconS"
+           style=":nav.rotate % 90" onclick="listNav(0)"/>
+
+      <!-- Goto previous page -->
+      <img if="first != 0" src=":svg('arrow')" class="clickable iconS"
+           onclick=":f'listNav({first - batchSize})'" style=":nav.rotate % 90"/>
+
+      <!-- Display current range -->
+      <div if="not(first == 0 and nav.count &lt; batchSize)">
+       <x>:first+1</x> ⇀ <x>:first + nav.count</x>
+       <x if="nav.total"> / <x>:nav.total</x></x>
+      </div>
+
+      <!-- Goto next page -->
+      <img if="nav.count == batchSize" src=":svg('arrow')"
+           style=":nav.rotate % 270" onclick=":f'listNav({first + batchSize})'"
+           class="clickable iconS"/>
+     </div>''',
+
+     js='''
+      function listNav(first) {
+        let url = new URL(window.location),
+            params = url.searchParams;
+        params.set('first', first);
+        window.location = url.href;
+      }'''
+     )
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

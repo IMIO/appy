@@ -22,13 +22,13 @@ from .globals import Globals
 from .columns import Columns
 from .sidebar import Sidebar
 from .template import Template
-from .navigate import Siblings
 from .includer import Includer
 from .language import Language
 from .progress import Progress
 from .validate import Validator
 from .svg import Config as SvgConfig
 from .dark import Config as DarkConfig
+from .navigate import Siblings, ListNav
 
 # Some elements in this module will be traversable - - - - - - - - - - - - - - -
 traverse = {'Language': True, 'Progress': True}

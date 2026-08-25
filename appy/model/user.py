@@ -794,7 +794,7 @@ class User(Base):
         # every connected user. The user will be part of the result only if the
         # expression evaluates to True. The user is passed to the expression as
         # variable "user".
-        # ~
+        #
         # Get and count connected users
         users = list(tool.H().onlineUsers.items())
         users.sort(key=lambda u: u[1], reverse=True) # Sort by last access date

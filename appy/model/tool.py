@@ -2,14 +2,11 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from pathlib import Path
 from DateTime import DateTime
 import re, urllib.parse, subprocess
 
 import appy.ui
-from ..tr import po
 from ..px import Px
-from .. import Config
 from .base import Base
 from .user import User
 from .root import Model
@@ -26,7 +23,6 @@ from .fields.rich import Rich
 from .carousel import Carousel
 from .fields.phase import Page
 from .utils import Object as O
-from ..data import nativeNames
 from .page import Page as OPage
 from ..utils.mail import Mailer
 from ..database import Database
@@ -34,6 +30,7 @@ from ..ui.layout import Layouts
 from ..xml.escape import Escape
 from .fields.string import String
 from .fields.action import Action
+from .fields.custom import Custom
 from ..database.log import Viewer
 from ..ui.template import Template
 from ..ui.progress import Progress
@@ -132,33 +129,11 @@ class Tool(Base):
                         title='Administrators', roles=['Manager'])
             self.log(GRP_CREA)
 
-        # Load Appy "po" files if we need to inject their values into
-        # Translation objects. app's "po" files are already in p_poFiles.
-        # Also load ext's "po" files if an ext is defined.
-        config = handler.server.config
-        ui = config.ui
-        load = ui.loadTranslationsAtStartup
-        extFiles = None
-        if load:
-            appyFiles = po.load(pot=False, languages=ui.languages)
-            if config.ext:
-                extPath = f'{__import__(config.ext).__path__[0]}/tr'
-                extFiles = po.load(path=Path(extPath), pot=False,
-                                   languages=ui.languages)
-
-        # Ensure a Translation object exists for every supported language
-        for language in ui.languages:
-            if language not in root.objects:
-                # Create a Translation file
-                tr = self.create('translations', secure=False, id=language,
-                            title=f'{language} ({nativeNames[language]})',
-                            sourceLanguage=ui.sourceLanguage)
-                tr.updateFromFiles(appyFiles, poFiles, extFiles or {})
-            else:
-                tr = root.objects[language]
-                if load: tr.updateFromFiles(appyFiles, poFiles, extFiles or {})
+        # Load translations from "po" files
+        Translation.loadAll(self, root, poFiles)
 
         # Check connected servers
+        config = self.config
         self.checkServers(config)
 
         # Define the home page
@@ -166,6 +141,9 @@ class Tool(Base):
 
         # Reinit the current user, that may be a fake one so far
         if handler.fake: handler.guard.initUser()
+
+        # Launch, when relevant, the job that will record server status
+        Server.Status.runJob(self)
 
         # Call method "onInstall" on the tool when available. This hook allows
         # an app to execute code on server initialisation.
@@ -364,7 +342,7 @@ class Tool(Base):
                   shownInfo=Query.listColumns, **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #                           "admin" zone
+    #                           The admin zone
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def forAdmin(self):
@@ -378,6 +356,19 @@ class Tool(Base):
     serverInfo = Computed(method=Server.view, layouts='f',
       page=Page('server', phase='admin', show=forAdmin,
                 label='Tool_page_server'), **ta)
+
+    # Status information about the running server, recorded on a regular basis,
+    # according to config.server.status* attributes. Stores a persistent list of
+    # appy.server.status.Status objects (most recent first).
+
+    ps = Page('statuses', phase='admin', label='Tool_page_statuses',
+              show=Server.Status.showPage)
+
+    # ~[Status]~
+    serverStatuses = Custom(page=ps, show='view', view=Server.Status.px)
+
+    # Adds a new Status object into f_serverStatuses
+    recordServerStatus = Server.Status.record
 
     # Database info and actions
     pageDB = Page('database', phase='admin', show=forAdmin,

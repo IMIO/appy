@@ -96,6 +96,9 @@ class ThreadPool:
     # connections should be droppped.
     daemon = True
 
+    # Default info about a thread, representing no info at all
+    noInfo = None, None
+
     def __init__(self, server, config):
         '''Initialise the pool's data stuctures'''
         # A reference to the p_server
@@ -148,7 +151,7 @@ class ThreadPool:
             for worker in self.workers:
                 # Ignore uninitialized threads
                 if not hasattr(worker, 'thread_id'): continue
-                started, info = self.tracked.get(worker.thread_id, (None,None))
+                started, info = self.tracked.get(worker.thread_id, self.noInfo)
                 if started is not None:
                     if (now - started) < cfg.hungThreadLimit:
                         busy += 1
@@ -195,29 +198,42 @@ class ThreadPool:
         inf = f' · {handler.getUserLogin()} · {handler.path}' if handler else ''
         return f'{thread.getName()} · {iD}{inf}'
 
-    def getTracked(self, handler, formatted=True):
-        '''Returns a dict summarizing info about the threads in the pool'''
-        r = O()
+    def getTracked(self, handler, formatted=True, statusObject=None):
+        '''Returns an object summarizing info about the threads in the pool'''
+        # If p_formatted is True, the object is converted to a XHTML table, and
+        # this latter is returned, as a string. If p_status is passed, it is an
+        # instance of class Status from appy/server/status.py: it will be used
+        # as result and will store a more minimalist info: the count of threads,
+        # per thread status. When a status object is passed, p_formatted is
+        # ignored.
+        r = O() if statusObject is None else statusObject
         for status in self.statuses:
-            setattr(r, status, [])
+            initVal = 0 if statusObject else []
+            setattr(r, status, initVal)
         now = time.time()
         cfg = self.config
         for worker in self.workers:
             # Ignore threads not being fully started up
             if not hasattr(worker, 'thread_id'): continue
-            started, info = self.tracked.get(worker.thread_id, (None, None))
+            started, info = self.tracked.get(worker.thread_id, self.noInfo)
             if started is not None:
                 attr = 'hung' if (now-started) > cfg.hungThreadLimit else 'busy'
             else:
                 attr = 'idle'
-            getattr(r, attr).append(worker)
+            if statusObject: # Update a count
+                r.addCount(attr)
+            else: # Store the thread itself in v_r, at this v_attr
+                getattr(r, attr).append(worker)
         # Add dying and zombies
         for id, (killed, worker) in self.dyingThreads.items():
             culled = self.cullThreadIfDead(id)
             if culled: continue
             attr = 'zombie' if now - killed > cfg.dyingLimit else 'dying'
-            getattr(r, attr).append(worker)
-        if formatted:
+            if statusObject:
+                r.addCount(attr)
+            else:
+                getattr(r, attr).append(worker)
+        if formatted and not statusObject:
             # Return it as a XHTML table
             rows = []
             for name, threads in r.items():
@@ -282,7 +298,7 @@ class ThreadPool:
                 starting += 1
                 continue
             id = worker.thread_id
-            started, info = self.tracked.get(id, (None, None))
+            started, info = self.tracked.get(id, self.noInfo)
             if started is None:
                 # Must be idle
                 idle += 1
@@ -446,4 +462,8 @@ class ThreadPool:
                     self.debug(SHUTD_F_OK)
         else:
             self.debug(SHUTD_OK)
+
+    def getStatusText(self, status):
+        '''Return a text corresponding to threads having this p_status'''
+        return f'{status.capitalize()}{br}threads'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
