@@ -476,21 +476,21 @@ class ListNav:
     px = Px('''
      <div class="flexg" var="first=nav.first; batchSize=nav.batchSize">
 
-      <!-- Goto first page -->
+      <!-- Go to the first page -->
       <img if="first != 0" src=":svg('arrows')" class="clickable iconS"
            style=":nav.rotate % 90" onclick="listNav(0)"/>
 
-      <!-- Goto previous page -->
+      <!-- Go to the previous page -->
       <img if="first != 0" src=":svg('arrow')" class="clickable iconS"
            onclick=":f'listNav({first - batchSize})'" style=":nav.rotate % 90"/>
 
-      <!-- Display current range -->
+      <!-- Display the current range -->
       <div if="not(first == 0 and nav.count &lt; batchSize)">
        <x>:first+1</x> ⇀ <x>:first + nav.count</x>
        <x if="nav.total"> / <x>:nav.total</x></x>
       </div>
 
-      <!-- Goto next page -->
+      <!-- Go to the next page -->
       <img if="nav.count == batchSize" src=":svg('arrow')"
            style=":nav.rotate % 270" onclick=":f'listNav({first + batchSize})'"
            class="clickable iconS"/>

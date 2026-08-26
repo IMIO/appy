@@ -369,7 +369,7 @@ class Field:
        <x if="not selector and guard.mayAct(o)">:ifield.pxObjectActions</x>
 
        <!-- Controls that may be dumped between 2 rows -->
-       <x if="addAnywhere and loop.o.first"
+       <x if="addAnywhere and loop.o and loop.o.first"
               var2="below=False">:ifield.pxInBetween</x>
        <x if="addAnywhere" var2="below=True">:ifield.pxInBetween</x>
       </x>
