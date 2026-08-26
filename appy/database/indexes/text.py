@@ -44,7 +44,8 @@ class TextIndex(Index):
     def valueEquals(self, value, current): return
 
     @classmethod
-    def toIndexed(class_, value, field, normalize=True, words=None):
+    def toIndexed(class_, value, field, normalize=True, words=None,
+                  options=None):
         '''Splits the plain text p_value into words'''
         # If p_words is passed, it is a dict of the form ~{s_word:None}~: every
         # found word is added into it. Else, words are returned, as a tuple.
@@ -55,7 +56,7 @@ class TextIndex(Index):
             r = set()
         if normalize:
             value = Normalize.text(value)
-        options = class_.getOptions(field)
+        options = options or class_.getOptions(field)
         for word in value.split():
             # Keep this word or not ?
             if len(word) <= options.ignore:

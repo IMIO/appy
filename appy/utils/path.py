@@ -248,4 +248,42 @@ def isLessThan(path, minutes):
     now = DateTime()
     modified = DateTime(path.stat().st_mtime)
     return ((now-modified)*24*60) <= minutes
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Splitter:
+    '''Splits a file into chunks of at most X bytes'''
+
+    FILE_KO = 'File %s does not exist or is not a file.'
+
+    # Default size for a chunk of files
+    defaultSize = 200 * 1024 * 1024 # 200 Mb
+
+    def __init__(self, sourceFile, ext='chunked', chunkSize=defaultSize, z=3):
+        # The file to split, as a Path object
+        self.sourceFile = sourceFile
+        # The folder where to dump the splitted files will correspond to the
+        # name of the file + a dot + p_ext. For example, if the source file is
+        # appy.fs and p_ext is "chunked", the chunks will go in a folder,
+        # besides appy.fs, named appy.fs.chunked.
+        self.destFolder = sourceFile.parent / f'{sourceFile.name}.{ext}'
+        # The maximum size, in bytes, for each part
+        self.chunkSize = chunkSize
+        # Each chunk will have the same name as the p_sourceFile, into which a
+        # z-filled chunk number will be injected (according to p_z), just before
+        # the last file extension. The chunk number will start at 1. For
+        # example, the first chunk for a file named appy.fs, with a p_z of 3,
+        # will be named appy.001.fs.
+        self.z = z
+
+    def prepare(self):
+        '''Prepare the split'''
+        if not self.sourceFile.is_file():
+            raise Exception(self.FILE_KO % self.sourceFile)
+        if not self.destFolder.is_dir():
+            raise Exception(self.DIR_KO % self.destFolder)
+
+    def run(self):
+        '''Performs the split'''
+        # Before actually performing the split, prepare it
+        self.prepare()
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
