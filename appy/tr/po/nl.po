@@ -805,7 +805,7 @@ msgstr "Annuleren"
 
 #. Default: "Give up"
 msgid "abandon"
-msgstr "Geef het op"
+msgstr "Afbreken"
 
 #. Default: "Changes canceled."
 msgid "object_canceled"
