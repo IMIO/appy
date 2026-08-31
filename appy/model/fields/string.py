@@ -441,8 +441,8 @@ class String(Multilingual, Field):
         # Escape v_value on /view layouts, excepted if p_value is detected as
         # being XHTML content. Indeed, a String value being a diff contains
         # XHTML data.
-        if value and layout in Layouts.viewLayouts and \
-           not value.startswith('<'):
+        if value and layout in Layouts.viewLayouts and isinstance(value, str) \
+           and not value.startswith('<'):
             value = Escape.xhtml(value, p=False)
         return value or ''
 

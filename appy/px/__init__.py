@@ -110,7 +110,7 @@ class Px:
     def __repr__(self):
         '''p_self as a short string'''
         name = f' name="{self.name}"' if self.name else ''
-        return f'‹PX{name} in@{self.file}:{self.line}›'
+        return f'‹PX{name} @{self.file}:{self.line}›'
 
     def setLocation(self):
         '''Retrieves p_self's "location" = the code file and number where it has

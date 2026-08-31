@@ -411,7 +411,7 @@ class LayoutF(Layout):
         # If the cell spans more than one cell, wrap it in a span in order to
         # achieve the same result, with flex, as a colspan > 1.
         if cell.basis > 1:
-            r = f'<span style="flex:1 0 {cell.basis}%">{r}</span>'
+            r = f'<span style="flex:1 0 {cell.basis}%">{r(c)}</span>'
         return r
 
     def __repr__(self): return f'‹LayoutF {self.layoutString}›'
