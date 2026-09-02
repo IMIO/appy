@@ -13,7 +13,7 @@ from ..database.vault import Vault
 from ..pod import formatsByTemplate
 from ..model.utils import Object as O
 from ..utils import executeCommand, Traceback
-from ..utils.path import getShownSize, getOsTempFolder
+from ..utils.path import getShownSize, getOsTempFolder, Splitter
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # If you want to configure the backup of your Appy server, place, in the main
@@ -32,12 +32,14 @@ BKP_DIS   = 'Backup cannot take place unless you configure it in config.backup.'
 BKP_TYPE  = 'Backup type: %s (full is @%s).'
 CMD       = 'Running: %s...'
 DONE      = "Done in %.2f''."
-S_SIZE    = 'Source file size is %s.'
+S_SIZE    = 'Source file size is %s (%d chunk·s).'
 PACKING   = 'Packing %s (%s)...'
 COPY_LOG  = 'Copy %s to %s.'
 DETAILS   = "\nMore details to be found in site's app.log file."
 DELETED   = 'Deleted from %s: %s'
 UNDELETED = '%s temp file(s) not deleted (unallowed).'
+SPLIT_RUN = 'Splitting %s...'
+SPLIT_OK  = 'Done. Splitted in %d chunk(s).'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -48,11 +50,17 @@ class Config:
         # will create 3 sub-folders in it:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # zodb  | will store copies of the appy.fs file (or named differently if
-        #       | you have changed the default naming convention). 2 copies will
-        #       | be created: backup1.fs and backup2.fs. Everytime the backup is
-        #       | launched, it will copy appy.fs to the less recent version
-        #       | among these 2 files. That way, if the copy crashes, there is
-        #       | always an intact copy in the "zodb" folder.
+        #       | you have changed the default naming convention). Note that
+        #       | appy.fs will not be copied as-is, but will be splitted in
+        #       | smaller, zipped, chunks, named appy.1.fs.zip, appy.2.fs.zip...
+        #       | Indeed, copying large files may be problematic if the source &
+        #       | target files are on 2 different devices and the network is
+        #       | unstable. Moreover, 2 copies of these chunked files will be
+        #       | created, in sub-folders zodb/backup1 and zodb/backup2.
+        #       | Everytime the backup is launched, it will overwrite appy.fs
+        #       | chunks to the less recent version among these 2 backups. That
+        #       | way, if the copy crashes, there is always an intact copy in
+        #       | the "zodb" folder.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # files | will store a copy of the DB-controlled file system
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -148,9 +156,12 @@ class Config:
 class Backup:
     '''Performs backups'''
 
+    # Options to rsync when copying chunks of the .fs file
+    chunkOptions = ['rsync', '-Paz', '--no-o', '--no-g', '--no-l', '--delete',
+                    '--quiet']
+
     # Options to rsync when copying DB-controlled files
-    filesOptions = ['rsync', '-Paz', '--no-o', '--no-g', '--no-l', '--delete',
-                    '--quiet', '--exclude', '*.fs*', '--exclude', '*.log']
+    filesOptions = chunkOptions + ['--exclude', '*.fs*', '--exclude', '*.log']
 
     # Type of backup: full or not
     type = { True: 'full', False: 'standard' }
@@ -206,7 +217,13 @@ class Backup:
             self.log(Traceback.get().strip(), type='error')
 
     def copyDatabase(self):
-        '''Copy the .fs file to the <backup folder>/zodb, using rsync'''
+        '''Splits the .fs file into chunks, and copy these chunks to the
+           <backup folder>/zodb, using rsync.'''
+        # Create the chunks in a folder, besides the .fs file
+        sourceFile = self.tool.config.database.filePath
+        self.log(SPLIT_RUN % sourceFile)
+        count = Splitter(sourceFile).run()
+        self.log(SPLIT_OK % count)
         # Create the destination folder if it does not exist
         destFolder = self.config.path / 'zodb'
         if not destFolder.is_dir():
@@ -215,11 +232,14 @@ class Backup:
             destFolder.mkdir(parents=True, exist_ok=True)
         # Get the last modification dates for backup files
         modified1 = modified2 = None
-        for backupFile in destFolder.glob('backup*.fs'):
-            modified = DateTime(backupFile.stat().st_mtime)
-            if backupFile.name == 'backup1.fs':
+        for backupFolder in destFolder.glob('backup*'):
+            # Ignore files like backup1.fs or backup2.fs, that were dumped
+            # before we decided to produce chunks.
+            if backupFolder.is_file(): continue
+            modified = DateTime(backupFolder.stat().st_mtime)
+            if backupFolder.name == 'backup1':
                 modified1 = modified
-            elif backupFile.name == 'backup2.fs':
+            elif backupFolder.name == 'backup2':
                 modified2 = modified
         # Select the file whose modification date is the less recent one
         if modified1 and modified2:
@@ -227,12 +247,12 @@ class Backup:
         else:
             nb = 1 if not modified1 else 2
         # Prepare the rsync command
-        sourceFile = self.tool.config.database.filePath
         fileSize = getShownSize(sourceFile.stat().st_size)
-        args = ['rsync', '--inplace', '--no-whole-file',
-                str(sourceFile), str(destFolder / f'backup{nb}.fs')]
+        args = list(self.chunkOptions)
+        args.append(f'{sourceFile}.chunked/') # The source folder
+        args.append(str(destFolder / f'backup{nb}'))
         # Run the sync
-        self.runCommand(args, text=S_SIZE % fileSize)
+        self.runCommand(args, text=S_SIZE % (fileSize, count))
 
     def copyFiles(self):
         '''Copy the files from the DB-controlled file system the

@@ -5,6 +5,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import os, os.path, zipfile, time
+
 from appy.utils import mimeTypes
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -90,6 +91,20 @@ def unzip(f, folder, odf=False, unzipSubZips=False, asBytes=True):
     return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def getZipFile(path):
+    '''Returns an open ZipFile object corresponding to this p_path'''
+    # p_path is the (preferably) absolute path name of a .zip file to create
+    #
+    # Remove file@p_path if it exists
+    if os.path.exists(path):
+        os.remove(path)
+    try:
+        r = zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)
+    except RuntimeError:
+        r = zipfile.ZipFile(path, 'w')
+    return r
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def zip(f, folder, odf=False, encode=False):
     '''Zips the content of p_folder into the zip file whose (preferably)
        absolute filename is p_f. If p_odf is True, p_folder is considered to
@@ -97,12 +112,8 @@ def zip(f, folder, odf=False, encode=False):
        case, some rules must be respected while building the zip (see below).
        If p_encode is True, we ensure the name of every file in the zip is
        encoded with encoding CP437.'''
-    # Remove p_f if it exists
-    if os.path.exists(f): os.remove(f)
-    try:
-        zipFile = zipfile.ZipFile(f, 'w', zipfile.ZIP_DEFLATED)
-    except RuntimeError:
-        zipFile = zipfile.ZipFile(f, 'w')
+    # Get the ZipFile object to build
+    zipFile = getZipFile(f)
     # If p_odf is True, insert first the file "mimetype" (uncompressed), in
     # order to be compliant with the OpenDocument Format specification,
     # section 17.4, that expresses this restriction. Else, libraries like
@@ -134,4 +145,19 @@ def zip(f, folder, odf=False, encode=False):
             zInfo.external_attr = 0o777 << 16
             zipFile.writestr(zInfo, '')
     zipFile.close()
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def zipFile(f, delete=True):
+    '''Create a zip file containing a unique file, whose (preferably) absolute
+       file name is in p_f.'''
+    # The zip file is created besides p_f and has the same name, suffixed with
+    # .zip. If p_delete is True, the file@p_path is deleted, once zipped.
+    #
+    # Get the ZipFile object to build
+    fileName = f'{f}.zip'
+    zipFile = getZipFile(fileName)
+    zipFile.write(f, os.path.basename(f))
+    zipFile.close()
+    if delete:
+        os.remove(f)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

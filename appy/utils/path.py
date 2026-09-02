@@ -10,6 +10,7 @@ import os, os.path, time, shutil, mimetypes, tempfile, hashlib
 from DateTime import DateTime
 
 from appy import utils
+from appy.utils.zip import zipFile, unzip
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 defaultMimeType = 'application/octet-stream'
@@ -121,10 +122,11 @@ class FolderDeleter:
                 class_.deleteEmpty(dirPath)
 
     @classmethod
-    def delete(class_, dirName, move=False):
+    def delete(class_, dirName, move=False, keep=False):
         '''Recursively deletes p_dirName. If p_move is True, instead of
            effectively deleting p_dirName, it tries to move it to the OS temp
            folder.'''
+        # If p_keep is True, the emptied folder is not deleted itself
         if move:
             # Instead of deleting it, try to move it to the OS temp folder
             name = os.path.basename(dirName)
@@ -137,8 +139,13 @@ class FolderDeleter:
                 # Renaming the folder may crash if the source and target devices
                 # are different.
                 class_.delete(dirName, move=False)
-            # Remove the parent folder if empty
-            class_.deleteEmpty(os.path.dirname(dirName))
+            if keep:
+                # Recreate the folder, that has been moved to the temp folder or
+                # that has been deleted.
+                Path(dirName).mkdir()
+            else:
+                # Remove the parent folder if empty
+                class_.deleteEmpty(os.path.dirname(dirName))
         else:
             # Delete p_dirName and its content
             dirName = os.path.abspath(dirName)
@@ -147,10 +154,11 @@ class FolderDeleter:
                     os.remove(os.path.join(root, name))
                 for name in dirs:
                     os.rmdir(os.path.join(root, name))
-            os.rmdir(dirName)
+            if not keep:
+                os.rmdir(dirName)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-extsToClean = ('.pyc', '.pyo', '.fsz', '.deltafsz', '.dat', '.log')
+extsToClean = '.pyc', '.pyo', '.fsz', '.deltafsz', '.dat', '.log'
 CLEAN_F_S = 'Cleaning folder %s...'
 RM_FILE   = 'Removing file %s...'
 RM_DIR    = 'Removing folder %s...'
@@ -253,19 +261,34 @@ def isLessThan(path, minutes):
 class Splitter:
     '''Splits a file into chunks of at most X bytes'''
 
-    FILE_KO = 'File %s does not exist or is not a file.'
+    FILE_KO    = 'File %s does not exist or is not a file.'
+    SIZE_KO    = 'Chunk size must be greater than %d.'
+    FILE_EX    = 'Aborted :: File %s exists.'
+    DIR_KO     = 'Aborted :: %s does not exist or is not a folder.'
+    DIR_E      = 'Aborted :: %s is empty.'
 
     # Default size for a chunk of files
     defaultSize = 200 * 1024 * 1024 # 200 Mb
 
-    def __init__(self, sourceFile, ext='chunked', chunkSize=defaultSize, z=3):
+    # Default number of file bytes read at a time in RAM
+    BYTES = 100000
+
+    def __init__(self, sourceFile, ext='chunked', chunkSize=defaultSize, z=3,
+                 destFolder=None, overwrite=True, zipIt=True):
         # The file to split, as a Path object
         self.sourceFile = sourceFile
-        # The folder where to dump the splitted files will correspond to the
-        # name of the file + a dot + p_ext. For example, if the source file is
-        # appy.fs and p_ext is "chunked", the chunks will go in a folder,
-        # besides appy.fs, named appy.fs.chunked.
-        self.destFolder = sourceFile.parent / f'{sourceFile.name}.{ext}'
+        # The folder where to dump the splitted files may be specified, as a
+        # Path object, in p_destFolder, but if it isn't, it will be a folder
+        # created besides p_sourceFile, whose name will be
+        #
+        #                 <p_sourceFile.name>.<p_ext>
+        #
+        # For example, if the source file is appy.fs and p_ext is "chunked", the
+        # chunks will go in a folder, besides appy.fs, named appy.fs.chunked.
+        #
+        # If the destination folder does not exist, it will be created.
+        self.destFolder = destFolder or \
+                          sourceFile.parent / f'{sourceFile.name}.{ext}'
         # The maximum size, in bytes, for each part
         self.chunkSize = chunkSize
         # Each chunk will have the same name as the p_sourceFile, into which a
@@ -274,16 +297,163 @@ class Splitter:
         # example, the first chunk for a file named appy.fs, with a p_z of 3,
         # will be named appy.001.fs.
         self.z = z
+        # If p_overwrite is True and the destination folder is not empty, it
+        # will be emptied. If p_overwrite is False and the destination folder
+        # is not empty, an exception will be raised.
+        self.overwrite = overwrite
+        # Zip every dumped file chunk ?
+        self.zipIt = zipIt
+        # ! A Splitter object may also be used to perform the reverse operation
+        # (called "reification"): reconstituting a source file from its parts.
+        # In that case:
+        # - p_sourceFile must be the file to reify ;
+        # - p_overwrite applies to this file: if it is True and the file exists,
+        #   it will be deleted; if it is False and the file exists, an error
+        #   will be raised ;
+        # - p_chunkSize, p_z and p_zipIt are ignored.
 
     def prepare(self):
         '''Prepare the split'''
+        # Check p_self.chunkSize
+        byteS = self.BYTES
+        if self.chunkSize <= byteS:
+            raise Exception(self.SIZE_KO % byteS)
+        # Ensure the source file exists
         if not self.sourceFile.is_file():
             raise Exception(self.FILE_KO % self.sourceFile)
-        if not self.destFolder.is_dir():
-            raise Exception(self.DIR_KO % self.destFolder)
+        # Ensure the destination folder exists
+        dest = self.destFolder
+        dest.mkdir(parents=True, exist_ok=True)
+        overwrite = self.overwrite
+        isEmpty = not any(dest.iterdir())
+        if overwrite:
+            # Empty v_dest if it is not empty
+            if not isEmpty:
+                FolderDeleter.delete(str(dest), keep=True)
+        else:
+            # Overwriting is not foreseen: raise an error if v_dest is not empty
+            if not isEmpty:
+                raise Exception(DIR_NOT_E % dest)
+
+    def finalizeChunk(self, f, chunkPath):
+        '''Closes this p_f(ile) handler and zips the dumped chunk when
+           requested.'''
+        f.close()
+        # Zip this part when requested
+        if self.zipIt:
+            zipFile(chunkPath)
 
     def run(self):
-        '''Performs the split'''
+        '''Performs the split and returns the number of chunks created'''
         # Before actually performing the split, prepare it
         self.prepare()
+        # Read the source file
+        source = self.sourceFile
+        dest = self.destFolder
+        size = self.chunkSize
+        byteS = self.BYTES # The number of bytes read at a time from the file
+        z = self.z
+        zipIt = self.zipIt
+        # Variables about the current chunk
+        i = 1            # The chunk number
+        bytesRead = 0    # The count of currently read bytes
+        chunkPath = None # The path to the current chunk
+        chunkFile = None # An open file handler to the current chunk
+        with open(str(self.sourceFile), 'rb') as f:
+            while True:
+                # Read the next part of the source file
+                part = f.read(byteS)
+                if not part:
+                    # All the file has been read. Finalize the last chunk.
+                    self.finalizeChunk(chunkFile, chunkPath)
+                    return i
+                partSize = len(part)
+                # Dump v_part ...
+                if bytesRead + partSize > size:
+                    # ... in the next chunk: v_size has been reached
+                    i += 1
+                    bytesRead = 0
+                    self.finalizeChunk(chunkFile, chunkPath)
+                    chunkPath = None
+                    chunkFile = None
+                # Dump p_part
+                if chunkFile is None:
+                    # Create the chunk file, it does not exist yet
+                    chunkName =f'{source.stem}.{str(i).zfill(z)}{source.suffix}'
+                    chunkPath = dest / chunkName
+                    chunkFile = open(chunkPath, 'wb')
+                chunkFile.write(part)
+                bytesRead += partSize
+        return i
+
+    def prepareReification(self):
+        '''Prepares the reification'''
+        # Manage the file to reify
+        overwrite = self.overwrite
+        source = self.sourceFile
+        if overwrite:
+            # Delete the source file if it exists
+            if source.is_file():
+                source.unlink()
+        else:
+            # Raise an error if it exists
+            if source.is_file():
+                raise Exception(self.FILE_EX % source)
+        # Manage the destination folder: it must exist and not be empty
+        dest = self.destFolder
+        if not dest.is_dir():
+            raise Exception(self.DIR_KO % dest)
+        if not any(dest.iterdir()):
+            raise Exception(self.DIR_E % dest)
+        # The following attribute will store the path to an OS temp folder that
+        # will be used to store unzipped chunks, if they are zipped.
+        self.unzipFolder = None
+
+    def getUnzipFolder(self):
+        '''Returns the path to the folder where to unzip chunks. If it does does
+           not exist yet, it is created.'''
+        r = self.unzipFolder
+        if r is None:
+            r = self.unzipFolder = getOsTempFolder(sub=True, asPath=True,
+                                                   prefix='AppyChunkUnzip')
+        return r
+
+    def getChunkPath(self, chunk):
+        '''In the context of reification, this method returns, as a Path object,
+           the absolute path to that p_chunk. If the chunk is not a zip file,
+           the method returns p_chunk itself. Else, it unzips it in a temp
+           folder and returns a Path object to that unzipped file.'''
+        if chunk.name.endswith('.zip'):
+            unzipFolder = self.getUnzipFolder()
+            unzip(str(chunk), unzipFolder)
+            r = unzipFolder / chunk.name[:-4]
+        else:
+            r = chunk
+        return r
+
+    def reify(self):
+        '''Reifies the source file from its chunks'''
+        # Prepare the reification
+        self.prepareReification()
+        # Create the file to reify
+        byteS = self.BYTES # The number of bytes read at a time from the file
+        with open(self.sourceFile, 'wb') as f:
+            # Get the chunks from p_self.destFolder
+            chunks = list(self.destFolder.glob('*.*'))
+            chunks.sort(key=lambda chunk: chunk.name)
+            for chunk in chunks:
+                # Possibly unzip it
+                chunk = self.getChunkPath(chunk)
+                # Read the chunk and add its content to p_f
+                with open(chunk, 'rb') as g:
+                    while True:
+                        part = g.read(byteS)
+                        if not part:
+                            # The chunk has been entirely read
+                            break
+                        f.write(part)
+        # Clean the temp folder, if any
+        if self.unzipFolder:
+            pass # XXX
+            #FolderDeleter.delete(self.unzipFolder)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

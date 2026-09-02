@@ -525,4 +525,21 @@ def firstMatch(rex, s):
     for regex in rex:
         match = regex.search(s)
         if match: return match.group(0)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def getCommonPrefix(s1, s2):
+    '''Returns the common prefix between strings p_s1 and p_s2'''
+    r = ''
+    i = 0
+    # Walk s1 and s2, char by char
+    while True:
+        try:
+            c1 = s1[i]
+            c2 = s2[i]
+            if c1 == c2:
+                r = f'{r}{c1}'
+            i += 1
+        except IndexError:
+            break # We have reached the end of one (or both) string(s)
+    return r
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
