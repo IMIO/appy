@@ -21,6 +21,10 @@ from appy.utils import string as sutils
 from appy.xml.cleaner import StringCleaner
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+REC_ERR = '%s :: Max recursion depth reached while walking history, looking ' \
+          'for updates to field "%s".'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventIterator:
     '''Iterator for history events'''
 
@@ -545,11 +549,16 @@ class History(PersistentList):
         if name is None: return
         # Check if history is available for field named p_name
         empty = True
-        for event in self.iter(eventType='Change', \
-                               condition=f"event.hasField('{name}')"):
-            # If we are here, at least one change concerns the field
-            empty = False
-            break
+        try:
+            for event in self.iter(eventType='Change', \
+                                   condition=f"event.hasField('{name}')"):
+                # If we are here, at least one change concerns the field
+                empty = False
+                break
+        except RecursionError:
+            # This has occurred on a production site
+            o = self.o
+            o.log(REC_ERR % (o.strinG(), name))
         return empty
 
     def getCurrentValues(self, o, fields):
