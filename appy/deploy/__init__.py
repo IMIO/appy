@@ -7,9 +7,10 @@
 import os, sys
 from pathlib import Path
 
+from .git import Git
+from .repository import Repository
 from appy.utils import termColorize
 from appy.model.utils import Object as O
-from appy.deploy.repository import Repository
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TG_LOG    = 'Log file for'
@@ -168,6 +169,48 @@ class Target:
            on this target, whose absolute path is p_dest.'''
         # If p_dest exists on the target, it will be overwritten
         self.execute((source, dest), exe='scp')
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class TargetFactory:
+    '''Easily create sets of targets sharing the same software stack'''
+
+    def __init__(self, servers, appy, app=None, ext=None, login='root',port=22):
+        # p_server must be a dict containing servers to connect to. Keys are
+        # servers' short names and values are servers' domain names or IPs.
+        self.servers = O(**servers)
+        # URLs to the code repo for p_appy, the p_app and the p_ext. It must be
+        # git URLs.
+        self.appy = appy
+        self.app = app
+        self.ext = ext
+        # The login to use for connecting to the server via SSH, and the port
+        # used by the distant SSH service. These parameters will be used for all
+        # p_servers. If they differ from one server to another, you will be able
+        # to pass server-specific parameters to method m_get (see below).
+        self.sshLogin = login
+        self.sshPort = port
+
+    def get(self, path, server, port=8000, sshLogin=None, sshPort=None):
+        '''Create and return a Target object for deploying a site with this
+           p_path on this p_server, running on that p_port.'''
+        # Get the server name or IP based on its nick name, as passed in
+        # p_server.
+        server = self.servers[server]
+        # The login for the SSH connection
+        sshLogin = sshLogin or self.sshLogin
+        # The port of the distant SSH service
+        sshPort = sshPort or self.sshPort
+        # Get Git objects for each code repo
+        appy = Git(self.appy)
+        app = Git(self.app) if self.app else None
+        ext = Git(self.ext) if self.ext else None
+        # Create and return a Target object
+        return Target(server, sshPort=sshPort, sshLogin=sshLogin, sitePath=path,
+                      sitePort=port, siteApp=app, siteExt=ext,
+                      siteDependencies=[appy])
+
+# Make class TargetFactory available via class Target
+Target.Factory = TargetFactory
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:

@@ -6,7 +6,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from pathlib import Path
 
-from appy.deploy.repository import Repository
+from .repository import Repository
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 GIT_EXE  = 'Executing %s...'

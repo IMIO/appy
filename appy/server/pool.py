@@ -32,7 +32,8 @@ HUNG_STATUS   = "killHungThreads status: %d threads (%d working, %d idle, " \
                 "%d starting), average time %s, maxTime %.2fsec, killed %d " \
                 "worker(s)."
 ZOMBIES_FOUND = 'Zombie thread(s) found: %s.'
-EXITING       = 'Exiting process because %s zombie threads is more than %s limit.'
+EXITING       = 'Exiting process because %s zombie threads is more than %s ' \
+                'limit.'
 NEW_WORKER    = 'Started new %s (%s): %s'
 STOPPING_THR  = 'Thread %s processed %i requests (limit %s); stopping it'
 SHUTD_RECV    = '%s (%s) is asked to shutdown'

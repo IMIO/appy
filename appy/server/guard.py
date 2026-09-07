@@ -63,7 +63,7 @@ class Config:
         self.loginTransform = None
         # When the user is in one of the following states, logging in will be
         # blocked.
-        self.noLoginStates = ('inactive',)
+        self.noLoginStates = 'inactive',
         # When using a LDAP for authenticating users, place an instance of class
         # appy.server.ldap.Config in the field below.
         self.ldap = None
