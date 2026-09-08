@@ -845,26 +845,9 @@ class User(Base):
         message = None
         if created and isLocal and self.isEmpty('password') and \
            self.config.security.generatePassword:
-            # Generate a clear password
-            password = self.getField('password').generate()
-            # Store it, encrypted
-            self.password = password
-            recipient = self.getMailRecipient()
-            _ = self.translate
-            if self.config.mail and recipient:
-                # Send the password by mail to the user
-                subject = _('first_password')
-                map = {'siteUrl': self.siteUrl, 'login': self.login,
-                       'password': password}
-                body = _('first_password_body', mapping=map, asText=True)
-                self.tool.sendMail(recipient, subject, body)
-                message = _('first_password_sent')
-            else:
-                # Return the clear password to the UI
-                message = _('new_password_text', mapping={'password': password})
-            self.resp.fleetingMessage = False
-            # The user will need to change it at next login
-            self.changePasswordAtNextLogin = True
+            # Generate a password for this newcomer and send him a mail if
+            # possible.
+            message = self.getField('password').generateFirst(self)
         page = self.req.page or 'main'
         if page == 'main':
             login = self.login

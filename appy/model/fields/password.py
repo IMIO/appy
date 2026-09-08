@@ -10,6 +10,9 @@ from appy.model.fields import Field
 from appy.model.utils import Object as O
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+PWD_ACT  = 'Password %s for %s.'
+
+#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PasswordGenerator:
     '''Class used to generate passwords'''
 
@@ -243,6 +246,32 @@ class Password(Field):
         '''Generate a password of at most m_maxLength chars'''
         return PasswordGenerator.get(self.minLength, maxLength)
 
+    def generateFirst(self, user):
+        '''Generates a first password for that p_user, send him a mail if
+           possible, and return the translated message to return to the UI.'''
+        # Firstly, generate a clear password
+        password = self.generate()
+        # Store it, encrypted, on the p_user
+        self.store(user, password)
+        # Send a mail to p_user if possible
+        recipient = user.getMailRecipient()
+        _ = user.translate
+        if user.config.mail and recipient:
+            # Send the password by mail to the user
+            subject = _('first_password')
+            map = {'siteUrl': user.siteUrl, 'login': user.login,
+                   'password': password}
+            body = _('first_password_body', mapping=map, asText=True)
+            user.tool.sendMail(recipient, subject, body)
+            r = _('first_password_sent')
+        else:
+            # No other choice: return the clear password to the UI
+            r = _('new_password_text', mapping={'password': password})
+        user.resp.fleetingMessage = False
+        # The user will need to change it at next login
+        user.changePasswordAtNextLogin = True
+        return r
+
     def set(self, o, password=n, log=True, maxLength=9):
         '''Sets a p_password on p_o for this password field. If p_password is
            not given, a password will be generated, made of at most p_maxLength
@@ -251,12 +280,13 @@ class Password(Field):
         if password is None:
             # Generate one
             password = self.generate(maxLength)
-            msgPart = 'generated'
+            verb = 'generated'
         else:
-            msgPart = 'changed'
+            verb = 'changed'
         self.store(o, password)
         # Log the operation when requested
-        if log: self.log('password %s for %s.' % (msgPart, login))
+        if log:
+            self.log(PWD_ACT % (verb, login))
         return password
 
     def store(self, o, value):
