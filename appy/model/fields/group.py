@@ -326,7 +326,8 @@ class UiGroup:
       .gridG>tbody>tr>td { padding:|gridGPadding| }
       .gridV>tbody>tr>td:nth-child(odd)  { font-size:|gridVLFSize| }
       .gridV>tbody>tr>td:nth-child(even) { font-size:|gridVFFSize| }
-      .gridE>tbody>tr>td:nth-child(odd)  { font-size:|gridELFSize| }
+      .gridE>tbody>tr>td:nth-child(odd)  { font-size:|gridELFSize|;
+                                           padding-top:0.8em }
       .gridE>tbody>tr>td:nth-child(even) { font-size:|gridEFFSize| }
       .xhtml .gridV>tbody>tr>td { padding:0 }''')
 

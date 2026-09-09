@@ -582,6 +582,7 @@ class Field:
         # this field; else, comparisons used by the sort algorithms will produce
         # an error. Moreover, this special value can be used in searches. Here
         # are two examples.
+        #
         # 1. For a Ref field, suppose "emptyIndexValue" is (0,), which is the
         #    default. Indeed, a valid Ref value is a list or tuple of object
         #    IIDs (=integers). If you want to express a search like the

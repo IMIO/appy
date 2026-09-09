@@ -1091,16 +1091,16 @@ class Ref(Field):
 
         # May the user link existing objects through this Ref ? If "link" is:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #    True    | the user will, on "edit", choose objects from an HTML
+        #    True    | the user will, on /edit, choose objects from an HTML
         #            | select widget, rendered as a dropdown list if max
         #            | multiplicity is 1 or as a selection box if several values
         #            | can be chosen ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #  "radio"   | the user will, on "edit", choose objects from radio
+        #  "radio"   | the user will, on /edit, choose objects from radio
         #            | buttons. This mode is valid for fields with a max
         #            | multiplicity being 1 ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # "checkbox" | the user will, on "edit", choose objects from checkboxes.
+        # "checkbox" | the user will, on /edit, choose objects from checkboxes.
         #            | This mode is valid for fields with a max multiplicity
         #            | being higher than 1.
         #            |
@@ -1108,14 +1108,14 @@ class Ref(Field):
         #            | value "True" is appropriate if the number of objects from
         #            | which to choose is low ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #   "list"   | the user will, on "view", choose objects from a list of
+        #   "list"   | the user will, on /view, choose objects from a list of
         #            | objects which is similar to those rendered in pxViewList;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #  "popup"   | the user will, on "view" or "edit", choose objects from a
+        #  "popup"   | the user will, on /view or /edit, choose objects from a
         #            | popup window. In this case, parameter "select" can hold a
         #            | Search object or a method returning it ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # "dropdown" | the user will, on "edit", choose objects by typing some
+        # "dropdown" | the user will, on /edit, choose objects by typing some
         #            | chars in an input text field: in a dropdown, the first
         #            | matching objects will be shown and will be selectable.
         #            | The set of possible objects shown in the dropdown must be

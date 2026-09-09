@@ -150,7 +150,7 @@ class Message:
 
          // Initialises the DOM node representing the "message" zone
          static init(node, noAnim) {
-           // Always create a Fader objet, even if not be directly used
+           // Always create a Fader objet, even if not directly used
            new Fader(node);
            node.className = 'message';
            if (!noAnim) Message.enableFader(node);

@@ -688,13 +688,13 @@ msgstr "L'identifiant d'utilisateur que vous avez sélectionné est déjà utili
 msgid "login_ko"
 msgstr "L'authentification a échoué."
 
-#. Default: "Welcome! You are now logged in."
+#. Default: "Welcome ${firstName}, you are now logged in."
 msgid "login_ok"
-msgstr "Bienvenue! Vous êtes maintenant connecté∙e."
+msgstr "Bienvenue ${firstName}, vous êtes maintenant connecté∙e."
 
-#. Default: "Welcome! You are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
+#. Default: "Welcome ${firstName}, you are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
 msgid "login_ok_change_password"
-msgstr "Bienvenue! Vous êtes maintenant connecté∙e.\n\n<b>Avant de continuer, choisissez un nouveau mot de passe.</b>"
+msgstr "Bienvenue ${firstName}, vous êtes maintenant connecté∙e.\n\n<b>Avant de continuer, choisissez un nouveau mot de passe.</b>"
 
 #. Default: "You have been logged out."
 msgid "logout_ok"

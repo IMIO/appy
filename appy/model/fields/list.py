@@ -16,6 +16,11 @@ from appy.ui.layout import Layout, LayoutF, Layouts
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 RC_NO_OS  = 'Class "%s", mentioned in attribute "rowClass", must be a sub-' \
             'class of class appy.model.utils.Object.'
+IDX_NO_V  = 'Provide, in attribute "indexValue", a method that will compute ' \
+            'the value to index.'
+IDX_NO_T  = 'Provide, in attribute "indexType", the type of the index to use.'
+IDX_NO_P  = 'Provide, in attribute "pythonType", the Python type of the ' \
+            'index to use.'
 INNER_KO  = 'Field "%s" cannot currently be used as inner field. This is the ' \
             'case for rich fields.'
 SUB_O_KO  = 'List field %s :: Attribute "fields" is a method :: An object ' \
@@ -341,20 +346,22 @@ class List(Field):
 
     def __init__(self, fields, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n,
-      layouts=n, move=0, readPermission='read', writePermission='write',
-      width='', height=n, maxChars=n, colspan=1, master=n, masterValue=n,
-      masterSnub=n, focus=False, historized=False, mapping=n, generateLabel=n,
-      label=n, subLayouts=Layouts.sub, widths=n, view=n, cell=n, buttons=n,
-      edit=n, custom=n, xml=n, translations=n, deleteConfirm=False, totalRows=n,
+      layouts=n, move=0, indexed=False, mustIndex=True, indexType=n,
+      pythonType=n, indexValue=n, emptyIndexValue=n, searchable=False,
+      readPermission='read', writePermission='write', width='', height=n,
+      maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n, focus=False,
+      historized=False, mapping=n, generateLabel=n, label=n,
+      subLayouts=Layouts.sub, widths=n, view=n, cell=n, buttons=n, edit=n,
+      custom=n, xml=n, translations=n, deleteConfirm=False, totalRows=n,
       totalCols=n, rowClass=O, headerAlign='middle', contentAlign='top',
       listCss=n, valueIfEmpty='-', numbered=False):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit, show,
-         renderable, page, group, layouts, move, False, True, n, n, False, n, n,
-         readPermission, writePermission, width, height, n, colspan, master,
-         masterValue, masterSnub, focus, historized, mapping, generateLabel,
-         label, n, n, n, n, True, False, view, cell, buttons, edit, custom, xml,
-         translations)
+         renderable, page, group, layouts, move, indexed, mustIndex, indexValue,
+         emptyIndexValue, searchable, n, n, readPermission, writePermission,
+         width, height, n, colspan, master, masterValue, masterSnub, focus,
+         historized, mapping, generateLabel, label, n, n, n, n, True, False,
+         view, cell, buttons, edit, custom, xml, translations)
         self.validable = True
         # Tuple of elements of the form (name, Field object) determining the
         # format of every element in the list. It can also be a method returning
@@ -408,6 +415,17 @@ class List(Field):
         # If "numbered" is or returns True, the row number will be shown at the
         # start of every row.
         self.numbered = numbered
+        # When a list field is indexed, Appy can't determine by itself what kind
+        # of data you want to index on the list. Consequently, you must specify
+        # a method in p_indexValue and specify the type of index in p_indexType
+        # and p_pythonType. Documentation about index types can be found in
+        #
+        #         appy/model/fields/computed.py::Computed.indexType
+        #
+        self.indexType = indexType
+        self.pythonType = pythonType
+        # A List value is a persistent list
+        self.storableTypes = PersistentList
         # Check parameters
         self.checkParameters()
 
@@ -447,6 +465,15 @@ class List(Field):
         # Check the "row class"
         if not issubclass(self.rowClass, O):
             raise Exception(RC_NO_OS % self.rowClass)
+        # When the field is indexed, Appy can't determine by itself what value
+        # to index, you must provide the info.
+        if self.indexed:
+            if not self.indexValue:
+                raise Exception(IDX_NO_V)
+            if not self.indexType:
+                raise Exception(IDX_NO_T)
+            if not self.pythonType:
+                raise Exception(IDX_NO_P)
 
     def getTableCss(self, c):
         '''Return the CSS classe(s) to apply to the main table tag'''

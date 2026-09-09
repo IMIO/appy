@@ -98,18 +98,21 @@ class Dict(List):
 
     def __init__(self, keys, fields, validator=n, multiplicity=(0,1), default=n,
       defaultOnEdit=n, show=True, renderable=n, page='main', group=n, layouts=n,
-      move=0, readPermission='read', writePermission='write', width='',
-      height=n, maxChars=n, colspan=1, master=n, masterValue=n, masterSnub=n,
-      focus=False, historized=False, mapping=n, generateLabel=n, label=n,
-      subLayouts=List.Layouts.sub, widths=n, view=n, cell=n, buttons=n, edit=n,
-      custom=n, xml=n, translations=n, totalRows=n, totalCols=n,
-      headerAlign='middle', contentAlign='top', listCss=n, valueIfEmpty='-'):
+      move=0, indexed=False, mustIndex=True, indexType=n, pythonType=n,
+      indexValue=n, emptyIndexValue=n, searchable=False, readPermission='read',
+      writePermission='write', width='', height=n, maxChars=n, colspan=1,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, subLayouts=List.Layouts.sub,
+      widths=n, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
+      translations=n, totalRows=n, totalCols=n, headerAlign='middle',
+      contentAlign='top', listCss=n, valueIfEmpty='-'):
 
         # Call the base constructor
         super().__init__(fields, validator, multiplicity, default,
-          defaultOnEdit, show, renderable, page, group, layouts, move,
-          readPermission, writePermission, width, height, maxChars, colspan,
-          master, masterValue, masterSnub, focus, historized, mapping,
+          defaultOnEdit, show, renderable, page, group, layouts, move, indexed,
+          mustIndex, indexType, pythonType, indexValue, emptyIndexValue,
+          searchable, readPermission, writePermission, width, height, maxChars,
+          colspan, master, masterValue, masterSnub, focus, historized, mapping,
           generateLabel, label, subLayouts, widths, view, cell, buttons, edit,
           custom, xml, translations, totalRows=totalRows, totalCols=totalCols,
           headerAlign=headerAlign, contentAlign=contentAlign, listCss=listCss,
@@ -129,6 +132,9 @@ class Dict(List):
         # of data; "sepRow" must be a SepRow object (see hereabove) that will
         # determine content and style for the separator row.
         self.keys = keys
+
+        # A Dict value is a persistent mapping
+        self.storableTypes = PersistentMapping
 
     def getWidths(self, subFields):
         '''Get the widths to appply to these p_subFields'''

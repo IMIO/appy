@@ -147,7 +147,8 @@ class Response:
             self.headers['Cookies'] = {}
         # Set the value for the cookie. A special value is defined if the
         # objective is to disable the cookie.
-        if value == 'deleted': value = f'{value}; Max-Age=0'
+        if value == 'deleted':
+            value = f'{value}; Max-Age=0'
         self.headers['Cookies'][name] = f'{value}; Path=/'
 
     def deleteCookie(self, name):
@@ -174,9 +175,10 @@ class Response:
             self.fleetingMessage = fleeting
 
     def goto(self, url=None, message=None, fromPopup=False, fromAjax=False,
-             fleeting=None):
+             fleeting=None, messageFirst=False):
         '''Redirect the user to p_url'''
-        if message: self.addMessage(message, fleeting=fleeting)
+        if message:
+            self.addMessage(message, fleeting=fleeting, first=messageFirst)
         req = self.handler.req
         if fromPopup:
             # Redirecting back to some URL from a popup requires an alternative

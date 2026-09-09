@@ -687,13 +687,13 @@ msgstr "El nombre de usuario que ha elegido ya está en uso o no es válido. Por
 msgid "login_ko"
 msgstr "Error en el inicio de sesión."
 
-#. Default: "Welcome! You are now logged in."
+#. Default: "Welcome ${firstName}, you are now logged in."
 msgid "login_ok"
-msgstr "¡Bienvenido! Ha iniciado la sesión."
+msgstr "¡Bienvenido ${firstName}! Ha iniciado la sesión."
 
-#. Default: "Welcome! You are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
+#. Default: "Welcome ${firstName}, you are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
 msgid "login_ok_change_password"
-msgstr "¡Bienvenido! Ha iniciado la sesión."
+msgstr "¡Bienvenido ${firstName}! Ha iniciado la sesión.\n\n<b>Before going further, please choose a new password.</b>"
 
 #. Default: "You have been logged out."
 msgid "logout_ok"

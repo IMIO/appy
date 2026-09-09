@@ -332,11 +332,13 @@ class Guard:
             success = False
             login = req.login.strip() if req.login else ''
             msg = AUTH_KO % login
+            maP = None
         else:
             # Authentication succeeded
             label = 'login_ok'
             success = True
             msg = AUTH_OK
+            maP = {'firstName': user.firstName or '😉'}
         # Log the action
         tool.log(msg)
         # Redirect the user to the appropriate page
@@ -360,7 +362,8 @@ class Guard:
             # Stay on the same page
             back = tool.H().headers['Referer']
         # Redirect the user to the appropriate page
-        tool.resp.goto(back, message=user.translate(label))
+        message = user.translate(label, mapping=maP)
+        tool.resp.goto(back, message=message, messageFirst=True)
 
     traverse['leave'] = True
     def leave(self, tool):

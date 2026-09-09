@@ -688,13 +688,13 @@ msgstr "This login is already in use."
 msgid "login_ko"
 msgstr "Login failed."
 
-#. Default: "Welcome! You are now logged in."
+#. Default: "Welcome ${firstName}, you are now logged in."
 msgid "login_ok"
-msgstr "Welcome! You are now logged in."
+msgstr "Welcome ${firstName}, you are now logged in."
 
-#. Default: "Welcome! You are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
+#. Default: "Welcome ${firstName}, you are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
 msgid "login_ok_change_password"
-msgstr "Welcome! You are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
+msgstr "Welcome ${firstName}, you are now logged in.\n\n<b>Before going further, please choose a new password.</b>"
 
 #. Default: "You have been logged out."
 msgid "logout_ok"
