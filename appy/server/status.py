@@ -202,7 +202,7 @@ class Status(Persistent):
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     # Maximum number of shown statuses per page
-    maxPerPage = 40
+    maxPerPage = 40, 70, 100
 
     # Navigate within server statuses
 
@@ -220,7 +220,7 @@ class Status(Persistent):
                threadStatuses=Server.Pool.statuses;
                pool=handler.server.pool;
                total=len(statuses);
-               nav=tool.ui.ListNav(req, total, batchSize=Status.maxPerPage);
+               nav=tool.ui.ListNav(req, total, batchSizes=Status.maxPerPage);
                slicE=statuses[nav.first:nav.getEndIndex()];
                x=nav.setCount(len(slicE));
                cols=5+len(threadStatuses) if pool else 5">

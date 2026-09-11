@@ -18,6 +18,9 @@ class Transaction:
     # Some elements will be traversable
     traverse = {}
 
+    # Max width for rendering transaction details
+    maxDetailsWidth = 100
+
     def __init__(self, info):
         '''Initialise a Transaction object from this dict raw p_info about a
            transaction as produces by the ZODB.'''
@@ -41,6 +44,27 @@ class Transaction:
         '''Returns p_self's data as a single line of text'''
         return f'<span class="transId">{self.id}</span> · ' \
                f'{self.getDate(tool)} · By {self.login} · {self.details}'
+
+    def getDetails(self, formatted=True):
+        '''Returs self.details, possibly p_formatted'''
+        # p_formatted means: details include carriage returns if too long
+        details = self.details or '-'
+        maX = self.maxDetailsWidth
+        if len(details) < maX: return details
+        # Split details into chunks
+        i = 0
+        r = []
+        more = True
+        while more:
+            nexT = details[i:i+maX]
+            if nexT:
+                r.append(nexT)
+                if len(nexT) < maX:
+                    break # We have reached the end of v_details
+            else:
+                break
+            i += len(nexT)
+        return f'↲{br}'.join(r)
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                            Class methods
@@ -87,6 +111,10 @@ class Transaction:
             trans = Transaction.get(database, i)
             infos.append(f'<li>{trans.asText(tool)}</li>')
         return f'<ul>{bn.join(infos)}</ul>'
+
+    @classmethod
+    def formatDetails(class_, details):
+        '''Returns details about a'''
 
     traverse['undo'] = 'Manager'
     @classmethod
@@ -162,7 +190,7 @@ class Transaction:
     pxList = Px('''
      <x var="database=tool.database;
              Transaction=database.Transaction;
-             nav=tool.ui.ListNav(req, batchSize=20);
+             nav=tool.ui.ListNav(req);
              transactions=Transaction.list(database, nav.first, nav.batchSize,
                                            req.filter);
              x=nav.setCount(len(transactions))">
@@ -193,10 +221,14 @@ class Transaction:
          <td class="transId">:tid</td>
          <td>:trans.getDate(tool)</td>
          <td>:trans.login</td>
-         <td>::trans.details</td>
+         <td>::trans.getDetails()</td>
         </tr>
        </table>
-       <div class="flexg topSpace">
+
+       <!-- Undo button -->
+       <div class="transWarn">⚠️ Selecting multiple checkboxes from multiple
+         pages does not work.</div>
+       <div class="flexg topSpaceS">
         <input type="button" value="Undo selected" class="button"
                onclick=":'askConfirm(%s,%s,%s)' % (q('form'), q('undoTrans'),
                                                    q(Transaction.UNDO_CF))"
@@ -210,6 +242,7 @@ class Transaction:
       .transId { font-family:monospace }
       .transFilter { display:flex; margin-bottom:0.4em }
       .transFilter input[type=button] { color:black }
+      .transWarn { font-size:90%; color:grey; margin:0.5em 0 0 1.1em }
       .small td.transId { padding-top:0.3em }''',
 
     js='''

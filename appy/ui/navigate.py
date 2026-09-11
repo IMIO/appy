@@ -444,16 +444,33 @@ class SearchSiblings(Siblings):
 class ListNav:
     '''Simple PX allowing to navigate between elements of a persistent list'''
 
-    def __init__(self, req, total=None, batchSize=30):
+    # Navigation batch sizes the user can choose. The first one is the default.
+    sizes = 30, 50, 100
+    
+    def __init__(self, req, total=None, batchSizes=sizes):
         '''ListNav constructor'''
         # The total number of elements of the list (may not be known)
         self.total = total
         # The index of the first element to show
         self.first = int(req.first) if 'first' in req else 0
+        # Possible batch sizes
+        self.batchSizes = batchSizes
+        # The request object
+        self.req = req
         # The number of list elements to show at once
-        self.batchSize = int(req.batchSize) if 'batchSize' in req else batchSize
+        self.batchSize = self.getBatchSize()
         # The count of currently shown elements
         self.count = 0 # Will be set by a call to m_setCount
+
+    def getBatchSize(self):
+        '''Gets the batch size, from the request or from p_self'''
+        req = self.req
+        if 'batchSize' in req:
+            # Ensure the maximum limit is not reached
+            r = min(int(req.batchSize), self.sizes[-1])
+        else:
+            r = self.batchSizes[0]
+        return r
 
     def __repr__(self):
         '''p_self as a short string'''
@@ -474,33 +491,54 @@ class ListNav:
 
     # Within the PX context, the current ListNav object is available as "nav"
     px = Px('''
-     <div class="flexg" var="first=nav.first; batchSize=nav.batchSize">
+     <div class="trflex">
+      <div class="flexg" var="first=nav.first; batchSize=nav.batchSize">
 
-      <!-- Go to the first page -->
-      <img if="first != 0" src=":svg('arrows')" class="clickable iconS"
-           style=":nav.rotate % 90" onclick="listNav(0)"/>
+       <!-- Go to the first page -->
+       <img if="first != 0" src=":svg('arrows')" class="clickable iconS"
+            style=":nav.rotate % 90" onclick="listNav(0)"/>
 
-      <!-- Go to the previous page -->
-      <img if="first != 0" src=":svg('arrow')" class="clickable iconS"
-           onclick=":f'listNav({first - batchSize})'" style=":nav.rotate % 90"/>
+       <!-- Go to the previous page -->
+       <img if="first != 0" src=":svg('arrow')" class="clickable iconS"
+            onclick=":f'listNav({first - batchSize})'" style=":nav.rotate % 90"/>
 
-      <!-- Display the current range -->
-      <div if="not(first == 0 and nav.count &lt; batchSize)">
-       <x>:first+1</x> ⇀ <x>:first + nav.count</x>
-       <x if="nav.total"> / <x>:nav.total</x></x>
+       <!-- Display the current range -->
+       <div if="not(first == 0 and nav.count &lt; batchSize)">
+        <x>:first+1</x> ⇀ <x>:first + nav.count</x>
+        <x if="nav.total"> / <x>:nav.total</x></x>
+       </div>
+
+       <!-- Go to the next page -->
+       <img if="nav.count == batchSize" src=":svg('arrow')"
+            style=":nav.rotate % 270" onclick=":f'listNav({first + batchSize})'"
+            class="clickable iconS"/>
       </div>
-
-      <!-- Go to the next page -->
-      <img if="nav.count == batchSize" src=":svg('arrow')"
-           style=":nav.rotate % 270" onclick=":f'listNav({first + batchSize})'"
-           class="clickable iconS"/>
+      <div>
+       <select onchange="listNav(null, this.options[this.selectedIndex].value)">
+        <option for="size in nav.batchSizes" value=":size"
+                selected=":str(size) == req.batchSize"><x>:size</x> per page
+        </option>
+       </select>
+      </div>
      </div>''',
 
+     css='''.trflex { display:flex; gap:1em; align-items:center }''',
+
      js='''
-      function listNav(first) {
+      // Go to the page listing elements starting at position p_first
+      function listNav(first, batchSize) {
         let url = new URL(window.location),
             params = url.searchParams;
-        params.set('first', first);
+        if (batchSize) {
+          /* Retrieving a p_batchSize means that the batch size has changed.
+             Update it and go back to the first page. */
+          params.set('first', 0);
+          params.set('batchSize', batchSize);
+        }
+        else {
+          // Go to the page starting at element having position p_first
+          params.set('first', first);
+        }
         window.location = url.href;
       }'''
      )
