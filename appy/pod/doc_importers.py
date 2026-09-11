@@ -362,6 +362,8 @@ class Image:
         x = y = None
         # Get the file format from the file name of absent
         format = self.format or os.path.splitext(self.path)[1][1:]
+        # Don't read SVG files
+        if format == 'svg': return None, None
         # Read the file on disk
         f = open(self.path, 'rb')
         if format in Image.jpgTypes:
