@@ -174,7 +174,8 @@ class Target:
 class TargetFactory:
     '''Easily create sets of targets sharing the same software stack'''
 
-    def __init__(self, servers, appy, app=None, ext=None, login='root',port=22):
+    def __init__(self, servers, appy, app=None, ext=None, login='root',
+                 port=22, venv=None):
         # p_server must be a dict containing servers to connect to. Keys are
         # servers' short names and values are servers' domain names or IPs.
         self.servers = O(**servers)
@@ -189,6 +190,8 @@ class TargetFactory:
         # to pass server-specific parameters to method m_get (see below).
         self.sshLogin = login
         self.sshPort = port
+        # The absolute path to the Python virtual env to use on the target site
+        self.venv = venv
 
     def get(self, path, server, port=8000, sshLogin=None, sshPort=None):
         '''Create and return a Target object for deploying a site with this
@@ -207,7 +210,7 @@ class TargetFactory:
         # Create and return a Target object
         return Target(server, sshPort=sshPort, sshLogin=sshLogin, sitePath=path,
                       sitePort=port, siteApp=app, siteExt=ext,
-                      siteDependencies=[appy])
+                      siteDependencies=[appy], venv=self.venv)
 
 # Make class TargetFactory available via class Target
 Target.Factory = TargetFactory
