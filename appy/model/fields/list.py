@@ -648,9 +648,16 @@ class List(Field):
         return r
 
     def getCopyValue(self, o):
-        '''Return a (deep) copy of field value on p_o''' 
+        '''Return a (deep) copy of the field value stored on p_o'''
         r = getattr(o, self.name, None)
-        if r: return copy.deepcopy(r)
+        if r:
+            typE = self.storableTypes
+            r = copy.deepcopy(r)
+            if not isinstance(r, typE):
+                # Some old database values may store a standard list/dict
+                # instead of their persistent variants.
+                r = typE(r)
+            return r
 
     def getHistoryValue(self, o, value, i, language=n, empty='-'):
         '''Render a nice previous p_value'''
