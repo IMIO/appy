@@ -3,6 +3,8 @@
 import re, utils
 from appy.shared.utils import formatNumber
 
+n = None
+
 htmlColorNames = {
   'aliceblue': '#f0f8ff', 'antiquewhite': '#faebd7', 'aqua': '#00ffff',
   'aquamarine': '#7fffd4','azure': '#f0ffff', 'beige': '#f5f5dc',
@@ -79,9 +81,9 @@ def parseStyleAttribute(value, asDict=False):
         val = value.strip()
         # Ignore values referring CSS variables
         if not val or val.startswith('var('): continue
-        n = name.strip()
-        if asDict: res[n] = val
-        else:      res.append( (n, val) )
+        name = name.strip()
+        if asDict: res[name] = val
+        else: res.append((name, val))
     return res
 
 # ------------------------------------------------------------------------------
@@ -225,9 +227,10 @@ class CssStyles:
     # Values, on combined attributes, that prevent splitting
     unsplittable = ('auto',)
     # Values that must be ignored
-    ignore = {'*': {'auto':None, 'initial':None, 'inherit':None}}
+    ignore = {'*': {'auto':n, 'initial':n, 'inherit':n, 'unset':n,
+                    'revert':n, 'revert-rule':n, 'revert-layer':n}}
     # Values specified in ignore['*'] must not be ignored for these attributes
-    ignoreExcept = {'auto': {'table-layout':None}}
+    ignoreExcept = {'auto': {'table-layout':n}}
     # The '!important' CSS rule
     importantRule = '!important'
 
