@@ -407,6 +407,9 @@ class HtmlTable(Element):
     # HTML table, we will dump the result of this sub-buffer into the parent
     # buffer, which may be the global buffer or another table buffer.
 
+    # Default border style for a cell
+    cellBorderStyle = '0.05pt solid #000000'
+
     def __init__(self, env, xhtmlElem, attrs):
         self.env = env
         # p_xhtmlElem is the HtmlElement representing this table
@@ -904,10 +907,14 @@ class XhtmlEnvironment(XmlEnvironment):
         if xhtmlElem.elem in ('td', 'th'):
             table = self.currentTables[-1]
             # Manage cells' borders
-            border = table.props.border
-            if border is None:
-                border = table.border and '0.05pt solid #000000' or '0'
-            xhtmlElem.cssStyles.add('border', border)
+            if not xhtmlElem.cssStyles.has('border'):
+                # No border is defined on this cell: get border requirements
+                # from the table level: from the TableProperties object or from
+                # CSS styles as defined on the container "table" tag.
+                border = table.props.border
+                if border is None:
+                    border = table.border and table.cellBorderStyle or '0'
+                xhtmlElem.cssStyles.add('border', border)
             # Manage cells' spacing
             spacing = table.borderSpacing
             if spacing:

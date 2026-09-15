@@ -428,6 +428,13 @@ class CssStyles:
                 self.add('%s-%s' % (prop, direction), value[i])
             delattr(self, prop)
 
+    def has(self, prefix):
+        '''Returns True if p_self contains at least one property starting with
+           or being p_prefix.'''
+        for name in self.__dict__.iterkeys():
+            if name.startswith(prefix):
+                return True
+
 # ------------------------------------------------------------------------------
 # For some XHTML tags, we define CssStyle instances containing one or several
 # styles that correspond to them.

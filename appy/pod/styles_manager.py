@@ -7,8 +7,8 @@ import re, os.path, random, string
 from appy.pod import *
 from appy import commercial
 from appy.shared.errors import CommercialError
-from appy.shared.utils import getElementAt, formatNumber
 from appy.pod.odf_parser import OdfEnvironment, OdfParser
+from appy.shared.utils import getElementAt, formatNumber, asDict
 from appy.shared.css import parseStyleAttribute, CssStyles, CssValue, px2cm
 
 # Possible states for the styles parser
@@ -877,6 +877,8 @@ class Css2odf:
     namesMap = {
       'marginleft': 'fo:margin-left', 'marginright': 'fo:margin-right',
       'margintop': 'fo:margin-top', 'marginbottom': 'fo:margin-bottom',
+      'borderleft': 'fo:border-left', 'borderright': 'fo:border-right',
+      'bordertop': 'fo:border-top', 'borderbottom': 'fo:border-bottom',
       'textalign': 'fo:text-align', 'textindent': 'fo:text-indent',
       'backgroundcolor': 'fo:background-color', 'color': 'fo:color',
       'fontsize': 'fo:font-size', 'fontvariant': 'fo:font-variant',
@@ -1056,9 +1058,11 @@ class StylesGenerator:
       'style:text-line-through-style': True, 'style:text-overline-style': True,
       'style:text-position': True}
     # Properties applying to table cells and that are not transferred to inner
-    # paragraphs.    
-    cellProperties = ('fo:padding', 'fo:border', 'fo:background-color',
-                      'style:vertical-align')
+    # paragraphs.
+    cellProps = ('fo:padding', 'fo:border', 'fo:background-color',
+                 'style:vertical-align', 'fo:border-top', 'fo:border-bottom',
+                 'fo:border-left', 'fo:border-right')
+    cellProperties = asDict(cellProps)
     # Default parent styles to apply for generated styles. Those styles are not
     # listed among DEFAULT_STYLES because, when there is no custom style to
     # generate, they must not be specified, it is implicit.
@@ -1235,9 +1239,11 @@ class StylesGenerator:
         paraAttrs = []
         cellAttrs = []
         for name, value in odfAttrs:
-            if name == 'fo:text-align': paraAttrs.append((name, value))
-            elif name in self.cellProperties: cellAttrs.append((name, value))
-            elif name in self.textProperties: paraAttrs.append((name, value))
+            if name in self.cellProperties:
+                dest = cellAttrs
+            else:
+                dest = paraAttrs
+            dest.append((name, value))
         # Generate a paragraph style to be applied on this td's inner paragraph
         if paraAttrs:
             xhtmlElem.innerStyle = self.get_any(xhtmlElem.protos['p'],paraAttrs,
@@ -1286,7 +1292,9 @@ class StylesGenerator:
                 # Combined values are currently ignored, "border" excepted
                 if name == 'border':
                     self.css2odf.getOdf(odfAttrs, name, value)
-            elif value.isMultiple():
+            elif value.isMultiple() and not name.startswith('border'):
+                # For "border-" properties, consider a value as
+                # "1pt solid black" as a non-multiple value.
                 for v in value.value.split(' '):
                     self.css2odf.getOdf(odfAttrs, name, value, v)
             else:
