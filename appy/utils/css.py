@@ -6,8 +6,11 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import re
 
-from appy.utils import formatNumber
+from appy.utils import formatNumber, bn
 from appy.utils.string import sadd, sremove
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+n = None
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 htmlColorNames = {
@@ -66,8 +69,8 @@ htmlColorNames = {
   'whitesmoke': '#f5f5f5', 'yellow': '#ffff00', 'yellowgreen': '#9acd32'}
 
 # Valid CSS values for font-weight and font-style attributes - - - - - - - - - -
-fontWeigths = ('normal', 'bold', 'lighter', 'bolder')
-fontStyles = ('normal', 'italic', 'oblique')
+fontWeigths = 'normal', 'bold', 'lighter', 'bolder'
+fontStyles = 'normal', 'italic', 'oblique'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Default ratio for converting pixels to cm
@@ -88,7 +91,7 @@ class Value:
       'line-height': ''} # line-height can be "normal" or a value with a unit
 
     # CSS properties defining colors
-    colorProperties = ('color', 'background-color')
+    colorProperties = 'color', 'background-color'
 
     # Regular expressions for parsing (parts of) CSS values
     valueRex = re.compile(r'(-?\d*(?:\.\d+)?)(%|px|cm|pt|em|ex)?')
@@ -214,23 +217,24 @@ class Styles:
                  'cellspacing': 'border-spacing', 'border': 'border'}
 
     # CSS properties whose values can be combined
-    combinable = ('textdecoration',)
+    combinable = 'textdecoration',
 
     # CSS combined properties (= that can be split into individual properties)
-    combined = ('margin',)
+    combined = 'margin',
 
     # Directions in use in combined CSS properties (padding, margin, etc),
     # defined in the standard order.
-    directions = ('top', 'right', 'bottom', 'left')
+    directions = 'top', 'right', 'bottom', 'left'
 
     # Directions implied with *w*idth
-    directionsW = ('right', 'left')
+    directionsW = 'right', 'left'
 
     # Values, on combined attributes, that prevent splitting
-    unsplittable = ('auto',)
+    unsplittable = 'auto',
 
     # Values that must be ignored
-    ignore = {'*': {'auto':None, 'initial':None, 'inherit':None}}
+    ignore = {'*': {'auto':n, 'initial':n, 'inherit':n, 'unset':n,
+                    'revert':n, 'revert-rule':n, 'revert-layer':n}}
 
     # Values specified in ignore['*'] must not be ignored for these attributes
     ignoreExcept = {'auto': {'table-layout':None}}
@@ -253,9 +257,9 @@ class Styles:
             val = value.strip()
             # Currently ignore values referring CSS variables
             if not val or val.startswith('var('): continue
-            n = name.strip()
-            if asDict: r[n] = val
-            else: r.append( (n, val) )
+            name = name.strip()
+            if asDict: r[name] = val
+            else: r.append((name,val))
         return r
 
     def __init__(self, elem=None, attrs=None, other=None, **kwargs):
@@ -438,9 +442,9 @@ class Styles:
             if length == 1:
                 value = value * 4
             elif length == 2:
-                value = (value[0], value[1], value[0], value[1])
+                value = value[0], value[1], value[0], value[1]
             elif length == 3:
-                value = (value[0], value[1], value[2], value[1])
+                value = value[0], value[1], value[2], value[1]
             elif length != 4:
                 # This will be ignored
                 delattr(self, prop)
@@ -449,7 +453,7 @@ class Styles:
             i = -1
             for direction in Styles.directions:
                 i += 1
-                self.add('%s-%s' % (prop, direction), value[i])
+                self.add(f'{prop}-{direction}', value[i])
             delattr(self, prop)
 
     def asString(self, keep=None):
@@ -462,7 +466,7 @@ class Styles:
                 # This v_name must be part of the result, excepted if it
                 # represents the "classes" attribute.
                 if name != 'classes':
-                    r.append('%s:%s' % (name, value))
+                    r.append(f'{name}:{value}')
         return ';'.join(r)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -486,9 +490,9 @@ class File:
         # representing CSS (or JS) code.
         if not s: return
         r = []
-        for line in s.split('\n'):
+        for line in s.split(bn):
             line = line.strip()
             if line and not line.startswith('//'):
                 r.append(line)
-        return '\n'.join(r)
+        return bn.join(r)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
