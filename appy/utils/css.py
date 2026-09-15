@@ -165,7 +165,7 @@ class Value:
     def isMultiple(self):
         '''Returns True if self.value contains several sub-values'''
         val = self.value
-        return isinstance(val, str) and (' ' in val)
+        return isinstance(val, str) and ' ' in val
 
     def __str__(self):
         res = str(self.value)
@@ -264,14 +264,14 @@ class Styles:
 
     def __init__(self, elem=None, attrs=None, other=None, **kwargs):
         '''Analyses styles as found in p_attrs and/or deduced from XHTML element
-           p_elem, and sets, for every found style, an attribute on self. This
-           constructor can also be used to build a Styles instance from
-           another Styles instance, given in p_other. A Styles instance
-           can also be initialised from p_kwargs representing CSS attributes.
-           CSS styles defined in p_kwargs override those in p_other, that, in
-           turn, override any existing value. Within p_kwargs, CSS attribute
-           names must not contain any dash (it would produce illegal Python
-           code).'''
+           p_elem, and sets, for every found style, an attribute on self.'''
+        # This constructor can also be used to build a Styles object from
+        # another Styles object, given in p_other. A Styles object can also be
+        # initialised from p_kwargs representing CSS attributes. CSS styles
+        # defined in p_kwargs override those in p_other, that, in turn, override
+        # any existing value. Within p_kwargs, CSS attribute names must not
+        # contain any dash (it would produce illegal Python code.
+        #
         # The content of a potential "class" attribute in p_attrs
         self.classes = ''
         # Parse first the "style" attribute if present
@@ -286,7 +286,7 @@ class Styles:
         # attributes if found.
         if attrs:
             for name, value in attrs.items():
-                if value and (name in self.xhtml2css):
+                if value and name in self.xhtml2css:
                     self.add(self.xhtml2css[name], value, override=False)
         # If a "class" attribute is defined, store, in attribute "classes", the
         # "external" class(es) defined in it.
@@ -455,6 +455,13 @@ class Styles:
                 i += 1
                 self.add(f'{prop}-{direction}', value[i])
             delattr(self, prop)
+
+    def has(self, prefix):
+        '''Returns True if p_self contains at least one property starting with
+           or being p_prefix.'''
+        for name in self.__dict__:
+            if name.startswith(prefix):
+                return True
 
     def asString(self, keep=None):
         '''Reifies p_self as a semi-colon-separated list of CSS properties.

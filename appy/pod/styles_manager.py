@@ -7,7 +7,7 @@ from collections import UserDict
 
 from appy import utils
 from appy.pod import *
-from appy.utils import css
+from appy.utils import css, asDict, bn
 from appy.utils.string import randomName
 from appy.pod.odf_parser import OdfEnvironment, OdfParser
 
@@ -18,8 +18,7 @@ PARSING_M_STYLES = 2 # Parsing section "master-styles"
 PARSING_P_LAYOUT = 3 # Parsing a page layout
 
 # Dict types
-dictTypes = (dict, UserDict)
-bn = '\n'
+dictTypes = dict, UserDict
 
 # Error-related constants  - - - - - - - - - - - - - - - - - - - - - - - - - - -
 MAP_KO     = 'The styles mapping must be a dictionary or a UserDict instance.'
@@ -900,6 +899,8 @@ class Css2odf:
     namesMap = {
       'marginleft': 'fo:margin-left', 'marginright': 'fo:margin-right',
       'margintop': 'fo:margin-top', 'marginbottom': 'fo:margin-bottom',
+      'borderleft': 'fo:border-left', 'borderright': 'fo:border-right',
+      'bordertop': 'fo:border-top', 'borderbottom': 'fo:border-bottom',
       'textalign': 'fo:text-align', 'textindent': 'fo:text-indent',
       'backgroundcolor': 'fo:background-color', 'color': 'fo:color',
       'fontsize': 'fo:font-size', 'fontvariant': 'fo:font-variant',
@@ -945,14 +946,15 @@ class Css2odf:
     }
 
     # CSS properties representing combinations of CSS properties
-    combined = ('background', 'border')
+    combined = 'background', 'border'
 
     # For the following attributes, an alternative px2cm ratio can be defined
     px2cmRatios = {'lineheight': css.px2cm * 2 }
 
     # The following attributes will not be converted to ODF if their related
     # condition evaluates to True.
-    notNegInTable = 'self.inTable() and (val < 0)'
+    notNegInTable = 'self.inTable() and val < 0'
+
     ignore = {
       # Ignore negative text-indent and margin-left attributes within tables
       'textindent': notNegInTable, 'marginleft': notNegInTable,
@@ -1090,9 +1092,11 @@ class StylesGenerator:
       'style:text-position': True}
 
     # Properties applying to table cells and that are not transferred to inner
-    # paragraphs.    
-    cellProperties = 'fo:padding', 'fo:border', 'fo:background-color', \
-                     'style:vertical-align'
+    # paragraphs.
+    cellProps = 'fo:padding', 'fo:border', 'fo:background-color', \
+                'style:vertical-align', 'fo:border-top', 'fo:border-bottom', \
+                'fo:border-left', 'fo:border-right'
+    cellProperties = asDict(cellProps)
 
     # Default parent styles to apply for generated styles. Those styles are not
     # listed among DEFAULT_STYLES because, when there is no custom style to
@@ -1290,9 +1294,8 @@ class StylesGenerator:
         cellAttrs = []
         store = 'content'
         for name, value in odfAttrs:
-            if name == 'fo:text-align': paraAttrs.append((name, value))
-            elif name in self.cellProperties: cellAttrs.append((name, value))
-            elif name in self.textProperties: paraAttrs.append((name, value))
+            dest = cellAttrs if name in self.cellProperties else paraAttrs
+            dest.append((name, value))
         # Generate a paragraph style to be applied on this td's inner paragraph
         if paraAttrs:
             xhtmlElem.innerStyle = self.get_any(xhtmlElem.protos['p'],paraAttrs,
@@ -1342,7 +1345,9 @@ class StylesGenerator:
                 # Combined values are currently ignored, "border" excepted
                 if name == 'border':
                     self.css2odf.getOdf(odfAttrs, name, value)
-            elif value.isMultiple():
+            elif value.isMultiple() and not name.startswith('border'):
+                # For "border-" properties, consider a value as
+                # "1pt solid black" as a non-multiple value.
                 for v in value.value.split(' '):
                     self.css2odf.getOdf(odfAttrs, name, value, v)
             else:

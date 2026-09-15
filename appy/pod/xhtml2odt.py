@@ -41,10 +41,12 @@ STYLE_ONLY_TAGS = 'b', 'strong', 'i', 'em', 'strike', 's', 'u', 'span', 'q', \
 for tag in STYLE_ONLY_TAGS: HTML_2_ODF[tag] = 'text:span'
 
 # Styles whose translation to ODF is simple
-SIMPLE_TAGS = XHTML_HEADINGS + ('p', 'div', 'blockquote', 'address', 'caption',
-                                'sub', 'sup', 'br', 'th', 'td')
+S_TAGS = 'p', 'div', 'blockquote', 'address', 'caption', 'sub', 'sup', 'br', \
+         'th', 'td'
+SIMPLE_TAGS = XHTML_HEADINGS + S_TAGS
 
-INNER_TAGS_NO_BR = STYLE_ONLY_TAGS + ('sub','sup','a','acronym','abbr','img')
+SS_TAGS = 'sub', 'sup', 'a', 'acronym', 'abbr', 'img'
+INNER_TAGS_NO_BR = STYLE_ONLY_TAGS + SS_TAGS
 INNER_TAGS = INNER_TAGS_NO_BR + ('br',)
 TABLE_CELL_TAGS = 'td', 'th'
 TABLE_COL_TAGS = TABLE_CELL_TAGS + ('col',)
@@ -408,6 +410,9 @@ class HtmlTable(Element):
     # constructed as we parse the HTML table; when encountering the end of the
     # HTML table, we will dump the result of this sub-buffer into the parent
     # buffer, which may be the global buffer or another table buffer.
+
+    # Default border style for a cell
+    cellBorderStyle = '0.05pt solid #000000'
 
     def __init__(self, env, xhtmlElem, attrs):
         self.env = env
@@ -908,16 +913,20 @@ class XhtmlEnvironment(Environment):
         if xhtmlElem.elem in ('td', 'th'):
             table = self.currentTables[-1]
             # Manage cells' borders
-            border = table.props.border
-            if border is None:
-                border = table.border and '0.05pt solid #000000' or '0'
-            xhtmlElem.cssStyles.add('border', border)
+            if not xhtmlElem.cssStyles.has('border'):
+                # No border is defined on this cell: get border requirements
+                # from the table level: from the TableProperties object or from
+                # CSS styles as defined on the container "table" tag.
+                border = table.props.border
+                if border is None:
+                    border = table.cellBorderStyle if table.border else '0'
+                xhtmlElem.cssStyles.add('border', border)
             # Manage cells' spacing
             spacing = table.borderSpacing
             if spacing:
                 # A minimum cell padding may be applicable
                 value = table.props.getCellPadding(spacing)
-                xhtmlElem.cssStyles.add('border-spacing', '%.2fcm' % value)
+                xhtmlElem.cssStyles.add('border-spacing', f'{value:.2f}cm')
         else:
             parent = xhtmlElem.parent
             if parent and parent.elem in ('td', 'th') and \
