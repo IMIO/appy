@@ -33,6 +33,12 @@ def getShownSize(size, unbreakable=False):
     size /= 1024 # This is the size, in Gb
     return f'{fmt(size, precision=1)}{b}Gb'
 
+def getSize(path, nice=True, unbreakable=False):
+    '''Returns the size of the file represented by Path object p_path, as a
+       number of bytes if p_nice is False, as a nicely formatted string else.'''
+    size = os.stat(path).st_size
+    return getShownSize(size, unbreakable=unbreakable) if nice else size
+
 def getFolderSize(folder, nice=False, withCounts=False):
     '''Returns the size of this p_folder (all content, recursively)'''
     r = 0

@@ -66,6 +66,7 @@ MIN_KO   = 'Config attribute "jobs.minutes" must be an integer being higher ' \
 MISSING  = 'Missing %s for a job.'
 WRONG_TD = 'Wrong timedef "%s".'
 TDEF_KO  = '%s. Must be of the form "m h dom mon dow".' % WRONG_TD
+JOB_C    = 'Job tool/%s configured @ %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Job:
@@ -215,7 +216,7 @@ class TimePart:
 
     def __repr__(self):
         '''p_self's string representation'''
-        rec = self.rec and ('/%d' % self.rec) or ''
+        rec = f'/{self.rec}' if self.rec else ''
         numA = self.numA
         numB = self.numB
         noneA = numA is None
@@ -223,10 +224,10 @@ class TimePart:
         if noneA and noneB:
             r = '*'
         elif not noneA and not noneB:
-            r = '%d-%d' % (numA, numB)
+            r = f'{numA}-{numB}'
         else:
             r = str(numA)
-        return '<TimePart %s%s>' % (r, rec)
+        return f'‹TimePart {r}{rec}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TimeDef:
@@ -416,10 +417,13 @@ class Config:
         if not isinstance(minutes, int) or (minutes < 1):
             raise Exception(MIN_KO)
 
-    def add(self, timeDef, method, threaded=False):
+    def add(self, timeDef, method, threaded=False, log=None):
         '''Adds a job to p_self.all, for running this m_method according to this
            p_timeDef.'''
         self.all.append( (TimeDef(timeDef), Job(method, threaded=threaded)) )
+        # This is logged, if a p_log function is passed
+        if log:
+            log(JOB_C % (method, timeDef))
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Scheduler:
@@ -436,7 +440,6 @@ class Scheduler:
         # Store, in attribute "last", the last minute corresponding to the last
         # scheduler execution. It allows to prevent several executions of the
         # same job(s) at the same minute.
-        # ~
         self.last = time.localtime().tm_min
         # This attribute is initialised to the current minute. It means that, as
         # soon as the Appy server is started, the scheduler will not be able to
