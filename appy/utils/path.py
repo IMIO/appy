@@ -39,6 +39,14 @@ def getSize(path, nice=True, unbreakable=False):
     size = os.stat(path).st_size
     return getShownSize(size, unbreakable=unbreakable) if nice else size
 
+def getDate(path, typE='st_mtime'):
+    '''Returns, as a DateTime object, a date related to the file@p_path'''
+    # p_typE may contain any attribute representing a date, as returned by
+    # os.stat(). The default, "st_mtime", represents the file's last
+    # modification date.
+    raw = getattr(os.stat(path), typE)
+    return DateTime(raw)
+
 def getFolderSize(folder, nice=False, withCounts=False):
     '''Returns the size of this p_folder (all content, recursively)'''
     r = 0
