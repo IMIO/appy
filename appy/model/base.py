@@ -456,7 +456,7 @@ class Base:
         # If p_isLabel is True, p_message is not a translated message, but a
         # to-be-translated i18n label; in that case, a p_mapping can be passed.
         #
-        # If we are in the popup, ignore p_backLink.
+        # If we are in the popup, ignore p_backLink
         if self.H().inPopup(): backLink = False
         raise MessageException(message, isLabel=isLabel, mapping=mapping,
                                backLink=backLink)

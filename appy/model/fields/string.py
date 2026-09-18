@@ -446,7 +446,7 @@ class String(Multilingual, Field):
             value = Escape.xhtml(value, p=False)
         return value or ''
 
-    def validateUniValue(self, o, value): return
+    def validateUniValue(self, o, value, patterns=None): return
 
     def getWidgetStyle(self):
         '''Get the styles to apply to the input widget on the edit layout'''

@@ -806,7 +806,7 @@ class Text(Multilingual, Field):
         if max and len(value) > max: value = value[:max]
         return value
 
-    def validateUniValue(self, o, value):
+    def validateUniValue(self, o, value, patterns=None):
         '''Text-specific validation logic'''
         # Ensure p_self.maxChars is respected
         maxC = self.maxChars
@@ -814,7 +814,7 @@ class Text(Multilingual, Field):
             maP = mapping={'max': maxC, 'found': len(value)}
             return o.translate('text_overflow', maP)
         # Ensure there is no invalid text within p_value
-        patterns = self.invalidTexts
+        patterns = patterns or self.invalidTexts
         if not patterns:
             return # Don't perfom the check: there is no invalid text to detect
         found = sutils.firstMatch(patterns, value)

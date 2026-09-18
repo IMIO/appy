@@ -5,8 +5,8 @@
 from DateTime import DateTime
 
 from appy.px import Px
-from appy.utils import dictTypes
 from appy.model.fields import Field
+from appy.utils import dictTypes, bn, br
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 INV_M_VAL  = 'Multilingual field "%s" accepts a dict whose keys are in ' \
@@ -319,17 +319,26 @@ class Multilingual:
             value[lg] = self.getUniStorableValue(o, value[lg])
         return value
 
-    def validateValue(self, o, value):
+    def validateValue(self, o, value, patterns=None):
         '''Validates this p_value'''
+        # When called by the standard validation mechanism, p_patterns is
+        # unused. This parameter allows to force a value as a replacement for
+        # p_self.invalidTexts, proposed by most multilingual fields. Indeed, it
+        # may be interesting to detect invalid texts outside the validation
+        # mechanism: the user is not blocked at the validation stage, may encode
+        # invalid texts, but, later on (ie, at some workflow step), could be. A
+        # workflow action could, in such cases, call m_validateValue on relevant
+        # fields with a forced value for p_patterns.
         if isinstance(value, Multilingual.types):
             r = []
             for lang, val in value.items():
-                res = self.validateUniValue(o, val)
+                res = self.validateUniValue(o, val, patterns)
                 if res:
-                    r.append('%s (%s)' % (res, lang.upper()))
-            r = '\n'.join(r) if r else None
+                    r.append(f'{res} ({lang.upper()})')
+            sep = br if patterns else bn
+            r = sep.join(r) if r else None
         else:
-            r = self.validateUniValue(o, value)
+            r = self.validateUniValue(o, value, patterns)
         return r
 
     def store(self, o, value):
@@ -356,5 +365,5 @@ class Multilingual:
         language = o.req.languageOnly
         v = self.getUniStorableValue(o, value)
         o.values[self.name][language] = v
-        return ' (%s)' % language
+        return f' ({language})'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

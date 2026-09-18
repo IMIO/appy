@@ -381,10 +381,10 @@ class Rich(Multilingual, Field):
         it = self.toItalicize
         return it(o) if callable(it) else it
 
-    def getXhtmlCleaner(self, o, forValidation=False):
+    def getXhtmlCleaner(self, o, forValidation=False, patterns=None):
         '''Returns a Cleaner instance tailored to p_self'''
         if forValidation:
-            invalid = self.invalidTexts
+            invalid = patterns or self.invalidTexts
             transform = None
             italicize = None
         else:
@@ -394,10 +394,12 @@ class Rich(Multilingual, Field):
         return Cleaner(invalidTexts=invalid, transformText=transform,
                        toItalicize=italicize, stripped=self.stripped, logger=o)
 
-    def validateUniValue(self, o, value):
+    def validateUniValue(self, o, value, patterns=None):
         '''Ensure p_value as will be stored (=cleaned) is valid XHTML'''
         try:
-            self.getXhtmlCleaner(o, forValidation=True).clean(value)
+            cleaner = self.getXhtmlCleaner(o, forValidation=True,
+                                           patterns=patterns)
+            cleaner.clean(value)
         except SAXParseException as err:
             # Try after removing problematic chars
             value = StringCleaner.clean(value)

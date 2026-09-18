@@ -713,8 +713,8 @@ class Poor(Rich):
       documents=False, languages=('en',), languagesLayouts=n, viewSingle=False,
       inlineEdit=False, view=n, cell=n, buttons=n, edit=n, custom=n, xml=n,
       translations=n, inject=False, valueIfEmpty='', viewCss='xhtmlV',
-      autoCorrect=AutoCorrect.default, font=n, transformText=n, toItalicize=n,
-      tagAttributes=n, stripped=n):
+      autoCorrect=AutoCorrect.default, font=n, invalidTexts=n, transformText=n,
+      toItalicize=n, tagAttributes=n, stripped=n):
         # Call the base constructor
         super().__init__(validator, multiplicity, default, defaultOnEdit,
           show, renderable, page, group, layouts, move, indexed, mustIndex,
@@ -724,8 +724,8 @@ class Poor(Rich):
           generateLabel, label, sdefault, scolspan, swidth, fwidth, sheight,
           persist, n, n, documents, n, languages, languagesLayouts, viewSingle,
           inlineEdit, 'Standard', view, cell, buttons, edit, custom, xml,
-          translations, inject, valueIfEmpty, viewCss, n, transformText,
-          toItalicize, stripped)
+          translations, inject, valueIfEmpty, viewCss, invalidTexts,
+          transformText, toItalicize, stripped)
         # Define a placeholder here, as a method returning some i18n text
         self.placeholder = placeholder
         # As-you-type replacements are defined by placing an Autocorrect object
@@ -802,27 +802,29 @@ class Poor(Rich):
         # check must be performed.
         return True if ignoreInner else not self.isInner()
 
-    def getXhtmlCleaner(self, o, forValidation=False):
+    def getXhtmlCleaner(self, o, forValidation=False, patterns=None):
         '''Returns a Cleaner instance tailored to p_self'''
         # More strict cleaning than the Rich
         tagsToIgnore = Cleaner.tagsToIgnoreWithContentStrict
         if forValidation:
             transform = italicize = None
+            invalid = patterns or self.invalidTexts
         else:
             transform = self.transformText
             it = self.toItalicize
             italicize = self.getItalicized(o)
-        return Cleaner(attrsToAdd=Cleaner.attrsToAddStrict,
+            invalid = None
+        return Cleaner(invalidTexts=invalid,attrsToAdd=Cleaner.attrsToAddStrict,
                        propertiesToKeep=Cleaner.propertiesToKeepStrict,
                        tagsToIgnoreWithContent=tagsToIgnore, repair=True,
                        transformText=transform, toItalicize=italicize,
                        stripped=self.stripped, logger=o)
 
-    def validateUniValue(self, o, value):
+    def validateUniValue(self, o, value, patterns=None):
         '''As a preamble, ensure p_value is XHTML'''
         value = XhtmlPreprocessor.preprocess(value, html=True, pre=False,
                                              paraTag='div')
-        return super().validateUniValue(o, value)
+        return super().validateUniValue(o, value, patterns)
 
     def getUniStorableValue(self, o, value, wrap=False):
         '''Gets the p_value as can be stored in the database within p_o'''
