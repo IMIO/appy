@@ -7,6 +7,7 @@
 import logging, sys, re, pathlib
 
 from appy.px import Px
+from appy.utils import bn
 from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -66,6 +67,8 @@ class Config:
                       messageParts=siteMessageParts, sep=siteSep)
         self.app  = O(dateFormat=appDateFormat,  attributes=appAttributes,
                       messageParts=appMessageParts,  sep=appSep)
+        # Logins of users that will receive a mail if a critical error is logged
+        self.criticalUsers = {'admin'}
 
     def set(self, siteLogFolder, appLogFolder):
         '''Sets site-specific configuration elements'''
@@ -118,6 +121,53 @@ class Config:
         # Return the created logger
         if created: logger.info(L_CREA % path)
         return logger
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+CRIT_SIL  = 'Critical error occured but there is no valid mail recipient to ' \
+            'warn people by mail.'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Logger:
+    '''Management of log entries'''
+
+    # While method appy.server.handler.py::Handler.log does most of the job of
+    # logging (creating the complete messages to log and calling the loggers
+    # from the Python logging module), this class does some parts of the job
+    # like sending mails in case of critical errors.
+
+    # Default mail subject and body for critical mails
+    criticalSubject = '%s · A critical error occurred'
+    criticalBody = f'A critical error occurred on a site for which you are ' \
+                   f'defined as critical user. Here are the details.{bn*2}%s'
+
+    @classmethod
+    def sendCriticalMail(class_, tool, config, message):
+        '''Sends a mail to critical users as defined in the log p_config: a
+           critical error has occurred.'''
+        message = message or ''
+        # Get the user recipients
+        recipients = []
+        for login in config.criticalUsers:
+            user = tool.search1('User', login=login)
+            if user:
+                rec = user.getMailRecipient()
+                if rec:
+                    recipients.append(rec)
+        if not recipients:
+            tool.log(CRIT_SIL, type='error')
+            return
+        # Determine the info to dump into the mail subject and body
+        siteUrl = tool.siteUrl
+        sconfig = tool.config.server
+        detail = f'{bn*2}{message}' if message else ''
+        info = f'Url: {siteUrl}{bn}Server:{tool.Server.platform.node()}' \
+               f'{bn}Address: {sconfig.getAddress(details=True, sep=bn)}{bn}' \
+               f'Port: {sconfig.port}{detail}'
+        # Build the mail subject and body
+        subject = class_.criticalSubject % siteUrl
+        body = class_.criticalBody % info
+        # Send the mail
+        tool.sendMail(recipients, subject, body)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 LOG_T_KO   = 'Unknown log type "%s".'

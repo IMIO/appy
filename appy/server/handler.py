@@ -13,6 +13,7 @@ from appy.utils import Function
 from appy.model.base import Base
 from appy.server.guard import Guard
 from appy.server.error import Error
+from appy.database.log import Logger
 from appy.server.static import Static
 from appy.server.request import Request
 from appy.model.utils import Object as O
@@ -225,10 +226,12 @@ class Handler:
         if message and self.logChar:
             message = f'{self.logChar} {message}'
         logger = getattr(server.loggers, type)
-        cfg = getattr(server.config.log, type)
+        # Get the main log config and the logger-specific config
+        mainConfig = server.config.log
+        config = getattr(mainConfig, type)
         # Get the parts of the message to dump
         r = []
-        for part in cfg.messageParts:
+        for part in config.messageParts:
             value = Handler.logAttributes.get(part)
             if value is None:
                 # This is the "message" part
@@ -244,14 +247,17 @@ class Handler:
                 r.append(value)
         # Call the appropriate method on the logger object corresponding to the
         # log p_level.
-        getattr(logger, level)(cfg.sep.join(r))
+        getattr(logger, level)(config.sep.join(r))
+        # Send a mail if this is a critical error
+        if type == 'app' and level == 'critical' and mainConfig.criticalUsers:
+            Logger.sendCriticalMail(self.tool, mainConfig, message)
 
     def isMobile(self):
         '''Was the currently handled HTTP request initiated from a mobile
            device ?'''
 
     def getSpecial(self, login):
-        '''Returns the special User instance having this p_login'''
+        '''Returns the special User object having this p_login'''
         try:
             r = self.dbConnection.root.objects.get(login)
         except AttributeError:

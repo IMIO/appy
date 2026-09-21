@@ -191,7 +191,7 @@ class Index(persistent.Persistent):
             ids = self.byValue.get(value)
         except (TypeError, SystemError) as err:
             if o: o.log(IBV_KO % (self.catalog.name, self.name, str(value),
-                                  str(err)), type='error')
+                                  str(err)), type='critical')
             return
         if ids is None: return
         # Remove reference to p_iD for this p_value
@@ -252,7 +252,7 @@ class Index(persistent.Persistent):
                     if o:
                         o.log(ISBV_KO % (self.catalog.name, self.name,
                                          str(value), str(iD), str(err)),
-                                         type='error')
+                                         type='critical')
                     raise err
             else:
                 self.byValue[value] = IITreeSet((iD,))

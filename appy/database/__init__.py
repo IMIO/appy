@@ -457,7 +457,7 @@ class Database:
            a list of object IDS instead of a list of true objects.'''
         # p_ids being True can be useful for some usages like determining the
         # number of objects without needing to get information about them.
-        # ~
+        #
         # Ensure there is a catalog for p_className
         catalog = handler.dbConnection.root.catalogs.get(className)
         if not catalog:
