@@ -8,6 +8,7 @@ import logging, sys, re, pathlib
 
 from appy.px import Px
 from appy.utils import bn
+from appy.utils import path as putils
 from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -185,10 +186,12 @@ class Viewer:
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     modes = 'tail', 'full'
 
-    # Attributes having sense in "tail" mode
-    bounded = O( # Values having min and max bounds
-     n           = O(max=500, min=50, default=100), # Number of retrieved lines
-     refreshRate = O(max=30 , min=3, default=15) , # Refresh rate (seconds)
+    # Attributes having sense in "tail" mode - - - - - - - - - - - - - - - - - -
+
+    # Values having min and max bounds
+    bounded = O(
+     n = O(max=10000, min=100, default=100), # Count of retrieved lines
+     refreshRate = O(max=30 , min=3, default=15), # Refresh rate (seconds)
     )
     chunkSize   = 1024 # Number of bytes retrieved at a time
 
@@ -212,8 +215,8 @@ class Viewer:
       <!-- Log file selector -->
       <select name="logFile" var="files=viewer.listFiles(logType)"
               onchange="refreshLogZone()">
-        <option for="id, name in files" value=":id"
-                selected=":req.logFile == id">:name</option>
+        <option for="id, niceName, name in files" value=":id" title=":name"
+                selected=":req.logFile == id">:niceName</option>
       </select>
 
       <!-- Refresh every x seconds -->
@@ -302,7 +305,7 @@ class Viewer:
      css='''.logControls { display:flex; align-items:center; gap:0.5em;
                            flex-wrap:wrap }
             .logControls select, .logControls input[type=text] {
-              padding:0; margin:0; font-size:90% }
+              padding:0.1em 0.3em; margin:0; font-size:90% }
             .logControls input[type=text] { width:11em }
             .logControl { display:inline-flex }
             .logControl input[type=number] { margin:0 0.4em 0 0;
@@ -311,7 +314,7 @@ class Viewer:
                        color:grey; text-transform:none }
             .logText { overflow:auto;width:65vw;height:55vh;font-size:90% }
             .rateR { width:2.5em }
-            .tailN { width:4em }
+            .tailN { width:5em }
             #logForm input[type=button] {
               color:inherit; padding:0.3em 0.7em; text-transform:none;
               font-size:80%; border:1px solid grey }''')
@@ -440,7 +443,7 @@ class Viewer:
         config = self.tool.config
         # Start with the current log file
         path = getattr(config.log, logType).path
-        current = (path.name, str(path))
+        current = path.name, f'{path.name} · {putils.getSize(path)}', str(path)
         r = None
         # Add backup files if any
         bconfig = config.backup
@@ -449,7 +452,8 @@ class Viewer:
             if logFolder.is_dir():
                 r = []
                 for logFile in logFolder.glob(f'{logType}.*.log'):
-                    r.append((logFile.name, str(logFile)))
+                    niceName = f'{logFile.name} · {putils.getSize(logFile)}'
+                    r.append((logFile.name, niceName, str(logFile)))
                 # Sort them in antichronological order
                 r.sort(key=lambda e: e[0], reverse=True)
                 # Insert the current log at the start of the list
