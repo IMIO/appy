@@ -21,7 +21,7 @@ REPLY_TO   = 'reply to: %s'
 MSG_SUBJ   = 'Subject :: %s'
 MSG_BODY   = 'Body :: %s'
 MSG_ATTS   = '%d attachment(s) :: %s.'
-MSG_SEND   = 'Sending mail from %s to %s (subject: %s).'
+MSG_SEND   = 'Sending mail from %s to (%d recipient·s) %s (subject: %s).'
 MAIL_R_KO  = 'Could not send mail to some recipients. %s'
 MAIL_SENT  = "Mail sent in %.2f''."
 MAIL_NSENT = '%s :: Mail sending failed (%s).'
@@ -376,7 +376,8 @@ class Mailer:
         if self.mailDisabled(): return
 
         # Log the start of the process
-        self.log(MSG_SEND % (self.from_, ', '.join(self.to), self.subject))
+        to = self.to
+        self.log(MSG_SEND % (self.from_, len(to), ', '.join(to), self.subject))
 
         # Create or update the EmailMessage object
         self.buildMessage()
