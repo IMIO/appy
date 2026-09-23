@@ -343,14 +343,19 @@ class Class(Meta):
                 sf = self.switchFields
             field.injectFields(self, pyClass, sf, withProperties=True)
 
-    def openHistories(self):
+    def openHistories(self, perm=None):
         '''Make histories on p_self's objects viewable by anyone having the
-           "read" permission on these objects.'''
+           "read" permission on these objects, or another p_perm(ission) if
+           passed.'''
         # Indeed, by default, object histories are not "open" to object viewers
         # (from the UI): they are viewable by Managers only.
-        record = self.fields['record']
-        record.show = Show.VX
-        record.page.show = 'view'
+        rec = self.fields['record']
+        if perm is None:
+            rec.show = Show.VX
+            rec.page.show = 'view'
+        else:
+            # Open histories to anyone having this p_perm(ission)
+            rec.show=rec.page.show= lambda o: 'view' if o.allows(perm) else None
 
     def readSearches(self):
         '''Create attribute "searches" as an ordered dict storing all static
