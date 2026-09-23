@@ -3,15 +3,17 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
+from appy.utils import formatNumber
 from appy.utils import string as sutils
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Batch:
-    '''Represents a list of objects being part of a wider list, ie:
-        * page 2 displaying objects 30 to 60 from a search matching 1110
-          results;
-        * page 1 displaying objects 0 to 20 from a list of 43 referred objects.
-    '''
+    '''Represents a list of objects being part of a wider list'''
+
+    # For example:
+    # - page 2 displaying objects 30 to 60 from a search matching 1110 results ;
+    # - page 1 displaying objects 0 to 20 from a list of 43 referred objects.
+
     def __init__(self, objects=None, total=0, size=30, start=0, hook=None):
         # The objects being part of this batch
         self.objects = objects
@@ -46,9 +48,44 @@ class Batch:
             css = 'clickable iconS'
             q = c.q
             scrollTop = q(c.scrollTop) if c.scrollTop else 'null'
-            js = 'askBunch(%s,%s,%s,%s)' % (q(self.hook), q(nb), q(self.size),
-                                            scrollTop)
+            js = f'askBunch({q(self.hook)},{q(nb)},{q(self.size)},{scrollTop})'
         return css, js
+
+    def getTotal(self, formatted=True):
+        '''Returns p_self total, formatted'''
+        # The formatting injects thousands separators when appropriate
+        r = self.total
+        return '?' if r is None else formatNumber(r)
+
+    def store(self, search, name=None):
+        '''Returns the Javascript code allowing to store objects from this batch
+           in the browser's session storage.'''
+        # Get the key at which we will store object IDs in the local storage
+        key = search.getSessionKey(name=name)
+        # Get the dict of IDs to store ~{i_index:i_id}~
+        i = self.start
+        value = {}
+        for o in self.objects:
+            value[i] = o.iid
+            i += 1
+        value = sutils.getStringFrom(value)
+        return f"sessionStorage.setItem('{key}',JSON.stringify({value}))"
+
+    def isComplete(self):
+        '''Does this batch contain all objects ?'''
+        return self.length == self.total
+
+    def showNav(self):
+        '''Show the navigation only when appropriate'''
+        return self.total > self.size
+
+    def __repr__(self):
+        '''p_self a short string'''
+        data = f'start={self.start},length={self.length},size={self.size},' \
+               f'total={self.total}'
+        if self.hook:
+            data = f'hook={self.hook},{data}'
+        return f'‹Batch {data}›'
 
     # Input field for going to element number x
     pxGotoNumber = Px('''
@@ -85,7 +122,7 @@ class Batch:
      <span class="navText"> 
       <x>:batch.start + 1</x> ⇀
       <x>:batch.start + batch.length</x> <span class="navSep">//</span> 
-      <span class="btot">:batch.total</span>
+      <span class="btot">:batch.getTotal()</span>
      </span>
 
      <!-- Go to the next page -->
@@ -109,33 +146,4 @@ class Batch:
      <!-- Go to the element number... -->
      <x var="gotoNumber=gotoNumber|False" if="gotoNumber"
         var2="sourceUrl=o.url; total=batch.total">:batch.pxGotoNumber</x>''')
-
-    def store(self, search, name=None):
-        '''Returns the Javascript code allowing to store objects from this batch
-           in the browser's session storage.'''
-        # Get the key at which we will store object IDs in the local storage
-        key = search.getSessionKey(name=name)
-        # Get the dict of IDs to store ~{i_index:i_id}~
-        i = self.start
-        value = {}
-        for o in self.objects:
-            value[i] = o.iid
-            i += 1
-        value = sutils.getStringFrom(value)
-        return "sessionStorage.setItem('%s',JSON.stringify(%s))" % (key, value)
-
-    def isComplete(self):
-        '''Does this batch contain all objects ?'''
-        return self.length == self.total
-
-    def showNav(self):
-        '''Show the navigation only when appropriate'''
-        return self.total > self.size
-
-    def __repr__(self):
-        '''String representation'''
-        data = 'start=%d,length=%d,size=%s,total=%d' % \
-               (self.start, self.length, self.size, self.total)
-        if self.hook: data = 'hook=%s,%s' % (self.hook, data)
-        return '<Batch %s>' % data
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

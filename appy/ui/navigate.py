@@ -6,6 +6,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy.px import Px
 from appy.model.batch import Batch
+from appy.utils import formatNumber
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 WRONG_NAV  = 'Wrong nav key "%s".'
@@ -16,7 +17,7 @@ class Sibling:
        another one.'''
 
     # Existing types of siblings
-    types = ('previous', 'next', 'first', 'last')
+    types = 'previous', 'next', 'first', 'last'
 
     # Names of icons corresponding to sibling types
     icons = {'previous': 'arrow',  'next': 'arrow',
@@ -118,7 +119,7 @@ class Siblings:
        <!-- Explain which element is currently shown -->
        <span class="navText">
         <x>:snav.number</x> <span class="navSep">//</span> 
-        <span class="btot">:snav.total</span>
+        <span class="btot">:snav.getTotal()</span>
        </span>
 
        <!-- Go to the next and/or last page -->
@@ -286,6 +287,12 @@ class Siblings:
         imageUrl = svg('arrowsA')
         return f'<a href="{self.sourceUrl}{params}" title="{message}">' \
                f'<img src="{imageUrl}" class="back{css}"/>{text}</a>'
+
+    def getTotal(self, formatted=True):
+        '''Returns p_self total, formatted'''
+        # The formatting injects thousands separators when appropriate
+        r = self.total
+        return '?' if r is None else formatNumber(r)
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class RefSiblings(Siblings):
@@ -462,6 +469,11 @@ class ListNav:
         # The count of currently shown elements
         self.count = 0 # Will be set by a call to m_setCount
 
+    def getTotal(self, formatted=True):
+        '''Returns p_self total, formatted'''
+        r = self.total
+        return '?' if r is None else formatNumber(r)
+
     def getBatchSize(self):
         '''Gets the batch size, from the request or from p_self'''
         req = self.req
@@ -500,12 +512,12 @@ class ListNav:
 
        <!-- Go to the previous page -->
        <img if="first != 0" src=":svg('arrow')" class="clickable iconS"
-            onclick=":f'listNav({first - batchSize})'" style=":nav.rotate % 90"/>
+            onclick=":f'listNav({first-batchSize})'" style=":nav.rotate % 90"/>
 
        <!-- Display the current range -->
        <div if="not(first == 0 and nav.count &lt; batchSize)">
         <x>:first+1</x> ⇀ <x>:first + nav.count</x>
-        <x if="nav.total"> / <x>:nav.total</x></x>
+        <x if="nav.total"> / <x>:nav.getTotal()</x></x>
        </div>
 
        <!-- Go to the next page -->

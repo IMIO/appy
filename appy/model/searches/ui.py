@@ -130,7 +130,7 @@ class UiSearch:
         <x if="mode.batch and not empty">
          <span var="css=class_.getCssFor(tool, 'sep')"
                class=":f'navSep {css}' if css else 'navSep'">//</span>
-         <span class="btot">:mode.batch.total</span>
+         <span class="btot">:mode.batch.getTotal()</span>
         </x>
         <!-- Search description -->
         <img if="descr" src=":svg('detail')" class="sdetail" title=":descr"/>
