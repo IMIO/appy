@@ -442,8 +442,8 @@ class HttpHandler(Handler):
         # Return the response content. In the case of a redirect, None will be
         # returned.
         if self.guard.user.isAnon():
-            if resp.contentType == 'html':
-                # This is (supposedly) a user behind a browser
+            if resp.forHuman():
+                # This is (supposedly) a human being behind a browser
                 if error and error.redirect is False:
                     # Log and return a 403 error. p_error may be a class and not
                     # an instance. In that case, v_error.redirect is None and
@@ -460,10 +460,13 @@ class HttpHandler(Handler):
                                   f'{gotoUrl}&stay=1', message=text)
                     r = None
             else:
-                # Return a 403 error, marshalled
+                # Return a 403 error, possibly marshalled
                 resp.code = HTTPStatus.FORBIDDEN
                 tag = error.__class__.__name__ if error is not None else 'Error'
-                r = traversal.marshall(error or '', rootTag=tag)
+                text = error or ''
+                r = traversal.marshall(text, rootTag=tag)
+                # Log it
+                text = Error.get(resp, traversal, error=error)
         else:
             # Log and return a 403 error: forbidden
             resp.code = HTTPStatus.FORBIDDEN

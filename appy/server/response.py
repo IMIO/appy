@@ -117,6 +117,20 @@ class Response:
         # happen with File fields with cache=True), keys "Cache-Control" and
         # "Expires" will be removed afterwards.
 
+    def forHuman(self):
+        '''Return True if a (supposedly) human being will receive this
+           response.'''
+        # In the beginning of the 21th century, most humans only read HTML, not
+        # technical languages such as JSON or XML.
+        if self.contentType != 'html': return
+        # Extract the user agent, if specified, from response headers
+        agent = self.handler.headers.get('User-Agent')
+        # Exclude git clients
+        if agent and agent.startswith('git/'):
+            return
+        # Suppose a human being is there
+        return True
+
     def __repr__(self):
         '''p_self's short string representation'''
         return f'‹Response code={self.code}›'

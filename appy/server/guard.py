@@ -122,7 +122,7 @@ class Unauthorized(Exception):
         # p_translated contains a potentially translated, human-targeted message
         self.translated = translated
         # By default (p_redirect is None), when an Unauthorized exception is
-        # raised, if the end user is a humain being behind a web browser, we
+        # raised, if the end user is a human being behind a web browser, we
         # will redirect him to the login page. But one may force p_redirect to
         # False to avoid this behaviour.
         self.redirect = redirect
