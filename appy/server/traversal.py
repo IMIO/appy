@@ -273,20 +273,21 @@ class Traversal:
             r = True
         return r
 
-    def executeMethod(self, method):
+    def executeMethod(self, method, catched=None):
         '''Execute m_method and return the result. The args potentially given to
            the method may vary.'''
+        # If m_method is a catcher, it will receive p_catched as last arg
         if hasattr(method, '__self__'):
             # We have a bound method. If the last walked object is not the bound
             # object, give the last walked object as unique arg.
             o = self.o
-            if o and method.__self__ != o:
-                r = method(o)
-            else:
-                r = method()
+            args = (o,) if (o and method.__self__ != o) else ()
         else:
-            r = method(self.o or self.handler)
-        return r
+            args = self.o or self.handler,
+        # Add p_catched as last arg if not None
+        if catched:
+            args = args + (catched,)
+        return method(*args)
 
     def executePx(self, name, px):
         '''Renders this p_px, whose p_name is given'''
@@ -323,12 +324,26 @@ class Traversal:
         # Finally, call the PX
         return px(self.context)
 
-    def managePart(self, previous, name, current):
-        '''Manage the currently traversed element p_current, named p_name, after
-           p_previous has already been traversed.
+    def manageTraverser(self, part):
+        '''At the start of a traversal, manage a potential traverser'''
+        # Invariant :: p_self.r is still None: p_part must either be a
+        # traverser, or correspond to an object ID. For more information about
+        # traversers, see appy/server/__init__.py::Config.traversers.
+        expr = self.handler.config.server.traversers.get(part)
+        if expr:
+            tool = self.tool
+            self.o = tool
+            self.r = eval(expr)
+        else:
+            # v_part must be an object ID
+            self.r = self.o = self.getObject(part)
 
-                       p_previous.<p_name> = p_current
-        '''
+    def managePart(self, previous, name, current, catched=None):
+        '''Manage the currently traversed element p_current, named p_name, after
+           p_previous has already been traversed.'''
+        #
+        #                 p_previous.<p_name> = p_current
+        #
         # Compute information allowing to determine if the user is allowed to
         # perform such traversal.
         info = self.getTraversalInfo(previous, name, current)
@@ -340,7 +355,7 @@ class Traversal:
             self.r = self.executePx(name, current)
         elif callable(current) and not inspect.isclass(current):
             # Execute method "current"
-            self.r = self.executeMethod(current)
+            self.r = self.executeMethod(current, catched)
         else:
             # Ensure p_current is already in p_self.r. This may not be the case
             # at the end of the traversal, if we add a default value.
@@ -381,6 +396,27 @@ class Traversal:
             self.field = r
         return r
 
+    def isCatcher(self, part, i):
+        '''Returns a 2-tuple whose first element is p_part (whose potential
+           catcher char has been stripped), and the second one, a list
+           containing the remaining parts yet to traverse if p_part represents a
+           catcher, None else.'''
+        # A "catcher" is a traversal p_part that represents a method that will
+        # manage itself the remaining of the traversal: it will "catch" the URL
+        # path that is yet to manage. A catcher is a name that ends with char
+        # "~". In the following example, the "git" part is a catcher:
+        #
+        #           http://my.coderepos.org/45/git~/Repo2/info/refs
+        #
+        # In such a case, a traversable method named "git" must exist on the
+        # object whose iid is 45. This method will receive, as single arg, a
+        # list containing the URL parts yet to manage: ['Repo2','info','refs'].
+        if part.endswith('~'):
+            r = part[:-1], self.parts[i+1:]
+        else:
+            r = part, None
+        return r
+
     def marshall(self, r, rootTag=None):
         '''Depending on the response type, the traversal p_r(esult) may need to
            be marshalled.'''
@@ -394,6 +430,13 @@ class Traversal:
             r = Marshaller(rootTag=tag).marshall(r)
         elif resp.contentType == 'json':
             r = json.Encoder(r).encode()
+        else:
+            # There is no known marshaller
+            if isinstance(r, bytes):
+                pass # Leave v_r as is
+            elif not isinstance(r, str):
+                # Convert it to a string
+                r = str(r)
         return r
 
     def run(self):
@@ -420,26 +463,23 @@ class Traversal:
                     # Switch to "static" mode
                     self.mode = Traversal.STATIC
                 elif self.r is None:
-                    # We are at the start of a traversal. p_self.r is still
-                    # None: v_part must either be a traverser, or correspond to
-                    # an object ID.
-                    expr = self.handler.config.server.traversers.get(part)
-                    if expr:
-                        tool = self.tool
-                        self.o = tool
-                        self.r = eval(expr)
-                    else:
-                        # v_part must be an object ID
-                        self.r = self.o = self.getObject(part)
-                # Manage any not-empty part
+                    # The start of a traversal: manage a potential traverser
+                    self.manageTraverser(part)
                 elif part:
+                    # Manage any not-empty part
                     if part.isdigit(): # An object (again): reset the traversal
                         self.reset(self.tool.getObject(part))
                     else:
-                        # Try to get attribute or method named "part" on self.r
+                        # Try to get an attribute or method named v_part on
+                        # p_self.r. Manage a potential catcher.
+                        part, catched = self.isCatcher(part, i)
                         self.r = self.getPart(part)
                         # Manage this part
-                        self.managePart(previous, part, self.r)
+                        self.managePart(previous, part, self.r, catched)
+                        # Stop here if the remaining of the traversal has been
+                        # handled by p_self.r.
+                        if catched:
+                            break
                 i += 1
                 previous = self.r
         # If self.r is an object and the response must be HTML, call the default
