@@ -447,8 +447,11 @@ class Base:
         raise self.guard.Error(msg, redirect=redirect)
 
     def raiseNotFound(self, msg=None):
-        '''Raise a 404 error'''
-        return self.resp.buildError(HTTPStatus.NOT_FOUND, message=msg)
+        '''Produce a 404 error'''
+        message = self.H().path
+        if msg: message = f'{message} - {msg}'
+        self.resp.buildError(HTTPStatus.NOT_FOUND, message=message)
+        return True
 
     def raiseMessage(self, message, isLabel=False, mapping=None,
                      backLink=False):
