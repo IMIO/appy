@@ -2,7 +2,10 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import time
+
 from DateTime import DateTime
+from DateTime.interfaces import SyntaxError
 
 from ..px import Px
 from .iframe import Iframe
@@ -16,6 +19,9 @@ PATH_KO  = 'The progress file does not exist.'
 PATH_DEL = 'Progress information about %s:%s has been cleaned.'
 DB_RW    = 'The database has been switched to read/write again.'
 PROD_INI = 'Progress operation started for %s:%s (exclusive=%s).'
+DATE_KO  = 'Error while reading progress file %s :: Unparsable creation date ' \
+           '"%s".'
+WAIT_RF  = 'Progress file %s incomplete. Re-read it in 1 second...'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Progress:
@@ -246,15 +252,17 @@ class Progress:
         r = None
         progress = elem.progress
         path = progress.getPath(o, elem.name)
+        r = None
         if path.is_file():
-            r = progress.getPathInfo(path)
-        else:
+            r = progress.getPathInfo(o, path)
+        if r is None:
+            # Either there was no file, or the file is unreadable
             r = O(percentage=0, login=tool.user.login, created=None, nb=0,
                   text=progress.divTranslate(o, 'progress_ongoing'))
         return r
 
     @classmethod
-    def getPathInfo(class_, path):
+    def getPathInfo(class_, o, path, retry=True):
         '''Extracts an object with info as dumped in the the status file having
            this p_path.'''
         r = O()
@@ -267,12 +275,47 @@ class Progress:
         # 4 | the percentage, as an integer number between 0 and 100 ;
         # 5 | the text, that may span several lines.
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        with open(str(path)) as f:
+        spath = str(path)
+        # v_complete will be True once the complete file will have been read,
+        # with the expected data structure. If the file is completely read but
+        # did not contain all the expected elements, we are probably reading it
+        # while a Progress.set method is writing it. In that case, wait a second
+        # and p_retry (only once).
+        complete = False
+        with open(spath) as f:
+            # Read line #1
             r.login = f.readline().strip()
-            r.created = DateTime(f.readline().strip())
-            r.nb = int(f.readline().strip())
-            r.percentage = int(f.readline().strip())
-            r.text = f.read() # The remaining of the file is the text
+            if r.login:
+                # Read line #2
+                createdS = f.readline().strip()
+                if createdS:
+                    try:
+                        r.created = DateTime(createdS)
+                        # Read line #3
+                        nb = f.readline().strip()
+                        if nb:
+                            r.nb = int(nb)
+                            # Read line #4
+                            percentage = f.readline().strip()
+                            if percentage:
+                                r.percentage = int(percentage)
+                                # Read line #5 and above: the remaining of the
+                                # file is the text.
+                                r.text = f.read()
+                                complete = True
+                    except SyntaxError:
+                        o.log(DATE_KO % (spath, createdS), type='error')
+        if not complete:
+            # A problem occurred while reading the file
+            if retry:
+                # Retry in one second: a Progress.set method may be writing it
+                o.log(WAIT_RF)
+                time.sleep(1)
+                r = class_.getPathInfo(o, path, retry=False)
+            else:
+                # Reading the file failed twice. Don't retry again: the current
+                # progress is lost.
+                r = None
         return r
 
     traverse['clean'] = 'Manager'
@@ -320,9 +363,14 @@ class Progress:
             iid, name = name.split('_')
             # Collect, from the file name and content, info in an Object and
             # add it to v_r.
-            info = class_.getPathInfo(path)
-            info.iid = iid
-            info.name = name
+            info = class_.getPathInfo(tool, path)
+            if info is None:
+                # There was a problem while reading the file
+                info = O(complete=False, iid=iid, name=name)
+            else:
+                info.iid = iid
+                info.name = name
+                info.complete = True
             r.append(info)
         return r
 
@@ -526,10 +574,13 @@ class Progress:
           <x>:(target.getShownValue() or target.id) if target else '?'</x>
          </td>
          <td>:name</td>
-         <td>:prog.login</td>
-         <td>:tool.formatDate(prog.created)</td>
-         <td>:prog.nb</td>
-         <td>:prog.percentage</td>
+         <td if="not prog.complete" colspan="4"><i>Unreadable file</i></td>
+         <x if="prog.complete">
+          <td>:prog.login</td>
+          <td>:tool.formatDate(prog.created)</td>
+          <td>:prog.nb</td>
+          <td>:prog.percentage</td>
+         </x>
 
          <!-- Allow to delete the status file -->
          <td>
