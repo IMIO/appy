@@ -365,7 +365,7 @@ class Tool(Base):
               show=Server.Status.showPage)
 
     # ~[Status]~
-    serverStatuses = Custom(page=ps, show='view', view=Server.Status.px)
+    serverStatuses = Custom(page=ps, show='view', view=Server.Status.px, **ta)
 
     # Adds a new Status object into f_serverStatuses
     recordServerStatus = Server.Status.record

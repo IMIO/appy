@@ -9,6 +9,7 @@ from DateTime import DateTime
 import appy
 from appy import n
 from appy.px import Px
+from appy.utils import br
 from ..fields import Field, Show
 from ..fields.file import FileInfo
 from appy.xml.escape import Escape
@@ -87,8 +88,7 @@ class Mailing:
                        'template': field.getTemplateName(o, template)}
             self.subject = _('podmail_subject', mapping=mapping)
         if forUi:
-            self.subject = '<b>%s</b>: %s</br/>' % \
-                           (_('email_subject'), self.subject)
+            self.subject = f'<b>{_("email_subject")}</b>: {self.subject}{br}'
         # Compute the mail body when absent
         self.body = self.body or mailText
         if not self.body:
@@ -101,7 +101,7 @@ class Mailing:
            body in its "comment" field. We misuse this field's label to
            integrate the mail subject in it (so the user can see it). This
            method returns this "label".'''
-        return '%s<br/><b>%s</b>' % (self.subject, _('email_body'))
+        return f'{self.subject}{br}<b>{_("email_body")}</b>'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ImageFinder:
@@ -201,7 +201,7 @@ class Pod(Field):
                 q(tool.Search.encodeForReplay(req, layout)), gc)"
        onclick=":'askConfirm(%s,%s,%s)' % (q('script'), q(js,False),
                    field.labelId) if confirm else js"
-       title=":field.getIconTitle(o, fmt, frozen)" id=":linkId">
+       title=":field.getIconTitle(_ctx_)" id=":linkId">
       <img src=":svg('downloa%s' % ('c' if onCell else 'd'))" class="iconP"/>
       <span if="fname" class="fmt">:fname</span>
      </div>''')
@@ -279,7 +279,7 @@ class Pod(Field):
                className=o.class_.name;
                merge=field.mergeTemplates;
                onCell=layout in field.cellLayouts or inPhase|False"
-          if="visible" class=":'mpod tpod' if merge else 'pod'">
+          if="visible" class=":field.getMainCss(_ctx_)">
       <script if="field.confirm">::field.getJsConfirmVar(o)</script>
 
       <!-- One zone for every visible template (or the unique one) -->
@@ -595,8 +595,8 @@ class Pod(Field):
       script=n, pdfOptions='ExportNotes=True', tabbedCR=False, fonts=n,
       confirm=False, raiseOnError=False, action=n, beforeAction=n,
       multiObjects=False, finalizeFunction=n, crumb=n):
-        # Param "template" stores the path to the pod template(s). If there is
-        # a single template, a string is expected. Else, a list or tuple of
+        # p_template stores the path to the pod template(s). If there is a
+        # single template, a string is expected. Else, a list or tuple of
         # strings is expected. Every such path must be relative to your
         # application. A pod template name Test.odt that is stored at the root
         # of your app will be referred as "Test.odt" in self.template. If it is
@@ -608,18 +608,18 @@ class Pod(Field):
             self.template = list(template)
         else:
             self.template = template
-        # Param "templateName", if specified, is a method that will be called
-        # with the current template (from self.template) as single arg and must
+        # p_templateName, if specified, is a method that will be called with the
+        # current template (from self.template) as single arg and must
         # return the name of this template. If self.template stores a single
-        # template, you have no need to use param "templateName" (excepted if
-        # you want to render the POD with a name, in the layout "buttons").
-        # In most cases, if you have a single template, simply use the field
-        # label to name the template. If you have a multi-pod field (with
-        # several templates specified as a list or tuple in param "template"),
-        # you will probably choose to hide the field label and use param
-        # "templateName" to give a specific name to every template. If
-        # "template" contains several templates and "templateName" is None, Appy
-        # will produce names from template filenames.
+        # template, you have no need to use p_templateName, excepted if you want
+        # to render the POD with a name, in the layout /buttons. In most cases,
+        # if you have a single template, simply use the field label to name the
+        # template. If you have a multi-pod field (with several templates
+        # specified as a list or tuple in p_template), you will probably choose
+        # to hide the field label and use param p_templateName to give a
+        # specific name to every template. If p_template contains several
+        # templates and PtemplateName" is None, Appy will produce names from
+        # template filenames.
         self.templateName = templateName
         # If you want to use "templateName" hereabove even if self.template
         # contains a single template, set "useTemplateName" to True.
@@ -643,7 +643,7 @@ class Pod(Field):
         # within self.template.
         self.showTemplate = showTemplate
         # When p_template lists several templates, each one is rendered as a
-        # separate widget, unless "mergeTemplate" is True. In that case, a
+        # separate widget, unless p_mergeTemplate is True. In that case, a
         # unique selector contains one entry per template/format.
         self.mergeTemplates = mergeTemplates
         # "freezeTemplate" determines if the current user may freeze documents
@@ -867,6 +867,14 @@ class Pod(Field):
         # Param "persist" is False, but actual persistence for this field is
         # determined by freezing.
         self.validable = False
+
+    def getMainCss(self, c):
+        '''Returns the CSS class(e) to apply to the main div tag'''
+        if c.onCell:
+            r = 'pod'
+        else:
+            r = 'mpod tpod' if c.merge else 'pod'
+        return r
 
     def getExtension(self, template):
         '''Gets a p_template's extension (".odt" or ".ods"). Because a template
@@ -1466,11 +1474,17 @@ class Pod(Field):
         if not onCell: return suffix
         return f'{uiFormats.get(format)}{suffix}'
 
-    def getIconTitle(self, o, format, frozen):
+    def getIconTitle(self, c):
         '''Get the title of the format icon'''
-        r = o.translate(format)
-        if frozen:
-            r = f'{r} ({r.translate("frozen")})'
+        fmt = c.fmt
+        if c.onCell:
+            # On a cell layout, the icon title may be the sole place where to
+            # dump the name of the template.
+            r = self.getNameFor(c.o, c.info.template, fmt)
+        else:
+            r = c._(fmt)
+        if c.frozen:
+            r = f'{r} ({c._("frozen")})'
         return r
 
     def setCustomContext(self, context, o, req, queryData):
