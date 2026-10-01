@@ -2,9 +2,6 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-UPLOADED = 'file "%s" uploaded in Ref "%d.%s" via rich "%s".'
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import sys, re
 from xml.sax._exceptions import SAXParseException
 
@@ -24,6 +21,7 @@ from appy.model.fields.multilingual import Multilingual
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 XML_ERROR  = 'Error while reading content of field %s on %s. %s.'
+DUMPED_OK  = 'File "%s" %s from rich "%s" to Ref "%d.%s".'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Rich(Multilingual, Field):
@@ -169,7 +167,9 @@ class Rich(Multilingual, Field):
         # pointing to Document instances (see appy/model/document.py), images
         # upload is actived in this rich field. An illustration can be found in
         # standard rich field appy/model/page.py::content, that uses, on the
-        # same class, the Ref field named "documents".
+        # same class, the Ref field named "documents". Moreover, any image whose
+        # base-64-encoded content would be found in a <img src:"data:..."/> tag
+        # will also be converted to a Document object via the same ref.
         self.documents = documents
         # Automatically enable the CK spellchecker ?
         self.spellcheck = spellcheck
@@ -385,14 +385,15 @@ class Rich(Multilingual, Field):
         '''Returns a Cleaner instance tailored to p_self'''
         if forValidation:
             invalid = patterns or self.invalidTexts
-            transform = None
-            italicize = None
+            transform = italicize = extractImages = None
         else:
             invalid = None
             transform = self.transformText
             italicize = self.getItalicized(o)
+            extractImages = self.extractImage if self.documents else None
         return Cleaner(invalidTexts=invalid, transformText=transform,
-                       toItalicize=italicize, stripped=self.stripped, logger=o)
+                       toItalicize=italicize, stripped=self.stripped, logger=o,
+                       extractImages=extractImages)
 
     def validateUniValue(self, o, value, patterns=None):
         '''Ensure p_value as will be stored (=cleaned) is valid XHTML'''
@@ -563,13 +564,25 @@ class Rich(Multilingual, Field):
         '''Uploads a document to the Ref mentioned in attribute "documents"'''
         # Get the file from the request
         ofile = o.req.upload
-        # Create a Document instance and link it to p_o via the Ref mentioned in
-        # self.documents.
+        # Create a Document object and link it to p_o via the Ref mentioned in
+        # p_self.documents.
         doc = o.create(self.documents, title=ofile.name, file=ofile)
         o.H().commit = True
         o.resp.setContentType('json')
         r = {'uploaded': 1, 'fileName': doc.title,
              'url': f'{doc.url}/file/download'}
-        o.log(UPLOADED % (ofile.name, o.iid, self.documents, self.name))
+        o.log(DUMPED_OK % (ofile.name, 'uploaded', self.name, o.iid,
+                           self.documents))
         return r
+
+    def extractImage(self, o, path):
+        '''The XML cleaner has extracted, in this temp p_path, a base64-encoded
+           inline image from a "img" tag: create a File-based object via tied
+           ref p_self.documents.'''
+        # Create a Document object and link it to p_o via the Ref mentioned in
+        # p_self.documents.
+        doc = o.create(self.documents, title=path.name, file=path)
+        o.log(DUMPED_OK % (path.name, 'extracted', self.name, o.iid,
+                           self.documents))
+        return f'{doc.url}/file/download'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

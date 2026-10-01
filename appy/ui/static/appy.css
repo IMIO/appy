@@ -24,7 +24,8 @@ form      { margin:0; padding:0 }
 acronym   { cursor:help }
 input     { font:100% |fonts| }
 textarea  { width:97.5%; font:100% |fonts|; border:1px solid #d0d0d0;
-            background-color:white; margin-bottom:0.5em; transition:height 0.2s}
+            padding:0.5em; background-color:white; margin-bottom:0.5em;
+            transition:height 0.2s }
 label,
 .asLabel  { color:|linkColor|; padding:0.2em 0.6em 0 0;
             text-transform:uppercase; font-size:95% }

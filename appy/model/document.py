@@ -29,8 +29,9 @@ class Document(Base):
     popup = Iframe('500px', '500px')
     listColumns = 'thumb*60px|', 'title'
 
-    # Managers and Publishers may create documents
-    creators = ['Manager', 'Publisher']
+    # Allow any authenticated person to create documents: stricter security will
+    # be implemented by the container objects and their ref to documents.
+    creators = ['Authenticated']
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                               The file
@@ -76,11 +77,27 @@ class Document(Base):
             return container
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    #                              Class methods
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    @classmethod
+    def showPage(class_, o, name):
+        '''Determine, on this container p_o(object), when the page containing
+           the ref having this p_name, which contains documents, must be
+           shown.'''
+        # Because documents are shown within rich or poor fields, the specific
+        # page where the ref lies must only be shown in the context of updating
+        # documents. Moreover, if there is no document, it has no sense to show
+        # the page.
+        if o.isEmpty(name): return
+        return 'view' if o.allows('write') else None
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                  Elements to render on top of the file
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    # When used in a carousel, elements may be specified, that must be shown
-    # on top of the document.
+    # [Carousel-specific] When used in a carousel, elements may be specified,
+    #                     that must be shown on top of the document.
 
     elementTypes = 'title', 'underTitle', 'buttonA', 'buttonB'
 

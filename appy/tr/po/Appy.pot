@@ -1559,10 +1559,6 @@ msgstr ""
 msgid "Page_title"
 msgstr ""
 
-#. Default: "Warning: uploading images will not be possible unless you save the page and edit it again."
-msgid "Page_warning"
-msgstr ""
-
 #. Default: "Token"
 msgid "Page_token"
 msgstr ""

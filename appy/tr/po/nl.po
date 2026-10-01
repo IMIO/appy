@@ -1559,10 +1559,6 @@ msgstr "Pagina"
 msgid "Page_title"
 msgstr "Titel"
 
-#. Default: "Warning: uploading images will not be possible unless you save the page and edit it again."
-msgid "Page_warning"
-msgstr "Let op: het uploaden van afbeeldingen is alleen mogelijk als u de pagina opslaat en opnieuw bewerkt."
-
 #. Default: "Token"
 msgid "Page_token"
 msgstr ""

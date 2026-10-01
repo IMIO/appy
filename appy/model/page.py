@@ -146,10 +146,6 @@ class Page(Base):
         if nbsp: r = r.replace(' ', ' ')
         return r
 
-    # A warning: image upload is impossible while the page is temp
-    warning = Info(show=lambda o: 'edit' if o.isTemp() else None,
-                   focus=True, layouts=Info.Layouts.n, **pa)
-
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                               Token
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -340,7 +336,7 @@ class Page(Base):
     documents = Ref(Document, add=True, link=False, multiplicity=(0,None),
       composite=True, back=Ref(attribute='page', show=False, label='Document'),
       showHeaders=True, shownInfo=Document.listColumns, actionsDisplay='inline',
-      page=FPage('images', show=lambda o:'view' if o.allows('write') else None),
+      page=FPage('images', show=lambda o: Document.showPage(o, 'documents')),
       rowAlign='middle', **pa)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -

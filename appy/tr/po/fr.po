@@ -1560,10 +1560,6 @@ msgstr "Page"
 msgid "Page_title"
 msgstr "Titre"
 
-#. Default: "Warning: uploading images will not be possible unless you save the page and edit it again."
-msgid "Page_warning"
-msgstr "Attention: le téléversement d'images ne sera possible que si vous enregistrez la page et la modifiez à nouveau."
-
 #. Default: "Token"
 msgid "Page_token"
 msgstr "Token"

@@ -2,22 +2,27 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import re
+import re, base64
 
-from appy.utils import asDict
-from appy.utils.css import Styles
-from appy.xml.escape import Escape
-from appy.xml import Parser, XHTML_SC
-from appy.utils import string as sutils
+from .escape import Escape
+from ..utils.css import Styles
+from . import Parser, XHTML_SC
+from ..utils import path as putils
+from ..utils import string as sutils
+from ..utils import asDict, bn, mimeTypesExts
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TFM_KO = 'Transform function %s :: Error while transforming: "%s" :: %s'
 IT_KO  = 'Error while trying to italicize text "%s" :: %s'
+E_NO   = "Couldn't extract image :: "
+EI_UNK = f'{E_NO}Unknown MIME type "%s".'
+EI_N64 = f'{E_NO}Unsupported encoding "%s".'
+EI_URL = f'{E_NO}Extract function did not return any URL.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Cleaner(Parser):
-    '''Cleans XHTML content, so it becomes ready to be stored into a
-       Appy-compliant format.'''
+    '''Cleans XHTML content, and does a lot more: it then becomes ready to be
+       stored into a Appy-compliant format.'''
 
     class InvalidText(Exception):
         '''Raised when invalid text is encountered in content to be cleaned by
@@ -65,7 +70,7 @@ class Cleaner(Parser):
                  attrsToIgnore=attrsToIgnore, propertiesToKeep=None,
                  attrsToAdd=attrsToAdd, repair=False, invalidTexts=None,
                  transformText=None, toItalicize=None,
-                 stripped=sutils.whitespace, logger=None):
+                 stripped=sutils.whitespace, logger=None, extractImages=None):
         # Call the base constructor
         Parser.__init__(self, env, caller, raiseOnError)
         self.tagsToIgnoreWithContent = tagsToIgnoreWithContent
@@ -106,6 +111,26 @@ class Cleaner(Parser):
         # A logger object can be passed if the cleaner has something to say (ie,
         # a p_transformText function produces an error).
         self.logger = logger
+        # When p_extractImages is not None, it allows to convert each inline,
+        # base64-encoded image that may be found in a tag of the form
+        #
+        #                    <img src="data:..."/>
+        #
+        # into a link to an external, URL-based tag like
+        #
+        #                    <img src="https://..."/>
+        #
+        # How does it work ? Place, in p_extractImages, a function: it will be
+        # called everytime an inline image is encountered in the XML input,
+        # with 2 args: (a) the p_logger object (or None if not passed), recycled
+        #                  for the current purpose (it is probably an object
+        #                  from your app that can do a lot more than logging) ;
+        #              (b) the path to the binary image content, as a
+        #                  pathlib.Path object, dumped in a temp file.
+        # The function must manage the final storage of the file and must return
+        # the URL from which the file will become accessible. This URL will
+        # replace the "src" attribute of the "img" tag in the cleaner output.
+        self.extractImages = extractImages
 
     def startDocument(self):
         # The result will be cleaned XHTML, joined from self.r
@@ -281,6 +306,45 @@ class Cleaner(Parser):
             r = False
         return r
 
+    def extractImage(self, attrs):
+        '''Dumps, on a file in the OS temp folder, inline image content found in
+           p_attrs["src"], calls function p_self.extractImages and return a
+           version of p_attrs where the "src" key contains the URL to the
+           extracted image.'''
+        src = attrs.get('src')
+        if not src or not src.startswith('data:'):
+            # This is not an inline image: do nothing
+            return attrs
+        mimeType, content = src[5:].split(';', 1)
+        # Get the file extension for a file of this v_mimeType
+        ext = mimeTypesExts.get(mimeType)
+        if not ext:
+            # The file format is unknown: do nothing
+            self.log(EI_UNK % mimeType, type='warning')
+            return attrs
+        if not content.startswith('base64,'):
+            # The content is not encoded in base64: do nothing
+            encoding = content.split(',', 1)[0]
+            self.log(EI_N64 % encoding, type='warning')
+            return attrs
+        # Create a temp file on disk
+        path = putils.getTempFileName(extension=ext, asPath=True)
+        with open(path, 'wb') as f:
+            f.write(base64.b64decode(content[7:]))
+        # Call p_self.extractImages
+        url = self.extractImages(self.logger, path)
+        if not url:
+            self.log(EI_URL, type='error')
+            path.unlink()
+            return attrs
+        # p_attrs is a non mutable data structure. Create a dict where the "src"
+        # entry has p_url as value.
+        r = {**attrs}
+        r['src'] = url
+        # Delete the temp file
+        path.unlink()
+        return r
+
     def startElement(self, tag, attrs):
         e = self.env
         # Dump any previously gathered content if any
@@ -301,13 +365,17 @@ class Cleaner(Parser):
                 e.ignoreContent = False
             e.currentTags.append( (tag, e.ignoreContent) )
             return
+        # Possibly extract image content from this p_tag
+        if tag == 'img' and self.extractImages:
+            # p_attrs are updated
+            attrs = self.extractImage(attrs)
         # Add a line break before the start tag if required (ie: xhtml differ
         # needs to get paragraphs and other elements on separate lines).
         prefix = ''
         if tag in Cleaner.lineBreakTags:
             prev = self.getPrevious()
-            if prev and prev[-1] != '\n':
-                prefix = '\n'
+            if prev and prev[-1] != bn:
+                prefix = bn
         r = f'{prefix}<{tag}'
         # Include the found attributes, excepted those that must be ignored
         for name, value in attrs.items():
@@ -357,8 +425,8 @@ class Cleaner(Parser):
                     suffix = ''
                     if tag in Cleaner.lineBreakTags:
                         prev = self.getPrevious()
-                        if prev and not prev.endswith('\n'):
-                            suffix = '\n'
+                        if prev and not prev.endswith(bn):
+                            suffix = bn
                     self.dump(f'</{tag}>{suffix}')
         # Pop list tags
         self.updateIndexes(tag, False)
@@ -371,7 +439,7 @@ class Cleaner(Parser):
         if e.ignoreContent: return
         # Remove leading whitespace
         current = e.currentContent
-        if not current or current[-1] == '\n':
+        if not current or current[-1] == bn:
             toAdd = content.lstrip(sutils.whitespaceB_)
         else:
             toAdd = content
