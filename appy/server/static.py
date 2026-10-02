@@ -216,9 +216,17 @@ class Static:
         #
         browserDate = handler.headers.get('If-Modified-Since')
         modified = fileInfo.modified if fileInfo else modified
-        if isinstance(modified, DateTime): modified = modified.timeTime()
-        smodified = email.utils.formatdate(modified, usegmt=True) # RFC 822
-        if not browserDate or smodified > browserDate:
+        # v_modified can be a DateTime object or a float representing the time
+        # elapsed since the Unix epoch. Ensure, in the end, we have only this
+        # latter format.
+        if isinstance(modified, DateTime):
+            modified = modified.timeTime()
+        # Get the last modification date as a RFC 822 string
+        smodified = email.utils.formatdate(modified, usegmt=True)
+        browserTime = DateTime(browserDate).timeTime() if browserDate else None
+        if not browserTime or int(modified) > int(browserTime):
+            # If v_modified and v_browserTime are not converted to integers,
+            # decimal parts may vary and the comparison may be wrong.
             resp = handler.resp
             resp.code = HTTPStatus.OK
             # Identify MIME type
