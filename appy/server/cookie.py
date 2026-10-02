@@ -8,8 +8,9 @@ import base64, urllib.parse
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Cookie:
-    '''Represents the Appy authentication cookie, carrying user credentials. It
-       will be set and read by an Appy app for authenticating a user.'''
+    '''Represents the Appy authentication cookie, carrying user credentials'''
+
+    # It will be set and read by an Appy app for authenticating a user
 
     # Name of the Appy authentication cookie
     name = 'AppyAuth'
@@ -39,9 +40,10 @@ class Cookie:
     def write(class_, handler, login, password, ctx=None):
         '''Encode p_login, p_password and p_ctx into the authentication
            cookie.'''
-        r = '%s:%s:%s' % (login, password or '', ctx or '')
+        r = f'{login}:{password or ""}:{ctx or ""}'
         r = base64.encodebytes(r.encode('utf-8')).rstrip()
-        handler.resp.setCookie(Cookie.name, urllib.parse.quote(r))
+        handler.resp.setCookie(Cookie.name, urllib.parse.quote(r),httpOnly=True,
+                               secure=not handler.inTheForeground())
 
     @classmethod
     def update(class_, handler, ctx, onResponse=False):

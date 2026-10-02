@@ -149,7 +149,7 @@ class Response:
         if name in self.headers:
             del(self.headers[name])
 
-    def setCookie(self, name, value):
+    def setCookie(self, name, value, secure=False, httpOnly=False):
         '''Adds a cookie among response headers, in special key "Cookies" that
            will be converted to as many "Set-Cookie" HTTP header entries as
            there are entries at this key.'''
@@ -163,6 +163,11 @@ class Response:
         # objective is to disable the cookie.
         if value == 'deleted':
             value = f'{value}; Max-Age=0'
+        # Add Secure and/or HttpOnly directives, when requested
+        if secure:
+            value = f'{value}; Secure'
+        if httpOnly:
+            value = f'{value}; HttpOnly'
         self.headers['Cookies'][name] = f'{value}; Path=/'
 
     def deleteCookie(self, name):

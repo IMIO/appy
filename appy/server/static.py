@@ -302,6 +302,10 @@ class Static:
                 else:
                     class_.notFound(handler, config)
                     return
+            elif part.startswith('.'):
+                # Prevent any access to any v_part starting with a dot:
+                # ., .., .ignore, etc.
+                return class_.notFound(handler, config)
             else:
                 path = path / part
                 if not path.exists():
