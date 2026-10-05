@@ -2335,26 +2335,29 @@ class Ref(Field):
         return r if isinstance(r, str) else '15px'
 
     def getMenuUrl(self, o, tied, target):
-        '''We must provide the URL of the p_tied object, when shown in a Ref
-           field in render mode 'menus'. If self.menuUrlMethod is specified,
-           use it. Else, returns the "normal" URL of the view page for the tied
-           object, but without any navigation information, because in this
-           render mode, tied object's order is lost and navigation is
-           impossible.'''
+        '''Provide the URL to the p_tied object, when shown in a Ref field in
+           render mode "menus".'''
+        # If self.menuUrlMethod is specified, use it
         if self.menuUrlMethod:
             r = self.menuUrlMethod(o, tied)
-            if r is None:
-                # There is no specific link to build
-                return None, target
-            elif isinstance(r, str):
-                # The method has just returned an URL
-                return r, LinkTarget()
-            else:
-                # The method has returned a tuple (url, target)
+            if isinstance(r, str):
+                # The method has just returned an URL. Add a target.
+                target = LinkTarget()
+            elif r:
+                # The method has returned a tuple (url, s_target). Get the
+                # target as a LinkTarget object.
                 target = LinkTarget()
                 target.target = r[1]
-                return r[0], target
-        return tied.getUrl(nav='no'), target
+                r = r[0]
+        else:
+            # Return the "normal" URL of the view page for the tied object, but
+            # without any navigation information, because in this render mode,
+            # tied object's order is lost and navigation is impossible.
+            r = tied.getUrl(nav='no')
+        # Also disable the anti-double-click protection: from the menu, the
+        # current page is not refreshed and the link would never be reified.
+        target.noOnclick()
+        return r, target
 
     def getMenuCss(self, zone, o, menu, base=n):
         '''Gets the CSS class that will be applied to this p_zone'''
