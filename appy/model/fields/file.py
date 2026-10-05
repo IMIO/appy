@@ -155,6 +155,16 @@ class FileInfo:
         pointer = 'help' if readOnly else 'pointer'
         return f'<abbr title="{r}" style="cursor:{pointer}">{r[:keep]}…</abbr>'
 
+    def getHash(self):
+        '''Returns the hash as incrusted in the file name'''
+        # Such a hash is as absent if no hash algorithm has been specified
+        if not getattr(self, 'algo', None): return
+        fsName = self.fsName
+        if not fsName: return
+        parts = fsName.split('.')
+        if len(parts) != 3: return
+        return parts[1]
+
     def exists(self, o):
         '''Does the file really exist on the filesystem ?'''
         # If the file exists but has no content, we consider it does not exist
@@ -220,7 +230,7 @@ class FileInfo:
                 return parts[-1][1:]
 
     def writeResponse(self, handler, path=n, disposition='attachment',
-                      cache=False):
+                      cache=True, maxAge=0):
         '''Returns the content the file in the HTTP response'''
         if not self.fsName:
             # Not in-database file: we have its full path
@@ -234,8 +244,8 @@ class FileInfo:
         # Count the time spent for serving the file and log it
         if log: start = time.time()
         # Serve the file via the Static class
-        Static.write(handler, path, None, fileInfo=self,
-                     disposition=disposition, enableCache=cache)
+        Static.write(handler, path, None, fileInfo=self, cache=cache,
+                     disposition=disposition, maxAge=maxAge)
         if log:
             # How long did it take to serve the file (in seconds) ?
             duration = utils.formatNumber(time.time() - start)
@@ -673,8 +683,9 @@ class File(Field):
       generateLabel=n, label=n, isImage=False, downloadAction=n, sdefault='',
       scolspan=1, swidth=n, sheight=n, view=n, cell=n, buttons=n, edit=n,
       custom=n, xml=n, xmlLocation=n, translations=n, render=n,
-      icon='paperclip', disposition='attachment', nameStorer=n, cache=False,
-      resize=False, thumbnail=n, preview=n, previewMaxSize=1048576*10, # 10Mb
+      icon='paperclip', disposition='attachment', nameStorer=n, cache=True,
+      maxAge=0, resize=False, thumbnail=n, preview=n,
+      previewMaxSize=1048576*10, # 10Mb
       previewConvertMaxSize=1048576, previewFormats=previewExts, viewWidth=n,
       viewHeight=n, hash='md5', noValueLabel='no_value', multiple=False,
       multiplePatch=None, dropWidth=None, dropHeight=None):
@@ -700,12 +711,19 @@ class File(Field):
         # disposition). This latter is the default. You may also specify a
         # method returning one of these 2 valid values.
         self.disposition = disposition
-        # By default, caching is disabled for this field: the browser will not
-        # be able to cache the file stored in it. This is the default, for
-        # security reasons. If you decide the browser can cache the file stored
-        # here, set the following attribute to True. Attribute p_cache can also
-        # store a method that must return a boolean value.
+        # By default, caching is enabled for this field. If you decide the
+        # browser cannot cache the file stored here, set the following attribute
+        # to False. Attribute p_cache can also store a method that must return a
+        # boolean value. Note that caching will not be enabled, whatever p_cache
+        # value has been set here, if no p_hash is provided (see below).
         self.cache = cache
+        # When p_cache is enabled, p_maxAge determines the period (in seconds)
+        # during which the browser is allowed to serve its cached version,
+        # before re-triggering a true download. After this period, the browser
+        # will download the file again: it will be entirely downloaded if the
+        # server-side version is newer than its cached version, or the browser
+        # will receive an empty response "304 Unchanged" else.
+        self.maxAge = maxAge
         # Attribute "width" is used to specify the width of the image or
         # document. The width of the input field allowing to upload the file can
         # be defined in attribute "inputWidth".
@@ -746,7 +764,10 @@ class File(Field):
         # file at the same place, with the same name, on disk. Moreover, it
         # allows to check if the file on disk corresponds to the file as
         # uploaded via the app, because the file name (that contains the digest)
-        # is stored in the database, within the FileInfo object.
+        # is stored in the database, within the FileInfo object. Finally, this
+        # hash is used a ETag identifier when the file is downloaded by a HTTP
+        # client, allowing this latter to cache the file content, while it isn't
+        # modified at server side.
         self.hash = hash
         # p_preview determines if the document, when possible, is visible on
         # /view. This is achieved via the html "object" tag. This is possible
@@ -1238,7 +1259,7 @@ class File(Field):
                 if infoD != info: path = info.getFilePath(o)
                 # Write the file content via the response object
                 infoD.writeResponse(handler, str(path), disposition=disposition,
-                                    cache=self.getAttribute(o, 'cache'))
+                  cache=self.getAttribute(o, 'cache'), maxAge=self.maxAge)
         else:
             # Return a 404
             Static.notFound(handler, config)

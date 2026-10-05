@@ -3,7 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from http import HTTPStatus
-import re, inspect, pathlib, mimetypes, os.path, email.utils, collections
+import re, inspect, email.utils, pathlib, mimetypes, os.path, collections
 
 from DateTime import DateTime
 
@@ -70,6 +70,14 @@ class Config:
         # Remember the date/time this instance has been created: it will be used
         # as last modification date for RAM resources.
         self.created = DateTime()
+
+        # For RAM resources, specify, in the following attribute, how much time
+        # (as a number of seconds) the browser will be allowed to use its cache
+        # version. This corresponds to a HTTP header Cache-Control: max-age=X.
+        self.ramMaxAge = 10800 # 3 hours
+
+        # The same attribute for any static non-RAM resource
+        self.nonRamMaxAge = 10800
 
         # The following dict allows to set a version for the CSS and Javascript
         # files being included in every Appy page. If an entry exists for a file
@@ -195,9 +203,65 @@ class Static:
         resp.build()
 
     @classmethod
+    def getETag(class_, path, fileInfo, modified, cache=True):
+        '''Computes the "entity tag" (ETag) identifier allowing a browser to
+           detect if, when caching is enabled, the last downloaded file
+           corresponding to p_path is still the same as the server-side file.'''
+        # Don't produce a ETag when caching is disabled: that way, it forces the
+        # browser to always ask a fresh file download.
+        if not cache: return
+        if fileInfo:
+            # The file to download comes from a File field and is stored in the
+            # DB-controlled filesystem. The ETag will correspond to a hash
+            # computed from the file content: if there is no such hash, caching
+            # cannot occur, and m_getHash will return None.
+            r = fileInfo.getHash()
+        else:
+            # Produce a weaker, but probably satisfactory ETag, based on the
+            # last file modification date (p_modified). p_modified can be a
+            # DateTime object or a float representing the time elapsed since the
+            # Unix epoch.
+            if isinstance(modified, float):
+                modified = DateTime(modified)
+            r = modified.strftime('%Y%m%d%H%M%S')
+        return r
+
+    @classmethod
+    def getLastModified(class_, modified):
+        '''Returns the value for header key Last-Modified, containing the last
+           file modification date in RFC 822 format.'''
+        # Get the last modification date as a RFC 822 string
+        if isinstance(modified, DateTime):
+            modified = modified.timeTime()
+        return email.utils.formatdate(modified, usegmt=True)
+
+    @classmethod
+    def setCacheHeaders(class_, resp, cache, eTag, modified, maxAge):
+        '''Sets, on the HTTP p_resp(onse) object, the appropriate cache-related
+           headers.'''
+        seT = resp.setHeader
+        if cache:
+            # Set keys ETag and Last-Modified, allowing the browser to identify
+            # potential changes to the resource in subsequent requests.
+            seT('ETag', eTag)
+            seT('Last-Modified', class_.getLastModified(modified))
+            # Is the browser allowed to serve its cached version for a while ?
+            if maxAge == 0:
+                # No: tell the browser the resource must be checked at each GET
+                seT('Cache-Control', 'no-cache, must-revalidate')
+            else:
+                # Yes, during at most p_maxAge second(s)
+                seT('Cache-Control', f'max-age={maxAge}')
+            resp.removeHeader('Expires')
+        else:
+            # Completely disable cache
+            seT('Cache-Control', 'no-cache, no-store, must-revalidate')
+            seT('Expires', '0')
+
+    @classmethod
     def write(class_, handler, path, modified, content=None, fileInfo=None,
-              disposition='attachment', downloadName=None, enableCache=True,
-              forcedMime=None):
+              disposition='attachment', downloadName=None, cache=True,
+              forcedMime=None, maxAge=1):
         '''Serves, to the browser, the content of the file whose path on disk is
            given in p_path or whose content in RAM is given in p_content.'''
         #
@@ -207,62 +271,60 @@ class Static:
         #
         # If p_path corresponds to a DB-controlled file, his corresponding
         # p_fileInfo is given. In that case, p_disposition will be taken into
-        # account (values can be "inline" or "attachment". Else, it will be
+        # account (values can be "inline" or "attachment"). Else, it will be
         # ignored, unless p_downloadName is specified.
         #
-        # For privacy reasons, p_enableCache may be disabled (ie, for
-        # potentially sensitive content from File fields). This way, it cannot
-        # be stored in the browser cache.
+        # For privacy reasons, p_cache may be disabled (ie, for potentially
+        # sensitive content from File fields). This way, it cannot be stored in
+        # the browser cache.
         #
-        browserDate = handler.headers.get('If-Modified-Since')
-        modified = fileInfo.modified if fileInfo else modified
-        # v_modified can be a DateTime object or a float representing the time
-        # elapsed since the Unix epoch. Ensure, in the end, we have only this
-        # latter format.
-        if isinstance(modified, DateTime):
-            modified = modified.timeTime()
-        # Get the last modification date as a RFC 822 string
-        smodified = email.utils.formatdate(modified, usegmt=True)
-        browserTime = DateTime(browserDate).timeTime() if browserDate else None
-        if not browserTime or int(modified) > int(browserTime):
-            # If v_modified and v_browserTime are not converted to integers,
-            # decimal parts may vary and the comparison may be wrong.
-            resp = handler.resp
+        # When cache is enabled, the max duration the browser is allowed to
+        # use a cached version of the resource may be defined in p_maxAge, as an
+        # integer number of seconds. It will be used to define header key
+        # Cache-Control: max-age=X.
+        #
+        # When caching is enabled, compute the file ETag that is transmitted to
+        # the browser on each file download, and get, from the browser when
+        # available, the ETag corresponding to the last downloaded version.
+        if cache:
+            eTag = class_.getETag(path, fileInfo, modified, cache)
+            browserETag = handler.headers.get('If-None-Match')
+        else:
+            eTag = browserETag = None
+        resp = handler.resp
+        if not browserETag or browserETag != eTag:
+            # A complete file download must occur
             resp.code = HTTPStatus.OK
             # Identify MIME type
-            set = resp.setHeader
+            seT = resp.setHeader
             mimeType, encoding = mimetypes.guess_type(path)
             mimeType = forcedMime or mimeType or 'application/octet-stream'
-            set('Content-Type', mimeType)
+            seT('Content-Type', mimeType)
             # Define content disposition
             if fileInfo or downloadName:
                 niceName = downloadName or fileInfo.uploadName
                 disp = f'{disposition};filename="{niceName}"'
-                set('Content-Disposition', disp)
-            # ~~~ Manage caching ~~~
-            if enableCache:
-                set('Last-Modified', smodified)
-                # Ensure there is no cache-related header
-                resp.removeHeader('Cache-Control')
-                resp.removeHeader('Expires')
-            else:
-                set('Cache-Control', 'no-cache, no-store, must-revalidate')
-                set('Expires', '0')
+                seT('Content-Disposition', disp)
+            # Set appropriate cache keys
+            class_.setCacheHeaders(resp, cache, eTag, modified, maxAge)
             # Write the file content to the socket
             path = None if content else path
             resp.build(content, path)
         else:
+            # Return a no-paylod 304 response, indicating that the file hasn't
+            # changed.
+            class_.setCacheHeaders(resp, cache, eTag, modified, maxAge)
             class_.writeUnchanged(handler)
 
     @classmethod
-    def writeFromDisk(class_, handler, path, disposition='attachment',
-                      downloadName=None, enableCache=True):
+    def writeFromDisk(class_, handler, path, config, disposition='attachment',
+                      downloadName=None, cache=True):
         '''Serve a static file from disk, whose path is p_path'''
         # The string version of p_path
         spath = str(path)
-        class_.write(handler, spath, os.path.getmtime(spath),
+        class_.write(handler, spath, os.path.getmtime(spath), cache=cache,
                      disposition=disposition, downloadName=downloadName,
-                     enableCache=enableCache)
+                     maxAge=config.nonRamMaxAge)
 
     @classmethod
     def writeFromRam(class_, handler, config):
@@ -287,7 +349,8 @@ class Static:
         if content is None:
             class_.notFound(handler, config)
             return
-        class_.write(handler, key, config.created, content=content)
+        class_.write(handler, key, config.created, content=content,
+                     maxAge=config.ramMaxAge)
 
     @classmethod
     def get(class_, handler):
@@ -323,5 +386,5 @@ class Static:
         if not path or not path.is_file():
             return class_.notFound(handler, config)
         # Read the file content and write it in the HTTP response
-        class_.writeFromDisk(handler, path)
+        class_.writeFromDisk(handler, path, config)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
