@@ -127,13 +127,15 @@ class UiSearch:
        <!-- Title -->
        <div if="not popup and search.showTitle" class="pageTitle">
         <x>::uiSearch.translated</x>
-        <x if="mode.batch and not empty">
+        <x if="batch and not empty">
          <span var="css=class_.getCssFor(tool, 'sep')"
                class=":f'navSep {css}' if css else 'navSep'">//</span>
-         <span class="btot">:mode.batch.getTotal()</span>
+         <span class="btot">:batch.getTotal()</span>
         </x>
         <!-- Search description -->
         <img if="descr" src=":svg('detail')" class="sdetail" title=":descr"/>
+        <!-- How long did it take ? -->
+        <x if="batch and batch.duration">::batch.getDuration(_=_)</x>
 
         <!-- Class-specific colored border (*t*itle *bot*tom) -->
         <div var="css=class_.getCssFor(tool, 'tbot')"
@@ -171,7 +173,7 @@ class UiSearch:
 
        <!-- (Top) navigation -->
        <div if="showNav and uiSearch.showTopNav and not mayAdd" class="snav"
-            style=":search.getNavMargins()">:mode.batch.pxNavigate</div>
+            style=":search.getNavMargins()">:batch.pxNavigate</div>
 
        <!-- Pod templates -->
        <x if="not empty and not popup and search.showPods and mode.objects">
@@ -188,7 +190,7 @@ class UiSearch:
       <!-- (Bottom) navigation -->
       <div if="not empty and showNav and uiSearch.showBottomNav"
            class="snab" var2="scrollTop='payload'"
-           align=":search.navAlign">:mode.batch.pxNavigate</div>
+           align=":search.navAlign">:batch.pxNavigate</div>
 
       <!-- No result -->
       <div if="empty">::_(search.noResultLabel)</div>

@@ -106,6 +106,7 @@ div[contenteditable=true]:empty:before { content:attr(data-placeholder);
 .inBetween { position:absolute; width:100% }
 .addAW { font-size:150%; transition:opacity 0.3s }
 .addAW a, .addAW a:visited { color:|altColor| }
+.itTook { text-transform:none; color:grey; font-size:85%; padding-left:1em }
 
 /* Buttons */
 input.button {

@@ -5,6 +5,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import time
+
 from DateTime import DateTime
 
 from appy.px import Px
@@ -264,6 +266,7 @@ class Search:
         # will be merged with p_self's parameters (including sortBy and
         # sortOrder).
         #
+        startTime = time.time() if batch else None
         # Prepare search parameters
         class_ = self.container
         className = class_.name
@@ -303,6 +306,7 @@ class Search:
         batch = Batch(total=len(r), size=maxPerPage, start=start)
         batch.setObjects(database.getObjects(handler, r, className,
                                             start=batch.start, size=batch.size))
+        batch.setDuration(startTime)
         return batch
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -

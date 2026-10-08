@@ -58,8 +58,8 @@ class Px:
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         # If the PX code represents a complete XML file, p_partial is False.
-        # Else, p_content will be surrounded by a root tag to be able to parse
-        # it with a SAX parser.
+        # Else, p_content will be surrounded by a root tag, in order to be
+        # parsable by a SAX parser.
 
         # If this PX is based on another PX template, specify the PX template in
         # p_template and the name of the p_hook where to insert this PX into the

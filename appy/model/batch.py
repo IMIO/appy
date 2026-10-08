@@ -2,6 +2,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import time
+
 from appy.px import Px
 from appy.utils import formatNumber
 from appy.utils import string as sutils
@@ -32,11 +34,21 @@ class Batch:
         # When this batch is shown in the ui, the ID of the DOM node containing
         # the list of objects.
         self.hook = hook
+        # The following field may store, as a float number of seconds, the time
+        # a search has taken to complete, including the time spent to prepare
+        # this batch (p_self), when ready to be served to the browser.
+        self.duration = None
 
     def setObjects(self, objects):
         '''p_objects may no have been added at construction time'''
         self.objects = objects
         self.length = len(objects)
+
+    def setDuration(self, startTime):
+        '''Computes the time a search, started at p_startTime, has taken to
+           complete, until a batch of objects (p_self) is ready to be served
+           to the browser.'''
+        self.duration = time.time() - startTime
 
     def getInfo(self, condition, nb, c):
         '''Returns info about the current navigation icon to produce'''
@@ -74,6 +86,20 @@ class Batch:
     def isComplete(self):
         '''Does this batch contain all objects ?'''
         return self.length == self.total
+
+    def getDuration(self, formatted=True, _=None):
+        '''Returns, as a float number of seconds or as a p_formatted chunk of
+           XHTML as a string, the time spent performing the search and building
+           this batch, duration, in seconds.'''
+        r = self.duration
+        if formatted:
+            if r:
+                text = _('search_duration')
+                seconds = f"{formatNumber(r)}''"
+                r = f'<span title="{text}" class="help itTook">{seconds}</span>'
+            else:
+                r = '?'
+        return r
 
     def showNav(self):
         '''Show the navigation only when appropriate'''

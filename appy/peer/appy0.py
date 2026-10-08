@@ -151,5 +151,5 @@ class Appy0(Peer):
         # Get the name of the distant class corresponding to this local
         # p_className.
         distantName = self.classNames.get(className) or className
-        return '%s/config?do=searchAll&className=%s' % (self.url, distantName)
+        return f'{self.url}/config?do=searchAll&className={distantName}'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
