@@ -185,7 +185,7 @@ msgstr "Verplaatsen"
 
 #. Default: "This is the time, in seconds, taken by the search itself. It excludes the time spent to render results."
 msgid "search_duration"
-msgstr "Dit verwijst naar de tijd die de zoekopdracht in beslag nam. De tijd die nodig was om de resultatenpagina te genereren, is hierbij niet inbegrepen."
+msgstr "Dit verwijst naar het aantal seconden dat de zoekopdracht duurde. De tijd die nodig was om de resultatenpagina te genereren, is hierbij niet inbegrepen."
 
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"

@@ -14,16 +14,15 @@ from persistent.mapping import PersistentMapping
 import ZODB, ZODB.POSException, transaction, transaction.interfaces
 
 from ..px import Px
-from ..utils import br
 from .lock import Lock
 from .lazy import Lazy
 from .vault import Vault
+from ..utils import br, mb
 from .catalog import Catalog
 from .trans import Transaction
 from ..utils import path as putils
 from ..utils import multicall, Function
 from .vault import Config as VaultConfig
-
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 DB_CREATED   = 'Database created @%s.'
@@ -31,7 +30,8 @@ DB_NOT_FOUND = 'Database does not exist @%s.'
 DB_LOCKED    = 'The database is currently locked (%s)'
 DB_CORRUPTED = 'The database @%s is corrupted and probably empty. Please ' \
                'remove it and restart your site.'
-DB_INFO      = '⛁ Database is %s (%s).'
+DB_INFO      = '⛁ Database is %s · %s'
+DB_INFO_M    = '  Pool size=%d · Cache size=%d · Cache size in bytes=%s.'
 DB_PACKING   = 'Packing %s (initial size: %s). May take a while...'
 DB_PACKED    = 'Done. Went from %s to %s.'
 TMP_STORE_NF = 'Temp store does not exist in %s.'
@@ -76,6 +76,16 @@ class Config:
     def __init__(self):
         # The path to the .fs file, the main database file
         self.filePath = None
+        # The maximum number of connections in the pool of database connections
+        self.poolSize = 12
+        # The maximum number of objects the ZODB may cache, per database
+        # connection.
+        self.cacheSize = 50000
+        # The maximum size of the cache of objects, per database connection. It
+        # is used in conjunction with p_self.cacheSize: the cache will be
+        # considered full either if the maximum number of objects (cacheSize) or
+        # bytes (cacheSizeByes) is reached.
+        self.cacheSizeBytes = 300*mb
         # The path to the folder containing database-controlled binary files
         self.binariesFolder = None
         # The path to the folder containing phantom files
@@ -150,7 +160,7 @@ class Config:
             created = False
         # Create or get the ZODB database
         try:
-            database = Database(path, server)
+            database = Database(path, server, self)
         except LockError as err:
             logger.error(DB_LOCKED % str(err))
             return
@@ -181,6 +191,11 @@ class Config:
     def getDatabaseSize(self, formatted=False):
         '''Returns the database size'''
         r = os.stat(self.filePath).st_size
+        return putils.getShownSize(r) if formatted else r
+
+    def getCacheSizeBytes(self, formatted=True):
+        '''Gets the p_formatted or raw value for p_self.cacheSizeBytes'''
+        r = self.cacheSizeBytes
         return putils.getShownSize(r) if formatted else r
 
     def getZodbVersion(self):
@@ -241,9 +256,11 @@ class Database:
     # database commit will be aborted and will raise an error message.
     readOnly = False
 
-    def __init__(self, path, server):
+    def __init__(self, path, server, config):
         # The ZODB database object
-        self.db = ZODB.DB(path)
+        self.db = ZODB.DB(path, pool_size=config.poolSize,
+                          cache_size=config.cacheSize,
+                          cache_size_bytes=config.cacheSizeBytes)
         # The main HTTP server
         self.server = server
 
@@ -428,8 +445,11 @@ class Database:
             # Update the initialisation handler
             handler.tool = tool
             # Log database info
-            size = tool.config.database.getDatabaseSize(formatted=True)
+            config = c = tool.config.database
+            size = config.getDatabaseSize(formatted=True)
             handler.log('app', 'info', DB_INFO % (fileName, size))
+            handler.log('app', 'info', DB_INFO_M % (c.poolSize, c.cacheSize,
+                                         putils.getShownSize(c.cacheSizeBytes)))
             # Create or update catalogs
             Catalog.manageAll(root, handler)
             # Initialise the vault when appropriate
@@ -1226,6 +1246,21 @@ class Database:
        </td>
       </tr>
       <tr><th>Database size</th><td>:cfg.getDatabaseSize(True)</td></tr>
+      <tr>
+       <th><abbr title="Max number of database connections">Pool size</abbr>
+       </th>
+       <td>:cfg.poolSize</td>
+      </tr>
+      <tr>
+       <th><abbr title="Max number of objects per connection">Cache size</abbr>
+       </th>
+       <td>:cfg.cacheSize</td>
+      </tr>
+      <tr>
+       <th><abbr title="Max cache size per connection">Cache size (bytes)</abbr>
+       </th>
+       <td>:cfg.getCacheSizeBytes()</td>
+      </tr>
       <tr>
        <th>Binaries</th>
        <td>:<x>:cfg.binariesFolder</x>

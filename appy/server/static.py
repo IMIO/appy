@@ -8,6 +8,7 @@ import re, inspect, email.utils, pathlib, mimetypes, os.path, collections
 from DateTime import DateTime
 
 import appy
+from appy.utils import mb
 from appy.utils import css
 from appy.model.utils import Object as O
 from appy.utils.string import Normalize, Variables
@@ -115,7 +116,7 @@ class Config:
         # Log any file download representing more than this number of bytes. By
         # "download", we mean, a file downloaded by a Appy client on a Appy
         # server.
-        self.logDownloadAbove = 2097152 # 2Mb
+        self.logDownloadAbove = 2*mb
 
     def check(self, messages):
         '''Checks that every entry in p_self.map is valid'''

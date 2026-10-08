@@ -186,7 +186,7 @@ msgstr "Déplacer"
 
 #. Default: "This is the time, in seconds, taken by the search itself. It excludes the time spent to render results."
 msgid "search_duration"
-msgstr "Il s'agit du temps qu'a pris la recherche. Cela exclut le temps passé à produire la page des résultats."
+msgstr "Il s'agit du nombre de secondes qu'a pris la recherche. Cela exclut le temps passé à produire la page des résultats."
 
 #. Default: "Nothing to see for the moment."
 msgid "query_no_result"

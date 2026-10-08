@@ -178,7 +178,7 @@ class Config:
         # Options for the pool of threads
         #
         # The initial number of threads to run
-        self.threads = 5
+        self.threads = 6
         # The maximum number of requests a worker thread will process before
         # dying (and replacing itself with a new worker thread).
         self.maxRequests = 100

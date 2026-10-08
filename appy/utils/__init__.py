@@ -25,6 +25,9 @@ listTypes = list, PersistentList
 sequenceTypes = listTypes + (tuple,)
 dictTypes = dict, PersistentMapping
 
+# The number of bytes in 1Mb
+mb = 1048576
+
 # On these layouts, using a gobal selector and switching from one option to the
 # other is not allowed: it would reload the entire page. Examples are: the
 # language selector, or the authentication context selector.

@@ -8,6 +8,7 @@ import io, os, os.path, time, shutil, base64
 
 from appy.px import Px
 from appy import utils, n
+from appy.utils import mb
 from appy.xml.escape import Escape
 from appy.model.fields import Field
 from appy.model.utils import Object
@@ -684,9 +685,8 @@ class File(Field):
       scolspan=1, swidth=n, sheight=n, view=n, cell=n, buttons=n, edit=n,
       custom=n, xml=n, xmlLocation=n, translations=n, render=n,
       icon='paperclip', disposition='attachment', nameStorer=n, cache=True,
-      maxAge=0, resize=False, thumbnail=n, preview=n,
-      previewMaxSize=1048576*10, # 10Mb
-      previewConvertMaxSize=1048576, previewFormats=previewExts, viewWidth=n,
+      maxAge=0, resize=False, thumbnail=n, preview=n, previewMaxSize=10*mb,
+      previewConvertMaxSize=mb, previewFormats=previewExts, viewWidth=n,
       viewHeight=n, hash='md5', noValueLabel='no_value', multiple=False,
       multiplePatch=None, dropWidth=None, dropHeight=None):
         # This boolean is True if the file is an image
