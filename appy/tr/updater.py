@@ -7,8 +7,6 @@
 import sys, collections
 
 from appy.tr import po
-from appy import Config
-from appy.model.utils import Object as O
 from appy.model import Config as ModelConfig
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

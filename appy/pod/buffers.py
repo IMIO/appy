@@ -2,15 +2,14 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import re, sys
+import re
 from xml.sax.saxutils import quoteattr
 
-from appy.pod import PodError
-from appy.pod.elements import *
+from .elements import *
 from appy.utils import Traceback
 from appy.xml import xmlPrologue
 from appy.xml.escape import Escape
-from appy.pod import actions, getUuid
+from . import actions, getUuid, PodError
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ParsingError(Exception): pass

@@ -2,8 +2,6 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from DateTime import DateTime
-
 from appy import n
 from appy.px import Px
 from appy.model.searches import Search
@@ -11,7 +9,7 @@ from appy.model.fields.text import Text
 from appy.model.fields.date import Date
 from appy.model.fields import Field, Show
 from appy.model.fields.string import String
-from appy.ui.layout import Layouts, Layout, LayoutF
+from appy.ui.layout import Layouts, LayoutF
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 UNFREEZ   = 'This field is unfreezable.'
@@ -63,7 +61,7 @@ class Computed(Field):
         # The Python method used for computing the field value, or a PX
         self.method = method
         # A specific method for producing the formatted value of this field.
-        # This way, if, for example, the value is a DateTime instance which is
+        # This way, if, for example, the value is a DateTime object which is
         # indexed, you can specify in m_formatMethod the way to format it in
         # the user interface while m_method computes the value stored in the
         # catalog.

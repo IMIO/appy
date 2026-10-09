@@ -7,8 +7,6 @@ from persistent.mapping import PersistentMapping
 
 from appy import n
 from appy.px import Px
-from appy.ui.layout import Layout
-from appy.model.utils import Object
 from appy.utils.diff import HtmlDiff
 from appy.model.fields.list import List
 

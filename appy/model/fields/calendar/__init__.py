@@ -2,14 +2,11 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import types
-
 from DateTime import DateTime
-from persistent import Persistent
 from BTrees.IOBTree import IOBTree
-from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
+from .. import Field
 from appy.px import Px
 from .cell import Cell
 from .views import View
@@ -17,7 +14,6 @@ from .event import Event
 from .other import Other
 from .layer import Layer
 from appy import utils, n
-from .. import Field, Show
 from .action import Action
 from .filter import Filter
 from .legend import Legend

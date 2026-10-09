@@ -2,12 +2,11 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os, re, io, time, copy, collections, pathlib
+import re, io, time, copy, collections, pathlib
+
+from appy.utils import bn
 from appy.model.utils import Object as O
 from appy.utils.string import produceNiceMessage
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-bn = '\n'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 poHeaders = '''msgid ""

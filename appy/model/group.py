@@ -2,16 +2,15 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy import Config
-from appy.model.base import Base
-from appy.model.user import User
-from appy.model.fields import Show
+from .base import Base
+from .user import User
+from .fields import Show
+from .fields.ref import Ref
+from .fields.string import String
 from appy.ui.layout import Layouts
-from appy.model.fields.ref import Ref
-from appy.model.fields.string import String
-from appy.model.workflow import standard as workflows
-from appy.model.fields.select import Select, Selection
-from appy.model.fields.group import Group as FieldGroup
+from .workflow import standard as workflows
+from .fields.select import Select, Selection
+from .fields.group import Group as FieldGroup
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Group(Base):

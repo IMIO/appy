@@ -2,8 +2,6 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from DateTime import DateTime
-
 from appy.px import Px
 from appy.model.fields import Field
 from appy.utils import dictTypes, bn, br
@@ -37,6 +35,7 @@ class Multilingual:
     # every language, and assembling the result according to the "languages
     # layout". The "Uni" PX receives the current language as variable "lg". If
     # the field is unilingual, the received "lg" variable is None.
+
     view = edit = cell = buttons = Px('''
      <x var="languages=field.getAttribute(o, 'languages');
              multi,value=field.renderMultilingual(o, languages, value, layout);

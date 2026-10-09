@@ -5,18 +5,16 @@
 # Contributors: Gauthier Bastien, Fabio Marcuzzi, IMIO
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import re, xml.sax, math
+import re, math
 
-from appy.pod import *
-from appy.utils import css, bn
+from . import *
 from appy.xml.escape import Escape
+from .odf_parser import OdfEnvironment
 from appy.utils.inject import Injector
-from appy.utils.string import Normalize
 from appy.xml import Environment, Parser
-from appy.utils import formatNumber, addPair
-from appy.pod.odf_parser import OdfEnvironment
-from appy.utils.string import WhitespaceCruncher
-from appy.pod.styles_manager import Style,BulletedProperties,NumberedProperties
+from appy.utils import css, bn, formatNumber
+from appy.utils.string import Normalize, WhitespaceCruncher
+from .styles_manager import BulletedProperties, NumberedProperties
 
 # Tags for which there is a direct correspondance between HTML and ODF
 h = 'text:h'

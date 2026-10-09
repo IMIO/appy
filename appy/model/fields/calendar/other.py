@@ -6,7 +6,6 @@ from appy.px import Px
 from appy import utils
 from .cell import Cell
 from .timeslot import Timeslot
-from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Other:

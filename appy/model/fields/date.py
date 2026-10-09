@@ -13,7 +13,6 @@ from appy.utils import dates
 from appy.model.fields import Field
 from appy.model.fields.hour import Hour
 from appy.database.operators import in_
-from appy.database.indexes.date import DateIndex
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 DEF_DAY_KO  = 'Wrong value for Date::defaultDay.'

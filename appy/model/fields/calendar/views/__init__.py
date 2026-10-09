@@ -6,7 +6,6 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from DateTime import DateTime
 
-from appy.px import Px
 from appy.utils import exeC
 from ..filter import Filter
 from appy.utils import string as sutils

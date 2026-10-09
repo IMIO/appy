@@ -2,7 +2,6 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import tempfile
 from pathlib import Path
 
 from ..tr import po

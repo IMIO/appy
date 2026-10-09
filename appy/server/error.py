@@ -5,7 +5,6 @@
 from http import HTTPStatus
 
 from appy.px import Px
-from appy.ui.js import Quote
 from appy.utils import Traceback
 from appy.xml.escape import Escape
 from appy.ui.template import Template

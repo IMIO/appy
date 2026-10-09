@@ -2,8 +2,9 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import subprocess
+
 from DateTime import DateTime
-import re, urllib.parse, subprocess
 
 import appy.ui
 from ..px import Px
@@ -17,9 +18,7 @@ from .mover import Mover
 from .fields.ref import Ref
 from ..server import Server
 from ..utils import Function
-from .searches import Search
 from .fields import Initiator
-from .fields.rich import Rich
 from .carousel import Carousel
 from .fields.phase import Page
 from .utils import Object as O
@@ -39,7 +38,6 @@ from ..utils import dates as dutils
 from .translation import Translation
 from .fields.calendar import Calendar
 from .fields.computed import Computed
-from ..database.catalog import Catalog
 from ..test.monitoring import Monitoring
 from ..server.context import AuthenticationContext
 

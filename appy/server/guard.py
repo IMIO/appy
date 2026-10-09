@@ -6,20 +6,16 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from pathlib import Path
-
 from DateTime import DateTime
 
 from appy.px import Px
+from .cookie import Cookie
 from appy.model.user import User
 from appy.utils import multicall, No
-from appy.server.cookie import Cookie
 from appy.utils import path as putils
-from appy.model.utils import Object as O
-from appy.model.fields.string import String
 from appy.model.fields.password import Password
 
-# Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 KO_LOG_TFM  = 'Invalid value "%s" for attribute "loginTransform".'
 KO_PERM     = '%s ⛁ %s: « %s » disallowed%s.'
 AUTH_KO     = 'Authentication failed with login %s.'

@@ -10,7 +10,6 @@ from appy.ui.layout import Layouts
 from appy.xml.escape import Escape
 from appy.model.fields.file import File
 from appy.model.fields.list import List
-from appy.model.fields.color import Color
 from appy.model.fields.action import Action
 from appy.model.fields.string import String
 from appy.model.fields.select import Select, Selection

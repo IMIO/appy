@@ -3,9 +3,9 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import collections
+
 from appy.px import Px
 from appy.utils import iconParts
-from appy.model.utils import Object
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Page:

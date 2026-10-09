@@ -2,23 +2,22 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import copy, types, re
-from DateTime import DateTime
+import types, re
 from persistent.list import PersistentList
 
 from appy.px import Px
 from appy import utils
+from .phase import Page
+from ..utils import Fake
 from appy.utils import bn
+from ..totals import Totals
+from ..utils import Object as O
 from appy.database import catalog
-from appy.model.utils import Fake
-from appy.model.totals import Totals
+from .group import Group, UiGroup
+from appy.ui.layout import Layouts
 from appy.tr import FieldTranslations
 from appy.utils import string as sutils
-from appy.model.utils import Object as O
-from appy.model.fields.phase import Page
 from appy.pod.evaluator import Compromiser
-from appy.ui.layout import Layout, Layouts
-from appy.model.fields.group import Group, UiGroup
 
 # In this file, names "list" and "dict" refer to sub-modules. To use Python
 # builtin types, use __builtins__['list'] and __builtins__['dict']

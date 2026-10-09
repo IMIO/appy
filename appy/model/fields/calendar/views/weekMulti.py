@@ -5,7 +5,6 @@
 from .week import Week
 from appy.px import Px
 from .editable import Editable
-from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class WeekMulti(Editable, Week):

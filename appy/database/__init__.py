@@ -4,9 +4,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os, os.path, sys, time, pathlib, shutil
+import os, os.path, pathlib, shutil
 
-from DateTime import DateTime
 from zc.lockfile import LockError
 from BTrees.IOBTree import IOBTree
 from BTrees.IIBTree import IITreeSet

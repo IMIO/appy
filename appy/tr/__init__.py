@@ -4,9 +4,6 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy.model.utils import Object as O
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class FieldTranslations:
     '''Translations, in all supported languages, for a given field'''
 

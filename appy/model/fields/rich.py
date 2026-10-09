@@ -2,22 +2,20 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import sys, re
+import sys
 from xml.sax._exceptions import SAXParseException
 
 from appy import n
+from . import Field
 from appy.px import Px
+from .text import Text
 from appy.utils import bn
 from appy.ui.layout import Layouts
-from appy.xml.escape import Escape
-from appy.model.fields import Field
 from appy.utils.diff import HtmlDiff
+from .multilingual import Multilingual
 from appy.utils.inject import Injector
-from appy.model.fields.text import Text
-from appy.utils import string as sutils
 from appy.ui.layout import Layouts, Layout
 from appy.xml.cleaner import Cleaner, StringCleaner
-from appy.model.fields.multilingual import Multilingual
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 XML_ERROR  = 'Error while reading content of field %s on %s. %s.'

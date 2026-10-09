@@ -2,11 +2,9 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import time
-
 from appy import n
+from . import Field
 from appy.px import Px
-from appy.model.fields import Field
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Hour(Field):

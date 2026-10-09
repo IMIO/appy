@@ -2,16 +2,16 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os, os.path, re, stat, shutil, struct, urllib.parse, base64, io
+import os, os.path, re, stat, shutil, struct, base64, io
 
 import appy.pod
 from appy import utils
+from . import PodError, getUuid
 from appy.utils import css, imghdr
-from appy.pod import PodError, getUuid
+from .metadata import MetadataReader
 from appy.utils.client import Resource
+from .odf_parser import OdfEnvironment
 from appy.model.utils import Object as O
-from appy.pod.metadata import MetadataReader
-from appy.pod.odf_parser import OdfEnvironment
 from appy.utils.path import getOsTempFolder, getTempFileName
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

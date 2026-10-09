@@ -4,7 +4,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import os.path, re
+import re
 
 from appy.px import Px
 from appy.utils import asDict

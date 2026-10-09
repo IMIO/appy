@@ -5,9 +5,7 @@
 import base64
 
 from appy.px import Px
-from appy.ui.js import Quote
-from appy.ui.includer import Includer
-from appy.utils.string import Normalize
+from .includer import Includer
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Iframe:

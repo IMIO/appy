@@ -389,8 +389,6 @@ class Converter:
 
     def connect(self):
         '''Connects to LibreOffice'''
-        if os.name == 'nt':
-            import socket
         import uno
         from com.sun.star.connection import NoConnectException
         try:

@@ -2,13 +2,13 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from . import Role
 from appy.px import Px
+from .state import State
 from appy.utils import iconParts
-from appy.model.fields.group import Group
-from appy.model.workflow.state import State
-from appy.model.workflow import emptyDict, Role
+from ..fields.group import Group
 
-# Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 UN_TRIG  = '%s :: Untriggerable transition "%s". %s'
 START_KO = 'Object is in state "%s", not being a start for this transition.'
 LOCK_KO  = 'A lock is in the way: %s.'

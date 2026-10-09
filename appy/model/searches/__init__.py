@@ -7,18 +7,15 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import time
 
-from DateTime import DateTime
-
 from appy.px import Px
-from appy.model.batch import Batch
-from appy.model.totals import Totals
+from .ui import UiSearch
+from . import initiators
+from ..batch import Batch
+from ..totals import Totals
+from ..utils import Object as O
+from ..fields.group import Group
 from appy.ui.criteria import Criteria
 from appy.ui.template import Template
-from appy.utils import string as sutils
-from appy.model.utils import Object as O
-from appy.model.fields.group import Group
-from appy.model.searches import initiators
-from appy.model.searches.ui import UiSearch
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 REPLAY_S    = 'Class "%s": replaying search "%s"...'

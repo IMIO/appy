@@ -4,7 +4,7 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from pathlib import Path
 from collections import UserDict
-import zipfile, shutil, xml.sax, os, os.path, re, mimetypes, time
+import shutil, os, os.path, re, mimetypes, time
 
 import appy.pod
 from .. import utils

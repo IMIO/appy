@@ -10,7 +10,6 @@ from pathlib import Path
 from DateTime import DateTime
 
 from appy.utils import path as putils
-from appy.model.fields.ref import Ref
 from appy.model.fields.file import File
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

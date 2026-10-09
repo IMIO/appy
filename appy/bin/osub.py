@@ -12,7 +12,6 @@ from appy.bin import Program
 from appy.utils.zip import zip, unzip
 from appy.utils import path as putils
 from appy.utils.string import randomName
-from appy.pod.styles_manager import StylesGenerator
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 FILE_KO   = '%s does not exist or is not a file.'

@@ -15,9 +15,8 @@ from appy.utils import string as sutils
 from appy.utils import flipDict, bn, rbn
 from appy.xml.cleaner import StringCleaner
 from appy.database.operators import and_, in_
-from appy.database.indexes.sort import SortOptions
+from appy.database.indexes.text import TextIndex
 from appy.ui.layout import Layouts, Layout, LayoutF
-from appy.database.indexes.text import TextIndex, TextOptions
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 IN_ED_MLG  = 'Is is currently not possible to inline-edit multilingual Text ' \

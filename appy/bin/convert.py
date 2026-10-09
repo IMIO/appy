@@ -8,7 +8,6 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import sys
-from pathlib import Path
 
 from appy.utils import bn
 from appy.bin import Program

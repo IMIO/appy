@@ -3,15 +3,14 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from http import HTTPStatus
-import re, inspect, email.utils, pathlib, mimetypes, os.path, collections
+import inspect, email.utils, pathlib, mimetypes, os.path, collections
 
 from DateTime import DateTime
 
 import appy
-from appy.utils import mb
-from appy.utils import css
+from appy.utils import mb, css
+from appy.utils.string import Variables
 from appy.model.utils import Object as O
-from appy.utils.string import Normalize, Variables
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 MAP_VAL_KO  = 'Values from the map must be pathlib.Path objects.'

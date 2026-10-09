@@ -7,18 +7,17 @@
 import sys, inspect, pathlib, importlib
 
 from appy.tr import po
+from .root import Model
+from .fields import Field
+from .fields.ref import Ref
 from appy.utils import exeC
-from appy.model.root import Model
-from appy.model.fields import Field
-from appy.model.fields.ref import Ref
-from appy.model.fields.phase import Page
-from appy.model.workflow import standard
-from appy.model.meta.class_ import Class
-from appy.model.fields.string import String
-from appy.model.workflow.state import State
-from appy.model.meta.workflow import Workflow
+from .workflow import standard
+from .meta.class_ import Class
+from .fields.string import String
+from .workflow.state import State
+from .meta.workflow import Workflow
 
-# Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 NO_SEARCH = "Note that Appy classes and workflows are not searched within " \
             "your app's __init__.py file, nor within sub-sub-modules."
 NO_CLASS  = 'Warning: no Appy class was found in your app @%%s. %s' % NO_SEARCH
@@ -108,7 +107,7 @@ class Loader:
             if class_.type == 'app': continue
             # Browse forward Ref fields
             for field in class_.fields.values():
-                if field.type != 'Ref' or field.isBack: continue
+                if not isinstance(field, Ref) or field.isBack: continue
                 # Get the target class
                 refClass = model.classes[field.class_.__name__]
                 # If this class has been overridden, we must update it with the

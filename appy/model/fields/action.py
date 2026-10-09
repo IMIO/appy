@@ -8,7 +8,6 @@ from appy.px import Px
 from appy import utils, n
 from appy.utils import bn
 from appy.ui import LinkTarget
-from appy.ui.iframe import Iframe
 from appy.ui.layout import Layouts
 from appy.model.searches import Search
 from appy.model.fields import Field, Initiator, Show

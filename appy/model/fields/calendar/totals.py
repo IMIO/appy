@@ -5,7 +5,6 @@
 from appy import utils
 from appy.px import Px
 from appy.xml.escape import Escape
-from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Total:
