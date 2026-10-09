@@ -890,20 +890,19 @@ class Calendar(Field):
                     end.year(),   end.month(),   end.day())
 
     def walkEvents(self, o, callback, dateRange=n):
-        '''Walks, on p_o, the calendar value in chronological order for this
-           field and calls p_callback for every day containing events. The
-           callback must accept 3 args: p_o, the current day (as a DateTime
-           instance) and the list of events at that day (the database-stored
-           PersistentList instance). If the callback returns True, we stop the
-           walk.
-
-           If p_dateRange is specified, it limits the walk to this range. It
-           can be:
-           * an integer, representing a year;
-           * a tuple of integers (year, month) representing a given month
-             (first month is numbered 1);
-           * a tuple (start, end) of DateTime instances.
-        '''
+        '''Walks, on p_o, calendar events in chronological order for this field
+           and calls p_callback for every day containing events.'''
+        # The callback must accept 3 args: p_o, the current day (as a DateTime
+        # object) and the list of events at that day (the database-stored
+        # PersistentList object). If the callback returns True, we stop the
+        # walk.
+        #
+        # If p_dateRange is specified, it limits the walk to this range. It can
+        # be :
+        # - an integer, representing a year ;
+        # - a tuple of integers (year, month) representing a given month (first
+        #   month is numbered 1) ;
+        # - a tuple (start, end) of DateTime objects.
         if self.name not in o.values: return
         yearsDict = getattr(o, self.name)
         if not yearsDict: return

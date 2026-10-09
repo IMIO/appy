@@ -302,14 +302,14 @@ class Unmarshaller(Parser):
         if e.currentBasicType:
             if e.currentBasicType == 'base64':
                 content = content.strip()
-            e.currentContent += content
+            e.currentContent = f'{e.currentContent}{content}'
         elif e.currentTag.name in self.contentAttributes:
             # Store p_content in attribute named according to
             # p_self.contentAttributes on the current object.
             name = self.contentAttributes[e.currentTag.name]
             ctype, current = e.containerStack[-1]
             if hasattr(current, name):
-                setattr(current, name, getattr(current, name) + content)
+                setattr(current, name, f'{getattr(current, name)}{content}')
             else:
                 setattr(current, name, content)
 
