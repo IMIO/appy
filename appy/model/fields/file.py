@@ -24,6 +24,7 @@ BAD_FTUPLE = 'This is not the way to set a file. You can specify a 2-tuple ' \
              '(fileName, fileContent) or a 3-tuple (fileName, fileContent, ' \
              'mimeType).'
 CONV_ERR   = 'Pod::Converter error. %s'
+CONV_ERR_M = "Pod::Converter error. %s wasn't generated."
 CONV_PDF_E = 'Pod::Converter error while converting the file to PDF.'
 CONV_PDF_T = 'converted as PDF'
 PATH_KO    = 'Missing absolute disk path for %s.'
@@ -391,7 +392,7 @@ class FileInfo:
             else:
                 filePath = f'{baseName}.{format}'
             if not os.path.exists(filePath):
-                o.log(CONV_ERR % err, type='error')
+                o.log(CONV_ERR_M % filePath, type='error')
                 return
         return filePath
 
@@ -944,7 +945,7 @@ class File(Field):
            preview ?'''
         if value.size > maxSize:
             r = False
-            maP = {'size': value.getShownSize()}
+            maP = {'size': putils.getShownSize(maxSize)}
             text = o.translate('file_unpreviewable_size', mapping=maP)
         else:
             r = True

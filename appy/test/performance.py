@@ -72,7 +72,7 @@ class Hit:
           request and finding your URL among it.
     '''
     # Regular expression for retrieving all "A" tags in a web page
-    aRex = re.compile(b'<a\s+.*?href="(.*?)".*?>(.*?)</a>', re.S)
+    aRex = re.compile(r'<a\s+.*?href="(.*?)".*?>(.*?)</a>', re.S)
 
     def __init__(self, url, indexes=None, method='GET', comment=None,
                  id=None, baseHit=None):

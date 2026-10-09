@@ -36,10 +36,11 @@ class UnmarshalledFile:
     def __repr__(self):
         '''p_self's short string representation'''
         if self.location:
-            info = '@%s' % self.location
+            info = f'@{self.location}'
         else:
-            info = '(%s)' % getShownSize(self.size)
-        return '<File %s %s>' % (self.name or '-unnamed-', info)
+            info = f'({getShownSize(self.size)})'
+        name = self.name or '-unnamed-'
+        return f'‹File {name} {info}›'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Unmarshaller(Parser):

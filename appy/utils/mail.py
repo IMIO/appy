@@ -180,7 +180,7 @@ class Mailer:
         log = self.logFun
         if not log: return
         if error:
-            log(MAIL_R_KO % str(r), type='warning')
+            log(MAIL_R_KO % str(error), type='warning')
         else:
             log(MAIL_SENT % (time.time() - start))
 

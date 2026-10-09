@@ -10,7 +10,7 @@ from appy.model.fields import Field
 from appy.model.utils import Object as O
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-PWD_ACT  = 'Password %s for %s.'
+PWD_ACT  = '%s :: Password %s.'
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PasswordGenerator:
@@ -286,7 +286,7 @@ class Password(Field):
         self.store(o, password)
         # Log the operation when requested
         if log:
-            self.log(PWD_ACT % (verb, login))
+            self.log(PWD_ACT % (o.strinG(), verb))
         return password
 
     def store(self, o, value):

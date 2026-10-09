@@ -40,10 +40,6 @@ class FormDataEncoder:
             r = f'{name}:float={value}'
         elif isinstance(value, int):
             r = f'{name}:int={value}'
-        elif isinstance(value, long):
-            r = f'{name}:long={value}'
-            if r[-1] == 'L':
-                r = r[:-1]
         else:
             raise Exception(ENC_ERR % str(value))
         return r

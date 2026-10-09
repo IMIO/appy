@@ -288,8 +288,8 @@ class Columns(list):
     def getColClass(class_, layout):
         '''Gets the Col (sub)class corresponding to this column p_name'''
         if layout.startswith('_'):
-            i = layouts.find('*')
-            name = layouts[1:] if i == -1 else layouts[1:i]
+            i = layout.find('*')
+            name = layout[1:] if i == -1 else layout[1:i]
             r = eval(name.capitalize())
         else:
             r = Col

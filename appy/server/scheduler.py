@@ -65,7 +65,7 @@ MIN_KO   = 'Config attribute "jobs.minutes" must be an integer being higher ' \
            'or equal to 1.'
 MISSING  = 'Missing %s for a job.'
 WRONG_TD = 'Wrong timedef "%s".'
-TDEF_KO  = '%s. Must be of the form "m h dom mon dow".' % WRONG_TD
+TDEF_KO  = f'{WRONG_TD} :: Must be of the form "m h dom mon dow".'
 JOB_C    = 'Job tool/%s configured @ %s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -295,7 +295,7 @@ class TimeDef:
         sparts = tdef.split()
         # Ensure it includes 5 time parts
         if len(sparts) != 5:
-            raise Exception(TDEF_KO % timeDef)
+            raise Exception(TDEF_KO % tdef)
         # Store the parts as TimePart instances in dict p_self.parts
         i = 4
         parts = self.parts

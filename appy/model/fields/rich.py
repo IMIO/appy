@@ -469,8 +469,7 @@ class Rich(Multilingual, Field):
 
     ckLanguages = {'en': 'en_US', 'pt': 'pt_BR', 'da': 'da_DK', 'nl': 'nl_NL',
                    'fi': 'fi_FI', 'fr': 'fr_FR', 'de': 'de_DE', 'el': 'el_GR',
-                   'it': 'it_IT', 'nb': 'nb_NO', 'pt': 'pt_PT', 'es': 'es_ES',
-                   'sv': 'sv_SE'}
+                   'it': 'it_IT', 'nb': 'nb_NO', 'es': 'es_ES', 'sv': 'sv_SE'}
 
     def getCkLanguage(self, o, language):
         '''Gets the language for CK editor SCAYT. p_language is one of

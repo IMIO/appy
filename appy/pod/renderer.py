@@ -31,9 +31,9 @@ RES_EXISTS  = 'Result file "%s" exists.'
 TEMP_W_KO   = 'I cannot create temp folder "%s". %s'
 R_TYPE_KO   = 'Result "%s" has a wrong extension. Allowed extensions are: "%s".'
 CONV_ERR    = 'An error occurred during the conversion. %s'
-NO_LO_POOL  = 'For producing pod results of type "%s", LibreOffice must be ' \
-              'called in server mode. Specify its server name and port in ' \
-              'Renderer\'s ad hoc attributes.'
+NO_LO_POOL  = 'For producing pod result "%s", LibreOffice must be called in ' \
+              'server mode. Specify its server name and port in Renderer\'s ' \
+              'ad hoc attributes.'
 DOC_KO      = 'Please specify a document to import, either with a stream ' \
               '(parameter "content") or with a path (parameter "at").'
 DOC_FMT_KO  = 'POD was unable to deduce the document format. Please specify ' \
@@ -1065,7 +1065,7 @@ class Renderer:
     def callLibreOffice(self, resultName, format=None, outputName=None):
         '''Call LibreOffice in server mode to convert or update the result'''
         if self.loPool is None:
-            raise PodError(NO_LO_POOL % resultType)
+            raise PodError(NO_LO_POOL % resultName)
         return self.loPool(self, resultName, format, outputName)
 
     def finalize(self):

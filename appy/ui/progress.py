@@ -229,7 +229,8 @@ class Progress:
         req = tool.req
         o = tool.getObject(req.iid)
         # Get the target field or transition
-        elem = o.getField(req.name) or o.class_.workflow.transitions.get(name)
+        name = req.name
+        elem = o.getField(name) or o.class_.workflow.transitions.get(name)
         return o, elem
 
     traverse['get'] = True # Strict security will be enforced in the method

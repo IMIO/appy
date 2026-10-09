@@ -242,7 +242,8 @@ class Config:
         login = headers.get(self.loginKey) if headers else None
         if login:
             # Apply a transform to the login when relevant
-            if self.ldap: login = self.ldap.applyLoginTransform(login)
+            if self.ldap:
+                login = self.ldap.applyLoginTransform(login)
             # Search for this user
             tool = handler.tool
             user = tool.search1('User', login=login)
@@ -253,8 +254,7 @@ class Config:
                     handler.commit = True
                 else:
                     # Force an identification failure
-                    if warn:
-                        tool.log(NON_SSO_U % login, type='warning', noUser=True)
+                    tool.log(NON_SSO_U % login, type='warning', noUser=True)
                     return
         return login
 

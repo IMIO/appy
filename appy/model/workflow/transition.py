@@ -16,6 +16,9 @@ ROLE_KO  = '%s lacks role %s.'
 ROLES_KO = '%s has none of the condition-defined roles.'
 METH_KO  = 'Blocked by custom method.'
 VAL_KO   = 'Condition value is "%s".'
+RS_MULTI = 'Method "removeState" only applies to multi-transitions.'
+RRIC_MIS = 'Method "replaceRoleInCondition" can only be used if ' \
+           'transition.condition is a sequence.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Transition:
@@ -256,7 +259,7 @@ class Transition:
         '''For a multi-state transition, this method removes every state pair
            containing p_state.'''
         if self.isSingle():
-            raise WorkflowException('To use for multi-transitions only')
+            raise self.Error(RS_MULTI)
         i = len(self.states) - 1
         while i >= 0:
             if state in self.states[i]:
@@ -297,10 +300,10 @@ class Transition:
         condition = self.condition
         if isinstance(old, Role): old = old.name
         # Ensure we have a list
-        if isinstance(condition, tuple): condition = list(condition)
+        if isinstance(condition, tuple):
+            condition = list(condition)
         if not isinstance(condition, list):
-            raise WorkflowException('m_replaceRoleInCondition can only be ' \
-              'used if transition.condition is a sequence.')
+            raise self.Error(RRIC_MIS)
         # Find the p_old role
         i = -1
         found = False

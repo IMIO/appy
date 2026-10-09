@@ -172,7 +172,7 @@ class Hour(Field):
         # (01,10) - 71 = (23,59)
         if mins < 0:
             mins += 60
-            hours -= 1
+            hour -= 1
         if hour < 0:
             hour += 24
         return hour, mins

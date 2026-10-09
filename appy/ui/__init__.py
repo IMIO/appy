@@ -713,7 +713,7 @@ class Config:
         '''Get the permanent text that must appear in the page header'''
         # Get the text via config attribute "test"
         r = self.test
-        if callable(r): r = test(tool)
+        if callable(r): r = r(tool)
         return r or ''
 
     def getBackground(self, px, ctx, type, popup=None):

@@ -4,9 +4,9 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-from appy.model.workflow import *
-from appy.model.workflow.state import State
-from appy.model.workflow.transition import Transition
+from . import *
+from .state import State
+from .transition import Transition
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # WARNING | To be activated, any workflow defined here must be listed in

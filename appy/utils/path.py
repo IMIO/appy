@@ -176,6 +176,7 @@ extsToClean = '.pyc', '.pyo', '.fsz', '.deltafsz', '.dat', '.log'
 CLEAN_F_S = 'Cleaning folder %s...'
 RM_FILE   = 'Removing file %s...'
 RM_DIR    = 'Removing folder %s...'
+DIR_NOT_E = 'Aborted :: Folder %s is not empty.'
 
 def cleanFolder(folder, exts=extsToClean, folders=(), verbose=False):
     '''This function allows to remove, in p_folder and subfolders, any file
