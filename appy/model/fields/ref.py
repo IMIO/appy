@@ -132,6 +132,9 @@ class RefInitiator(Initiator):
             o.history.add('Link', addition=True, field=self.field.name,
                           comment=new.strinG(translated=True, path=False))
 
+# Register this specific initiator
+Initiator.registry['ref'] = RefInitiator
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Separator:
     '''Withins lists of tied objects, one may need to insert one or several
@@ -155,6 +158,7 @@ class Ref(Field):
     # Make sub-classes available here
     Position = Position
     Separator = Separator
+    Initiator = RefInitiator
 
     # Ref-specific layouts
     class Layouts(Layouts):
@@ -187,9 +191,6 @@ class Ref(Field):
     # Getting a ref value is something special: disable the standard Appy
     # machinery for this.
     customGetValue = True
-
-    # A Ref has a specific initiator class
-    initiator = RefInitiator
 
     # Its is more practical if the empty value is iterable
     empty = ()
@@ -544,7 +545,7 @@ class Ref(Field):
 
      <!-- Linked objects -->
      <x if="objects"
-        var2="initiator=field.initiator(tool, req, (o, field));
+        var2="initiator=field.Initiator(tool, req, (o, field));
               tableWidth=field.width or field.layouts['view'].width;
               columns=field.getCurrentColumns(colset, colsets);
               genCss=columns.getCss(field.showHeaders, initiator.field.rowAlign,
@@ -3113,8 +3114,9 @@ class Ref(Field):
         if self.isBack or inPickList or inMenu: return 'no'
         # If p_nb is None, we want to produce a generic nav info into which we
         # will insert a specific number afterwards.
-        if nb is None: return 'ref.%d.%s.%%d.%d' % (o.iid, self.name, total)
-        return 'ref.%d.%s.%d.%d' % (o.iid, self.name, nb, total)
+        if nb is None:
+            return f'ref.{o.iid}.{self.name}.%d.{total}'
+        return f'ref.{o.iid}.{self.name}.{nb}.{total}'
 
     def getCollapseInfo(self, o, inPickList):
         '''Returns a Collapsible instance, that determines if the "tied objects"

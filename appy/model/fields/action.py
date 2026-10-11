@@ -45,6 +45,9 @@ class ActionInitiator(Initiator):
             r = msg or None
         return r
 
+# Register this specific initiator
+Initiator.registry['action'] = ActionInitiator
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Multi:
     '''Management of muti-actions = actions that execute on a set of objects,
@@ -64,9 +67,6 @@ class Action(Field):
 
     # Some methods will be traversable
     traverse = Field.traverse.copy()
-
-    # Action-specific initiator class
-    initiator = ActionInitiator
 
     # Getting an action is something special: disable the standard Appy
     # machinery for this.

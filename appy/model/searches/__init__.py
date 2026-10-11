@@ -31,10 +31,6 @@ class Search:
     UI = UiSearch
     Totals = Totals
 
-    # Special initiator in use when an object is being created from a Search. It
-    # has nothing to do with popup-oriented initiator as defined hereafter.
-    initiator = initiators.SearchInitiator    
-
     # Parameters needed to replay a search (see m_replay)
     replayParams = 'className', 'search', 'sortKey', 'sortOrder', 'filters'
 

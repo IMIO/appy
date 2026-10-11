@@ -18,4 +18,8 @@ class BooleanIndex(Index):
         '''Converts p_value to a boolean value if it is not the case'''
         # In other words, value None must be converted to False
         return bool(value)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Add myself as attribute of my base parent
+Index.BooleanIndex = BooleanIndex
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

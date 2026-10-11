@@ -23,8 +23,8 @@ class Custom(Field):
             return class_.b
 
     # If your objective is to build a complete custom widget, with specific
-    # "edit" and "view" PXs and with a custom data structure, please use a field
-    # of type Computed(unfreezable=True).
+    # /edit and /view PXs and with a custom data structure, an alternative is to
+    # use a field of type Computed(unfreezable=True).
 
     # Indeed, the purpose of the Custom field is simpler and aims at storing a
     # data structure that is produced by your code independently of any UI

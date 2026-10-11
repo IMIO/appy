@@ -3,7 +3,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from appy import utils, n
-from appy.model.fields.integer import Integer
+from .integer import Integer
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SEP_UNALLOWED = 'Char "%s" is not allowed as decimal separator.'

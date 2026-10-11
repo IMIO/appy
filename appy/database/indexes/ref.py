@@ -66,4 +66,8 @@ class RefIndex(Index):
 
     # The CSS class to use when rendering the "recompute" icon for a Ref index
     boxIconCss = 'boxIconR'
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Add myself as attribute of my base parent
+Index.RefIndex = RefIndex
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

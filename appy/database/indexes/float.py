@@ -24,4 +24,8 @@ class FloatIndex(Index):
     def toString(class_, o, value):
         '''Returns the string representation for p_value'''
         return formatNumber(value) if value is not None else None
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Add myself as attribute of my base parent
+Index.FloatIndex = FloatIndex
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

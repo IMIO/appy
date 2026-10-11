@@ -31,4 +31,8 @@ class RichIndex(TextIndex):
         # "searchable" index.
         return Extractor(keepCRs=False).parse(f'<x>{value}</x>') if value \
                                                                  else None
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Add myself as attribute of my base parent
+TextIndex.__bases__[0].RichIndex = RichIndex
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

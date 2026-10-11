@@ -80,4 +80,8 @@ class DateIndex(Index):
         '''Returns the string representation of the date in p_value'''
         return o.tool.formatDate(value, format='%dt %d %mt %Y') if value \
                                                                 else None
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Add myself as attribute of my base parent
+Index.DateIndex = DateIndex
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

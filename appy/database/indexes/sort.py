@@ -43,4 +43,8 @@ class SortIndex(Index):
         # Similar to p_toIndexed, but does not restrict the number of chars and
         # does not concatenate search terms.
         return Normalize.text(value)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Add myself as attribute of my base parent
+Index.SortIndex = SortIndex
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

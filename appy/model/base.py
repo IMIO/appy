@@ -32,7 +32,7 @@ from appy.model.workflow import standard as workflows
 from appy.model.fields.select import Select, Selection
 from appy.utils.string import Normalize, produceNiceMessage
 
-# Errors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 RO_EXPR     = 'This is a read-only property: you cannot set a value for it.'
 FIELD_KO    = 'Field "%s" on class "%s" does not exist.'
 MISS_CLS    = '"new" called without class name.'
@@ -62,7 +62,7 @@ class Base:
     workflow = workflows.Anonymous
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    #                             Fields
+    #                                 Fields
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     # The following fields are base fields that apply to any class, be it a
@@ -873,7 +873,7 @@ class Base:
         '''Computes the container ID ("cid") for p_self'''
         r = None
         for field in self.class_.fields.values():
-            if field.type == 'Ref' and field.isBack and field.back.composite:
+            if isinstance(field, Ref) and field.isBack and field.back.composite:
                 container = getattr(self, field.name, None)
                 if container:
                     try:
@@ -1243,9 +1243,9 @@ class Base:
         r = {}
         # Browse field values from p_self and store "copyable" ones in "r"
         for field in self.class_.fields.values():
-            # Skip non persistent fields, back references & p_exclude(d) fields
+            # Skip non persistent fields, back refs & p_exclude(d) fields
             if not field.persist or field.name in exclude or \
-               (field.type == 'Ref' and field.isBack): continue
+               (isinstance(field, Ref) and field.isBack): continue
             # Use the value in p_fields if given
             if field.name in fields:
                 value = fields[field.name]
@@ -1535,10 +1535,10 @@ class Base:
             # Try to get a "classic" initiator, from the "[o]nav" key
             nav = req.nav or req.onav
             if not nav or nav == 'no': return
-            fieldType, info = nav.split('.', 1)
-            field = eval(fieldType.capitalize())
-            if field.initiator:
-                r = field.initiator(self.tool, req, info)
+            prefix, info = nav.split('.', 1)
+            iClass = Field.Initiator.registry.get(prefix)
+            if iClass:
+                r = iClass(self.tool, req, info)
                 if r.isComplete():
                     return r
         else:

@@ -58,6 +58,10 @@ class Index(persistent.Persistent):
     # appy/database/indexes/options.py.
     options = None
 
+    # 💡 Each sub-class will add itself as attribute of this Index class. For
+    #    example, class appy.database.indexes.float.py::FloatIndex will be
+    #    available via Index.FloatIndex.
+
     @classmethod
     def getOptions(class_, field):
         '''Get, as an instance of an Options sub-class, index options that apply
@@ -422,4 +426,9 @@ class Index(persistent.Persistent):
         '''Returns the string representation of this p_value'''
         if value is None: return
         return value if isinstance(value, str) else str(value)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Each concrete class must be set as an attribute here, including the base
+# class itself.
+Index.Index = Index
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

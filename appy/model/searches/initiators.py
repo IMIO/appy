@@ -3,18 +3,22 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ~license~
 
-# Abstract base class for any initiator  - - - - - - - - - - - - - - - - - - - -
-class Initiator:
-    '''When a search is rendered in a popup, the "initiator", in the main page,
-       can be:
-       * (a) some object, in view or edit mode, displaying a given Ref field
-             for which the popup is used to select one or more objects to link;
-       * (b) some class for which we must create an instance from a template;
-             the popup is used to select such a template object.
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from ..fields import Field
 
-       This class is the abstract class for 2 concrete initiator classes:
-       RefInitiator (for case a) and TemplateInitiator (for case b).
-    '''
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Initiator:
+    '''Abstract base class for any search-specific initiator'''
+
+    # When a search is rendered in a popup, the "initiator", in the main page,
+    # can be:
+    #  (a) some object, in view or edit mode, displaying a given Ref field
+    #      for which the popup is used to select one or more objects to link;
+    #  (b) some class for which we must create an instance from a template;
+    #      the popup is used to select such a template object.
+
+    # This class is the abstract class for 2 concrete initiator classes:
+    # RefInitiator (for case a) and TemplateInitiator (for case b).
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class RefInitiator(Initiator):
@@ -148,4 +152,7 @@ class SearchInitiator:
         '''The initiator is considered to be complete if p_self.o is not
            empty.'''
         return self.o
+
+# Register this specific initiator
+Field.Initiator.registry['search'] = SearchInitiator
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -12,10 +12,10 @@ from ..utils import Fake
 from appy.utils import bn
 from ..totals import Totals
 from ..utils import Object as O
-from appy.database import catalog
 from .group import Group, UiGroup
 from appy.ui.layout import Layouts
 from appy.tr import FieldTranslations
+from appy.database.indexes import Index
 from appy.utils import string as sutils
 from appy.pod.evaluator import Compromiser
 
@@ -108,11 +108,14 @@ class Initiator:
     '''From a given field on a given object, it is possible to trigger the
        creation of another object. The most obvious example is the creation of a
        tied object via a Ref field with add=True. An "initiator" represents the
-       (object, field) that initiates the object creation.
+       (object, field) that initiates the object creation.'''
 
-       In order to customize initiator behaviour, every Field sub-class can
-       propose an Initiator sub-class, by overriding its static attribute
-       "initiator".'''
+    # Initiators manifest themselves in the object creation process by placing
+    # info in the "nav" request key. Each initiator must declare itself in the
+    # registry below, by adding an entry whose key is the prefix used for their
+    # "nav" keys (like "ref", "action", "search"), and whose value is themselves
+    # (= a Initiator sub-class).
+    registry = {}
 
     # The concept of initiator can also be used in the context of visualizing
     # objects. For example, when displaying a tied object via a Ref, its
@@ -283,8 +286,8 @@ class Field:
     # In most cases, outer fields store persistent lists
     outerType = PersistentList
 
-    # The initiator class related to the Field
-    initiator = Initiator
+    # Make the Initiator base class available here
+    Initiator = Initiator
 
     # The name of the index class storing values of this field in the catalog
     indexType = 'Index' # For most fields, the base Index class suits
@@ -1434,7 +1437,7 @@ class Field:
            store values of this field in a database catalog, or the class itself
            if p_class_ is True.'''
         r = self.indexType
-        return getattr(catalog, r) if class_ else r
+        return getattr(Index, r) if class_ else r
 
     def getIndex(self, o):
         '''Gets the Index object corresponding to this field, or None if the

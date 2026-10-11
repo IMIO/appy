@@ -8,20 +8,16 @@
 from BTrees.IIBTree import IITreeSet, difference
 from persistent.mapping import PersistentMapping
 
-from .indexes import Index
-from .indexes.ref import RefIndex
-from .indexes.date import DateIndex
-from .indexes.text import TextIndex
-from .indexes.rich import RichIndex
-from .indexes.sort import SortIndex
-from .indexes.float import FloatIndex
-from .indexes.boolean import BooleanIndex
-
 from appy.px import Px
+from .indexes import Index
+from .sorter import Sorter
+from .operators import Operator
 from appy.ui.template import Template
-from appy.database.sorter import Sorter
 from appy.model.utils import Object as O
-from appy.database.operators import Operator
+
+# Force now the import of all index classes. Else, their registration on the
+# Index class may not be performed.
+from .indexes import boolean, date, float, ref, rich, sort, text
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 CTL_CREATED = 'Catalog created for class "%s".'
@@ -195,13 +191,13 @@ class Catalog(PersistentMapping):
                 if not field.indexed: continue
                 name = field.name
                 all.append(name)
-                # Get the name of the index class to use
-                indexType = field.getIndexType()
+                # Get the index class to use
+                indexClass = field.getIndexType(class_=True)
                 # Does the index already exist ?
                 if name in self:
                     # Do nothing if the index exists and is of the correct type
                     index = self[name]
-                    if index.__class__.__name__ == indexType:
+                    if index.__class__ == indexClass:
                         continue
                     else:
                         # There is a mismatch between the index currently
@@ -215,7 +211,7 @@ class Catalog(PersistentMapping):
                     # The index must be created
                     changes.created.append(name)
                 # Create the index: it does not exist yet
-                index = self[name] = eval(indexType)(field, self)
+                index = self[name] = indexClass(field, self)
                 r.append(index)
         # Browse indexes, looking for indexes to delete
         for name in self.keys():

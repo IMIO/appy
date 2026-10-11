@@ -78,4 +78,8 @@ class TextIndex(Index):
     def toTerm(class_, value, field):
         '''Normalizes p_value in order to be used as a search term'''
         return Normalize.text(value)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Add myself as attribute of my base parent
+Index.TextIndex = TextIndex
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

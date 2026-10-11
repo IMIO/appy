@@ -21,7 +21,7 @@ from appy.model.utils import Object as O
 RES_START   = 'Resolving links for %d objects (and inner links for %d ' \
               'objects), based on a total of %d imported objects...'
 RES_END     = '%d links resolved and %d unresolved.'
-UNRESOLVED  = 'Unresolved object with ID "%s" mentioned in %s:%s:%s.'
+UN_RESOLVED = 'Unresolved object with ID "%s" mentioned in %s → %s.'
 MIS_CUS_FUN = 'Custom entries to resolve have been found but no function has ' \
               'been specified to resolve them (in peer.unresolved.customFun).'
 CUS_START   = 'Starting custom resolution of %d entries...'
@@ -120,7 +120,7 @@ class Unresolved:
                     if tied is None:
                         # Still unresolved
                         counts.unresolved += 1
-                        tool.log(UNRESOLVED % (id, o.class_.name, o.id, name))
+                        tool.log(UN_RESOLVED % (id, o.strinG(), name))
                     else:
                         # Tied object found, perform the link
                         o.link(name, tied, executeMethods=False)
@@ -150,8 +150,7 @@ class Unresolved:
                             tied = byId.get(ival)
                             if tied is None:
                                 # Still unresolved
-                                tool.log(UNRESOLVED % (ival, o.class_.name,
-                                                       o.id, name))
+                                tool.log(UN_RESOLVED % (ival, o.strinG(), name))
                                 del innerVal[j]
                                 counts.unresolved += 1
                             else:
