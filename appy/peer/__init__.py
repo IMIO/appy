@@ -47,7 +47,7 @@ class Peer:
     distantToolName = 'tool'
 
     # Symbols used for script output
-    printSymbols = ('-', '-', '-', '°', '~', ':')
+    printSymbols = '-', '-', '~', '·', '·', '•', '•'
 
     # Separator for the object counter. Allows to easily view the counter
     counterSep = '-' * 5
@@ -199,7 +199,7 @@ class Peer:
         '''Don't get bored while observing script execution'''
         if (nb % 100) == 0:
             # Every 100 elements, show the current element's p_nb
-            r = '%s=%d/%d=%s' % (Peer.counterSep, nb, total, Peer.counterSep)
+            r = f'{Peer.counterSep}={nb}/{total}={Peer.counterSep}'
         else:
             # Print a random char
             r = random.choice(self.printSymbols)
@@ -249,7 +249,7 @@ class Peer:
         tool.log(IMPORT_START % url)
         # The starting point of the whole importing process is the tool
         try:
-            url = '%s/%s/xml' % (url, self.distantToolName)
+            url = f'{url}/{self.distantToolName}/xml'
             dtool = self.get(url)
             importer = self.getImporter(tool.class_)
             importer(tool, self, tool, dtool,

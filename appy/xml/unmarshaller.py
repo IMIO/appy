@@ -2,7 +2,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import datetime
+import io, datetime
 from base64 import decodebytes
 
 from DateTime import DateTime
@@ -13,10 +13,9 @@ from appy.utils.path import getShownSize
 from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-CONVERSION_ERROR = '"%s" value "%s" could not be converted by the XML ' \
-                   'unmarshaller.'
-CUSTOM_CONVERSION_ERROR = 'Custom converter for "%s" values produced an ' \
-                          'error while converting value "%s". %s'
+CONV_ERR   = '"%s" value "%s" could not be converted by the XML unmarshaller.'
+C_CONV_ERR = 'Custom converter for "%s" values produced an error while ' \
+             'converting value "%s". %s'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class UnmarshalledFile:
@@ -58,6 +57,10 @@ class Unmarshaller(Parser):
     # one corresponding to the value of an attribute for this object. if "tuple"
     # is specified, it will be converted to a list. "long" is supported for
     # backward compatibility with Python 2.
+
+    # When the textual content of a tag is greater than this number of chars, a
+    # io.StringIO buffer is used.
+    bufferAbove = 150
 
     def __init__(self, classes={}, tagTypes={}, conversionFunctions={},
                  contentAttributes={}):
@@ -297,36 +300,68 @@ class Unmarshaller(Parser):
                 setattr(container, name, val)
                 e.currentName = name
 
+    def addContent(self, o, content, attr='currentContent', create=False):
+        '''Concatenates this string p_content to already encountered content as
+           stored in getattr(p_o, p_attr).'''
+        # Create p_attr on p_o if it does not exist yet, and if we are not sure
+        # it exists or not (p_create is True).
+        if create and not hasattr(o, attr):
+            setattr(o, attr, '')
+        # Add p_content. For large quantities of content (beyond
+        # p_self.bufferAbove), a io.StringIO buffer is used. That way, time- and
+        # space-consuming string concatenations are avoided.
+        current = getattr(o, attr)
+        if isinstance(current, io.StringIO):
+            # Add p_content to the p_current string buffer
+            current.write(content)
+        elif len(current) + len(content) > self.bufferAbove:
+            # Convert the already encoutered string content into a StringIO
+            # buffer
+            buffeR = io.StringIO()
+            buffeR.write(current)
+            buffeR.write(content)
+            setattr(o, attr, buffeR)
+        else:
+            # Concatenate strings
+            setattr(o, attr, f'{current}{content}')
+
+    def stringify(self, o, attr='currentContent'):
+        '''Converts p_o.<p_attr> to a plain string if it is a io.StringIO
+           buffer.'''
+        r = getattr(o, attr, '')
+        return r if isinstance(r, str) else r.getvalue()
+
     def characters(self, content):
         e = Parser.characters(self, content)
         if e.currentBasicType:
             if e.currentBasicType == 'base64':
                 content = content.strip()
-            e.currentContent = f'{e.currentContent}{content}'
+            if content:
+                # While parsing Base64 strings, p_content may contain a unique
+                # newline.
+                self.addContent(e, content)
         elif e.currentTag.name in self.contentAttributes:
             # Store p_content in attribute named according to
             # p_self.contentAttributes on the current object.
             name = self.contentAttributes[e.currentTag.name]
             ctype, current = e.containerStack[-1]
-            if hasattr(current, name):
-                setattr(current, name, f'{getattr(current, name)}{content}')
-            else:
-                setattr(current, name, content)
+            self.addContent(current, content, attr=name, create=True)
 
     def endElement(self, tag):
         e = Parser.endElement(self, tag)
         type = e.currentBasicType
         if type:
-            value = e.currentContent.strip()
-            if not value: value = None
+            content = self.stringify(e)
+            value = content.strip()
+            if not value:
+                value = None
             else:
                 # If we have a custom converter for values of this type, use it
                 if type in self.conversionFunctions:
                     try:
                         value = self.conversionFunctions[type](value)
                     except Exception as err:
-                        raise Exception(CUSTOM_CONVERSION_ERROR % \
-                                        (type, value, str(err)))
+                        raise Exception(C_CONV_ERR % (type, value, str(err)))
                 # If not, try a standard conversion
                 elif type in self.numericTypes:
                     # Manage obsolete type "long"
@@ -334,7 +369,7 @@ class Unmarshaller(Parser):
                     try:
                         value = eval(value)
                     except (SyntaxError, NameError) as e:
-                        raise Exception(CONVERSION_ERROR % (type, value))
+                        raise Exception(CONV_ERR % (type, value))
                     # Convert ints to floats
                     if type == 'float' and isinstance(value, int):
                         value = float(value)
@@ -342,7 +377,7 @@ class Unmarshaller(Parser):
                     # a float value with a comma in it could have been converted
                     # to a tuple instead of a float.
                     if not isinstance(value, eval(type)):
-                        raise Exception(CONVERSION_ERROR % (type, value))
+                        raise Exception(CONV_ERR % (type, value))
                 elif type == 'bytes':
                     # Convert the string value to bytes
                     value = value.encode()
@@ -351,7 +386,7 @@ class Unmarshaller(Parser):
                 elif type == 'datetime':
                     value = self.getStandardDatetime(value)
                 elif type == 'base64':
-                    value = decodebytes(e.currentContent.encode())
+                    value = decodebytes(content.encode())
             # Store the value on the last container
             self.storeValue(tag, value)
             # Clean the environment

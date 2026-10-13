@@ -15,6 +15,7 @@ from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
 from appy.px import Px
+from appy.utils import br
 from appy.model.batch import Batch
 from appy.xml.escape import Escape
 from appy.utils import string as sutils
@@ -134,7 +135,7 @@ class Event(persistent.Persistent):
         date = params.pop('date')
         return self.__class__(login, state, date, **params)
 
-    def completeComment(self, comment, sep='<br/><br/>'):
+    def completeComment(self, comment, sep=br*2):
         '''Appends p_comment to the existing p_self.comment'''
         if not self.comment:
             self.comment = comment
@@ -780,7 +781,7 @@ class History(PersistentList):
                 msg = f'{msg} – « {comment} »'
             r.append(msg)
         css = f' class="{css}"' if css else ''
-        return f'<div{css}>{"<br/>".join(r)}</div>'
+        return f'<div{css}>{br.join(r)}</div>'
 
     traverse['delete'] = 'Manager'
     def delete(self, o):
