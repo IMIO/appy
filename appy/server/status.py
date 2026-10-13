@@ -232,11 +232,24 @@ class Status(Persistent):
 
         <!-- Headers -->
         <tr>
-         <th>Time<div class="legend">Most recent first</div></th>
+         <th>Time<div class="tsmall">Most recent first</div></th>
          <th if="pool" for="ts in threadStatuses">::pool.getStatusText(ts)</th>
-         <th>RAM</th>
-         <th>CPU<div class="legend">Since last server start</div></th>
-         <th>CPU<div class="legend">% since last status</div></th>
+         <!-- Add, in the RAM column header, the total (T), free (F) and
+              available (A) RAM on the machine. -->
+         <th var="total,free,avail=handler.server.getRamInfo()">
+           <div>RAM</div>
+           <div class="tsmall">
+            <abbr title="Total RAM on this machine">T · </abbr><x>:total</x>
+           </div>
+           <div class="tsmall">
+            <abbr title="Free RAM on this machine">F · </abbr><x>:free</x>
+           </div>
+           <div class="tsmall">
+            <abbr title="Available RAM on this machine">A · </abbr><x>:avail</x>
+           </div>
+         </th>
+         <th>CPU<div class="tsmall">Since last server start</div></th>
+         <th>CPU<div class="tsmall">% since last status</div></th>
          <th>#Users</th>
         </tr>
 

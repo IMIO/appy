@@ -4,6 +4,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from pathlib import Path
 import os, sys, time, platform, pwd
 import socket, logging, pathlib, selectors, threading
 
@@ -768,16 +769,62 @@ class Server:
         userId = os.getuid()
         return pwd.getpwuid(userId).pw_name
 
+    def getRamFigure(self, line):
+        '''Returns a nicely formatted RAM-related figure, based on this p_line
+           as found in /proc/meminfo.'''
+        # The figure in the file is expressed in Kb. Get it as a integer number
+        # of bytes.
+        byteS = int(line.split()[1]) * 1024
+        return getShownSize(byteS)
+
+    def getRamInfo(self):
+        '''Returns, as a 3-tuple whose elements are formatted strings, info
+           about the available RAM on this machine: total, free and
+           available.'''
+        # "Free" refers to RAM being actually free and immediately usable, while
+        # "Available", always >= "Free", refers to RAM that is free or can
+        # quickly be freed.
+        #
+        # Get the file, on a Linux machine, that contains such info
+        u = '?' # *u*nknown
+        path = Path('/proc/meminfo')
+        if not path.is_file():
+            r = u, u, u
+        else:
+            total = free = available = None
+            with open(path) as f:
+                for line in f:
+                    if line.startswith('MemTotal:'):
+                        total = self.getRamFigure(line)
+                    elif line.startswith('MemFree:'):
+                        free = self.getRamFigure(line)
+                    elif line.startswith('MemAvailable:'):
+                        available = self.getRamFigure(line)
+                    else:
+                        if available:
+                            # All lines of interest were read
+                            break
+            r = total or u, free or u, available or u
+        return r
+
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                                 PXs
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     view = Px('''
-     <x var="cfg=config.server; server=handler.server; info=server.platform">
-      <h2>Server configuration</h2>
+     <x var="cfg=config.server; server=handler.server; info=server.platform;
+             ramTotal,ramFree,ramAvail=server.getRamInfo()">
+      <h2>Machine</h2>
       <table class="small">
        <tr><th>Name</th><td>:info.node()</td></tr>
        <tr><th>Address</th><td>::cfg.getAddress(details=True)</td></tr>
+       <tr><th>RAM · Total</th><td>:ramTotal</td></tr>
+       <tr><th>RAM · Free</th><td>:ramFree</td></tr>
+       <tr><th>RAM · Available</th><td>:ramAvail</td></tr>
+      </table>
+
+      <h2>Appy server</h2>
+      <table class="small">
        <tr><th>Port</th><td>:cfg.port</td></tr>
        <tr><th>Protocol</th><td>:cfg.protocol</td></tr>
        <tr><th>Mode</th><td>:server.mode</td></tr>

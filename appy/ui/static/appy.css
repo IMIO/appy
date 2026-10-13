@@ -185,6 +185,7 @@ div.rbutton { float:right }
         padding:0.5em 0 }
 .discreet { font-size:95%; color:#555555; margin:0; text-transform:none }
 .discreet table td, .discreet table th { border:1px solid grey; padding:3px }
+.tsmall { font-size:86%; color:|brightColor| }
 .titlet { vertical-align:top }
 .subTitle { font-size:90%; color:|darkColor| }
 .subTitle table { margin: 1em 0 }
