@@ -243,7 +243,9 @@ class Static:
         if cache:
             # Set keys ETag and Last-Modified, allowing the browser to identify
             # potential changes to the resource in subsequent requests.
-            seT('ETag', eTag)
+            if eTag:
+                # For a FileInfo object without hash algo, there is no ETag
+                seT('ETag', eTag)
             seT('Last-Modified', class_.getLastModified(modified))
             # Is the browser allowed to serve its cached version for a while ?
             if maxAge == 0:

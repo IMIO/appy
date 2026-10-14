@@ -892,9 +892,10 @@ class LinkTarget:
         self.onClickIsDefault = True
 
     def noOnclick(self):
-        '''Disables any "onclick" behaviour.'''
-        self.onClick = None
-        self.onClickIsDefault = False
+        '''Disables the "onclick" behaviour, if it is the default'''
+        if self.onClick == LinkTarget.defaultOnClick:
+            self.onClick = None
+            self.onClickIsDefault = False
 
     def getOnClick(self, back, o=None, onClick=None, other=False):
         '''Gets the "onClick" attribute, taking into account p_back DOM node ID
