@@ -230,8 +230,8 @@ class FileInfo:
             if len(parts) > 1:
                 return parts[-1][1:]
 
-    def writeResponse(self, handler, path=n, disposition='attachment',
-                      cache=True, maxAge=0):
+    def writeResponse(self, handler, path=n, disposition='inline', cache=True,
+                      maxAge=0):
         '''Returns the content the file in the HTTP response'''
         if not self.fsName:
             # Not in-database file: we have its full path
@@ -245,7 +245,7 @@ class FileInfo:
         # Count the time spent for serving the file and log it
         if log: start = time.time()
         # Serve the file via the Static class
-        Static.write(handler, path, None, fileInfo=self, cache=cache,
+        Static.write(handler, path, self.modified, fileInfo=self, cache=cache,
                      disposition=disposition, maxAge=maxAge)
         if log:
             # How long did it take to serve the file (in seconds) ?

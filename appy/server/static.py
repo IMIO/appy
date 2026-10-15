@@ -213,9 +213,10 @@ class Static:
         if fileInfo:
             # The file to download comes from a File field and is stored in the
             # DB-controlled filesystem. The ETag will correspond to a hash
-            # computed from the file content: if there is no such hash, caching
-            # cannot occur, and m_getHash will return None.
-            r = fileInfo.getHash()
+            # computed from the file content. If there is no such hash, the
+            # file's last modification date will be used.
+            r = fileInfo.getHash() or \
+                class_.getETag(path, None, fileInfo.modified)
         else:
             # Produce a weaker, but probably satisfactory ETag, based on the
             # last file modification date (p_modified). p_modified can be a
@@ -243,9 +244,7 @@ class Static:
         if cache:
             # Set keys ETag and Last-Modified, allowing the browser to identify
             # potential changes to the resource in subsequent requests.
-            if eTag:
-                # For a FileInfo object without hash algo, there is no ETag
-                seT('ETag', eTag)
+            seT('ETag', eTag)
             seT('Last-Modified', class_.getLastModified(modified))
             # Is the browser allowed to serve its cached version for a while ?
             if maxAge == 0:
@@ -262,7 +261,7 @@ class Static:
 
     @classmethod
     def write(class_, handler, path, modified, content=None, fileInfo=None,
-              disposition='attachment', downloadName=None, cache=True,
+              disposition='inline', downloadName=None, cache=True,
               forcedMime=None, maxAge=1):
         '''Serves, to the browser, the content of the file whose path on disk is
            given in p_path or whose content in RAM is given in p_content.'''
@@ -305,6 +304,8 @@ class Static:
             # Define content disposition
             if fileInfo or downloadName:
                 niceName = downloadName or fileInfo.uploadName
+                # Note that, when p_disposition is "attachment", browsers will
+                # disable caching.
                 disp = f'{disposition};filename="{niceName}"'
                 seT('Content-Disposition', disp)
             # Set appropriate cache keys

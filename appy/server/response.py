@@ -267,18 +267,18 @@ class Response:
         # Define the response line
         phrase = self.codePhrase or self.code.phrase or ''
         line = self.formatHeaderLine
-        r = [line('%s %d %s' % (self.httpVersion, self.code, phrase))]
+        r = [line(f'{self.httpVersion} {self.code} {phrase}')]
         add = r.append
         # Add HTTP headers
         for name, value in self.headers.items():
             # Manage special key containing cookies
             if name == 'Cookies':
+                sameSite = self.sameSite
                 for key, v in value.items():
-                    add(line('Set-Cookie: %s=%s; SameSite=%s' % \
-                             (key, v, self.sameSite)))
+                    add(line(f'Set-Cookie: {key}={v}; SameSite={sameSite}'))
             else:
                 # Manage any other key
-                add(line('%s: %s' % (name, value)))
+                add(line(f'{name}: {value}'))
         # Terminate with a blank line
         add(Response.eol)
         # Write the complete result to the socket
@@ -355,7 +355,7 @@ class Response:
         if self.message is not None:
             quoted = urllib.parse.quote(self.message)
             if self.fleetingMessage:
-                quoted = '*%s' % quoted
+                quoted = f'*{quoted}'
             self.setCookie('AppyMessage', quoted)
         # Prepare the response content
         content, path = self.prepareContent(content, path)
