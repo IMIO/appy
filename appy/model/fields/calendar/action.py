@@ -62,7 +62,7 @@ class Action:
     # The range of widgets (checkboxes, buttons) allowing to trigger actions
     px = Px('''
       <!-- The view switcher -->
-      <div var="others=view.getOthers()" if="others">
+      <div var="others=view.getOthers()" if="field.switchable and others">
        <a for="other, params in others" class="clickable flexg"
           onclick=":view.getAjaxSwitch(hook, other, params)">
         <img src=":o.buildSvg(other)" class="iconM"/>

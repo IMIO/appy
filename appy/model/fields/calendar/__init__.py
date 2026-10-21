@@ -205,7 +205,8 @@ class Calendar(Field):
       beforeDelete=n, afterEdit=n, afterCreate=n, selectableMonths=6,
       selectableWeeks=4, createEventLabel='which_event', style='calTable',
       strictMonths=False, houredWidth='10em', fullDay=n, createObjects=n,
-      useEventComments=False, eventClass=n, eventFields=n, dataClass=n):
+      useEventComments=False, eventClass=n, eventFields=n, dataClass=n,
+      switchable=True):
 
         '''Calendar field constructor'''
 
@@ -669,12 +670,18 @@ class Calendar(Field):
         # False (boolean), it will be a standard error message. If the method
         # returns a string, it will be used as specific error message.
 
-        Field.__init__(self, validator, multiplicity, default, defaultOnEdit,
-          show, renderable, page, group, layouts, move, False, True, n, n,
-          False, n, n, readPermission, writePermission, width, height, n,
-          colspan, master, masterValue, masterSnub, focus, False, mapping,
-          generateLabel, label, n, n, n, n, True, False, view, cell, buttons,
-          edit, custom, xml, translations)
+        # When several views are applicable (ie, go to a multi-week view from a
+        # multi-month view, or inversely), may the user switch from one view to
+        # the other ?
+        self.switchable = switchable
+
+        # Call the base constructor
+        super().__init__(validator, multiplicity, default, defaultOnEdit, show,
+          renderable, page, group, layouts, move, False, True, n, n, False, n,
+          n, readPermission, writePermission, width, height, n, colspan, master,
+          masterValue, masterSnub, focus, False, mapping, generateLabel, label,
+          n, n, n, n, True, False, view, cell, buttons, edit, custom, xml,
+          translations)
 
         # Ensure parameters are correct
         self.checkParameters()
