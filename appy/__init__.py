@@ -4,7 +4,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import pathlib
+import pathlib, inspect
 
 # Store here the path to the Appy root package, it is often requested
 path = pathlib.Path(__file__).parent
@@ -110,4 +110,11 @@ class Config:
         if self.backup:
             self.backup.check(messages)
         return messages
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Set a default date format for DateTime. Else, the DateTime module calls a
+# method to get a default format (getDefaultDateFormat) and there is a huge
+# performance degradation everytime a DateTime object is created.
+import DateTime.DateTime
+inspect.getmodule(DateTime.DateTime).default_datefmt = 'us'
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

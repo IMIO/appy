@@ -2,6 +2,8 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+import datetime
+
 from DateTime import DateTime
 from BTrees.IOBTree import IOBTree
 from persistent.mapping import PersistentMapping
@@ -38,8 +40,9 @@ MISS_EN_M   = "When param 'eventTypes' is a method, you must give another " \
               "method in param 'eventNameMethod'."
 S_MONTHS_KO = 'Strict months can only be used with multiple calendars.'
 ACT_MISS    = 'Action "%s" does not exist or is not visible.'
-DCLASS_KO   = 'Class specified in attribute "dataClass" is not a sub-class of '\
-              'class appy.model.fields.calendar.data.EventData.'
+CLASS_KO    = 'Class specified in attribute "%s" is not a sub-class of appy.%s.'
+ECLASS_KO   = CLASS_KO % ('eventClass', 'model.fields.calendar.event.Event')
+DCLASS_KO   = CLASS_KO % ('dataClass', '.model.fields.calendar.data.EventData')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Gradient:
@@ -199,10 +202,10 @@ class Calendar(Field):
       topPx=n, bottomPx=n, actions=n, filters=n, selectableEmptyCells=False,
       legend=n, view=n, cell=n, buttons=n, edit=n, editable=True,
       editableEvents=False, custom=n, xml=n, translations=n, delete=True,
-      beforeDelete=n, afterCreate=n, selectableMonths=6, selectableWeeks=4,
-      createEventLabel='which_event', style='calTable', strictMonths=False,
-      houredWidth='10em', fullDay=n, createObjects=n, useEventComments=False,
-      eventFields=None, dataClass=None):
+      beforeDelete=n, afterEdit=n, afterCreate=n, selectableMonths=6,
+      selectableWeeks=4, createEventLabel='which_event', style='calTable',
+      strictMonths=False, houredWidth='10em', fullDay=n, createObjects=n,
+      useEventComments=False, eventClass=n, eventFields=n, dataClass=n):
 
         '''Calendar field constructor'''
 
@@ -485,10 +488,25 @@ class Calendar(Field):
         # args. If the method returns False, the deletion will not occur.
         self.beforeDelete = beforeDelete
 
-        # If you want execute a specific action after an event has added, via
+        # When an event is created or modified, if you want to fine-tune the
+        # concerned event (ie, adding new attributes on it), the method you
+        # place in the following parameter will be executed. It will receive the
+        # following args:
+        # - the day on which the event takes place, as a DateTime object ;
+        # - the event object ;
+        # - a boolean, True if the object has just been created, False if the
+        #    event was existing and has been modified.
+        self.afterEdit = afterEdit
+
+        # If you want execute a specific action after an event was added, via
         # the UI, to this calendar, specify a method here, that must accept, as
         # args, the date, event type, timeslot and dayspan.
         self.afterCreate = afterCreate
+
+        # 💡 p_afterCreate is always called after p_afterEdit. Why is there 2
+        #     methods ? If several events are created at once (with a dayspan
+        #     >1), p_afterEdit is first called on each individual event ; then,
+        #     p_afterCreate is called in the end, once for all created events.
 
         # You may specify PXs that will show specific information, respectively,
         # before and after the calendar.
@@ -591,6 +609,14 @@ class Calendar(Field):
         # will be shown.
         self.useEventComments = useEventComments
 
+        # Events stored in a calendar field are instances of class
+        #
+        #               appy.model.fields.calendar.event.Event
+        #
+        # You may specify here an alternate class, that must must be a sub-class
+        # from class Event.
+        self.eventClass = eventClass or Event
+
         # If you define fields in p_eventFields, they will complete the event
         # data model and will be rendered in the popup for creating or updating
         # an event, below the standard fields. When such fields are in use,
@@ -655,7 +681,9 @@ class Calendar(Field):
 
     def checkParameters(self):
         '''Ensure p_self's parameters are correct'''
-        if self.dataClass and not issubclass(self.dataClass, EventData):
+        if not issubclass(self.eventClass, Event):
+            raise Exception(ECLASS_KO)
+        if not issubclass(self.dataClass, EventData):
             raise Exception(DCLASS_KO)
 
     def getRenderInfo(self, render):
@@ -747,9 +775,11 @@ class Calendar(Field):
     def dateInRange(self, date, view):
         '''Is p_date within the range (possibly) defined for this calendar by
            p_startDate and p_endDate ?'''
-        tooEarly = view.startDate and date < view.startDate
-        tooLate = view.endDate and not tooEarly and date > view.endDate
-        return not tooEarly and not tooLate
+        if view.startDate and date < view.startDate:
+            return # To early
+        if view.endDate and date > view.endDate:
+            return # Too late
+        return True
 
     def getApplicableEventTypesAt(self, o, date, eventTypes, cache,
                                   forBrowser=False):
@@ -776,6 +806,7 @@ class Calendar(Field):
         '''Returns the list of events that exist at some p_date (=day)'''
         # p_date can be:
         # - a DateTime object;
+        # - a datetime.date object;
         # - a tuple (i_year, i_month, i_day);
         # - a string YYYYmmdd.
         # p_empty is returned if no event is found.
@@ -793,7 +824,10 @@ class Calendar(Field):
             year, month, day = date
         elif isinstance(date, str):
             year, month, day = int(date[:4]), int(date[4:6]), int(date[6:8])
+        elif isinstance(date, datetime.date):
+            year, month, day = date.year, date.month, date.day
         else:
+            # a DateTime object
             year, month, day = date.year(), date.month(), date.day()
         # Dig into the oobtree
         if year not in years: return empty

@@ -2,7 +2,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import copy
+import copy, datetime
 from DateTime import DateTime
 from persistent import Persistent
 from BTrees.IOBTree import IOBTree
@@ -108,8 +108,9 @@ class Factory:
                 if events[i].eventType == eventType:
                     del events[i]
                 i -= 1
-            events.insert(0, Event(eventType, comment=self.comment,
-                                   data=self.data))
+            eClass = self.field.eventClass
+            event = eClass(eventType, comment=self.comment, data=self.data)
+            events.insert(0, event)
             return True
 
     def checkSlotted(self):
@@ -149,11 +150,15 @@ class Factory:
         merged = self.mergeSlotted(events)
         if not merged:
             # Create and store the event
-            event = Event(eventType, timeslot=timeslot, comment=self.comment,
-                          data=self.getData(cloned=cloneData))
+            eClass = self.field.eventClass
+            event = eClass(eventType, timeslot=timeslot, comment=self.comment,
+                           data=self.getData(cloned=cloneData))
             # Complete event data if it exists
             if event.data: event.data.complete(self.o, event)
             events.append(event)
+            # Possibly call afterEdit
+            onEdit = self.field.afterEdit
+            if onEdit: onEdit(self.o, self.date, event, True)
             # Sort events in the order of timeslots
             if len(events) > 1:
                 timeslots = list(self.timeslots)
@@ -175,10 +180,15 @@ class Factory:
     def makeUnslotted(self):
         '''Create an unslotted event'''
         eventType = self.eventType
-        event = Event(eventType, timeslot=None, start=self.date, end=self.end,
-                      comment=self.comment, data=self.getData())
+        eClass = self.field.eventClass
+        event = eClass(eventType, timeslot=None, start=self.date, end=self.end,
+                       comment=self.comment, data=self.getData())
         # Complete event data if it exists
         if self.data: self.data.complete(self.o, event)
+        # Possibly call afterEdit
+        onEdit = self.field.afterEdit
+        if onEdit: onEdit(self.o, self.date, event, True)
+        # Add the new v_event among p_self.events
         events = self.events
         events.append(event)
         if len(events) > 1:
@@ -241,6 +251,8 @@ class Event(Persistent):
         # instance of class appy.model.fields.calendar.data.EventData, or a
         # custom sub-class.
         self.data = data
+        # Note than additional attributes can also be added on the event
+        # (it)p_self, by calendar.onEditEvent methods.
 
     def getTimeMark(self):
         '''Returns short info about the event time: the timeslot for a slotted
@@ -350,21 +362,43 @@ class Event(Persistent):
         # Get the dayPart attribute as defined on the Timeslot object
         return field.Timeslot.get(self.timeslot, o, field, timeslots).dayPart
 
-    def matchesType(self, type):
-        '''Is p_self an event of this p_type ?'''
-        # p_type can be:
-        # - a single event type (as a string),
-        # - a prefix denoting several event types (as a string ending with a *),
-        # - a list of (unstarred) event types.
-        etype = self.eventType
-        if isinstance(type, str):
-            if type.endswith('*'):
-                r = etype.startswith(type[:-1])
+    def matchesType(self, typE, start):
+        '''Is p_self an event of this p_typE ?'''
+        # p_type can be a single event type (as a string) or a list of types. In
+        # this latter case, the method returns True if p_self's type is among
+        # the list.
+        #
+        # If p_start is True (only applicable if p_typE is a string), p_typE
+        # represents a prefix: the method returns True if p_self's event type
+        # has this prefix.
+        eType = self.eventType
+        if isinstance(typE, str):
+            if start:
+                r = eType.startswith(typE)
             else:
-                r = etype == type
+                r = eType == typE
         else:
-            r = etype in type
+            r = eType in typE
         return r
+
+    def matches(self, eventType, start, slots, attributes):
+        '''Does p_self matches this p_eventType (or only the p_start of it),
+           p_slot and p_attributes ?'''
+        # A logical AND is implicit
+        #
+        # Check p_eventType
+        if eventType and not self.matchesType(eventType, start):
+            return
+        # Check slot
+        if slots and self.timeslot not in slots:
+            return
+        # Check p_attributes
+        if attributes:
+            for name, val in attributes.items():
+                v = getattr(self, name, None)
+                if v != val:
+                    return
+        return True
 
     def __repr__(self):
         '''p_self's short string representation'''
@@ -379,8 +413,27 @@ class Event(Persistent):
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     @classmethod
+    def getMask(class_, typeMask):
+        '''Returns a "mask" allowing to retrieve events whose type match this
+           p_typeMask.'''
+        # p_typeMask may be None (any event matches), an event type (any event
+        # having this type matches) or a prefix followed by char * (any event
+        # whose type has this prefix matches). It can also be a list or tuple of
+        # event types (an event matches if its type is in the sequence).
+
+        # The method returns a 2-tuple (eventType, b_start). The second element
+        # indicates if the first one represents a type or a prefix.
+        if typeMask is None:
+            r = None, False
+        elif isinstance(typeMask, str) and typeMask.endswith('*'):
+            r = typeMask[:-1], True
+        else:
+            r = typeMask, False
+        return r
+
+    @classmethod
     def get(class_, o, field, eventType=None, minDate=None, maxDate=None,
-            sorted=True, groupSpanned=False, slots=None):
+            sorted=True, groupSpanned=False, slots=None, z=True, **attrs):
         '''Returns all the events stored in this calendar p_field on this
            p_o(bject), of a given p_eventType if passed.'''
 
@@ -390,6 +443,18 @@ class Event(Persistent):
         # - a string mask ending with a star, it returns all events whose type
         #   starts with this mask. For example, mask "holiday*" would match
         #   event types "holiday" and "holidayNonStandard".
+        #
+        #  ⚠️ Using a mask ending with a star is not efficient when scanning a
+        #      high number of events. Using specific event attributes and
+        #      searching them based on p_attrs is the best option.
+        eventType, start = class_.getMask(eventType)
+
+        # If p_slots is passed (as a list or tuple of timeslots), only events
+        # defined at one of these slots will be returned.
+
+        # If events have specific attributes, p_attrs may contain values for
+        # such attributes: only events matching these values will be part of the
+        # result.
 
         # The return value is a list of 2-tuples whose 1st elem is a DateTime
         # object and whose 2nd elem is the event.
@@ -406,57 +471,51 @@ class Event(Persistent):
         # into a single event. In this case, tuples in the result are 3-tuples:
         # (DateTime_startDate, DateTime_endDate, event).
 
-        # If p_slots is passed (as a list or tuple of timeslots), only events
-        # defined at one of these slots will be returned.
-
         # Prevent wrong combinations of parameters
-        if groupSpanned and not sorted:
-            raise Exception(UNSORT_EVTS)
+        if groupSpanned and not sorted: raise Exception(UNSORT_EVTS)
+        if field.name not in o.values: return ()
+        # Compute "min" and "max" integer elements
         r = []
-        if field.name not in o.values: return r
-        # Compute "min" and "max" tuples
         if minDate:
-            minYear = minDate.year()
-            minMonth = (minYear, minDate.month())
-            minDay = (minYear, minDate.month(), minDate.day())
+            minY, minM, minD = minDate.year(), minDate.month(), minDate.day()
         if maxDate:
-            maxYear = maxDate.year()
-            maxMonth = (maxYear, maxDate.month())
-            maxDay = (maxYear, maxDate.month(), maxDate.day())
+            maxY, maxM, maxD = maxDate.year(), maxDate.month(), maxDate.day()
+        dateClass = DateTime if z else datetime.date
         # Browse years
         years = getattr(o, field.name)
         for year in years.keys():
-            # Don't take this year into account if outside interval
-            if minDate and year < minYear: continue
-            if maxDate and year > maxYear: continue
+            # Don't take this v_year into account if outside interval
+            if (minDate and year < minY) or (maxDate and year > maxY):
+                continue
             months = years[year]
             # Browse this year's months
             for month in months.keys():
-                # Don't take this month into account if outside interval
-                thisMonth = (year, month)
-                if minDate and thisMonth < minMonth: continue
-                if maxDate and thisMonth > maxMonth: continue
+                # Don't take this v_month into account if outside interval
+                if (minDate and (year == minY and month < minM)) or \
+                   (maxDate and (year == maxY and month > maxM)):
+                    continue
                 days = months[month]
                 # Browse this month's days
                 for day in days.keys():
-                    # Don't take this day into account if outside interval
-                    thisDay = (year, month, day)
-                    if minDate and thisDay < minDay: continue
-                    if maxDate and thisDay > maxDay: continue
+                    # Don't take this v_day into account if outside interval
+                    if (minDate and \
+                        (year == minY and month == minM and day < minD)) or \
+                       (maxDate and \
+                        (year == maxY and month == maxM and day > maxD)):
+                        continue
                     events = days[day]
                     # Browse this day's events
+                    daY = None
                     for event in events:
                         # Filter unwanted events
-                        if eventType and not event.matchesType(eventType):
+                        if not event.matches(eventType, start, slots, attrs):
                             continue
-                        if slots and event.timeslot not in slots:
-                            continue
-                        # We have found a event
-                        date = DateTime(f'{year}/{month}/{day} UTC')
+                        # v_event matches
+                        daY = daY or dateClass(year, month, day)
                         if groupSpanned:
-                            singleRes = [date, None, event]
+                            singleRes = [daY, None, event]
                         else:
-                            singleRes = (date, event)
+                            singleRes = daY, event
                         r.append(singleRes)
         # Sort the result if required
         if sorted: r.sort(key=lambda x: x[0])
@@ -576,6 +635,10 @@ class Event(Persistent):
         else:
             # Update event data
             event.data.update(o, data)
+        # Call afterEdit when present
+        onEdit = field.afterEdit
+        if onEdit: onEdit(o, date, event, False)
+        # Log and say
         if log:
             eventName = event.getName(o, field, None, xhtml=False)
             field.log(o, EVT_ED % (eventName, timeslot), date)

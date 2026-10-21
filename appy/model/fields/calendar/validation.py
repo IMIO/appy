@@ -172,6 +172,9 @@ class Validation:
         '''In the context of validating this p_event, convert his type to the
            final one as passed in p_finalEventType.'''
         event.eventType = finalEventType
+        # We have updated this p_event: call afterEdit when present
+        onEdit = field.afterEdit
+        if onEdit: onEdit(o, date, event, False)
         # Setting a new event type to the event is similar to creating a new
         # event: call p_field.afterCreate when defined.
         method = field.afterCreate

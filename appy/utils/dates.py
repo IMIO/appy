@@ -17,6 +17,7 @@ except ImportError:
 # Days of the week
 weekDaysR = 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'
 weekEndDays = 'Sat', 'Sun'
+weekEndDaysN = 6, 0
 weekDays  = weekDaysR + weekEndDays
 weekDays_ = weekDays + ('Off',)
 weekDaysD = {'Mon':0, 'Tue':1, 'Wed':2, 'Thu':3, 'Fri':4, 'Sat':5, 'Sun':6}
@@ -145,6 +146,16 @@ class Date:
             # during the same week if they occcur at the same day.
             return class_.sameDay(d1, d2)
         return 0 <= delta <= 6
+
+    @classmethod
+    def isWeekEnd(class_, d):
+        '''Does this p_d(ate) represent a Saturday or a Sunday ?'''
+        if isinstance(d, DateTime):
+            r = d.dow() in weekEndDaysN
+        else:
+            # A datetime.date[time] object
+            r = d.weekday() >= 5
+        return r
 
     @classmethod
     def getDayInterval(class_, date):

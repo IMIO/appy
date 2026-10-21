@@ -11,7 +11,7 @@ C_ST_ERR  = "Problem with the method call stack: we did not enter any ' \
 PROF_ON   = 'Profiler :: In use.'
 METH_IN   = 'Entering %s...'
 METH_OUT  = 'Leaving %s.'
-METH_TOT  = 'Rotal durations in methods:'
+METH_TOT  = 'Total durations in methods:'
 METH_DUR  = '  %s: %f second·s'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -39,15 +39,13 @@ class Profiler:
     '''Counts the time spent in some of your code's methods'''
 
     class Error(Exception): pass
-    
-    def __init__(self, o, mustLog=True, mustPrint=False):
-        self.o = o
-        # Must I log profiling results via p_o.log ?
-        self.mustLog = o and mustLog
+
+    def __init__(self, mustLog=True, mustPrint=False):
+        # Must I log profiling results  ?
+        self.mustLog = mustLog
         # Must I print profiling results to stdout ?
         self.mustPrint = mustPrint
         self.init()
-        self.log(PROF_ON)
 
     def init(self):
         '''(re-)initialize this profiler's data structures'''
@@ -55,6 +53,11 @@ class Profiler:
         self.callStack = []
         # ~{m_methodName: f_totalTimeInMethod}~
         self.durations = {}
+
+    def enable(self, o):
+        '''Enable the profiler'''
+        self.o = o
+        self.log(PROF_ON)
 
     def log(self, msg):
         # First, indent the message for readability
@@ -77,8 +80,9 @@ class Profiler:
         if not self.callStack:
             self.log(METH_IN % methodName)
         self.callStack.append(MethodCall(methodName, enterTime, theMethod))
-        if not self.durations.has_key(methodName):
+        if methodName not in self.durations:
             self.durations[methodName] = 0
+        return self
 
     def leave(self):
         '''Is called when leaving a given method'''
@@ -90,7 +94,7 @@ class Profiler:
         if not self.callStack:
             self.log(METH_OUT % methodCall.methodName)
             self.log(METH_TOT)
-            durations = self.durations.items()
+            durations = list(self.durations.items())
             # Sort methods by total duration
             durations.sort(key=lambda x: x[1])
             for methodName, duration in durations:
