@@ -981,23 +981,26 @@ class File(Field):
 
     def mustPreview(self, o, value, layout):
         '''Must the document at p_value be previewed ?'''
-        # If yes, it returns a tuple (True, None). Else, it returns a tuple
-        # (False, s_reason), s_reason being a translated text explaining why no
-        # preview could be rendered.
+        # If yes, it returns a tuple (True, None, b_isImage). Else, it returns a
+        # tuple (False, s_reason, None), s_reason being a translated text
+        # explaining why no preview could be rendered.
         #
-        # Previewing docs is only possible on /view
-        if layout != 'view' and not self.isImage: return n, n
-        r = False
-        text = None
+        # Previewing docs is only possible on /view, excepted for fields storing
+        # images only.
+        if layout != 'view' and not self.isImage: return n, n, n
+        # Previewing can be completely disabled
         preview = self.getAttribute(o, 'preview')
-        if preview is None:
-            # By default, preview (not-oversized) images only
-            if self.isImage:
-                r, text = self.notPreviewOversized(o, value,self.previewMaxSize)
+        if preview is False: return n, n, n
+        # Starting here, in any case, a not oversized image must be previewed.
+        # Extend here the notion of "image" to fields not exclusively storing
+        # images.
+        isImage = self.isImage or value.mimeType in File.imageMimeTypes
+        if isImage:
+            r, text = self.notPreviewOversized(o, value, self.previewMaxSize)
         elif preview:
             # Previewing could be enabled: is the file previewable ?
             r, text = self.isPreviewable(o, value)
-        return r, text
+        return r, text, isImage
 
     def getPreview(self, o, value, url, layout):
         '''Return a preview for p_value, as an "object" tag'''
@@ -1062,14 +1065,14 @@ class File(Field):
         if layout == 'edit': return value.getUploadName(readOnly=True)
         # Build the URL for downloading or displaying the file
         url = f'{o.url}/{name}/download'
-        preview, text = self.mustPreview(o, value, layout)
+        preview, text, isImage = self.mustPreview(o, value, layout)
         # For previewable images, display them directly, in an "img" tag
-        if preview and self.isImage:
+        if preview and isImage:
             # Define a max width when relevant
             viewWidth = self.getAttribute(o, 'viewWidth')
             css = f' style="max-width:{viewWidth}"' if viewWidth else ''
             titleI = value.getNameAndSize(shorten=False)
-            r = f'<img src="{url}" title="{titleI}"{css}/>'
+            r = f'<img src="{url}?disposition=inline" title="{titleI}"{css}/>'
         elif preview:
             # Return an object tag for previewing the file
             r = self.getPreview(o, value, url, layout)
