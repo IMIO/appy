@@ -1000,6 +1000,9 @@ class File(Field):
         elif preview:
             # Previewing could be enabled: is the file previewable ?
             r, text = self.isPreviewable(o, value)
+        else:
+            r = False
+            text = None
         return r, text, isImage
 
     def getPreview(self, o, value, url, layout):
