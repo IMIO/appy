@@ -476,6 +476,14 @@ msgstr "⚠️ Missing login or email.\n\nPlease encode here a valid user login 
 msgid "for_anon_only"
 msgstr "⚠️ This procedure can't be performed:\nyou are already logged into this site."
 
+#. Default: "⚠️ Note that the following existing user has the same name and first name as this one.\n\n${dup}"
+msgid "user_dup_title"
+msgstr "⚠️ Note that the following existing user has the same name and first name as this one.\n\n${dup}"
+
+#. Default: "⚠️ Note that the following existing users have the same name and first name as this one.\n\n${dup}"
+msgid "users_dup_title"
+msgstr "⚠️ Note that the following existing users have the same name and first name as this one.\n\n${dup}"
+
 #. Default: "Action would have had no effect."
 msgid "action_null_test"
 msgstr "Action would have had no effect."

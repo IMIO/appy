@@ -476,6 +476,14 @@ msgstr "⚠️ Nom d'utilisateur ou e-mail manquant.\n\nVeuillez encoder un nom 
 msgid "for_anon_only"
 msgstr "⚠️ Cette procédure ne peut être effectuée: vous êtes déjà connecté·e."
 
+#. Default: "⚠️ Note that the following existing user has the same name and first name as this one.\n\n${dup}"
+msgid "user_dup_title"
+msgstr "⚠️ Notez que l'utilisateur suivant, déjà existant, a les mêmes prénom et nom que celui-ci.\n\n${dup}"
+
+#. Default: "⚠️ Note that the following existing users have the same name and first name as this one.\n\n${dup}"
+msgid "users_dup_title"
+msgstr "⚠️ Notez que les utilisateurs suivants, déjà existants, ont les mêmes prénom et nom que celui-ci.\n\n${dup}"
+
 #. Default: "Action would have had no effect."
 msgid "action_null_test"
 msgstr "L'action n'aurait eu aucun effet."

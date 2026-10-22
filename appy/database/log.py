@@ -12,6 +12,19 @@ from appy.utils import path as putils
 from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Appy only uses the following formatters from the standard Python logging
+# module: asctime, levelname and message. Consequently, prevent the logging
+# module from computing, for every log entry, caller info, thread, process and
+# task data, that are never dumped.
+
+logging.logThreads   = logging.logMultiprocessing = False
+logging.logProcesses = logging.logAsyncioTasks    = False
+
+logging._srcFile = None # A switch the Python logging docs recommend to turn off
+                        # in their "Optimization" section, even though it is a
+                        # private attribute.
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 L_CREA  = '%s created.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

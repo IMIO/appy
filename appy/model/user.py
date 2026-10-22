@@ -5,25 +5,26 @@
 import time, base64
 from DateTime import DateTime
 
-from appy.px import Px
-from appy.model.base import Base
-from appy.model.fields import Show
-from appy.ui.layout import Layouts
-from appy.model.searches import Search
-from appy.database.operators import or_
-from appy.utils import string as sutils
-from appy.model.fields.date import Date
-from appy.utils.string import Normalize
-from appy.model.utils import Object as O
-from appy.model.fields.phase import Page
-from appy.model.fields.group import Group
-from appy.model.fields.string import String
-from appy.model.fields.action import Action
-from appy.model.fields.boolean import Boolean
-from appy.model.fields.computed import Computed
-from appy.model.fields.password import Password
-from appy.model.workflow import standard as workflow
-from appy.model.fields.select import Select, Selection
+from ..px import Px
+from .base import Base
+from ..utils import bn
+from .fields import Show
+from .searches import Search
+from .fields.date import Date
+from .utils import Object as O
+from .fields.phase import Page
+from ..ui.layout import Layouts
+from .fields.group import Group
+from .fields.string import String
+from .fields.action import Action
+from .fields.boolean import Boolean
+from ..utils import string as sutils
+from ..database.operators import or_
+from ..utils.string import Normalize
+from .fields.computed import Computed
+from .fields.password import Password
+from .workflow import standard as workflow
+from .fields.select import Select, Selection
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SCAN_DB    = 'User %d :: Changing its login from %s to %s :: Scanning all ' \
@@ -43,12 +44,11 @@ class User(Base):
     '''Base class representing a user'''
 
     workflow = workflow.User
-    noLoginUsers = ('system', 'anon')
+    noLoginUsers = 'system', 'anon'
     specialUsers = noLoginUsers + ('admin',)
     searchAdvanced = Search('advanced', actionsDisplay='inline')
-    listColumns = ('title', 'name*15%|', 'login*20%|', 'roles*20%|',
-                   'state*10%|')
-    listColumnsShort = ('title', 'login')
+    listColumns = 'title', 'name*15%|', 'login*20%|', 'roles*20%|', 'state*10%|'
+    listColumnsShort = 'title', 'login'
 
     # The following users are always present in any Appy database
     defaultUsers = {'admin': ('Manager',), 'system': ('Manager',), 'anon': ()}
@@ -187,6 +187,36 @@ class User(Base):
         '''Return p_self's first name, or call m_getTitle if the first name is
            undefined.'''
         return self.firstName or self.getTitle()
+
+    def getNameDuplicates(self, formatted=False, reindexFirst=False):
+        '''Gets p_self's "duplicate" User object, if we consider their name and
+           first names.'''
+        # The comparison is based on the index value for field "title". It may
+        # be required to reindex it before searching for duplicates, to ensure
+        # the value is up-to-date.
+        if reindexFirst:
+            self.reindex(fields=('title',))
+        title = self.getField('title').getCatalogValue(self)
+        # Get the duplicates. Remove myself from the result.
+        r = self.search('User', title=title)
+        r.remove(self)
+        # Produce a formatted result (URLs to duplicates) when requested
+        if formatted:
+            if r:
+                # Replace every user in p_r with a "li" tag containing a link
+                i = len(r) - 1
+                while i >= 0:
+                    user = r[i]
+                    r[i] = f'<li><a href="{user.url}" target="_blank">' \
+                           f'⛁ {user.iid}</a></li>'
+                    i -= 1
+                # Render the complete chunk of XHTML
+                s = 's' if len(r) > 1 else ''
+                r = f'<ul>{bn.join(r)}</ul>'
+                r = self.translate(f'user{s}_dup_title', mapping={'dup':r})
+            else:
+                r = None
+        return r
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                                 Login

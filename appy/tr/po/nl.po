@@ -475,6 +475,14 @@ msgstr "⚠️ Ontbrekende gebruikersnaam of e-mailadres.\n\nVoer een geldige ge
 msgid "for_anon_only"
 msgstr "⚠️ Deze procedure kan niet worden uitgevoerd: u bent al verbonden."
 
+#. Default: "⚠️ Note that the following existing user has the same name and first name as this one.\n\n${dup}"
+msgid "user_dup_title"
+msgstr ""
+
+#. Default: "⚠️ Note that the following existing users have the same name and first name as this one.\n\n${dup}"
+msgid "users_dup_title"
+msgstr ""
+
 #. Default: "Action would have had no effect."
 msgid "action_null_test"
 msgstr "De actie zou geen effect hebben gehad."

@@ -475,6 +475,14 @@ msgstr "⚠️ Fehlender Benutzername oder E-Mail-Adresse.\n\nBitte geben Sie ei
 msgid "for_anon_only"
 msgstr "⚠️ Dieser Vorgang kann nicht durchgeführt werden: Sie sind bereits verbunden."
 
+#. Default: "⚠️ Note that the following existing user has the same name and first name as this one.\n\n${dup}"
+msgid "user_dup_title"
+msgstr ""
+
+#. Default: "⚠️ Note that the following existing users have the same name and first name as this one.\n\n${dup}"
+msgid "users_dup_title"
+msgstr ""
+
 #. Default: "Action would have had no effect."
 msgid "action_null_test"
 msgstr "Die Aktion hätte keine Wirkung gehabt."
