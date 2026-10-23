@@ -155,7 +155,8 @@ class Status(Persistent):
     @classmethod
     def showPage(class_, tool):
         '''Show page with server statuses if statuses' recording is enabled'''
-        return 'view' if tool.config.server.statusRate else None
+        r = tool.forAdmin()
+        return 'view' if r and tool.config.server.statusRate else None
 
     @classmethod
     def runJob(class_, tool):
@@ -266,7 +267,7 @@ class Status(Persistent):
          </tr>
          <!-- Dump a special row indicating that a server restart occurred -->
          <tr if="status.serverRestartOccurred()">
-          <th colspan=":cols" align="center" class="legend">
+          <th colspan=":cols" align="center" class="discreet">
            ›› Server restart occurred ‹‹
           </th>
          </tr>

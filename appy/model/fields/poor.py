@@ -146,7 +146,7 @@ class Icon:
             # Add a warning message if no string has been found
             if not entries:
                 emptyText = o.translate('no_sentence')
-                entries.append(f'<div class="legend">{emptyText}</div>')
+                entries.append(f'<div class="discreet">{emptyText}</div>')
         # Determine the dropdown width. It can be defined within p_self.args
         if self.args:
             width = self.args.split(',', 1)[0]

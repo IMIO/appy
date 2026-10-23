@@ -433,7 +433,7 @@ class Icon:
         # Add a warning message if no sentence has been found
         if not sentences:
             noS = o.translate('no_sentence')
-            sentences.append(f'<div class="legend">{noS}</div>')
+            sentences.append(f'<div class="discreet">{noS}</div>')
         return f'<div class="sentenceContainer" ' \
                f'onmouseover="toggleDropdown(this) " ' \
                f'onmouseout="toggleDropdown(this,\'none\')">{r}' \

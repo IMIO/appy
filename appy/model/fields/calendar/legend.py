@@ -69,7 +69,8 @@ class Legend:
     def getCss(self):
         '''Gets the CSS class(es) for the legend table'''
         r = 'legend'
-        if self.position == 'right': r += ' legendRight'
+        if self.position == 'right':
+            r = f'{r} legendRight'
         return r
 
     def getCssText(self):

@@ -452,8 +452,16 @@ class Config:
         # Calendar elements
         self.weekEndBg = '#797979' # Background for calendar week-end cells
         self.calActBg = '#f7f8fb' # Calendar actions' background color
-        self.calTTB = '2px solid #f7f7f7' # Calendar's *t*imeline *t*d *b*order
-        self.calTFS = '85%' # Calendar's *t*imeline *f*ont *s*ize
+        # Prefix "calT" stands for "calendar timeline"
+        self.calTTB = '2px solid #f7f7f7' # *t*d *b*order
+        self.calTC = 'black' # Font *c*olor
+        self.calTFS = '85%' # *F*ont *s*ize
+        self.calTHH = '2.6em' # *H*eader's *h*eight
+        self.calTBC = 'inherit' # *B*ackground *c*olor
+        self.calTBB = f'1px solid {self.darkColor}' # *B*ackground *b*ottom
+        self.calTG = '0.5em' # Gap between timeline elements
+        self.calTLM = '0' # Legend margins
+        self.calTLP = '1px 0px' # Legend padding
 
         # Other elements
         self.gridFiltersMargin = '20px 0 0 0' # Filter in grid search results

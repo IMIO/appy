@@ -14,7 +14,7 @@ class WeekMulti(Editable, Week):
     editable = True
 
     # CSS styles to set to column headers
-    headerStyles = 'top:0px'
+    headerStyles = ''
 
     def countOthers(self, others):
         '''Counts the number of other calendars being shown in this multiple
@@ -52,7 +52,8 @@ class WeekMulti(Editable, Week):
             var2="o=other.o; field=other.field">:other.px</x>
 
          <!-- The separator between groups of other calendars -->
-         <x if="not loop.groupO.last">::field.Other.getSep(len(view.grid)+2)</x>
+         <x if="not loop.groupO.last">::field.Other.getSep(len(view.grid)+2+
+                                        len(totals.cols))</x>
         </x>
        </tbody>
 

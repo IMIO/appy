@@ -87,7 +87,7 @@ class Totals:
     # Class Running (see below) will be traversable from this class
     traverse = {'Running': True}
 
-    # Totals objects are to be defined in attributes Calendar.totalRows and
+    # Totals objects are to be defined in attributes Calendar.totalRows and/or
     # Calendar.totalCols.
 
     # A Totals object may apply to all views or be restricted to a single view
@@ -150,7 +150,7 @@ class Totals:
         #
         # if c.last:
         #     total.grand = total.value
-        #     total.value = youFormatStuff(total.value)
+        #     total.value = yourFormatStuff(total.value)
         #
         # If, when Appy must render the total, total.value is unformatted (ie,
         # it is not a string):
@@ -323,7 +323,7 @@ class Totals:
 
     # Total columns besides the calendar, as a separate table
     pxCols = Px('''
-     <table cellpadding="0" cellspacing="0" class="list timeline"
+     <table cellpadding="0" cellspacing="0" class="list timeline monthline"
             style="float:right" id=":f'{hook}_tcs'"
             var="grid=view.grid;
                  render=view.renderRaw;
@@ -332,36 +332,37 @@ class Totals:
                  totals=field.Totals.compute(field, cols, 'col', _ctx_)">
       <script>:field.Totals.getAjaxData(field, o, 'cols', hook)</script>
 
-      <!-- 2 empty rows -->
-      <tr><th for="col in cols" class="hidden">-</th></tr>
-      <tr><td for="col in cols" class="hidden">-</td></tr>
+      <thead>
+       <!-- 1 empty rows -->
+       <tr><th for="col in cols"></th></tr>
+       <tr><td for="col in cols">​</td></tr>
 
-      <!-- The column headers -->
-      <tr>
-       <td for="col in cols"><abbr title=":_(col.label)">:col.name</abbr></td>
-      </tr>
+       <!-- The column headers -->
+       <tr>
+        <td for="col in cols"><abbr title=":_(col.label)">:col.name</abbr></td>
+       </tr>
+      </thead>
 
-      <!-- Re-create one row for every other calendar -->
-      <x var="i=-1" for="groupO in others">
-       <tr for="other in groupO" var2="@i=i+1">
-        <x for="col in cols">::totals[col.name][i].asCell(_ctx_)</x>
+      <tbody>
+       <!-- Re-create one row for every other calendar -->
+       <x var="i=-1" for="groupO in others">
+        <tr for="other in groupO" var2="@i=i+1">
+         <x for="col in cols">::totals[col.name][i].asCell(_ctx_)</x>
+        </tr>
+
+        <!-- The separator between groups of other calendars -->
+        <x if="not loop.groupO.last">::field.Other.getSep(len(cols))</x>
+       </x>
+
+       <!-- Repeat the column headers -->
+       <tr>
+        <td for="col in cols"><abbr title=":_(col.label)">:col.name</abbr></td>
        </tr>
 
-       <!-- The separator between groups of other calendars -->
-       <x if="not loop.groupO.last">::field.Other.getSep(len(cols))</x>
-      </x>
-
-      <!-- Add empty rows for every total row -->
-      <tr for="row in rows"><td for="col in cols">&nbsp;</td></tr>
-
-      <!-- Repeat the column headers -->
-      <tr>
-       <td for="col in cols"><abbr title=":_(col.label)">:col.name</abbr></td>
-      </tr>
-
-      <!-- 2 empty rows -->
-      <tr><td for="col in cols" class="hidden">-</td></tr>
-      <tr><th for="col in cols" class="hidden">-</th></tr>
+       <!-- 2 empty rows -->
+       <tr><td for="col in cols" class="hidden">-</td></tr>
+       <tr><th for="col in cols" class="hidden">-</th></tr>
+      </tbody>
      </table>''')
 
     # Ajax-call pxRows or pxCols

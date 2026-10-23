@@ -158,16 +158,17 @@ class Calendar(Field):
 
      css='''
       .controlsP { display:flex; margin-bottom:0.3em; gap:0.5em;
-                   align-items:center; position:sticky; top:-1.8em;
+                   align-items:center; position:sticky; top:-2em;
                    background-color:|calActBg|; z-index:1 }
       .controlsP select { margin:0 }
       .controlsP input[type=checkbox] { margin-right:0.4em }
-      .viewF { display:flex; flex-direction:row-reverse; gap:0.5em }
+      .controlsP input[type=button] { text-transform:none; color:black }
+      .viewF { display:flex; flex-direction:row-reverse; gap:|calTG| }
       .viewF > :nth-child(1) { flex-basis:100% }
       .viewF > :nth-child(2) { display:flex; flex-direction:column; width:10em;
-                               gap:0.5em; position:sticky; top:1.5em;
-                               align-self:flex-start }
-      .viewM { display:flex; align-items:start; flex-wrap:wrap; gap:0.4em }
+                               gap:|calTG|; position:sticky; top:1.5em;
+                               align-self:flex-start; margin-right:0.5em }
+      .viewM { display:flex; align-items:start; flex-wrap:wrap; gap:|calTG| }
       .calSelect { margin:0.2em 0; color:|selectColor|; font-size:95% }
       .eFields { margin-bottom:0.5em }
       .eFields label { padding:0 0.6em 0 0; width:4em }

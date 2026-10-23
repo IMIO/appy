@@ -203,8 +203,8 @@ class Other:
     @classmethod
     def getSep(class_, colspan):
         '''Produces the separator between groups of other calendars'''
-        return f'<tr style="height:8px"><th colspan="{colspan}" ' \
-               f'style="background-colo r:grey"></th></tr>'
+        return f'<tr style="height:8px"><td colspan="{colspan}" ' \
+               f'style="background-color:lightgrey"></td></tr>'
 
     @classmethod
     def getEventsAt(class_, field, date, others, typeInfo, view, cache,

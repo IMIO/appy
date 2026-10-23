@@ -67,7 +67,7 @@ input[type=datetime-local] { width:12em; margin-bottom:0.4em }
 input::placeholder   { color:#666666 }
 input:invalid,
 select:invalid       { background-color:|wrongTextColor| }
-input[type=text]:read-only, input[type^=date]:disabled
+input[type=text]:read-only, input[type^=date]:disabled, select:disabled
                      { background-color:|readOnlyColor|; cursor:not-allowed }
 select[multiple]     { border:1px solid |itextBottomColor|; margin:0;
                        background-image:none; padding:0.1em 0.3em }
@@ -251,10 +251,10 @@ div.rbutton { float:right }
 .list>tbody>tr>th,
 .list>thead>tr>th { color:|darkColor|; padding:10px; max-width:50em }
 .list>tbody>tr>td { font-size:94% }
-.list>tbody>tr>th,
-.list>thead>tr>th { font-weight:bold; background-color:rgba(255,255,255,0.8);
-                    position:sticky; top:-30px; height:3em;
-                    border-bottom:2px solid |darkColor|; z-index:2 }
+.list>tbody>tr:nth-of-type(1)>th,
+.list>thead>tr:nth-of-type(1)>th { font-weight:bold;
+  background-color:rgba(255,255,255,0.8); position:sticky; top:-30px;
+  height:3em; border-bottom:2px solid |darkColor|; z-index:2 }
 .list a { font-weight:bold }
 .list a.pop { font-weight:normal; float:right; font-size:150%; color:lightgrey;
               margin:-6px 0 0 6px }
@@ -292,17 +292,28 @@ div.rbutton { float:right }
 #summary { margin:8px }
 #commentArea { margin:5px 0 }
 #commentArea > div { font-style:italic; font-size:90%; padding-bottom:5px }
-.timeline { font-family:Abel,monospace; color:#555555; font-size:|calTFS| }
+.timeline { font-family:Abel,monospace; color:|calTC|; font-size:|calTFS| }
+.timeline>thead>tr:nth-of-type(1)>th { position:sticky; top:-4px;
+                                       text-align:center; height:|calTHH|;
+                                       background-color:|calTBC|;
+                                       border-bottom:|calTBB|;
+                                       padding-bottom:4px; }
 .timeline>tbody>tr { height:22px }
-.timeline>tbody>tr>th { background-color:|brightColor|; text-align:center;
-                        border:none; height:auto; padding:0 1px !important }
+.timeline>tbody>tr>th { padding:10px 0 }
 .timeline>tbody>tr>td { text-align:center; padding:0 1px; border:|calTTB| }
-.weekline>tbody>tr>td { text-align:left }
-.weekline>thead>tr>th { height:1em; border-bottom:2px solid lightgrey;
-                        padding-bottom:4px }
-.weekline>tbody>tr:nth-of-type(1)>th { border-top:2px solid lightgrey }
 .timeline a { font-size:100% !important }
-.tlLeft { text-align:left !important; padding-left:1px !important }
+.monthline>thead>tr:nth-of-type(2)>td { position:sticky; top:37px;
+                                        background-color:#f4f4f4;
+                                        text-align:center; z-index:2 }
+.monthline>thead>tr:nth-of-type(3)>td { position:sticky; top:57px;
+                                        background-color:white;
+                                        text-align:center; z-index:2 }
+.weekline>tbody>tr>td { text-align:left }
+.weekline>tbody>tr>th { padding:3px; border:|calTTB| }
+.weekline>tbody>tr:nth-of-type(1)>th { position:inherit; border:|calTTB|;
+                                       background-color:transparent;
+                                       height:auto; padding:0 }
+.tlLeft  { text-align:left !important; padding-left:1px !important }
 .tlRight { text-align:right !important; padding-right:1px !important }
 /* For a calendar displaying events hour after hour */
 .houred td, .houred th { padding:0.2em 0.6em }
@@ -424,9 +435,9 @@ th input { margin:0 !important}
 .sahist { margin: 0 0 0 1em } /* *s*tand-*a*lone history */
 .smallbox { margin:0; vertical-align:middle }
 .ct { color:white; font-family:sans-serif; mix-blend-mode:difference }
-.legend { font-size:90%; color:grey }
-.legendRight { float:right; margin-left:10px }
-.legend td { padding:1px 0px; border:0 !important }
+.legend { font-size:90%; color:grey; margin:|calTLM|; position:sticky; top:0 }
+.legendRight { float:right; margin-left:10px; position:sticky; top:0 }
+.legend td { padding:|calTLP| }
 .fmt { font-size:62%; position:absolute; right:0; top:-5px }
 
 /* Animations */

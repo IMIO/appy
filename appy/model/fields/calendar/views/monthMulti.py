@@ -192,30 +192,31 @@ class MonthMulti(Month):
     # The row displaying month namess
     pxMonths = Px('''
      <tr>
-      <th class="hidden"></th>
-      <th for="mInfo in monthsInfos" colspan=":mInfo.colspan">::mInfo.month</th>
-      <th class="hidden"></th>
+      <th></th>
+      <th for="mInfo in monthsInfos" colspan=":mInfo.colspan"
+          style="text-align:center">::mInfo.month</th>
+      <th></th>
      </tr>''')
 
     # The row displaying day letters
     pxDayLetters = Px('''
      <tr>
-      <td class="hidden"></td>
+      <td></td>
       <td for="date in view.grid"><b>:namesOfDays[date.aDay()].name[0]</b></td>
-      <td class="hidden"></td>
+      <td></td>
      </tr>''')
 
     # The row displaying day numbers
     pxDayNumbers = Px('''
      <tr>
-      <td class="hidden"></td>
+      <td></td>
       <td for="date in view.grid"><b>:str(date.day()).zfill(2)</b></td>
-      <td class="hidden"></td>
+      <td></td>
      </tr>''')
 
     # Main PX
     px = Px('''
-     <table class="list timeline" id=":f'{hook}_cal'"
+     <table class="list timeline monthline" id=":f'{hook}_cal'"
             style="display: inline-block"
             var="monthsInfos=view.getMonths(cache);
                  gradients=field.getGradients(o)">
@@ -227,11 +228,13 @@ class MonthMulti(Month):
        <col/>
       </colgroup>
 
-      <tbody>
+      <thead>
        <!-- Header rows (months and days) -->
        <x>:view.pxMonths</x>
        <x>:view.pxDayLetters</x><x>:view.pxDayNumbers</x>
+      </thead>
 
+      <tbody>
        <!-- Other calendars -->
        <x for="groupO in others">
         <tr for="other in groupO" id=":other.o.iid"
@@ -254,7 +257,9 @@ class MonthMulti(Month):
 
       <!-- Total rows -->
       <x if="field.totalRows">:field.Totals.pxRows</x>
-      <tbody> <!-- Footer (repetition of months and days) -->
+
+      <!-- Footer (repetition of months and days) -->
+      <tbody>
        <x>:view.pxDayNumbers</x><x>:view.pxDayLetters</x>
        <x>:view.pxMonths</x>
       </tbody>
