@@ -457,7 +457,7 @@ class Config:
         self.calTC = 'black' # Font *c*olor
         self.calTFS = '85%' # *F*ont *s*ize
         self.calTHH = '2.6em' # *H*eader's *h*eight
-        self.calTBC = 'inherit' # *B*ackground *c*olor
+        self.calTBC = 'white' # *B*ackground *c*olor
         self.calTBB = f'1px solid {self.darkColor}' # *B*ackground *b*ottom
         self.calTG = '0.5em' # Gap between timeline elements
         self.calTLM = '0' # Legend margins
