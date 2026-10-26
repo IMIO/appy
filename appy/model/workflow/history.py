@@ -768,7 +768,7 @@ class History(PersistentList):
             if noLabelFor and type in noLabelFor:
                 prefix = ''
             else:
-                suffix = esc(o.translate(event.getLabel(o)))
+                suffix = esc(o.translate(event.getLabel(o) or '?'))
                 prefix = f' – <b>{suffix}</b> '
             # Get the comment when present
             comment = event.comment or ''
