@@ -73,6 +73,11 @@ class Config:
         # "cookieWarning" must contain the name of an attribute on the tool,
         # that must store the URL of a page displaying the privacy policy.
         self.cookieWarning = False
+        # Must the AppyAuth cookie be flagged as "Secure" ? It set to True, it
+        # means that the HTTP client will throw the cookie away on any non-HTTPS
+        # connection. This can be problematic on test sites, or on production
+        # environments accessed via internal URLs.
+        self.cookieSecure = False
         # Who has access to the Python UI console ? In this set, place only
         # logins of users having the Manager role.
         self.consoleUsers = {'admin'}

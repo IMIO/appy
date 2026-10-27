@@ -42,8 +42,10 @@ class Cookie:
            cookie.'''
         r = f'{login}:{password or ""}:{ctx or ""}'
         r = base64.encodebytes(r.encode('utf-8')).rstrip()
-        handler.resp.setCookie(Cookie.name, urllib.parse.quote(r),httpOnly=True,
-                               secure=not handler.inTheForeground())
+        config = handler.config.security
+        secure = config.cookieSecure and not handler.inTheForeground()
+        handler.resp.setCookie(Cookie.name, urllib.parse.quote(r),
+                               httpOnly=True, secure=secure)
 
     @classmethod
     def update(class_, handler, ctx, onResponse=False):
