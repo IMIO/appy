@@ -8,15 +8,14 @@ from email.utils import formatdate
 from email.message import EmailMessage
 import smtplib, socket, time, mimetypes
 
-from .string import Variables
-from appy.database.operators import or_
-from appy.model.utils import Object as O
+from appy.model.notify import Notifier
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-NO_CONFIG  = 'Must send mail but no SMTP server configured.'
 NO_SERVER  = 'no mailhost defined'
 DISABLED   = 'Mail disabled%s :: Should send mail from %s to %d recipient(s):' \
              ' %s.'
+SENDER_NO  = "Don't specify any sender when sending mails: the Mailer gets " \
+             "it from the mail config."
 REPLY_TO   = 'reply to: %s'
 MSG_SUBJ   = 'Subject :: %s'
 MSG_BODY   = 'Body :: %s'
@@ -26,11 +25,9 @@ MAIL_R_KO  = 'Could not send mail to some recipients. %s'
 MAIL_SENT  = "Mail sent in %.2f''."
 MAIL_NSENT = '%s :: Mail sending failed (%s).'
 CONNECT_OK = "Connected to %s in %.2f''."
-NO_G_U     = 'Inexistent %s(s) %s.'
 NO_REC     = 'No mail recipient for "%s".'
 NO_RECS    = 'No recipient for sending mail about %s %s with %s(s) %s.'
-SP_VARS_KO = 'sendMailIf called with split=False and non empty variables. ' \
-             'Indeed, variables come into play when sending individual mails.'
+
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -91,61 +88,53 @@ class Config:
         return r
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Mailer:
+class Mailer(Notifier):
     '''Sends mail'''
 
+    # A mail is a specific kind of notification a user may receive. Class
+    # Notifier groups all stuff being common to all types of notifications.
+
+    # Does this notifier allow attachments ?
+    attachmentsAllowed = True
+
+    # Don't log the start of the process: this notifier has his own log
+    logInit = False
+
+    # Error message when a mailer is called without config
+    NO_CONFIG  = 'Must send mail but no SMTP server configured in config.mail.'
+
     def __init__(self, config, log=None):
-        # An instance of class appy.utils.mail.Config hereabove
-        self.config = config
-        # p_log can be a function accepting 2 args:
-        # - the message to log (as a string);
-        # - the second must be named "type" and will receive string
-        #   "info", "warning" or "error".
-        self.logFun = log
+        # Call the base constructor. p_config must be an instance of class
+        # appy.utils.mail.Config as defined hereabove.
+        super().__init__(config, log)
         # The following attribute will hold an instance of class
         # email.message.EmailMessage, that will be used to build the mail parts.
         # Even if several emails must be sent by the current Mailer object
         # (p_self), a unique EmailMessage object will be used: parts being
         # specific to each mail will be replaced within this unique object.
         self.message = None
-        # The sender
-        self.from_ = config.getFrom() if config else None
-        # The recipients
-        self.to = None
-        # The reply-to address, if any
-        self.replyTo = None
-        # The mail subject, body and attachments
-        self.subject = self.body = self.attachments = None
-        # Must a distinct mail be sent for every recipient ?
-        self.split = None
         # The object representing the SMTP server will be stored here
         self.server = None
+        # The mail recipient(s)
+        self.to = None
+        # Has p_self been late-initialized ?
+        self.lateInit = False
 
-    def init(self, to, subject, body, attachments, replyTo, split):
+    def init(self, sender, subject, body, attachments, replyTo, split):
         '''Late initialisation'''
+        # Call the base method
+        super().init(sender, subject, body, attachments, replyTo, split)
+        # Get the sender
         config = self.config
-        # Standardize p_to to a list of recipients, even when there is a single
-        # recipient.
-        if to:
-            self.to = [to] if isinstance(to, str) else to
-        # p_self may already have been late-initialised: set attributes only
-        # for not-empty parameters.
-        if replyTo:
-            # Get the reply-to address, if any
-            self.replyTo = replyTo
-        elif self.replyTo is None and config:
+        if sender:
+            # The mailer gets the sender from the mail config
+            raise Exception(SENDER_NO)
+        self.sender = config.getFrom() if config else None
+        # Get the reply-to info from the config if not passed in p_replyTo
+        if replyTo is None and config:
             self.replyTo = config.replyTo
-        # Get the mail subject and body
-        if subject:
-            self.subject = subject
-        if body:
-            self.body = body
-        # Get attachments
-        if attachments:
-            self.attachments = attachments
-        # Must a distinct mail be sent for every recipient ?
-        if split is not None:
-            self.split = split
+        # Note that late initialisation was done
+        self.lateInit = True
 
     def connect(self):
         '''Connects to the SMTP server and store, in p_self.server, an object
@@ -167,12 +156,6 @@ class Mailer:
         if server:
             server.quit()
 
-    def log(self, message, type='info'):
-        '''Logs a message, if a log function has been defined'''
-        fun = self.logFun
-        if fun:
-            fun(message, type=type)
-
     def logShipment(self, error, start):
         '''A mail has been sent at this p_start time. Log the fact that it has
            been successfully sent or not (depending on the boolean p_error
@@ -184,13 +167,7 @@ class Mailer:
         else:
             log(MAIL_SENT % (time.time() - start))
 
-    def configError(self):
-        '''Return True if the config is missing or wrong'''
-        if not self.config:
-            self.log(NO_CONFIG)
-            return True
-
-    def mailDisabled(self):
+    def mailDisabled(self, subject, body):
         '''Returns True if no mail must be send because the SMTP server is
            disabled or is not specified. Log when appropriate.'''
         # Return False if an enabled server is found
@@ -202,13 +179,13 @@ class Mailer:
         # Log info about the mail that could have been sent
         msg = '' if config.server else f' ({NO_SERVER})'
         to = self.to
-        toLog = DISABLED % (msg, self.from_, len(to), ', '.join(to))
+        toLog = DISABLED % (msg, self.sender, len(to), ', '.join(to))
         if self.replyTo:
             rText = REPLY_TO % self.replyTo
             toLog = f'{toLog} ({rText}).'
         log(toLog)
-        log(MSG_SUBJ % self.subject)
-        log(MSG_BODY % self.body)
+        log(MSG_SUBJ % subject)
+        log(MSG_BODY % body)
         # Log info about the attachments, if any
         attachs = self.attachments
         if attachs:
@@ -222,14 +199,14 @@ class Mailer:
             log(MSG_ATTS % (len(attachs), ', '.join(names)))
         return True
 
-    def createMessage(self):
+    def createMessage(self, subject, body):
         '''Creates the EmailMessage object as a way to build the mail to send'''
         self.message = m = EmailMessage()
-        m['Subject'] = self.subject
-        m['From'] = self.from_
+        m['Subject'] = subject
+        m['From'] = self.sender
         # The "To" and potential "Bcc" headers will be added afterwards
         m['Date'] = formatdate(localtime=True)
-        m.set_content(self.body)
+        m.set_content(body)
         if self.replyTo:
             m['reply-to'] = self.replyTo
         # Add attachments
@@ -253,18 +230,18 @@ class Mailer:
                 m.add_attachment(fileContent, maintype=main, subtype=sub,
                                  filename=fileName)
 
-    def buildMessage(self):
+    def buildMessage(self, subject, body):
         '''Create or update the EmailMessage object from data as stored on
            p_self.'''
         m = self.message
         if m is None:
             # Create a new one
-            self.createMessage()
+            self.createMessage(subject, body)
         else:
             # Recycle the existing one. What may have changed is the mail body
             # and subject.
             del m['Subject']
-            m['Subject'] = self.subject
+            m['Subject'] = subject
             # Change the body. If the message has attachments (is multipart),
             # the part corresponding to the body must be found and updated.
             if m.is_multipart():
@@ -272,9 +249,9 @@ class Mailer:
                 # is the mail body.
                 for part in m.walk():
                     if part.get_content_type() == 'text/plain':
-                        part.set_content(self.body)
+                        part.set_content(body)
             else:
-                m.set_content(self.body)
+                m.set_content(body)
 
     def sendMessage(self, disconnect=True):
         '''Send the mail as built in p_self.message; return True upon success'''
@@ -300,13 +277,15 @@ class Mailer:
                     r = server.send_message(m)
                     self.logShipment(r, start)
             else:
-                # Send a unique mail to everybody
+                # Send a unique mail ...
                 if 'To' in m: del m['To']
                 if 'Bcc' in m: del m['Bcc']
                 if one:
+                    # ... to a single person
                     m['To'] = to[0]
                 else:
-                    m['To'] = self.from_
+                    # ... to everybody
+                    m['To'] = self.sender
                     m['Bcc'] = ', '.join(to)
                 r = server.send_message(m)
                 self.logShipment(r, start)
@@ -319,7 +298,12 @@ class Mailer:
         except socket.error as se:
             self.log(MAIL_NSENT % (config, str(se)), type='error')
 
-    def send(self, to, subject=None, body=None, attachments=None, replyTo=None,
+    def standardize(self, to):
+        '''Standardize p_to to a list of mail recipients'''
+        # Indeed, p_to may be a single recipient
+        return [to] if isinstance(to, str) else to
+
+    def send(self, to, subject, body, attachments=None, replyTo=None,
              split=None, disconnect=True):
 
         '''Sends a mail, via the SMTP server defined in p_self.config. Returns
@@ -332,7 +316,8 @@ class Mailer:
         # p_subject and p_body must be strings containing the mail subject and
         # body.
 
-        # p_attachments must be a list or tuple whose elements can have 2 forms:
+        # p_attachments, if passed, must be a list or tuple whose elements can
+        # have 2 forms:
         # 1. a tuple (fileName, fileContent): "fileName" is the name of the file
         #    as a string; "fileContent" is the file content, expressed as bytes;
         # 2. an instance of class appy.model.fields.file.FileInfo ;
@@ -340,231 +325,98 @@ class Mailer:
         #    appy.model.fields.file.FileInfo is in use, but with an alternate
         #    file name, specified in the first tuple element.
 
-        # A p_replyTo mail address or recipient can be specified
+        # A p_replyTo mail address or recipient can be specified.
 
         # If p_split is True, an individual mail will be sent to each recipient.
-        # Else, a unique mail will be send to all repicients, listed in field
+        # Else, a unique mail will be send to all recipients, listed in field
         # Bcc.
 
         # By default, p_disconnect is True: after sending the mail(s), the SMTP
         # connection will be closed: no more call to p_send will work. By
-        # setting p_disconnect to True, the SMTP connection stays open, and
+        # setting p_disconnect to False, the SMTP connection stays open, and
         # successive calls to m_send may take place (there is one limitation,
         # though, as explained below). In that case, you have to close yourself
         # the SMTP connection, once all the m_send calls will be over, by
-        # calling method mailer::disconnect. For example, this is what m_sendIf
-        # does (via its call to m_walkUsers).
+        # calling method mailer::disconnect. For example, this is what method
+        # Notifier.sendIf does (see m_onceWalked, called by it).
 
         # ⚠️ If you use a Mailer object directly (ie, not via wrapper methods
         #    tool.sendMail or tool.sendMailIf), note that if you call m_send
-        #    several times within the same connection (with p_disconnect being
-        #    False), the same internal EmailMessage object will be recycled
-        #    again and again; in that case, only p_to, p_subject and p_body will
-        #    be updated in it, but not p_attachments.
-        #    In other words, if you plan to send several mails with different
-        #    attachments for each mail, use a different Mailer object for each
-        #    one, or use the hereabove-mentioned wrapper methods on the tool.
+        #    several times with the same connection (with p_disconnect being
+        #    False), the same internal EmailMessage object will be recycled ;
+        #    in that case, only p_to, p_subject and p_body will be updated in
+        #    it, but not p_attachments. In other words, if you plan to send
+        #    several mails with different attachments for each mail, create a
+        #    different Mailer object for each one, or use the hereabove-
+        #    mentioned wrapper methods on the tool.
 
         # Ensure everything is correctly configured
         if self.configError(): return
 
-        # Late-initialise p_self
-        self.init(to, subject, body, attachments, replyTo, split)
+        # Late-initialise p_self, if not done yet
+        if not self.lateInit:
+            self.init(None, subject, body, attachments, replyTo, split)
+
+        # Ensure p_self.to is a list of recipients
+        self.to = to = self.standardize(to)
 
         # Don't send a mail if the mail server is disabled or does not exist
         # (but possibly log info about the mail that would have been sent).
-        if self.mailDisabled(): return
+        if self.mailDisabled(subject, body): return
 
         # Log the start of the process
-        to = self.to
-        self.log(MSG_SEND % (self.from_, len(to), ', '.join(to), self.subject))
+        self.log(MSG_SEND % (self.sender, len(to), ', '.join(to), subject))
 
         # Create or update the EmailMessage object
-        self.buildMessage()
+        self.buildMessage(subject, body)
 
         # Send the created message
         return self.sendMessage(disconnect)
 
-    def getVariablesObject(self, user, variables):
-        '''Returns an object containing values for p_variables as applied to
-           this p_user.'''
-        r = O()
-        for name in variables:
-            value = getattr(user, name)
-            if callable(value): value = value()
-            r[name] = value
-        return r
-
-    def sendOne(self, recipient, user, variables):
-        '''Sends a mail to this p_recipient, corresponding to that p_user.
-           p_self must already have been late-initialised. If p_variables are
-           passed, replace them within p_self.subject and p_self.body before
-           sending the mail.'''
-        if variables:
-            # Remember the currently stored subject and body, that represent
-            # templates that must now be instantiated.
-            templateSubject = self.subject
-            templateBody = self.body
-            # Get the p_user-specific variables in an object
-            varS = self.getVariablesObject(user, variables)
-            self.subject = Variables.replace(self.subject, varS)
-            self.body = Variables.replace(self.body, varS)
-        # Send the mail to this p_recipient
-        self.send(recipient, disconnect=False)
-        if variables:
-            # Reset the template subject and body
-            self.subject = templateSubject
-            self.body = templateBody
-
-    def collectUsers(self, o, privilege, privilegeType):
-        '''Collect users having this p_privilege on this p_o(bject). If
-           p_privilegeType is "role" or "permission", all active users are
-           returned; they will be filtered by the called method.'''
-        # To be more precise, the return value is a tuple ([users], s_checkPR),
-        # where s_checkPR indicates if the called method must further filter
-        # users according to a *p*ermission (s_checkPR holds 'permission') or
-        # *r*ole (s_checkPR holds 'role').
-        pt = privilegeType
-        if pt in ('group', 'user'):
-            checkPR = None
-            logins = (privilege,) if isinstance(privilege, str) else privilege
-            objs = o.search(pt.capitalize(), login=or_(*logins), state='active')
-            if not objs:
-                raise Exception(NO_G_U % (pt, ', '.join(logins)))
-            if pt == 'user':
-                users = objs
-            else:
-                # Get active users from all retrieved groups
-                users = set()
-                for group in objs:
-                    for user in group.users:
-                        if user.state == 'active':
-                            users.add(user)
+    def sendOne(self, user):
+        '''Tries to send a mail to that p_user and return the number of mails
+           sent (1 or 0).'''
+        # Get the mail recipient for that p_user
+        recipient = user.getMailRecipient()
+        if not recipient:
+            # Do not send anything to that user: it does not have e-mail. Log
+            # this problem only if the user is not special.
+            if not user.isSpecial():
+                user.log(NO_REC % user.login, type='warning')
+            return 0
+        # We have here a valid v_recipient
+        if self.split:
+            # Directly send a mail
+            subject, body = self.getTexts(user)
+            self.send(recipient, subject, body, disconnect=False)
+            r = 1
         else:
-            # Get all users
-            users = o.search('User', state='active')
-            checkPR = pt
-        return users, checkPR
-
-    def walkUsers(self, users, o, excludeExpression, checkPR, privilege,
-                  userMethod, variables):
-        '''In non-split mode, this method collects and returns a list of valid
-           mail recipients based on appropriate users among p_users. In split
-           mode, for every such recipient, it directly sends a mail.'''
-        r = None
-        split = self.split
-        checkRole = checkPR == 'role'
-        for user in users:
-            # Check if the user has p_privilege on this object
-            if checkPR:
-                has = user.hasRole if checkRole else user.hasPermission
-                if isinstance(privilege, str):
-                    # Check a single permission or role
-                    if not has(privilege, o): continue
-                else:
-                    # Several permissions or roles are mentioned. Having a
-                    # single permission or role is sufficient.
-                    hasOne = False
-                    for priv in privilege:
-                        if has(priv, o):
-                            hasOne = True
-                            break
-                    if not hasOne: continue
-            # Evaluate the p_excludeExpression
-            if excludeExpression and eval(excludeExpression): continue
-            # Execute the p_userMethod when specified
-            if userMethod and not getattr(user, userMethod)(o): continue
-            # Get the mail recipient for this user
-            recipient = user.getMailRecipient()
-            if not recipient:
-                # Do not add this user: it does not have e-mail. Log this
-                # problem only if the user is not special.
-                if not user.isSpecial():
-                    user.log(NO_REC % user.login, type='warning')
-                continue
-            # We have here a valid v_recipient
-            if split:
-                # Directly send a mail
-                self.sendOne(recipient, user, variables)
-            else:
-                # Add the recipient to v_r
-                if r is None: r = []
-                r.append(recipient)
-        if split:
-            # We must now disconnect from the SMTP server. Indeed, all the
-            # individual mails being sent via this method were done via a single
-            # SMTP connection.
-            self.disconnect()
+            # Don't sent a mail now and add the recipient to p_self.to
+            to = self.to
+            if to is None:
+                to = self.to = []
+            to.append(recipient)
+            r = 0 # No mail was sent so far
         return r
 
-    def sendIf(self, o, privilege, subject, body, attachments=None,
-               privilegeType='permission', excludeExpression=None,
-               userMethod=None, replyTo=None, split=False, variables=None):
+    def onceWalked(self):
+        '''Close the connection to the SMTP server when appropriate'''
+        if self.split:
+            # We must now disconnect from the SMTP server. Indeed, once all
+            # users have been walked, all the individual mails were sent via a
+            # single SMTP connection.
+            self.disconnect()
 
-        '''Sends a mail related to this p_o(bject) to any active user having
-           this p_privilege on it.'''
-
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # If p_privilegeType...
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # is...        | p_privilege is a (list or tuple of)...
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        # 'permission' | permission(s)
-        # 'role'       | role(s)
-        # 'group'      | group login(s)
-        # 'user'       | user login(s)
-        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-        # p_excludeExpression, if passed, will be evaluated on every selected
-        # user. Users for which the expression will produce True will not become
-        # mail recipients. The expression is evaluated with variables "user" and
-        # "o" in its context.
-
-        # p_userMethod may be the name of a method on class User. If specified,
-        # beyond p_privilege checking, a user will receive a mail if this method
-        # returns True. p_userMethod must accept p_o as unique arg.
-
-        # p_subject and p_body must be strings containing the mail subject and
-        # body. If p_variables are not empty, p_subject and/or p_body may
-        # contain variable parts (more explanations below, when describing
-        # p_variables).
-
-        # In the case of individual mails (p_split is True), p_variables, if
-        # passed, must be a list or tuple of attribute or method names, that
-        # must be defined on the User object corresponding to each recipient. In
-        # this case, p_subject and p_body are supposed to contain variables
-        # surrounded by pipes, like |attr1| or |method1|. When sending the mail
-        # to each recipient, variables in p_subject and p_body will be replaced
-        # by the corresponding values as found on the User object corresponding
-        # to the recipient (in the example, user.attr1 or user.method1()). If
-        # the name corresponds to a method, it will be called without any arg.
-
-        # For any other parameter, check documentation on method m_send: their
-        # homonymm parameters on this method have the same meaning as here.
-
-        # Check parameters coherence
-        if not split and variables: raise Exception(SP_VARS_KO)
-
-        # Late-initialise p_self
-        self.init(None, subject, body, attachments, replyTo, split)
-
-        # Collect users having this p_privilege on this p_o(bject)
-        users, checkPR = self.collectUsers(o, privilege, privilegeType)
-
-        # Walk p_users
-        recipients = self.walkUsers(users, o, excludeExpression, checkPR,
-                                    privilege, userMethod, variables)
-
-        # Stop here if we are in p_split mode: mails have already been sent
-        if split: return
-
+    def finalize(self):
+        '''Sends the unique mail if we are not in split mode'''
+        if self.split: return
         # Non-split mode: send the unique mail
-        if recipients:
-            self.send(recipients)
+        if self.recipients:
+            self.send(self.to, self.subject, self.body)
         elif self.logFun:
-            # Log the absence of v_recipients
-            if isinstance(privilege, (list, tuple)):
-                privilege = ', '.join(privilege)
+            # There is no recipient at all: no mail can be sent. Log this.
+            priv = self.privilege
+            pri = ', '.join(priv) if isinstance(priv, (list, tuple)) else priv
             self.log(NO_RECS % (o.class_.name.lower(), o.id, privilegeType,
-                                privilege), type='warning')
+                                pri), type='warning')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

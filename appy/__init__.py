@@ -59,6 +59,9 @@ class Config:
     # When using a SMTP mail server for sending emails from your app, place an
     # instance of class appy.utils.mail.Config in the field below.
     mail = n
+    # User notifications are configured via a instance of class
+    # appy.model.notify.Config, to set in the following attribute.
+    notify = n
     # Place here a appy.server.scheduler.Config instance, defining cron-like
     # actions being automatically triggered.
     jobs = n

@@ -1431,6 +1431,38 @@ msgstr "Passwort"
 msgid "User_password"
 msgstr "Passwort"
 
+#. Default: "Notifications"
+msgid "User_page_notifs"
+msgstr ""
+
+#. Default: "Notifications"
+msgid "User_notifications"
+msgstr ""
+
+#. Default: "💤 You haven't received any notification yet."
+msgid "user_no_notif"
+msgstr ""
+
+#. Default: "From"
+msgid "User_notifications_sender"
+msgstr ""
+
+#. Default: "Date & time"
+msgid "User_notifications_date"
+msgstr ""
+
+#. Default: "Read ?"
+msgid "User_notifications_read"
+msgstr ""
+
+#. Default: "Subject"
+msgid "User_notifications_subject"
+msgstr ""
+
+#. Default: "Body"
+msgid "User_notifications_body"
+msgstr ""
+
 #. Default: "Profile"
 msgid "User_page_main"
 msgstr "Profil"

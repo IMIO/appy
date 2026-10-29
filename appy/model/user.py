@@ -11,10 +11,13 @@ from ..utils import bn
 from .fields import Show
 from .searches import Search
 from .fields.date import Date
+from .fields.poor import Poor
+from .fields.list import List
 from .utils import Object as O
 from .fields.phase import Page
 from ..ui.layout import Layouts
 from .fields.group import Group
+from .notify import Notification
 from .fields.string import String
 from .fields.action import Action
 from .fields.boolean import Boolean
@@ -94,7 +97,8 @@ class User(Base):
                         placeholder=lambda o: o.translate('password_type_new'),
                         page=pagePassword, autofocus=True)
 
-    # The encrypted password, carriable via the XML layout
+    # The encrypted password, carriable via /xml
+
     def showEncrypted(self):
         '''Allow to show encrypted password to admins only, via the xml
            layout.'''
@@ -104,6 +108,24 @@ class User(Base):
 
     encrypted = Computed(show=showEncrypted, label='User',
                          method=lambda o: o.values.get('password'))
+
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                              Notifications
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+    notif = (
+      ('sender' , String()) , # Who sent this notification ?
+      ('date'   , Date())   , # When (date + time) ?
+      ('read'   , Boolean()), # Has the user read it ?
+      ('subject', String()) , # The subject (or title)
+      ('body'   , Poor())   , # The body (or description)
+    )
+
+    notifPage = Page('notifs', show='view', label='User_page_notifs',
+                     icon='notif.svg')
+
+    notifications = List(notif, rowClass=Notification, label='User',
+                         page=notifPage, valueIfEmpty=Notification.getEmpty)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                         Title, name, first name

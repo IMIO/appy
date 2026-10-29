@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="C1" xmlns="http://www.w3.org/2000/svg" x="0" y="0"
+ viewBox="0 0 65 65" style="enable-background:new 0 0 65 65" xml:space="preserve">
+<style type="text/css">
+.s1{fill:none;stroke:black;stroke-width:1.5;stroke-linejoin:round;stroke-miterlimit:10}
+</style>
+<g transform="scale(1.4 1.4) translate(-11 -11)">
+ <polygon class="s1" points="31.6,46.4 45.2,51.9 50.5,14.3 13.4,39.2 24.6,43.3 28.3,53.4"/>
+ <line class="s1" x1="27.4" y1="40.2" x2="50.2" y2="14.7"/>
+ <line class="s1" x1="31.6" y1="46.4" x2="50.3" y2="14.7"/>
+</g>
+</svg>

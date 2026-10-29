@@ -18,6 +18,7 @@ from .mover import Mover
 from .fields.ref import Ref
 from ..server import Server
 from ..utils import Function
+from .notify import Notifier
 from .fields import Initiator
 from .carousel import Carousel
 from .fields.phase import Page
@@ -51,8 +52,8 @@ LD_C_KO    = 'LDAP config not found.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Tool(Base):
-    '''Base class for the Appy tool, a persistent instance storing configuration
-       elements and more, like users, group and translations.'''
+    '''Base class for the Appy tool, a persistent object storing configuration
+       elements and more, like users, groups and translations.'''
 
     # Make some modules and classes available and/or traversable via the tool
     ui = appy.ui
@@ -415,40 +416,53 @@ class Tool(Base):
                 label='Tool_page_progress'), **ta)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #                             Monitoring
+    #                              Monitoring
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     traverse['check'] = True
     def check(self):
-        '''Returns monitoring-related info about this instance'''
+        '''Returns monitoring-related info about this site'''
         return Monitoring().get(self)
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-    #                            Main methods
+    #                           Send notifications
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-
-    def sendMail(self, to, subject, body, attachments=None, replyTo=None,
-                 split=True):
-        '''Sends a mail. See doc in appy/utils/mail.py.'''
-        mailer = Mailer(self.config.mail, self.log)
-        return mailer.send(to, subject, body, attachments=attachments,
-                           replyTo=replyTo, split=split)
-
-    def sendMailIf(self, o, privilege, subject, body, attachments=None,
-                   privilegeType='permission', excludeExpression='False',
-                   userMethod=None, replyTo=None, split=True, variables=None):
-        '''Sends a mail concerning this p_o(bject), to people having this
-           p_privilege. See doc in appy/utils/mail.py.'''
-        mailer = Mailer(o.config.mail, o.log)
-        return mailer.sendIf(o, privilege, subject, body,
-                 attachments=attachments, privilegeType=privilegeType,
-                 excludeExpression=excludeExpression, userMethod=userMethod,
-                 replyTo=replyTo, split=split, variables=variables)
 
     def getMailer(self):
         '''Return a Mailer object for those who want more control over their
            mail sending process.'''
         return Mailer(self.config.mail, self.log)
+
+    def sendMail(self, to, subject, body, attachments=None, replyTo=None,
+                 split=True):
+        '''Sends a mail. See doc in appy/utils/mail.py.'''
+        return self.getMailer().send(to, subject, body, attachments=attachments,
+                                     replyTo=replyTo, split=split)
+
+    def sendMailIf(self, o, privilege, subject, body, attachments=None,
+                   privilegeType='permission', excludeExpression=None,
+                   userMethod=None, replyTo=None, split=True, variables=None):
+        '''Sends a mail concerning this p_o(bject), to users having this
+           p_privilege. See doc in appy/utils/mail.py.'''
+        return self.getMailer().sendIf(o, privilege, subject, body,
+                 attachments=attachments, privilegeType=privilegeType,
+                 excludeExpression=excludeExpression, userMethod=userMethod,
+                 replyTo=replyTo, split=split, variables=variables)
+
+    def notify(self, o, privilege, subject, body, privilegeType='permission',
+               sender=None, excludeExpression=None, userMethod=None,
+               variables=None):
+        '''Sends a notification concerning this p_o(bject), to users having this
+           p_privilege. See doc in appy/model/notify.py.'''
+        notifier = Notifier(self.config.notify, self.log)
+        sender = sender or self.translate('app_name_raw')
+        return notifier.sendIf(o, privilege, subject, body, variables=variables,
+                 privilegeType=privilegeType, sender=sender,
+                 userMethod=userMethod, excludeExpression=excludeExpression)
+
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+    #                            Main methods
+    #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
     def computeHomePage(self):
         '''Compute the page that is shown to the user when he hits the app'''

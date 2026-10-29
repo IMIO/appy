@@ -110,6 +110,7 @@ appInit = '''
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 import appy
 from appy.database import log
+from appy.model import notify
 from appy.server import guard, scheduler, backup
 from appy import database, model, ui, server, deploy, peer
 
@@ -117,12 +118,13 @@ from appy import database, model, ui, server, deploy, peer
 class Config(appy.Config):
     server = server.Config()
     security = guard.Config()
-    backup = backup.Config()
-    jobs = scheduler.Config()
+    model = model.Config()
+    notify = notify.Config()
     database = database.Config()
     log = log.Config()
-    model = model.Config()
     ui = ui.Config()
+    jobs = scheduler.Config()
+    backup = backup.Config()
     deploy = deploy.Config()
     peers = peer.Config()
 
