@@ -21,6 +21,7 @@ from .notify import Notification
 from .fields.string import String
 from .fields.action import Action
 from .fields.boolean import Boolean
+from .fields.integer import Integer
 from ..utils import string as sutils
 from ..database.operators import or_
 from ..utils.string import Normalize
@@ -126,6 +127,10 @@ class User(Base):
 
     notifications = List(notif, rowClass=Notification, label='User',
                          page=notifPage, valueIfEmpty=Notification.getEmpty)
+
+    # Store, in an index, the number of unread notifications
+    unread = Integer(show=False, indexed=True, persist=False,
+                     default=Notification.computeUnread, label='User')
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                         Title, name, first name

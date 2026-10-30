@@ -1433,35 +1433,39 @@ msgstr "Wachtwoord"
 
 #. Default: "Notifications"
 msgid "User_page_notifs"
-msgstr ""
+msgstr "Meldingen"
 
 #. Default: "Notifications"
 msgid "User_notifications"
-msgstr ""
+msgstr "Meldingen"
+
+#. Default: "Unread notifications"
+msgid "User_unread"
+msgstr "Ongelezen meldingen"
 
 #. Default: "💤 You haven't received any notification yet."
 msgid "user_no_notif"
-msgstr ""
+msgstr "💤 U heetf nog geen meldingen ontvangen."
 
 #. Default: "From"
 msgid "User_notifications_sender"
-msgstr ""
+msgstr "Van"
 
 #. Default: "Date & time"
 msgid "User_notifications_date"
-msgstr ""
+msgstr "Datum"
 
 #. Default: "Read ?"
 msgid "User_notifications_read"
-msgstr ""
+msgstr "Gelezen ?"
 
 #. Default: "Subject"
 msgid "User_notifications_subject"
-msgstr ""
+msgstr "Onderwerp"
 
 #. Default: "Body"
 msgid "User_notifications_body"
-msgstr ""
+msgstr "Inhoud"
 
 #. Default: "Profile"
 msgid "User_page_main"

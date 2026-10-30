@@ -44,6 +44,17 @@ class Notification(Object):
         return o.translate('user_no_notif')
 
     @classmethod
+    def computeUnread(class_, user):
+        '''Compute the number of unread notifications in p_user.notifications'''
+        r = 0
+        notifs = user.notifications
+        if notifs:
+            for notif in notifs:
+                if not notif.read:
+                    r += 1
+        return r
+
+    @classmethod
     def createFor(class_, user, notifier):
         '''Adds a notification for that p_user, as prepared by this
            p_notifier.'''
@@ -56,6 +67,12 @@ class Notification(Object):
         if notifs is None:
             notifs = user.notifications = PersistentList()
         notifs.insert(0, notif)
+        # Remove the oldest notification, if the maximum number of notifications
+        # has been reached.
+        if len(notifs) > user.config.notify.maxPerUser:
+            notifs.pop()
+        # Reindex the number of unread notifications
+        user.reindex(fields=('unread',))
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Notifier:

@@ -1439,6 +1439,10 @@ msgstr ""
 msgid "User_notifications"
 msgstr ""
 
+#. Default: "Unread notifications"
+msgid "User_unread"
+msgstr ""
+
 #. Default: "💤 You haven't received any notification yet."
 msgid "user_no_notif"
 msgstr ""

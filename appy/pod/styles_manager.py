@@ -53,7 +53,7 @@ class Properties:
 
     # HTML elements whose styles are defined by Property instances instead of
     # Style instances.
-    elems = ('table', 'ol', 'ul')
+    elems = 'table', 'ol', 'ul'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TableProperties(Properties):
