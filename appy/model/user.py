@@ -54,6 +54,9 @@ class User(Base):
     listColumns = 'title', 'name*15%|', 'login*20%|', 'roles*20%|', 'state*10%|'
     listColumnsShort = 'title', 'login'
 
+    # Make some classes available here
+    Notification = Notification
+
     # The following users are always present in any Appy database
     defaultUsers = {'admin': ('Manager',), 'system': ('Manager',), 'anon': ()}
 
@@ -122,8 +125,8 @@ class User(Base):
       ('body'   , Poor())   , # The body (or description)
     )
 
-    notifPage = Page('notifs', show='view', label='User_page_notifs',
-                     icon='notif.svg')
+    notifPage = Page('notifs', show=Notification.showPage,
+                     label='User_page_notifs', icon='notif.svg')
 
     notifications = List(notif, rowClass=Notification, label='User',
                          page=notifPage, valueIfEmpty=Notification.getEmpty)
@@ -695,7 +698,9 @@ class User(Base):
     #                                  PXs
     #- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
-    # Display, in the user strip, a link to the User instance of the logged user
+    # Display, in the user strip, a link to the User object corresponding to the
+    # logged user.
+
     pxLink = Px('''
      <!-- The variant with a clickable username -->
      <div if="cfg.userLink" class="textIcon">
@@ -704,10 +709,15 @@ class User(Base):
        <div>
         <a href=":user.url"><span>:cfg.getUserText(user)</span></a>
        </div>
+       <!-- Display the notification badge when relevant -->
+       <x>:user.Notification.pxBadge</x>
      </div>
 
      <!-- The variant with the name not being clickable -->
-     <span if="not cfg.userLink">:cfg.getUserText(user)</span>''')
+     <x if="not cfg.userLink">
+      <span>:cfg.getUserText(user)</span>
+      <x>:user.Notification.pxBadge</x>
+     </x>''')
 
     #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
     #                              Class methods

@@ -136,6 +136,9 @@ class Mailer(Notifier):
         # Note that late initialisation was done
         self.lateInit = True
 
+    # Don't use Notifier counts: the mailer has his own counts
+    def defineCounts(self): pass
+
     def connect(self):
         '''Connects to the SMTP server and store, in p_self.server, an object
            representing it, if not already done.'''

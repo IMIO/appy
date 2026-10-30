@@ -5,6 +5,7 @@
 from DateTime import DateTime
 from persistent.list import PersistentList
 
+from appy.px import Px
 from .utils import Object
 from ..database.operators import or_
 from ..utils.string import Variables
@@ -18,6 +19,8 @@ NO_G_U     = 'Inexistent %s(s) %s.'
 NOTIF_S    = 'Notification about "%s" :: '
 NOTIF_NIL  = f'{NOTIF_S}Sent to nobody.'
 NOTIF_OK   = f'{NOTIF_S}Sent to %d user·s.'
+NOTIF_DEL  = 'Enforce notify.maxPerUser=%d :: %d notification·s deleted for ' \
+             '%d user·s.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -42,6 +45,12 @@ class Notification(Object):
         '''Gets the text to display when there is no notification yet for a
            user.'''
         return o.translate('user_no_notif')
+
+    @classmethod
+    def showPage(class_, user):
+        '''Show page User::notifs to manages only: users see notifications in a
+           popup.'''
+        return 'view' if user.hasRole('Manager') else None
 
     @classmethod
     def computeUnread(class_, user):
@@ -71,8 +80,29 @@ class Notification(Object):
         # has been reached.
         if len(notifs) > user.config.notify.maxPerUser:
             notifs.pop()
+            c = notifier.counts
+            c.deleted += 1
+            c.dusers += 1
         # Reindex the number of unread notifications
         user.reindex(fields=('unread',))
+
+    # The notification badge, to show besides the user name in the UI and
+    # containing the number of unread notifications.
+
+    pxBadge = Px('''
+     <div var="unread=user.getField('unread').getCatalogValue(user)"
+          if="user.unread" class="uBadge">:user.unread</div>''',
+
+     css='''
+      @keyframes colorize {
+        44%  { background-color:|badgeColor| }
+        50%  { background-color:|darkColor| }
+        56%  { background-color:|badgeColor| }
+      }
+      .uBadge { background-color:|badgeColor|; padding:0.2em 0.5em;
+                position:relative; top:-7px; left:-11px; border-radius:50%;
+                font-size:93%; color:|brightColor|;
+                animation:colorize 8s infinite} ''')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Notifier:
@@ -99,8 +129,9 @@ class Notifier:
         # - the second must be named "type" and will receive string
         #   "info", "warning" or "error".
         self.logFun = log
-        # The count of notifications that will be sent
-        self.count = 0
+        # The count of notifications that will be sent (and, possibly,
+        # complementary counts).
+        self.counts = self.defineCounts()
 
     def init(self, sender, subject, body, attachments, replyTo, split):
         '''Late initialisation, possibly overriden by child classes'''
@@ -112,6 +143,16 @@ class Notifier:
         self.split = split
         if self.logInit:
             self.log(self.NOTIF_INI % (subject, sender))
+
+    def defineCounts(self):
+        '''What counts to define and log while sending notifications ?'''
+        return Object(
+          sent   =0, # The total number of sent notifications
+          deleted=0, # The number of deleted notifications, while respecting
+                     # config.maxPerUser.
+          dusers =0  # The number of users for which at least one notification
+                     # has been deleted.
+        )
 
     def checkAttributes(self):
         '''Ensure p_self's attributes are valid'''
@@ -141,14 +182,19 @@ class Notifier:
     def finalize(self):
         '''A sub-class may override this to perform some final action'''
         # Log the number of notifications having been sent
-        count = self.count
-        if count == 0:
+        c = self.counts
+        sent = c.sent
+        if sent == 0:
             text = NOTIF_NIL % self.subject
             typE = 'warning'
         else:
-            text = NOTIF_OK % (self.subject, count)
+            text = NOTIF_OK % (self.subject, sent)
             typE ='info'
         self.log(text, typE)
+        # Log complementary counts, if notifications have been deleted
+        deleted = c.deleted
+        if deleted:
+            self.log(NOTIF_DEL % (self.config.maxPerUser, deleted, c.dusers))
 
     def getVariablesObject(self, user):
         '''Returns an object containing values for p_variables as applied to
@@ -237,7 +283,7 @@ class Notifier:
             # Execute the v_userMethod when specified
             if userMethod and not getattr(user, userMethod)(o): continue
             # A notification must (a priori) be sent to that v_user
-            self.count += self.sendOne(user)
+            self.counts.sent += self.sendOne(user)
         # Perform some final step once all users have been walked
         self.onceWalked()
 
@@ -249,9 +295,7 @@ class Notifier:
             r = 0
         else:
             # Create the notification
-            subject, body = self.getTexts(user)
             Notification.createFor(user, self)
-            notif = Notification(sender=self.sender, date=DateTime(), )
             r = 1
         return r
 

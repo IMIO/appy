@@ -299,6 +299,7 @@ class Config:
                                                 # rendered within in the header.
         self.lightBgColor = self.brightColor # An alternate, light background
                                              # color.
+        self.badgeColor = '#b35e5e' # Color for the user notification badge
 
         # Text color for links
         self.linkColor = self.darkColor
