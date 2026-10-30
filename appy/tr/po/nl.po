@@ -1443,9 +1443,25 @@ msgstr "Meldingen"
 msgid "User_unread"
 msgstr "Ongelezen meldingen"
 
+#. Default: "Unread"
+msgid "user_notif_unread"
+msgstr "Ongelezen"
+
+#. Default: "Read"
+msgid "user_notif_read"
+msgstr "Al gelezen"
+
 #. Default: "💤 You haven't received any notification yet."
 msgid "user_no_notif"
 msgstr "💤 U heetf nog geen meldingen ontvangen."
+
+#. Default: "← Previous notification"
+msgid "user_notif_prev"
+msgstr "← Vorige melding"
+
+#. Default: "Next notification →"
+msgid "user_notif_next"
+msgstr "Volgende melding →"
 
 #. Default: "From"
 msgid "User_notifications_sender"

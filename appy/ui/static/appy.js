@@ -1661,7 +1661,7 @@ function toggleCookie(cookieId,display,defaultValue,expandIcon,collapseIcon) {
 
 // Functions for opening and closing a popup
 function openPopup(popupId, msg, width, height, resizable, css, back,
-                   commentLabel) {
+                   commentLabel, backReload) {
   // Put the message into the popup
   if (msg) {
     let msgHook = (popupId == 'alertPopup')? 'appyAlertText': 'appyConfirmText',
@@ -1691,7 +1691,7 @@ function openPopup(popupId, msg, width, height, resizable, css, back,
   if (w) popup.style.width = `${w}px`;
   if (h) popup.style.height = `${h}px`;
   // A custom object, stored on the v_popup, will manage iframe specificities
-  if (frame) new Iframe(popup, w, h, resizable, mobile, back);
+  if (frame) new Iframe(popup, w, h, resizable, mobile, back, backReload);
   // Apply the CSS class to the popup
   popup.className = (css)? `popup ${css}`: 'popup';
   // Show the popup

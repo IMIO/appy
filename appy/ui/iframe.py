@@ -135,7 +135,7 @@ class Iframe:
 
      js='''class Iframe {
 
-       constructor(popup, w, h, resizable, mobile, back) {
+       constructor(popup, w, h, resizable, mobile, back, backReload) {
          // Interconnect the DOM p_popup and the object under construction
          this.popup = popup;
          popup.appy = this;
@@ -155,7 +155,7 @@ class Iframe:
          this.backCode = null;
          /* Once closed, must the caller level (a p_back hook or the main
             window) be reloaded ? */
-         this.backReload = false;
+         this.backReload = backReload;
          // Define and show the mask preventing clicking around the iframe
          if (!mobile) {
            this.mask = getNode('iframeMask');

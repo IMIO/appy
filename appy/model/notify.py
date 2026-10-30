@@ -7,6 +7,7 @@ from persistent.list import PersistentList
 
 from appy.px import Px
 from .utils import Object
+from ..ui.template import Template
 from ..database.operators import or_
 from ..utils.string import Variables
 
@@ -40,6 +41,10 @@ class Notification(Object):
     # Instances of this class are used as rows of data on List field
     # User::notifications.
 
+    def getFDate(self, o):
+        '''Returns p_self.date, formatted'''
+        return o.tool.formatDate(self.date)
+
     @classmethod
     def getEmpty(class_, o):
         '''Gets the text to display when there is no notification yet for a
@@ -47,10 +52,34 @@ class Notification(Object):
         return o.translate('user_no_notif')
 
     @classmethod
-    def showPage(class_, user):
+    def getAt(class_, user, i):
+        '''Gets, on that p_user, the notification having index p_i'''
+        # If p_i is None, the method returns the first unread notification. If
+        # there is no unread notification, the method returns the first
+        # notification. To be more precise, the method returns a tuple
+        # (notif, j), where j is the index of the notification within
+        # p_user.notifications.
+        notifs = user.notifications
+        if not notifs: return None, None
+        if i is None:
+            # Get the first unread one ...
+            j = -1
+            for notif in notifs:
+                j += 1
+                if not notif.read:
+                    return notif, j
+            # ... or the first one if all notifications have been read
+            return notifs[0], 0
+        else:
+            # Get the p_ith notif
+            notif = notifs[i] if (0 <= i < len(notifs)) else None
+            return notif, i
+
+    @classmethod
+    def showPage(class_, o):
         '''Show page User::notifs to manages only: users see notifications in a
            popup.'''
-        return 'view' if user.hasRole('Manager') else None
+        return 'view' if o.user.hasRole('Manager') else None
 
     @classmethod
     def computeUnread(class_, user):
@@ -62,6 +91,20 @@ class Notification(Object):
                 if not notif.read:
                     r += 1
         return r
+
+    def noteAsRead(self, user):
+        '''Note, in p_user.notifications, p_self as having been read'''
+        # Don"'t do anything if p_self is already noted as read
+        if self.read: return
+        # Replace p_self with a clone, among p_user.notifications: the
+        # Notification class is not persistent.
+        notifs = user.notifications
+        i = notifs.index(self)
+        notifs[i] = self.clone(read=True)
+        # Reindex field p_user.unread
+        user.reindex(fields=('unread',))
+        # This will require a database commit
+        user.H().commit = True
 
     @classmethod
     def createFor(class_, user, notifier):
@@ -90,8 +133,15 @@ class Notification(Object):
     # containing the number of unread notifications.
 
     pxBadge = Px('''
-     <div var="unread=user.getField('unread').getCatalogValue(user)"
-          if="user.unread" class="uBadge">:user.unread</div>''',
+     <div if="not user.isEmpty('notifications')"
+          var="unread=user.getField('unread').getCatalogValue(user)"
+          class=":'uBadge ubU' if unread else 'uBadge ubR'">
+
+      <!-- Open a popup to show the appropriate notification -->
+      <a href=":f'{user.url}/Notification/pxView?popup=True'"
+        onClick="openPopup('iframePopup',null,500,400,true,null,null,null,true)"
+        target="appyIFrame">:unread</a>
+     </div>''',
 
      css='''
       @keyframes colorize {
@@ -99,10 +149,69 @@ class Notification(Object):
         50%  { background-color:|darkColor| }
         56%  { background-color:|badgeColor| }
       }
-      .uBadge { background-color:|badgeColor|; padding:0.2em 0.5em;
-                position:relative; top:-7px; left:-11px; border-radius:50%;
-                font-size:93%; color:|brightColor|;
-                animation:colorize 8s infinite} ''')
+      .uBadge { padding:0.2em 0.5em; position:relative; top:-7px; left:-7px;
+                border-radius:50%; font-size:93%; color:|brightColor| }
+      .ubR { background-color:#888; color:grey }
+      .ubU { background-color:|badgeColor|;
+             animation:colorize 8s infinite } ''')
+
+    # Consult, in the Appy iframe popup, a single notification
+    pxView = Px('''
+     <x var="i=int(req.i) if 'i' in req else None;
+             notif,j=o.Notification.getAt(o, i);
+             pre='User_notifications_'">
+
+      <!-- Render a message if there is no notif at all -->
+      <div if="not notif">:_('user_no_notif')</div>
+
+      <!-- Render a notif. Start by rendering the sender and the date/hour. -->
+      <x if="notif" var2="notifs=user.notifications">
+       <div><x>:_(f'{pre}sender')</x> <b>:notif.sender</b></div>
+       <div><x>:_(f'{pre}date')</x> <x>:notif.getFDate(o)</x></div>
+
+       <!-- Siblings navigation -->
+       <div if="j &gt; 0 or j &lt; len(notifs)" class="navN"
+            var2="baseUrl=f'{user.url}/Notification/pxView?popup=True&amp;i='">
+
+        <!-- Go to the previous notification -->
+        <a if="j &gt; 0"
+           href=":f'{baseUrl}{j-1}'">:_('user_notif_prev')</a>
+
+        <!-- Go to the next notification -->
+        <a if="j &lt; len(notifs)-1"
+           href=":f'{baseUrl}{j+1}'">:_('user_notif_next')</a>
+       </div>
+
+       <!-- The subject and body, with the mention "read/not read".
+            By the way, note the notif as read, if not done yet. -->
+       <div class="xhtml" var="x=notif.noteAsRead(o)">
+        <div class="subjectN">
+         <h3>:notif.subject</h3>
+
+         <!-- Read or not read yet ? -->
+         <div if="not notif.read"
+              class="nR unreadN">:_('user_notif_unread')</div>
+         <div if="notif.read"
+              class="nR readN">:_('user_notif_read')</div>
+        </div>
+        <x>::notif.body or '-'</x>
+       </div>
+      </x>
+     </x>''',
+
+     css='''
+      .nR { border:1px solid black; font-size:90%; width:fit-content;
+            padding:0.2em 0.5em; font-weight:bold; float:right }
+      .unreadN { border-color: darkred; color:darkred }
+      .readN { border-color: darkgreen; color:darkgreen }
+      .navN { background-color:#f4f4f4; padding:0.2em; margin-top:0.5em;
+              display:flex; justify-content:space-between; gap:0.5em;
+              font-size:90%; font-style:italic }
+      .subjectN { display:flex; align-items:center;
+                  justify-content:space-between }
+     ''',
+
+     template=Template.px, hook='content')
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Notifier:

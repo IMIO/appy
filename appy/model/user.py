@@ -54,8 +54,12 @@ class User(Base):
     listColumns = 'title', 'name*15%|', 'login*20%|', 'roles*20%|', 'state*10%|'
     listColumnsShort = 'title', 'login'
 
+    # Some elements will be traversable
+    traverse = Base.traverse.copy()
+
     # Make some classes available here
     Notification = Notification
+    traverse['Notification'] = 'perm:read'
 
     # The following users are always present in any Appy database
     defaultUsers = {'admin': ('Manager',), 'system': ('Manager',), 'anon': ()}

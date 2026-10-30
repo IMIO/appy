@@ -1444,9 +1444,25 @@ msgstr "Notifications"
 msgid "User_unread"
 msgstr "Notifications non lues"
 
+#. Default: "Unread"
+msgid "user_notif_unread"
+msgstr "Non lu"
+
+#. Default: "Read"
+msgid "user_notif_read"
+msgstr "Déjà lu"
+
 #. Default: "💤 You haven't received any notification yet."
 msgid "user_no_notif"
 msgstr "💤 Vous n'avez encore reçu aucune notification."
+
+#. Default: "← Previous notification"
+msgid "user_notif_prev"
+msgstr "← Notification précédente"
+
+#. Default: "Next notification →"
+msgid "user_notif_next"
+msgstr "Notification suivante →"
 
 #. Default: "From"
 msgid "User_notifications_sender"
@@ -1454,7 +1470,7 @@ msgstr "De"
 
 #. Default: "Date & time"
 msgid "User_notifications_date"
-msgstr "Date"
+msgstr "Le"
 
 #. Default: "Read ?"
 msgid "User_notifications_read"
