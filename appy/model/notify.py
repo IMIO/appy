@@ -145,14 +145,14 @@ class Notification(Object):
 
      css='''
       @keyframes colorize {
-        44%  { background-color:|badgeColor| }
-        50%  { background-color:|darkColor| }
-        56%  { background-color:|badgeColor| }
+        44% { opacity:1.0 }
+        50% { opacity:0.0 }
+        56% { opacity:1.0 }
       }
       .uBadge { padding:0.2em 0.5em; position:relative; top:-7px; left:-7px;
-                border-radius:50%; font-size:93%; color:|brightColor| }
+                border-radius:50%; font-size:|badgeFSize|; color:|brightColor| }
       .ubR { background-color:#888; color:grey }
-      .ubU { background-color:|badgeColor|;
+      .ubU { background-color:|badgeBgColor|;
              animation:colorize 8s infinite } ''')
 
     # Consult, in the Appy iframe popup, a single notification
@@ -338,10 +338,11 @@ class Notifier:
         # users according to a *p*ermission (s_checkPR holds 'permission') or
         # *r*ole (s_checkPR holds 'role').
         o = self.o
+        priv = self.privilege
         pt = self.privilegeType
         if pt in ('group', 'user'):
             checkPR = None
-            logins = (privilege,) if isinstance(privilege, str) else privilege
+            logins = (priv,) if isinstance(priv, str) else priv
             objs = o.search(pt.capitalize(), login=or_(*logins), state='active')
             if not objs:
                 raise Exception(NO_G_U % (pt, ', '.join(logins)))

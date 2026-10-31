@@ -299,7 +299,6 @@ class Config:
                                                 # rendered within in the header.
         self.lightBgColor = self.brightColor # An alternate, light background
                                              # color.
-        self.badgeColor = '#b35e5e' # Color for the user notification badge
 
         # Text color for links
         self.linkColor = self.darkColor
@@ -527,6 +526,10 @@ class Config:
         self.phaseCMargin = '0 0 20px 0' # Margins for phases, *c*ompact variant
         self.pageGap = '0 0' # Gap between pages (vertical & horizontal).
                              # Example: "0.6em ​1em"
+
+        # Styling the user notification badge
+        self.badgeBgColor = '#b35e5e' # background color
+        self.badgeFSize = '75%' # Font-size. It determines the badge size.
 
         # Pages' attributes, with alternate values when the UI is compact (see
         # attribute "compact "hereabove).
