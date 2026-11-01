@@ -149,11 +149,14 @@ class Notification(Object):
         50% { opacity:0.0 }
         56% { opacity:1.0 }
       }
-      .uBadge { padding:0.2em 0.5em; position:relative; top:-7px; left:-7px;
-                border-radius:50%; font-size:|badgeFSize|; color:|brightColor| }
-      .ubR { background-color:#888; color:grey }
+      .uBadge { padding:|badgePadding|; position:relative; top:-7px; left:-7px;
+                border-radius:50%; font-size:|badgeFSize|; color:|brightColor|;
+                height:fit-content }
+      .ubR { background-color:|badgeBgColorR|; color:grey }
+      .ubR>a { color:|brightColor| }
       .ubU { background-color:|badgeBgColor|;
-             animation:colorize 8s infinite } ''')
+             animation:colorize 8s infinite }
+      .ubU>a { color:inherit }''')
 
     # Consult, in the Appy iframe popup, a single notification
     pxView = Px('''

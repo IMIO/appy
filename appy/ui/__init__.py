@@ -528,8 +528,11 @@ class Config:
                              # Example: "0.6em ​1em"
 
         # Styling the user notification badge
-        self.badgeBgColor = '#b35e5e' # background color
-        self.badgeFSize = '75%' # Font-size. It determines the badge size.
+        self.badgeBgColor = '#b35e5e' # Background color when unread
+        self.badgeBgColorR = '#888' # Background color when all read
+        self.badgeFSize = '75%' # Font-size. Determines the overall badge size.
+        self.badgePadding = '0.2em 0.5em' # Padding
+        self.badgeColor = 'inherit'
 
         # Pages' attributes, with alternate values when the UI is compact (see
         # attribute "compact "hereabove).
