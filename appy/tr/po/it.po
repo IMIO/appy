@@ -679,6 +679,10 @@ msgstr "Ritorno alla pagina di partenza"
 msgid "welcome"
 msgstr ""
 
+#. Default: "Welcome ${firstName}"
+msgid "welcome_x"
+msgstr ""
+
 #. Default: "This login is reserved."
 msgid "login_reserved"
 msgstr ""

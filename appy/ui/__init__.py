@@ -291,8 +291,11 @@ class Config:
         self.warnColor = '#e15151'
         # Text color in the header
         self.headerColor = self.brightColor
-        self.headerPcColor = '#cecece' # *p*ages and *u*stom zone, in the
+        self.headerPcColor = '#cecece' # *p*ages and *c*ustom zone, in the
                                        # portlet when inlaid in the header.
+        self.headerPcBgColor = 'transparent' # Background color for that PC
+                                             # zone. Can hold a function called
+                                             # via m_cget (see below).
         # Background color for the header
         self.headerBgColor = self.darkColor
         self.headerSpanColor = self.brightColor # Color for standard text
@@ -411,6 +414,9 @@ class Config:
         self.gcPadding  = '0 0 0 10px' # *G*roup *c*ontent paddings
         self.gcFSize = '100%' # *F*ont size
         self.gcFStyle = 'normal' # *F*ont style, can be "italic"
+
+        # Styling the "htp" = *h*eader *t*op in *p*ortlet
+        self.htpPadding = '0 0 1.5em 1.5em'
 
         # The sidebar (sb)
         self.sbPadding = '28px 8px 30px 0px'

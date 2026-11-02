@@ -679,6 +679,10 @@ msgstr "Keer terug naar de hoofdpagina"
 msgid "welcome"
 msgstr "Welkom"
 
+#. Default: "Welcome ${firstName}"
+msgid "welcome_x"
+msgstr "Welkom ${firstName}"
+
 #. Default: "This login is reserved."
 msgid "login_reserved"
 msgstr "Dit login is voorbehouden"

@@ -680,6 +680,10 @@ msgstr "Home"
 msgid "welcome"
 msgstr "Welcome"
 
+#. Default: "Welcome ${firstName}"
+msgid "welcome_x"
+msgstr "Welcome ${firstName}"
+
 #. Default: "This login is reserved."
 msgid "login_reserved"
 msgstr "This login is reserved."

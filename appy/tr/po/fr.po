@@ -680,6 +680,10 @@ msgstr "Revenir à ma page principale"
 msgid "welcome"
 msgstr "Bienvenue"
 
+#. Default: "Welcome ${firstName}"
+msgid "welcome_x"
+msgstr "Bienvenue ${firstName}"
+
 #. Default: "This login is reserved."
 msgid "login_reserved"
 msgstr "Ce login est réservé."

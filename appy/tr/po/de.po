@@ -679,6 +679,10 @@ msgstr "Zurück zu meiner Hauptseite"
 msgid "welcome"
 msgstr "Willkommen"
 
+#. Default: "Welcome ${firstName}"
+msgid "welcome_x"
+msgstr ""
+
 #. Default: "This login is reserved."
 msgid "login_reserved"
 msgstr "Dieses Login ist reserviert."
@@ -1385,15 +1389,15 @@ msgstr "Erstellt von"
 
 #. Default: "On"
 msgid "Base_created"
-msgstr "Erstellt am"
+msgstr "Erstellt"
 
 #. Default: "Last update by"
 msgid "Base_modifier"
-msgstr ""
+msgstr "Geändert von"
 
 #. Default: "Last updated on"
 msgid "Base_modified"
-msgstr "Letzte Änderungen"
+msgstr "Geändert"
 
 #. Default: "State"
 msgid "Base_state"

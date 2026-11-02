@@ -123,7 +123,8 @@ class Portlet:
      <x>:ui.Portlet.pxUser</x>
 
      <!-- Pages and custom zone -->
-     <div class="pzone">
+     <div class="pzone"
+          style=":f'background-color:{cfg.cget(\'headerPcBgColor\', _ctx_)}'">
       <div class="colorZ" style=":f'background-color:{cfg.headerPcColor}'">
       </div>
       <div class="vflex">
@@ -147,7 +148,7 @@ class Portlet:
 
      # "htp" stands for *h*eader *t*op in *p*ortlet
      css='''
-      .htp { display:flex; align-items:flex-start; padding:0 0 1.5em 1.5em;
+      .htp { display:flex; align-items:flex-start; padding:|htpPadding|;
              gap:0.7em; border-bottom: 1px solid lightgrey }
       .htp > :nth-child(2) { text-transform:uppercase; font-weight:bold }
       .htp > :nth-child(3) { display:flex; gap:0.4em; align-items:flex-end;
