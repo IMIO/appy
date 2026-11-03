@@ -123,8 +123,8 @@ class Portlet:
      <x>:ui.Portlet.pxUser</x>
 
      <!-- Pages and custom zone -->
-     <div class="pzone"
-          style=":f'background-color:{cfg.cget(\'headerPcBgColor\', _ctx_)}'">
+     <div class="pzone" var="bgColor=cfg.cget('headerPcBgColor', _ctx_)"
+          style=":f'background-color:{bgColor}'">
       <div class="colorZ" style=":f'background-color:{cfg.headerPcColor}'">
       </div>
       <div class="vflex">
