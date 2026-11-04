@@ -25,9 +25,9 @@ MAIL_R_KO  = 'Could not send mail to some recipients. %s'
 MAIL_SENT  = "Mail sent in %.2f''."
 MAIL_NSENT = '%s :: Mail sending failed (%s).'
 CONNECT_OK = "Connected to %s in %.2f''."
+ML_SENT    = '%d mail(s) sent.'
 NO_REC     = 'No mail recipient for "%s".'
 NO_RECS    = 'No recipient for sending mail about %s %s with %s(s) %s.'
-
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Config:
@@ -136,8 +136,8 @@ class Mailer(Notifier):
         # Note that late initialisation was done
         self.lateInit = True
 
-    # Don't use Notifier counts: the mailer has his own counts
-    def defineCounts(self): pass
+    def moreCounts(self):
+        '''Don't compute additional counts being specific to the base class'''
 
     def connect(self):
         '''Connects to the SMTP server and store, in p_self.server, an object
@@ -412,7 +412,10 @@ class Mailer(Notifier):
 
     def finalize(self):
         '''Sends the unique mail if we are not in split mode'''
-        if self.split: return
+        # Split mode: log the number of sent mails
+        if self.split:
+            self.log(ML_SENT % self.counts.sent)
+            return
         # Non-split mode: send the unique mail
         if self.recipients:
             self.send(self.to, self.subject, self.body)

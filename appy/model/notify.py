@@ -243,7 +243,8 @@ class Notifier:
         self.logFun = log
         # The count of notifications that will be sent (and, possibly,
         # complementary counts).
-        self.counts = self.defineCounts()
+        self.counts = Object(sent=0)
+        self.moreCounts()
 
     def init(self, sender, subject, body, attachments, replyTo, split):
         '''Late initialisation, possibly overriden by child classes'''
@@ -256,15 +257,15 @@ class Notifier:
         if self.logInit:
             self.log(self.NOTIF_INI % (subject, sender))
 
-    def defineCounts(self):
-        '''What counts to define and log while sending notifications ?'''
-        return Object(
-          sent   =0, # The total number of sent notifications
-          deleted=0, # The number of deleted notifications, while respecting
-                     # config.maxPerUser.
-          dusers =0  # The number of users for which at least one notification
-                     # has been deleted.
-        )
+    def moreCounts(self):
+        '''Add complementary counts to p_self.counts'''
+        # Override this to avoid computing additional counts being specific to
+        # internal notifications.
+        c = self.counts
+        c.deleted = 0 # The number of deleted notifications, while respecting
+                      # config.maxPerUser.
+        c.dusers = 0  # The number of users for which at least one notification
+                      # has been deleted.
 
     def checkAttributes(self):
         '''Ensure p_self's attributes are valid'''
