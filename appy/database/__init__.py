@@ -13,6 +13,7 @@ from persistent.mapping import PersistentMapping
 import ZODB, ZODB.POSException, transaction, transaction.interfaces
 
 from ..px import Px
+from . import pickles
 from .lock import Lock
 from .lazy import Lazy
 from .vault import Vault
@@ -56,7 +57,8 @@ FOLDER_NDEL  = 'Folder %s was not deleted because not empty.'
 SITE_INIT    = ':: Site init ::'
 SITE_CLEAN   = ':: Site clean ::'
 SITE_RUN     = ':: Method "%s" called ::'
-M_TRANS_ERR  = 'Running tool.%s :: Unresolved conflict occurred :: %s.'
+M_TRANS_ERR  = 'Running tool.%s :: Unresolved conflict occurred %s:: %s.'
+NO_REPLAY    = '(no replay forced) '
 M_RETRY      = 'Running tool.%s :: Conflict occurred :: %s :: Transaction ' \
                'replay #%d...'
 TOG_TO_RO    = f'You are about to make the database read-only.{br}{br}This ' \
@@ -238,6 +240,7 @@ class Database:
     Vault = Vault
     Catalog = Catalog
     Transaction = Transaction
+    PicklesReader = pickles.Reader
 
     # Some elements will be traversable
     traverse = {'Catalog': 'Manager', 'Transaction': 'Manager'}
@@ -684,8 +687,9 @@ class Database:
                     handler.replay = attempts
                     # Abort the transaction that could not be committed
                     transaction.abort()
-                    if attempts == maxAttempts:
-                        text = M_TRANS_ERR % (method, str(err))
+                    if attempts == maxAttempts or handler.noReplay:
+                        part = NO_REPLAY if handler.noReplay else ''
+                        text = M_TRANS_ERR % (method, part, str(err))
                         handler.log('app', 'error', text)
                         break
                     else:

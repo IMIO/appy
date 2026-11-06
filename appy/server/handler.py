@@ -25,7 +25,8 @@ from appy.utils import asDict, MessageException
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TRANS_RETRY = '%s on %s :: Conflict occurred :: %s :: Transaction replay #%d...'
-TRANS_ERR   = 'Unresolved conflict occurred :: %s.'
+TRANS_ERR   = 'Unresolved conflict occurred %s:: %s.'
+NO_REPLAY   = '(no replay forced) '
 SOCK_TO     = 'Client socket timeout: %s.'
 RQ_LINE_KO  = 'Bad request line "%s".'
 RQ_UNREAD   = '‹unreadable›'
@@ -326,6 +327,15 @@ class HttpHandler(Handler):
         self.closeSocket = True # Until now
         # The debug level
         self.debugLevel = self.config.server.debugLevel
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # Dynamic | For some touchy methods, like tool.backup, replaying it
+        # request | after a database conflict occurred may cause problems. By
+        # only    | setting the following attribute to True, you can disable the
+        #         | replay mechanism for the ongoing request.
+        #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # Note that this attribute is not defined in the dynamic-specific method
+        # m_init: else, it would be overwritten.
+        self.noReplay = False
 
     def init(self):
         '''Additional initialization, only applicable for dynamic content'''
@@ -537,8 +547,9 @@ class HttpHandler(Handler):
                 # Abort the transaction that could not be committed
                 transaction.abort()
                 # Return an error if is was the last attempt
-                if attempts == maxAttempts:
-                    self.log('app', 'error', TRANS_ERR % str(err))
+                if attempts == maxAttempts or self.noReplay:
+                    part = NO_REPLAY if self.noReplay else ''
+                    self.log('app', 'error', TRANS_ERR % (part, str(err)))
                     self.resp.code = HTTPStatus.SERVICE_UNAVAILABLE # 503
                     r = Error.get(self.resp, self.traversal)
                     break
@@ -790,6 +801,8 @@ class VirtualHandler(Handler):
         self.resp = Response(self)
         # There is no guard yet defined for a virtual request
         self.guard = None
+        # By default, replaying transactions is enabled
+        self.noReplay = False
         # Call the base handler's method
         Handler.init(self)
         # Add myself to the registry of handlers

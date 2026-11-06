@@ -136,7 +136,7 @@ class Config:
         # enable this, set an integer value representing the number of seconds
         # to wait before restarting the server. This is required to let the
         # server terminate his ongoing transaction.
-        self.restart = 10
+        self.restart = 60
 
     def check(self, messages):
         '''Checks the backup configuration'''
@@ -354,6 +354,8 @@ class Backup:
         if not config or not config.path:
             self.log(BKP_DIS, type='warning')
             return
+        # If a conflict error occurs, the backup can't be retried
+        self.handler.noReplay = True
         # Is that a full backup or not ?
         full = self.isFull()
         self.log(BKP_TYPE % (self.type[full], config.fullDay))

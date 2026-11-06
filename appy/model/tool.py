@@ -520,6 +520,11 @@ class Tool(Base):
         if not date: return
         return dutils.Date.format(self, date, format, False, language)
 
+    def readPickle(self, o, formatted=True):
+        '''Returns info about the stored, pickled data about this persistent
+           p_o(bject).'''
+        return Database.PicklesReader.read(o, formatted=formatted)
+
     def restart(self, wait=5, command=None):
         '''Restarts the currently running Appy server (S), by forking another
            process that will wait p_wait seconds before restarting S.'''
