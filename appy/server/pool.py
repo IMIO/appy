@@ -420,7 +420,7 @@ class ThreadPool:
                     alive -= 1
             # In the meanwhile, workers may have self-removed from the list
             alive = min(alive, len(self.workers))
-        # Get threads still being busy after out wait
+        # Get threads still being busy after our wait
         hung = []
         for worker in self.workers:
             worker.join(0.5)

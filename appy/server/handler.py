@@ -9,19 +9,18 @@ from DateTime import DateTime
 import http.client, email.parser
 import re, time, socket, threading, urllib.parse, transaction
 
-from appy.utils import Function
-from appy.model.base import Base
-from appy.server.guard import Guard
-from appy.server.error import Error
-from appy.database.log import Logger
-from appy.server.static import Static
-from appy.server.request import Request
-from appy.model.utils import Object as O
-from appy.server.response import Response
-from appy.server.languages import Languages
-from appy.server.traversal import Traversal
-from appy.pod.actions import EvaluationError
-from appy.utils import asDict, MessageException
+from .guard import Guard
+from .error import Error
+from .static import Static
+from .request import Request
+from ..model.base import Base
+from .response import Response
+from .languages import Languages
+from .traversal import Traversal
+from ..database.log import Logger
+from ..model.utils import Object as O
+from ..pod.actions import EvaluationError
+from ..utils import Function, asDict, MessageException
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 TRANS_RETRY = '%s on %s :: Conflict occurred :: %s :: Transaction replay #%d...'
@@ -152,6 +151,18 @@ class Handler:
     def get(class_):
         '''Returns the handler for the currently executing thread'''
         return class_.registry[threading.get_ident()]
+
+    @classmethod
+    def hasNoReplay(class_):
+        '''Returns True if, among the currently registered handlers, at least
+           one has flag "noReplay" to True.'''
+        # Flag "noReplay" is used to detect touchy actions that may problably
+        # last for a long time and/or may perform actions being outside the
+        # context of the current database transaction, like contacting external
+        # systems.
+        for handler in class_.registry.values():
+            if handler.noReplay:
+                return True
 
     # Make the Language class available in the handler namespace
     Languages = Languages
@@ -335,6 +346,10 @@ class HttpHandler(Handler):
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # Note that this attribute is not defined in the dynamic-specific method
         # m_init: else, it would be overwritten.
+        #
+        # ⚠️ p_self.noReplay is used as basis for determining if a Appy server
+        #    is "uninterruptible". While a server is in that state, it has
+        #    consequences. For example, the scheduler cannot run any job.
         self.noReplay = False
 
     def init(self):

@@ -177,10 +177,14 @@ class Status(Persistent):
     @staticmethod
     def record(tool):
         '''Creates a new Status object and add it into p_tool.serverStatuses'''
+        # Don't do anything if the last recorded status has been recorded less
+        # than one minute ago. This can happen when long jobs are run and the
+        # status record job has been delayed.
+        statuses = tool.serverStatuses
+        if statuses and ((DateTime() - statuses[0].time)*24*60) < 1: return
         # Create a new Status object
         status = Status(tool)
-        # Get the list of server statuses. Create it if it does not exist yet.
-        statuses = tool.serverStatuses
+        # Create the list of server statuses it if it does not exist yet
         if statuses is None:
             statuses = tool.serverStatuses = PersistentList()
         # Link the new v_status to the previous one, if any

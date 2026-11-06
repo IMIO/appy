@@ -662,6 +662,13 @@ class Server:
                 # Perform scheduled jobs, if any
                 self.scheduler.scanJobs()
 
+    def uninterruptible(self):
+        '''Is this server uninterruptible ?'''
+        # Consider the server as being uninterruptible if it contains at least
+        # one request handler being flagged as "no-replay" (more info in
+        # m_hasNoReplay).
+        return Handler.hasNoReplay()
+
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     #                          URL-related methods
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

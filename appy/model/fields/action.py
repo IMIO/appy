@@ -681,6 +681,9 @@ class Action(Field):
         result = self.result
         progress = self.progress
         handler.commit = result != 'file' # Most actions will update the DB
+        # It is probably not a good idea to replay a supposedly long action when
+        # a database conflict error occurs.
+        if progress: handler.noReplay = True
         # Execute the action
         success, msg = self.execute(o, options=options)
         if not msg:

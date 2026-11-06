@@ -473,6 +473,8 @@ class Scheduler:
         if not self.minutes: return
         current = time.localtime().tm_min
         if current % self.minutes or current == self.last: return
+        # Don't run any job if the server is considered as uninterruptible
+        if self.server.uninterruptible(): return
         # Run jobs that must be run
         self.last = current
         self.runJobs()
