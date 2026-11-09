@@ -3,6 +3,7 @@
 
 # ------------------------------------------------------------------------------
 import os.path, sys
+from xml.sax.saxutils import escape, quoteattr
 
 from appy.pod import odf_parser as op
 from appy.shared.zip import zip, unzip
@@ -89,7 +90,7 @@ class SplitParser(op.OdfParser):
         '''Adds start tag p_elem and his p_attrs into the right store'''
         r = [u'<%s' % elem]
         for name, value in attrs.items():
-            r.append(u' %s="%s"' % (name, value))
+            r.append(u' %s=%s' % (name, quoteattr(value)))
         r.append(u'>')
         self.getStore().append(u''.join(r))
 
@@ -141,7 +142,7 @@ class SplitParser(op.OdfParser):
 
     def characters(self, content):
         '''Tag p_content is read'''
-        self.getStore().append(content)
+        self.getStore().append(escape(content))
 
     def endDocument(self):
         '''Injects, into every chunk from p_self.chunk, the common part from
