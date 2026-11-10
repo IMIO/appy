@@ -149,7 +149,7 @@ class Editable:
                timeslot=timeslot|None;
                create=not reqType;
                view=field.View.get(o, field);
-               date=field.DateTime(day);
+               date=field.dutils.Date.toUTC(field.DateTime(day));
                hasFields=bool(field.eventFields);
                eventTypes=field.getEventTypes(o);
                timeslots=field.Timeslot.getAll(o, field);
