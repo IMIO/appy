@@ -10,6 +10,7 @@
 from pathlib import Path
 
 from appy.bin import Program
+from appy.xml.escape import Escape
 from appy.utils.zip import zip, unzip
 from appy.utils import path as putils
 from appy.pod import odf_parser as op
@@ -82,7 +83,7 @@ class SplitParser(op.OdfParser):
         '''Adds start tag p_elem and his p_attrs into the right store'''
         r = [f'<{elem}']
         for name, value in attrs.items():
-            r.append(f' {name}="{value}"')
+            r.append(f' {name}="{Escape.xml(value)}"')
         r.append('>')
         self.getStore().append(''.join(r))
 
@@ -134,7 +135,7 @@ class SplitParser(op.OdfParser):
 
     def characters(self, content):
         '''Tag p_content is read'''
-        self.getStore().append(content)
+        self.getStore().append(Escape.xhtml(content))
 
     def endDocument(self):
         '''Injects, into every chunk from p_self.chunk, the common part from
