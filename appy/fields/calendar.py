@@ -1713,8 +1713,11 @@ class Calendar(Field):
         '''Returns the event type of the first event defined at p_day, or None
            if unspecified.'''
         events = self.getEventsAt(obj, date)
-        if not events: return
-        return events[0].eventType
+        if not events:
+            r = None
+        else:
+            r = events[0].eventType
+        return r
 
     def standardizeDateRange(self, range):
         '''p_range can have various formats (see m_walkEvents below). This
@@ -1809,13 +1812,15 @@ class Calendar(Field):
            grouped into a single event. In this case, tuples in the result
            are 3-tuples: (DateTime_startDate, DateTime_endDate, event).
         '''
+
         # Prevent wrong combinations of parameters
         if groupSpanned and not sorted:
             raise Exception('Events must be sorted if you want to get ' \
                             'spanned events to be grouped.')
         obj = obj.o # Ensure p_obj is not a wrapper
         res = []
-        if not hasattr(obj, self.name): return res
+        if not hasattr(obj, self.name):
+            return res
         # Compute "min" and "max" tuples
         if minDate:
             minYear = minDate.year()

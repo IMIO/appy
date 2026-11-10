@@ -28,19 +28,22 @@ class Profiler:
 
     class Error(Exception): pass
     
-    def __init__(self, obj, mustLog=True, mustPrint=False):
-        self.obj = obj
+    def __init__(self, mustLog=True, mustPrint=False):
         # Must I log profiling results via p_obj.log ?
-        self.mustLog = obj and mustLog
+        self.mustLog = mustLog
         self.mustPrint = mustPrint # Must I print profiling results to stdout?
         self.init()
-        self.log('profiler in use.')
 
     def init(self):
         '''(re-)initialize this profiler's data structures'''
         self.callStack = [] # Stack of profiled method calls
         self.durations = {} # ~{m_methodName: f_totalTimeInMethod}~
-        
+
+    def enable(self, obj):
+        '''Enables this profiler'''
+        self.obj = obj
+        self.log('Profiler in use.')
+
     def log(self, msg):
         # First, indent the message for readability
         blanks = ' ' * 2 * len(self.callStack)
@@ -64,6 +67,7 @@ class Profiler:
         self.callStack.append(MethodCall(methodName, enterTime, theMethod))
         if not self.durations.has_key(methodName):
             self.durations[methodName] = 0
+        return self
 
     def leave(self):
         '''Is called when leaving a given method'''
