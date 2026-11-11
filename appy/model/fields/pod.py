@@ -31,7 +31,7 @@ TPL_INEX  = 'Template not found at %s.'
 FREEZ_ERR = 'Error while trying to freeze a "%s" file in pod field "%s" (%s).'
 FREEZ_FER = 'Server error. Please contact the administrator.'
 RENDERING = "Rendering pod %s :: %s (in %s)..."
-RENDERED  = "%s:%s (%s) rendered in %.2fsec."
+RENDERED  = "%s:%s (%s, %s) rendered in %.2fsec."
 MAIL_NO_R = 'Mailing "%s" contains no recipient.'
 MAIL_NO_U = 'Mailing "%s": inexistent user or no email for "%s".'
 MAIL_NO_F = 'Mailing "%s" contains no recipient (after removing wrong ' \
@@ -1307,7 +1307,8 @@ class Pod(Field):
         if executeAction and self.action:
             self.action(o, template, podContext, fmt, result)
         # Log the successfull rendering
-        o.log(RENDERED % (o.id, self.name, fileName, time.time()-start))
+        o.log(RENDERED % (o.id, self.name, fileName, putils.getSize(result),
+                          time.time()-start))
         # Get a FileInfo object to manipulate the file on the filesystem
         return FileInfo(result, inDb=False, uploadName=fileName)
 
