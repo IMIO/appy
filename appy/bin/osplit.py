@@ -95,9 +95,13 @@ class SplitParser(op.OdfParser):
         if state == SP.COMMON_START and not self.inStyles and \
            elem == 'office:automatic-styles':
             self.inStyles = True
-        # Potentially detect a split style
+        # Potentially detect a split style. An empty master page name could have
+        # been written by LibreOffice, ie, after a page break has been removed
+        # from a paragraph. Consequently, the related condition hereafter
+        # detects the presence of a non-empty 'style:master-page-name'
+        # attribute.
         if self.inStyles and elem == 'style:style' and \
-           'style:master-page-name' in attrs:
+           attrs.get('style:master-page-name'):
             # A split style has been found
             pageStyleName = attrs['style:master-page-name']
             self.splitStyles[attrs['style:name']] = pageStyleName
