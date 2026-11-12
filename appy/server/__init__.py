@@ -233,6 +233,14 @@ class Config:
         # duration of the Appy nightlife must also be taken into account: during
         # these festive activities, no status is recorded.
         self.statusMax = 3000
+        # If server status recording is enabled (see p_self.statusRate), one of
+        # the info being recorded in each status is the list of the most
+        # demanding processes in terms of RAM and CPU. The following attribute
+        # determines the length of these lists. By default, it is 8: a server
+        # status will store the list of the 8 most demanding processes in terms
+        # of RAM, and the list of the 8 most demanding processes in terms of
+        # CPU.
+        self.statusMaxProcesses = 8
 
     def isIPv6(self):
         '''Is IP v6 in use ?'''
@@ -371,7 +379,7 @@ class Server:
     platform = platform
 
     # Some elements will be traversable
-    traverse = {}
+    traverse = {'Status': 'Manager'}
 
     def __init__(self, config, mode, method=None, ext=None):
         # p_config is the main app config
