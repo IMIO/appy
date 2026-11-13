@@ -195,11 +195,14 @@ class Status(Persistent):
             r = putils.getShownSize(byteS, unbreakable=True)
         elif i == 10:
             # Put the complete command path in a tooltip
-            parts = info.rsplit('/', 1)
-            if len(parts) == 1:
-                r = info
+            if info.startswith('['):
+                r = info # This is a special name, leave it untouched
             else:
-                r = f'<abbr title="In {parts[0]}">{parts[1]}</abbr>'
+                parts = info.rsplit('/', 1)
+                if len(parts) == 1:
+                    r = info
+                else:
+                    r = f'<abbr title="In {parts[0]}">{parts[1]}</abbr>'
         elif i == 11:
             # Command args: it can be long
             r = f'<div class="discreet">{Px.truncateText(info, width=35)}</div>'
