@@ -4,11 +4,12 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from .day import Day
 from appy.px import Px
+from .editable import Editable
 from appy.utils import dates as dutils
 from appy.model.utils import Object as O
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Week(Day):
+class Week(Editable, Day):
     '''Represents a calendar, weekly view for an individual calendar'''
 
     # A week view inherits from the Day view: it is built as a day + its

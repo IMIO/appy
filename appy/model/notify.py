@@ -282,11 +282,11 @@ class Notifier:
             self.log(self.NO_CONFIG)
             return True
 
-    def log(self, message, typE='info'):
+    def log(self, message, type='info'):
         '''Logs a message, if a log function has been defined'''
         fun = self.logFun
         if fun:
-            fun(message, type=typE)
+            fun(message, type=type)
 
     def onceWalked(self):
         '''A sub-class may override this to perform some action once all users

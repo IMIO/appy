@@ -4,10 +4,9 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from .week import Week
 from appy.px import Px
-from .editable import Editable
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class WeekMulti(Editable, Week):
+class WeekMulti(Week):
     '''Represents a calendar, weekly view for several individual calendars'''
 
     multiple = True

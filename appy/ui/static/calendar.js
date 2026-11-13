@@ -148,6 +148,11 @@ class EventPopup {
     return r;
   }
 
+  getCalendarInfo() {
+    // Get info about the calendar from which the popup is
+    return getNode(this.hook)['ajax'].params;
+  }
+
   openDelete(spansDays) {
     /* Opens the popup for deleting an event. p_spansDays is required to know if
        the event spans more days: that way, a checkbox may be shown, allowing to
@@ -167,7 +172,11 @@ class EventPopup {
     // Fetch the field-specific content of the edit popup
     const hook = `${this.popupId}Content`,
           url = `${siteUrl}/${this.iid}/${this.name}/Editable/pxContent`,
-          params = {'hook':hook, 'day': this.day };
+          params = {'hook': hook, 'day': this.day },
+          info = this.getCalendarInfo();
+    // Carry parameters from the currently shown calendar
+    params['render'] = info['render'];
+    if ('month' in info) params['month'] = info['month'];
     if (eventType) {
       params['eventType'] = eventType;
       params['timeslot'] = this.timeslot;
