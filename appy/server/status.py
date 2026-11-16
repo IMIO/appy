@@ -370,7 +370,7 @@ class Status(Persistent):
      <td align="center">
       <a if="hasProcessInfo" target="appyIFrame"
          href=":status.getProcessesUrl(tool, nav.first+loop.status.nb)"
-         onclick="openPopup('iframePopup',null,900,400,true)">👁</a>
+         onclick="openPopup('iframePopup',null,900,500,true)">👁</a>
       <x if="not hasProcessInfo">-</x>
      </td>''')
 

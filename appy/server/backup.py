@@ -114,6 +114,11 @@ class Config:
         # perform a "full" backup everyday, by using value "All".
         self.fullDay = 'Sun'
 
+        # When copying files to p_self.path (dabatase chunks, binaries from the
+        # database-controlled file system and logs), rsync is used. Must option
+        # -z (compression) be used ?
+        self.compress = True
+
         # The following attributes stores the name of a method on the tool that
         # the backup will call after the backup procedure has been executed. You
         # could also directly define a job with this method, but by specifying
@@ -157,7 +162,7 @@ class Backup:
     '''Performs backups'''
 
     # Options to rsync when copying chunks of the .fs file
-    chunkOptions = ['rsync', '-Paz', '--no-o', '--no-g', '--no-l', '--delete',
+    chunkOptions = ['rsync', '-Pa', '--no-o', '--no-g', '--no-l', '--delete',
                     '--quiet']
 
     # Options to rsync when copying DB-controlled files
@@ -187,6 +192,19 @@ class Backup:
     def logDone(self, start):
         '''Logs the "done" message, with the time elapsed since p_start'''
         self.log(DONE % (time.time() - start))
+
+    def getRsyncCommand(self, typE, src, dest):
+        '''Gets the rsync command to execute for copying any database chunk
+           (p_typE is "chunk") or database-controlled files (p_typE is
+           "files").'''
+        r = list(getattr(self, f'{typE}Options'))
+        # Add compression (rsync's -z option) when configured
+        if self.config.compress:
+            r[1] = f'{r[1]}z'
+        # Add the source and destination file·s or folder
+        r.append(src)
+        r.append(dest)
+        return r
 
     def runCommand(self, args, text=None):
         '''Runs and logs a commmand made of p_args'''
@@ -248,9 +266,8 @@ class Backup:
             nb = 1 if not modified1 else 2
         # Prepare the rsync command
         fileSize = getShownSize(sourceFile.stat().st_size)
-        args = list(self.chunkOptions)
-        args.append(f'{sourceFile}.chunked/') # The source folder
-        args.append(str(destFolder / f'backup{nb}'))
+        args = self.getRsyncCommand('chunk', f'{sourceFile}.chunked/',
+                                    str(destFolder / f'backup{nb}'))
         # Run the sync
         self.runCommand(args, text=S_SIZE % (fileSize, count))
 
@@ -262,9 +279,8 @@ class Backup:
         if not destFolder.is_dir():
             destFolder.mkdir(parents=True, exist_ok=True)
         # Prepare the rsync command
-        args = list(self.filesOptions)
-        args.append(f'{self.tool.config.database.binariesFolder}/')
-        args.append(str(destFolder))
+        binFolder = self.tool.config.database.binariesFolder
+        args = self.getRsyncCommand('files', f'{binFolder}/', str(destFolder))
         # Run the sync
         self.runCommand(args)
 
