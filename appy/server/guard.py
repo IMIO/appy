@@ -78,6 +78,11 @@ class Config:
         # connection. This can be problematic on test sites, or on production
         # environments accessed via internal URLs.
         self.cookieSecure = False
+        # Must the AppyAuth cookie be flagged as "HttpOnly" ? If set to True, it
+        # will not be possible to access its content via Javascript. While it
+        # seems to always be a good idea, some apps may contain code that reads
+        # this cookie via Javascript.
+        self.cookieHttpOnly = False
         # Who has access to the Python UI console ? In this set, place only
         # logins of users having the Manager role.
         self.consoleUsers = {'admin'}
