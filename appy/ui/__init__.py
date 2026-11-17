@@ -538,6 +538,8 @@ class Config:
         self.badgeBgColorR = '#888' # Background color when all read
         self.badgeFSize = '75%' # Font-size. Determines the overall badge size.
         self.badgePadding = '0.2em 0.5em' # Padding
+        self.badgeTop = '-7px'
+        self.badgeLeft = '-7px'
         self.badgeColor = 'inherit'
 
         # Pages' attributes, with alternate values when the UI is compact (see

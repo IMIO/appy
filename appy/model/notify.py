@@ -149,9 +149,9 @@ class Notification(Object):
         50% { opacity:0.0 }
         56% { opacity:1.0 }
       }
-      .uBadge { padding:|badgePadding|; position:relative; top:-7px; left:-7px;
-                border-radius:50%; font-size:|badgeFSize|; color:|brightColor|;
-                height:fit-content }
+      .uBadge { padding:|badgePadding|; position:relative; top:|badgeTop|;
+                left:|badgeLeft|; border-radius:50%; font-size:|badgeFSize|;
+                color:|brightColor|; height:fit-content }
       .ubR { background-color:|badgeBgColorR|; color:grey }
       .ubR>a { color:|brightColor| }
       .ubU { background-color:|badgeBgColor|;
