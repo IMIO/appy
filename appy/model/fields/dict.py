@@ -193,6 +193,9 @@ class Dict(List):
             o.values[self.name] = dbValue = PersistentMapping(dbValue)
         # Update the whole value, or update it item per item
         if dbValue is None or overwrite:
+            # Ensure p_value is a persistent mapping
+            if not isinstance(value, PersistentMapping):
+                value = PersistentMapping(value)
             o.values[self.name] = value
         else:
             # Update the DB value with p_value

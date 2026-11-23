@@ -7,10 +7,11 @@ import os.path, urllib.parse
 from appy.px import Px
 from appy import utils, n
 from appy.utils import bn
+from ..searches import Search
 from appy.ui import LinkTarget
 from appy.ui.layout import Layouts
-from appy.model.searches import Search
-from appy.model.fields import Field, Initiator, Show
+from . import Field, Initiator, Show
+from appy.utils import path as putils
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 CONF_ERR  = 'When using options, a popup will already be shown, with the ' \
@@ -221,9 +222,8 @@ class Action(Field):
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #    "file"      | the result is the binary content of a file that the
         #                | user will download. In that case, the "message" part
-        #                | of the method result must be an open file handler ;
-        #                | after the action has been executed, Appy will close
-        #                | it ;
+        #                | of the method result must be the path to a file, as a
+        #                | string or as a Path object ;
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #   "redirect"   | the action will lead to the user being redirected to
         #                | some other page. The URL of this page must be given
@@ -698,14 +698,20 @@ class Action(Field):
             r = msg
         elif result == 'file':
             # v_msg does not contain a message, but a Python file handler
-            r = msg.read()
+            if isinstance(msg, str):
+                fileName = msg
+            elif isinstance(msg, Path):
+                fileName = str(msg)
+            else:
+                # An opened file handler (it was allowed in a previous version
+                # of Appy).
+                fileName = os.path.abspath(msg.name)
+                msg.close()
+            modified = putils.getDate(fileName, raw=True)
+            Static.write(handler, fileName, modified,
+                         disposition=self.downloadDisposition)
             # If we are serving a file from the popup, close it afterwards
             if o.req.popup: resp.setCookie('closePopup', 'yes')
-            header = resp.setHeader
-            header('Content-Type', utils.getMimeType(msg.name))
-            header('Content-Disposition', '%s;filename="%s"' % \
-                   (self.downloadDisposition, os.path.basename(msg.name)))
-            msg.close()
         else:
             r = msg
         # Stop here if p_minimal is True

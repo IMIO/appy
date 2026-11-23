@@ -647,6 +647,15 @@ class List(Field):
             r.append(self.getStorableRowValue(o, v))
         return r
 
+    def store(self, o, value):
+        '''Converts p_value to its persistent counterpart if it is a standard
+           one.'''
+        # This could also work for a persistent mapping, if p_self is a Dict
+        # field, but the Dict sub-class has his own m_store method.
+        typE = self.storableTypes
+        value = typE(value) if not isinstance(value, typE) else value
+        return super().store(o, value)
+
     def getCopyValue(self, o):
         '''Return a (deep) copy of the field value stored on p_o'''
         r = getattr(o, self.name, None)
