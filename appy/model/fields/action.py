@@ -13,7 +13,6 @@ from appy.ui import LinkTarget
 from appy.ui.layout import Layouts
 from . import Field, Initiator, Show
 from appy.utils import path as putils
-from appy.server.static import Static
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 CONF_ERR  = 'When using options, a popup will already be shown, with the ' \
@@ -697,7 +696,9 @@ class Action(Field):
         # Serve the file by using the Static class
         spath = str(path)
         modified = putils.getDate(spath, raw=True)
-        Static.write(o.H(), spath, modified, downloadName=path.name,
+        handler = o.H()
+        Static = handler.server.Static
+        Static.write(handler, spath, modified, downloadName=path.name,
                      disposition=self.downloadDisposition)
         # If we are serving a file from the popup, close it afterwards
         if o.req.popup:

@@ -10,6 +10,7 @@ import socket, logging, pathlib, selectors, threading
 
 from appy.px import Px
 from .status import Status
+from .static import Static
 from .pool import ThreadPool
 from appy import utils, version
 from .scheduler import Scheduler
@@ -372,8 +373,9 @@ class Config:
 class Server:
     '''Appy HTTP server'''
 
-    # Make some names available gere
+    # Make some names available here
     Status = Status
+    Static = Static
     Handler = Handler
     Pool = ThreadPool
     platform = platform
