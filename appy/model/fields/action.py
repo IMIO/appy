@@ -2,6 +2,7 @@
 # ~license~
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+from pathlib import Path
 import os.path, urllib.parse
 
 from appy.px import Px
@@ -12,6 +13,7 @@ from appy.ui import LinkTarget
 from appy.ui.layout import Layouts
 from . import Field, Initiator, Show
 from appy.utils import path as putils
+from appy.server.static import Static
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 CONF_ERR  = 'When using options, a popup will already be shown, with the ' \
@@ -180,11 +182,12 @@ class Action(Field):
       defaultOnEdit=n, show=Show.TR, renderable=n, page='main', group=n,
       layouts=n, move=0, readPermission='read', writePermission='write',
       width=n, height=n, maxChars=n, colspan=1, action=n, result='computation',
-      downloadDisposition='attachment', confirm=False, master=n, masterValue=n,
-      masterSnub=n, focus=False, historized=False, mapping=n, generateLabel=n,
-      label=n, icon=n, sicon=n, view=n, cell=n, buttons=n, edit=n, custom=n,
-      xml=n, translations=n, render='button', iconOut=False, iconCss='iconS',
-      iconSize=n, options=n, fake=False, progress=None, back=BACK_OBJ):
+      downloadDisposition='attachment', deleteFile=False, confirm=False,
+      master=n, masterValue=n, masterSnub=n, focus=False, historized=False,
+      mapping=n, generateLabel=n, label=n, icon=n, sicon=n, view=n, cell=n,
+      buttons=n, edit=n, custom=n, xml=n, translations=n, render='button',
+      iconOut=False, iconCss='iconS', iconSize=n, options=n, fake=False,
+      progress=None, back=BACK_OBJ):
         # Attribute "action" must hold a method or a list/tuple of methods.
         # In most cases, every method will be called without arg, but there are
         # exceptions (see parameters "options" and "confirm").
@@ -236,10 +239,15 @@ class Action(Field):
         # redirection will occur.
         self.result = result
 
-        # If self.result is "file", the "disposition" for downloading the file
-        # is defined in self.downloadDisposition and can be "attachment" or
+        # If p_result is "file", the "disposition" for downloading the file is
+        # defined in self.downloadDisposition and can be "attachment" or
         # "inline".
         self.downloadDisposition = downloadDisposition
+
+        # Still if p_result is "file", if you want Appy to delete the file as
+        # soon as it has been served to the HTTP client, set p_deleteFile to
+        # True.
+        self.deleteFile = deleteFile
 
         # If "confirm" is True, a popup will ask the user if he is really sure
         # about triggering this action. If "confirm" is "comment", the same
@@ -673,6 +681,31 @@ class Action(Field):
            current progress.'''
         self.progress.set(o, self.name, percentage, text)
 
+    def serveFile(self, o, resp, spec):
+        '''Returns, in the current HTTP response, the file having this
+           p_spec(ification).'''
+        # p_spec can have several formats
+        if isinstance(spec, str):
+            path = Path(spec)
+        elif isinstance(spec, Path):
+            path = spec
+        else:
+            # An opened file handler (it was allowed in a previous version of
+            # Appy).
+            path = Path(spec.name).resolve()
+            spec.close()
+        # Serve the file by using the Static class
+        spath = str(path)
+        modified = putils.getDate(spath, raw=True)
+        Static.write(o.H(), spath, modified, downloadName=path.name,
+                     disposition=self.downloadDisposition)
+        # If we are serving a file from the popup, close it afterwards
+        if o.req.popup:
+            resp.setCookie('closePopup', 'yes')
+        # Delete the served file if required
+        if self.deleteFile:
+            os.remove(fileName)
+
     traverse['perform'] = 'perm:write'
     def perform(self, o, options=None, minimal=False):
         '''Called when the action is triggered from the UI'''
@@ -697,21 +730,8 @@ class Action(Field):
             result = 'computation' if result == 'redirect' else result
             r = msg
         elif result == 'file':
-            # v_msg does not contain a message, but a Python file handler
-            if isinstance(msg, str):
-                fileName = msg
-            elif isinstance(msg, Path):
-                fileName = str(msg)
-            else:
-                # An opened file handler (it was allowed in a previous version
-                # of Appy).
-                fileName = os.path.abspath(msg.name)
-                msg.close()
-            modified = putils.getDate(fileName, raw=True)
-            Static.write(handler, fileName, modified,
-                         disposition=self.downloadDisposition)
-            # If we are serving a file from the popup, close it afterwards
-            if o.req.popup: resp.setCookie('closePopup', 'yes')
+            # v_msg does not contain a message, but a file specifier
+            r = self.serveFile(o, resp, msg)
         else:
             r = msg
         # Stop here if p_minimal is True

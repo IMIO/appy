@@ -141,10 +141,9 @@ class Translation(Base):
             message = po.Message(field.name, msg, deF or '')
             poFile.addMessage(message, needsCopy=False)
             count += 1
-        stringIo = poFile.generate(inFile=False)
-        stringIo.name = name # To mimic a file
-        stringIo.seek(0)
-        return True, stringIo
+        f = poFile.generate(inFile=True)
+        f.close()
+        return True, poFile.path
 
     def downloadPoFile(self, type):
         '''Generates the "po" file corresponding to this translation, updated

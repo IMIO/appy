@@ -265,8 +265,8 @@ class File:
 
     def generate(self, inFile=True):
         '''Generates the corresponding po(t) file on disk if p_inFile is True,
-           in a io.StringIO else. In this latter case, the StringIO instance is
-           returned.'''
+           in a io.StringIO else.'''
+        # An opened file or StringIO handler is returned
         if inFile:
             f = open(str(self.path), 'w')
         else:
