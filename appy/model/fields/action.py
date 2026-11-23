@@ -704,7 +704,7 @@ class Action(Field):
             resp.setCookie('closePopup', 'yes')
         # Delete the served file if required
         if self.deleteFile:
-            os.remove(fileName)
+            os.remove(spath)
 
     traverse['perform'] = 'perm:write'
     def perform(self, o, options=None, minimal=False):

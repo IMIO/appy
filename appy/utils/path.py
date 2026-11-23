@@ -46,7 +46,7 @@ def getDate(path, typE='st_mtime', raw=False):
     # os.stat(). The default, "st_mtime", represents the file's last
     # modification date.
     r = getattr(os.stat(path), typE)
-    return r if raw else DateTime(raw)
+    return r if raw else DateTime(r)
 
 def getFolderSize(folder, nice=False, withCounts=False):
     '''Returns the size of this p_folder (all content, recursively)'''
