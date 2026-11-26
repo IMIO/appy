@@ -167,6 +167,7 @@ class TestFactory:
         raise TesterError(CREAT_T_N_O)
 
 # Program help - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 HELP_V   = 'Dumps the whole test report on stdout'
 HELP_KT  = 'Keep the temp folder, in order to be able to copy some results ' \
            'and make them expected results when needed.'
@@ -216,7 +217,7 @@ class Tester(Program):
         parser = self.parser
         add = parser.add_argument
         if self.flavours:
-            add('flavour', help=Make.HELP_FLV % self.flavours)
+            add('flavour', help=HELP_FLV % self.flavours)
         add('-v', '--verbose', action='store_true', help=HELP_V)
         add('-k', '--keepTemp', action='store_true', help=HELP_KT)
         add('-t', '--test', help=HELP_TST)

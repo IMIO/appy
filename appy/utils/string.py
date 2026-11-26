@@ -127,21 +127,23 @@ class Normalize:
     # are None, because lookup in dicts are more efficient.
 
     # ~~~ A common set of chars, to ignore or blankify in most situations
-    baseIgnorable = '.,:;*+=~?%^\'’"<>{}[]#|\t\\°-‑'
+    ignorable = '.,:;*+=~?%^\'’"<>{}[]#|\t\\°'
+    dashes = '-‑‐‒–—―⸺⸻−'
+    baseIgnorable = f'{ignorable}{dashes}'
 
     # ~~~ The set of chars to ignore when producing a file name
     moreIgnorableA = '  $£€/\r\n'
-    fileNameIgnorable = asDict(baseIgnorable + moreIgnorableA)
+    fileNameIgnorable = asDict(f'{baseIgnorable}{moreIgnorableA}')
 
     # ~~~ The set of chars to blankify when extracting text for the purpose of
     #     database indexing or keywords cleaning, with 2 variants, keeping
     #     dashes (True) or not.
     moreIgnorableB = '\n/()_'
     textIgnorable = {
-      False: asDict(baseIgnorable + moreIgnorableB),
-      True:  asDict(baseIgnorable[:-2] + moreIgnorableB)
+      False: asDict(f'{baseIgnorable}{moreIgnorableB}'),
+      True:  asDict(f'{ignorable}{moreIgnorableB}')
     }
-    indexIgnorable = asDict(baseIgnorable + moreIgnorableA + moreIgnorableB)
+    indexIgnorable = asDict(f'{baseIgnorable}{moreIgnorableA}{moreIgnorableB}')
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Base method normalizing chars by blankifying, ignoring, replacing or

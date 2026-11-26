@@ -5,7 +5,7 @@
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 from itertools import count
-import os, queue, atexit, time, ctypes, threading
+import os, queue, time, ctypes, threading
 
 from appy.utils import br, bn
 from appy.model.utils import Object as O
@@ -41,7 +41,7 @@ SHUTD_POOL    = 'Shutting down the threadpool (%d threads)'
 SHUTD_HUNG    = "%s worker(s) didn't stop properly, and %s zombie(s)"
 SHUTD_OK      = 'All workers stopped'
 SHUTD_FORCED  = 'Forcefully exiting process'
-SHUTD_F_OK    = 'All workers eventually killed'
+SHUTD_F_OK    = 'All workers eventually killed.'
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ThreadPool:
@@ -93,10 +93,6 @@ class ThreadPool:
 
     SHUTDOWN = object()
 
-    # This flag specifies if, when the server terminates, all in-progress client
-    # connections should be droppped.
-    daemon = True
-
     # Default info about a thread, representing no info at all
     noInfo = None, None
 
@@ -124,8 +120,6 @@ class ThreadPool:
         self.lastAddedNewIdleWorkers = 0
         # Number of requests received since last check for hunged threads
         self.requestsSinceLastHungCheck = 0
-        if not ThreadPool.daemon:
-            atexit.register(self.shutdown)
         # Create the threads
         for i in range(config.threads):
             self.addWorker(message=INITIAL_WK)
@@ -279,7 +273,7 @@ class ThreadPool:
         index = next(self.workersCount)
         worker = threading.Thread(target=self.workerMethod, args=args,
                                   kwargs=kwargs, name=(f'Thread {index}'))
-        worker.setDaemon(ThreadPool.daemon)
+        worker.setDaemon(True)
         worker.start()
 
     def threadExists(self, id):
@@ -438,29 +432,11 @@ class ThreadPool:
                 self.debug(KILLED_HUNGED)
             if forceQuitTimeout:
                 timedOut = False
-                needForceQuit = bool(zombies)
                 for worker in self.workers:
                     if not timedOut and worker.is_alive():
                         timedOut = True
                         worker.join(forceQuitTimeout)
-                    if worker.is_alive():
-                        # Worker won't die
-                        needForceQuit = True
-                if needForceQuit:
-                    # Remove the threading atexit callback
-                    for callback in list(atexit._exithandlers):
-                        func = getattr(callback[0], 'im_func', None)
-                        if not func:
-                            continue
-                        globs = getattr(func, 'func_globals', {})
-                        mod = globs.get('__name__')
-                        if mod == 'threading':
-                            atexit._exithandlers.remove(callback)
-                    atexit._run_exitfuncs()
-                    self.debug(SHUTD_FORCED)
-                    os._exit(3)
-                else:
-                    self.debug(SHUTD_F_OK)
+                self.debug(SHUTD_F_OK)
         else:
             self.debug(SHUTD_OK)
 

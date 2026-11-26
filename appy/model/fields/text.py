@@ -8,7 +8,6 @@ from appy import n
 from . import Field
 from appy.px import Px
 from appy.xml import Parser
-from appy.ui.layout import Layouts
 from appy.xml.escape import Escape
 from .multilingual import Multilingual
 from appy.utils import string as sutils

@@ -10,7 +10,6 @@ from . import Field
 from appy.px import Px
 from .text import Text
 from appy.utils import bn
-from appy.ui.layout import Layouts
 from appy.utils.diff import HtmlDiff
 from .multilingual import Multilingual
 from appy.utils.inject import Injector

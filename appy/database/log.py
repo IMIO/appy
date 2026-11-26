@@ -20,7 +20,7 @@ from appy.model.utils import Object as O
 logging.logThreads   = logging.logMultiprocessing = False
 logging.logProcesses = logging.logAsyncioTasks    = False
 
-logging._srcFile = None # A switch the Python logging docs recommend to turn off
+logging._srcfile = None # A switch the Python logging docs recommend to turn off
                         # in their "Optimization" section, even though it is a
                         # private attribute.
 

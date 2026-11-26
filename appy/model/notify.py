@@ -144,7 +144,7 @@ class Notification(Object):
      </div>''',
 
      css='''
-      @keyframes colorize {
+      @keyframes bliNk {
         44% { opacity:1.0 }
         50% { opacity:0.0 }
         56% { opacity:1.0 }
@@ -155,7 +155,7 @@ class Notification(Object):
       .ubR { background-color:|badgeBgColorR|; color:grey }
       .ubR>a { color:|brightColor| }
       .ubU { background-color:|badgeBgColor|;
-             animation:colorize 8s infinite }
+             animation:bliNk 8s infinite }
       .ubU>a { color:inherit }''')
 
     # Consult, in the Appy iframe popup, a single notification

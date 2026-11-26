@@ -421,8 +421,9 @@ class Mailer(Notifier):
             self.send(self.to, self.subject, self.body)
         elif self.logFun:
             # There is no recipient at all: no mail can be sent. Log this.
+            o = self.o
             priv = self.privilege
             pri = ', '.join(priv) if isinstance(priv, (list, tuple)) else priv
-            self.log(NO_RECS % (o.class_.name.lower(), o.id, privilegeType,
+            self.log(NO_RECS % (o.class_.name.lower(), o.id, self.privilegeType,
                                 pri), type='warning')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
