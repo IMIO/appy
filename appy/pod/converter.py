@@ -226,8 +226,6 @@ class Converter:
         self.oo = None # The LO application object
         self.doc = None # The document that will be loaded in LO
         self.toc = None # The table of contents, if existing
-        # LO version, as a string
-        self.version = None
         # The path to a LO template (ie, a ".ott" file) from which styles can be
         # imported.
         self.templateUrl = self.templatePath = None
@@ -378,15 +376,6 @@ class Converter:
         access = update and configUpdateAccess or configAccess
         return provider.createInstanceWithArguments(access, prop)
 
-    def getVersion(self):
-        '''Returns the LO version'''
-        try:
-            path = '/org.openoffice.Setup/Product'
-            return self.getConfig(path).getByName('ooSetupVersion')
-        except Exception:
-            # LibreOffice 3 raises an exception here
-            return '3.0'
-
     def connect(self):
         '''Connects to LibreOffice'''
         import uno
@@ -394,8 +383,6 @@ class Converter:
         try:
             # Get the uno component context from the PyUNO runtime
             self.context = ctx = uno.getComponentContext()
-            # Get the LO version
-            self.version = self.getVersion()
             # Create the UnoUrlResolver
             create = ctx.ServiceManager.createInstanceWithContext
             resolver = create('com.sun.star.bridge.UnoUrlResolver', ctx)
@@ -462,11 +449,6 @@ class Converter:
         do(frame, '.uno:DistributeColumns', '', 0, ())
         # Perform the "optimize" operation when relevant
         if optimize:
-            # With LibreOffice < 5, range selection must be done again
-            if self.version < '5.0':
-                viewCursor.gotoRange(cursor, False)
-                viewCursor.gotoEnd(True)
-                viewCursor.gotoEnd(True)
             do(frame, '.uno:SetOptimalColumnWidth', '', 0, ())
 
     def updateToc(self):

@@ -7,13 +7,15 @@
 import os
 from pathlib import Path
 
+from appy.utils import bn
 from appy.utils.string import Variables
 from appy.utils.path import getTempFileName
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Template virtual host for http (to avoid)
+
 httpSingle = '''<VirtualHost *:80>
- ServerName |domain|
+ ServerName |domain||aliases|
  ServerAdmin |email|
  ErrorLog ${APACHE_LOG_DIR}/error.log
  CustomLog ${APACHE_LOG_DIR}/access.log combined
@@ -26,7 +28,7 @@ httpSingle = '''<VirtualHost *:80>
 
 # Template virtual host for http (redirect to https)
 http = '''<VirtualHost *:80>
- ServerName |domain|
+ ServerName |domain||aliases|
  RedirectPermanent / https://|domain|/
 </VirtualHost>'''
 
@@ -38,7 +40,7 @@ http = '''<VirtualHost *:80>
 
 https = '''<IfModule mod_ssl.c>
  <VirtualHost _default_:443>
-  ServerName |domain|
+  ServerName |domain||aliases|
   ServerAdmin |email|
   ErrorLog ${APACHE_LOG_DIR}/error.log
   CustomLog ${APACHE_LOG_DIR}/access.log combined
@@ -71,7 +73,7 @@ class Config:
     fileAttributes = 'cert', 'key', 'chain'
 
     def __init__(self, email, domain, protocol='https', cert=None, key=None,
-                 chain=None, destFolder='ssl'):
+                 chain=None, destFolder='ssl', aliases=None):
         # The email address identifying the software creator managing the site
         self.email = email
         # The server's domain name, as known and accessed by the end users
@@ -111,11 +113,24 @@ class Config:
         #                      ensure p_destFolder starts with a '/' in that
         #                      case.
         self.destFolder = destFolder
+        # Beyond the base name, as passed in p_domain, you may specify alternate
+        # domains in p_aliases, that must be a list. For example, if p_domain is
+        # 'appyframe.work', p_aliases may hold ['www.appyframe.work'].
+        self.aliases = self.getAliases(aliases)
         # Must we copy cert-related files from the DEV machine to the server ?
         self.copyFiles = not destFolder.startswith('/')
         # Set Path objects for certificate files
         if protocol == 'https':
             self.setPaths()
+
+    def getAliases(self, aliases):
+        '''Return the correctly formatted server p_aliases'''
+        if aliases is None:
+            r = ''
+        else:
+            r = ' '.join(aliases)
+            r = f'{bn}  ServerAlias {r}'
+        return r
 
     def setPaths(self):
         '''Set Path objects for certificate files'''
